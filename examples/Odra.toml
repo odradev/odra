@@ -93,3 +93,6 @@ fqn = "factory::token::FTokenFactory"
 
 [[contracts]]
 fqn = "factory::token::FToken"
+
+[[contracts]]
+fqn = "factory::token::FactoryProxy"

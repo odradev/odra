@@ -125,15 +125,15 @@ mod test {
                             true,
                             {
                                 let mut named_args = odra::casper_types::RuntimeArgs::new();
-                                if self.attached_value > odra::casper_types::U512::zero() {
-                                    let _ = named_args.insert("amount", self.attached_value);
-                                }
+                                odra::args::EntrypointArgument::insert_runtime_arg(true, "odra_cfg_is_upgradable", &mut named_args);
+                                odra::args::EntrypointArgument::insert_runtime_arg(false, "odra_cfg_is_upgrade", &mut named_args);
+                                odra::args::EntrypointArgument::insert_runtime_arg(true, "odra_cfg_allow_key_override", &mut named_args);
+                                odra::args::EntrypointArgument::insert_runtime_arg(contract_name.clone(), "odra_cfg_package_hash_key_name", &mut named_args);
                                 odra::args::EntrypointArgument::insert_runtime_arg(contract_name, "contract_name", &mut named_args);
                                 odra::args::EntrypointArgument::insert_runtime_arg(value, "value", &mut named_args);
                                 named_args
                             }
                         )
-                        .with_amount(self.attached_value),
                     )
                 }
 
@@ -145,14 +145,13 @@ mod test {
                             true,
                             {
                                 let mut named_args = odra::casper_types::RuntimeArgs::new();
-                                if self.attached_value > odra::casper_types::U512::zero() {
-                                    let _ = named_args.insert("amount", self.attached_value);
-                                }
                                 odra::args::EntrypointArgument::insert_runtime_arg(contract_name, "contract_name", &mut named_args);
+                                odra::args::EntrypointArgument::insert_runtime_arg(true, "odra_cfg_is_factory_upgrade", &mut named_args);
+                                odra::args::EntrypointArgument::insert_runtime_arg(true, "odra_cfg_allow_key_override", &mut named_args);
+                                odra::args::EntrypointArgument::insert_runtime_arg(false, "odra_cfg_create_upgrade_group", &mut named_args);
                                 named_args
                             }
                         )
-                        .with_amount(self.attached_value),
                     )
                 }
 
@@ -166,14 +165,13 @@ mod test {
                             true,
                             {
                                 let mut named_args = odra::casper_types::RuntimeArgs::new();
-                                if self.attached_value > odra::casper_types::U512::zero() {
-                                    let _ = named_args.insert("amount", self.attached_value);
-                                }
                                 odra::args::EntrypointArgument::insert_runtime_arg(odra::args::BatchUpgradeArgs::from(args), "args", &mut named_args);
+                                odra::args::EntrypointArgument::insert_runtime_arg(true, "odra_cfg_is_factory_upgrade", &mut named_args);
+                                odra::args::EntrypointArgument::insert_runtime_arg(true, "odra_cfg_allow_key_override", &mut named_args);
+                                odra::args::EntrypointArgument::insert_runtime_arg(false, "odra_cfg_create_upgrade_group", &mut named_args);
                                 named_args
                             }
                         )
-                        .with_amount(self.attached_value),
                     )
                 }
             }
@@ -632,7 +630,6 @@ mod test {
 
                 #[no_mangle]
                 fn total_supply() {
-                    odra::odra_casper_wasm_env::host_functions::override_factory_caller();
                     let result = __erc20_factory_exec_parts::execute_total_supply(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                     odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
                         odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
@@ -643,13 +640,11 @@ mod test {
 
                 #[no_mangle]
                 fn pay_to_mint() {
-                    odra::odra_casper_wasm_env::host_functions::override_factory_caller();
                     __erc20_factory_exec_parts::execute_pay_to_mint(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                 }
 
                 #[no_mangle]
                 fn approve() {
-                    odra::odra_casper_wasm_env::host_functions::override_factory_caller();
                     __erc20_factory_exec_parts::execute_approve(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                 }
             }

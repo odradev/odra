@@ -57,6 +57,18 @@ pub fn contract_function_item(fun: &FnIR, is_trait_impl: bool) -> syn::ItemFn {
     env_call(signature, call_def_expr, attrs, vis)
 }
 
+pub fn factory_contract_function_item(fun: &FnIR, is_trait_impl: bool) -> syn::ItemFn {
+    let vis = match is_trait_impl {
+        true => visibility_default(),
+        false => visibility_pub()
+    };
+    let signature = function_signature(fun);
+    let call_def_expr = factory_call_def_with_amount(fun);
+    let attrs = function_filtered_attrs(fun);
+
+    env_call(signature, call_def_expr, attrs, vis)
+}
+
 fn env_call(
     sig: syn::Signature,
     call_def_expr: syn::Expr,
