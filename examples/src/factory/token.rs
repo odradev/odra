@@ -1,4 +1,4 @@
-use odra::{casper_types::U256, prelude::*};
+use odra::{casper_types::U256, prelude::*, ContractRef};
 use odra_modules::{access::Ownable, cep18_token::Cep18};
 
 #[odra::module(factory=on)]
@@ -32,17 +32,44 @@ impl FToken {
     }
 }
 
+#[odra::module]
+pub struct FactoryProxy {
+    factory_address: Var<Address>
+}
+
+#[odra::module]
+impl FactoryProxy {
+    pub fn init(&mut self, address: Address) {
+        self.factory_address.set(address);
+    }
+
+    pub fn deploy_new_contract(&self) -> Address {
+        let factory_address = self.factory_address.get().unwrap_or_revert(self);
+
+        let mut factory = FTokenFactoryContractRef::new(self.env(), factory_address);
+        let (addr, _uref) = factory.new_contract(
+            "TokenContract".to_string(),
+            "Token".to_string(),
+            "TTK".to_string(),
+            18,
+            U256::from(1000u64)
+        );
+        addr
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use alloc::string::ToString;
     use odra::{
         casper_types::U256,
-        host::{Deployer, HostRef, NoArgs}
+        host::{Deployer, HostRef, NoArgs},
+        prelude::Addressable
     };
 
     use crate::factory::token::{
         FToken as Token, FTokenFactory as TokenFactory, FTokenHostRef,
-        FTokenInitArgs as TokenInitArgs
+        FTokenInitArgs as TokenInitArgs, FactoryProxy, FactoryProxyInitArgs
     };
 
     #[test]
@@ -83,5 +110,24 @@ mod tests {
         assert_eq!(token.name(), "Token".to_string());
         assert_eq!(token.symbol(), "TTK".to_string());
         assert_eq!(token.total_supply(), U256::from(500u64));
+    }
+
+    #[test]
+    fn test_proxy() {
+        let env = odra_test::env();
+        let factory = TokenFactory::deploy(&env, NoArgs);
+        let proxy = FactoryProxy::deploy(
+            &env,
+            FactoryProxyInitArgs {
+                address: factory.address()
+            }
+        );
+
+        let addr = proxy.deploy_new_contract();
+        let token = FTokenHostRef::new(addr, env);
+        assert_eq!(token.get_owner(), proxy.address());
+        assert_eq!(token.name(), "Token".to_string());
+        assert_eq!(token.symbol(), "TTK".to_string());
+        assert_eq!(token.total_supply(), U256::from(1000u64));
     }
 }
