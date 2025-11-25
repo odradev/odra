@@ -158,6 +158,7 @@ impl OdraCli {
         let mut container = DeployedContractsContainer::instance(storage);
 
         // Register the contracts from the container in the host environment.
+        // Only register contracts that have callers (were added via .contract::<T>() in the builder).
         for deployed_contract in container.all_contracts() {
             let caller = self.callers.get(&(deployed_contract.name(), deployed_contract.key_name())).unwrap_or_else(|| {
                 let path = match &contracts_path {

@@ -27,7 +27,9 @@ pub enum ContractError {
     #[error("Couldn't find contract `{0}`")]
     NotFound(String),
     #[error("Couldn't find schema file for contract `{0}`")]
-    SchemaFileNotFound(String)
+    SchemaFileNotFound(String),
+    #[error("Contract `{0}` already exists")]
+    ContractExists(String)
 }
 
 /// Represents storage for deployed contracts.
@@ -130,8 +132,8 @@ pub trait ContractProvider {
 /// The data is stored in a TOML file `deployed_contracts.toml` in the
 /// `{project_root}/resources` directory.
 pub struct DeployedContractsContainer {
-    data: ContractsData,
-    storage: Box<dyn ContractStorage>
+    data: std::cell::RefCell<ContractsData>,
+    storage: std::cell::RefCell<Box<dyn ContractStorage>>
 }
 
 impl DeployedContractsContainer {
@@ -139,27 +141,32 @@ impl DeployedContractsContainer {
     pub(crate) fn instance(storage: impl ContractStorage + 'static) -> Self {
         match storage.read() {
             Ok(data) => Self {
-                data,
-                storage: Box::new(storage)
+                data: std::cell::RefCell::new(data),
+                storage: std::cell::RefCell::new(Box::new(storage))
             },
             Err(_) => Self {
-                data: Default::default(),
-                storage: Box::new(storage)
+                data: std::cell::RefCell::new(Default::default()),
+                storage: std::cell::RefCell::new(Box::new(storage))
             }
         }
     }
 
-    pub fn apply_deploy_mode(&mut self, mode: String) -> Result<(), ContractError> {
+    pub fn apply_deploy_mode(&self, mode: String) -> Result<(), ContractError> {
         match mode.as_str() {
             DEPLOY_MODE_OVERRIDE => {
-                self.data.contracts.clear();
-                self.storage.write(&self.data)?;
+                self.data.borrow_mut().contracts.clear();
+                let data = self.data.borrow();
+                let mut storage = self.storage.borrow_mut();
+                storage.write(&data)?;
                 log("Contracts configuration has been overridden");
             }
             DEPLOY_MODE_ARCHIVE => {
-                self.storage.backup()?;
-                self.data.contracts.clear();
-                self.storage.write(&self.data)?;
+                let storage = self.storage.borrow_mut();
+                storage.backup()?;
+                self.data.borrow_mut().contracts.clear();
+                let data = self.data.borrow();
+                let mut storage = self.storage.borrow_mut();
+                storage.write(&data)?;
                 log("Starting fresh deployment. Previous contracts configuration has been backed up.");
             }
             _ => {} // default mode does nothing
@@ -169,20 +176,23 @@ impl DeployedContractsContainer {
 
     /// Adds a contract to the container.
     pub fn add_contract_named<T: HostRef + HasIdent>(
-        &mut self,
+        &self,
         contract: &T,
         package_name: Option<String>
     ) -> Result<(), ContractError> {
+        // Try to add the contract - will fail if package_name already exists
         self.data
-            .add_contract::<T>(contract.address(), package_name);
-        self.storage.write(&self.data)
+            .borrow_mut()
+            .add_contract::<T>(contract.address(), package_name)?;
+
+        // Save to storage
+        let data = self.data.borrow();
+        let mut storage = self.storage.borrow_mut();
+        storage.write(&data)
     }
 
     /// Adds a contract to the container.
-    pub fn add_contract<T: HostRef + HasIdent>(
-        &mut self,
-        contract: &T
-    ) -> Result<(), ContractError> {
+    pub fn add_contract<T: HostRef + HasIdent>(&self, contract: &T) -> Result<(), ContractError> {
         self.add_contract_named(contract, None)
     }
 }
@@ -202,6 +212,7 @@ impl ContractProvider for DeployedContractsContainer {
     ) -> Result<T::HostRef, ContractError> {
         let name = package_name.unwrap_or(T::HostRef::ident());
         self.data
+            .borrow()
             .contracts()
             .iter()
             .find(|c| c.key_name() == name)
@@ -211,11 +222,12 @@ impl ContractProvider for DeployedContractsContainer {
     }
 
     fn all_contracts(&self) -> Vec<DeployedContract> {
-        self.data.contracts().clone()
+        self.data.borrow().contracts().clone()
     }
 
     fn address_by_name(&self, package_name: &str) -> Option<Address> {
         self.data
+            .borrow()
             .contracts()
             .iter()
             .find(|c| c.key_name() == package_name)
@@ -276,11 +288,25 @@ impl Default for ContractsData {
 }
 
 impl ContractsData {
-    pub fn add_contract<T: HasIdent>(&mut self, address: Address, package_name: Option<String>) {
+    pub fn add_contract<T: HasIdent>(
+        &mut self,
+        address: Address,
+        package_name: Option<String>
+    ) -> Result<(), ContractError> {
         let contract = DeployedContract::new::<T>(address, package_name);
-        self.contracts.retain(|c| c.name != contract.package_name);
+
+        // Check if a contract with this package_name already exists
+        if self
+            .contracts
+            .iter()
+            .any(|c| c.package_name == contract.package_name)
+        {
+            return Err(ContractError::ContractExists(contract.package_name));
+        }
+
         self.contracts.push(contract);
         self.last_updated = Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true);
+        Ok(())
     }
 
     fn contracts(&self) -> &Vec<DeployedContract> {
