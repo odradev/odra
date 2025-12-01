@@ -270,7 +270,7 @@ fn getter_code(member: &StructMember) -> proc_macro2::TokenStream {
     quote::quote! {
         #[wasm_bindgen(getter)]
         pub fn #ident(&self) -> #ty {
-            odra_wasm_client::types::IntoWasmValue::into_odra_value(self.#ident.clone())
+            odra_wasm_client::types::IntoWasmValue::to_wasm_value(self.#ident.clone())
         }
     }
 }
@@ -313,5 +313,39 @@ mod test {
         let tokens = field_def(&field);
         let expected = parse_quote!(#[wasm_bindgen(js_name = "testFieldRustStyle")] pub test_field_rust_style: String);
         pretty_assertions::assert_eq!(tokens, expected);
+    }
+
+    #[test]
+    fn test_getter_code() {
+        let field = StructMember {
+            name: "test".to_string(),
+            description: None,
+            ty: Type(NamedCLType::U128)
+        };
+        let tokens = getter_code(&field);
+        let expected = quote::quote!(
+            #[wasm_bindgen(getter)]
+            pub fn test(&self) -> odra_wasm_client::types::U128 {
+                odra_wasm_client::types::IntoWasmValue::to_wasm_value(self.test.clone())
+            }
+        );
+        pretty_assertions::assert_eq!(tokens.to_string(), expected.to_string());
+    }
+
+    #[test]
+    fn test_setter_code() {
+        let field = StructMember {
+            name: "test".to_string(),
+            description: None,
+            ty: Type(NamedCLType::U128)
+        };
+        let tokens = setter_code(&field);
+        let expected = quote::quote!(
+            #[wasm_bindgen(setter)]
+            pub fn set_test(&mut self, value: odra_wasm_client::types::U128) {
+                self.test = odra_wasm_client::types::IntoOdraValue::into_odra_value(value).unwrap();
+            }
+        );
+        pretty_assertions::assert_eq!(tokens.to_string(), expected.to_string());
     }
 }
