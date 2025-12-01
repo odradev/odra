@@ -270,7 +270,7 @@ fn getter_code(member: &StructMember) -> proc_macro2::TokenStream {
     quote::quote! {
         #[wasm_bindgen(getter)]
         pub fn #ident(&self) -> #ty {
-            odra_wasm_client::types::IntoWasmValue::into_odra_value(self.#ident.clone())
+            odra_wasm_client::types::IntoWasmValue::to_wasm_value(self.#ident.clone())
         }
     }
 }
