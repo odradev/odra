@@ -1,21 +1,24 @@
 [package]
 name = "odra-wasm-client-builder"
 description = "Wasm client"
-edition = "2021"
-version.workspace = true
-authors.workspace = true
-license.workspace = true
-homepage.workspace = true
-repository.workspace = true
+
+authors = { workspace = true }
+edition = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+readme = { workspace = true }
+repository = { workspace = true }
+version = { workspace = true }
 
 [dependencies]
-odra-schema = { workspace = true}
-serde_json = { workspace = true }
-quote = { version = "1.0.33" }
-syn = { version = "2.0.29", features = ["full", "extra-traits"] }
-proc-macro2 = { version = "1.0.36" }
+odra-schema = { workspace = true }
+
 convert_case = { workspace = true }
-thiserror = "1.0.40"
+proc-macro2 = { workspace = true }
+quote = { workspace = true }
+serde_json = { workspace = true }
+syn = { workspace = true }
+thiserror = { workspace = true }
 
 [dev-dependencies]
 pretty_assertions = "1.4.0"

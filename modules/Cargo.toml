@@ -1,28 +1,24 @@
 [package]
 name = "odra-modules"
-version = "2.4.1"
-edition = "2021"
-authors = ["Jakub Płaskonka <kuba@odra.dev>", "Krzysztof Pobiarżyn <krzysztof@odra.dev>", "Maciej Zieliński <maciej@odra.dev>"]
-license = "MIT"
-repository = "https://github.com/odradev/odra"
 description = "Collection of reusable Odra modules."
-keywords = ["wasm", "webassembly", "blockchain"]
+
+authors = { workspace = true }
+edition = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+readme = { workspace = true }
+repository = { workspace = true }
+version = { workspace = true }
 
 [dependencies]
-odra = { path = "../odra", version = "2.4.1", default-features = false }
-serde = { workspace = true, default-features = false }
-serde_json = { workspace = true, default-features = false }
-serde-json-wasm = { workspace = true }
-base16 = { workspace = true }
 base64 = { workspace = true }
+odra = { path = "../odra", version = "2.4.1", default-features = false }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 odra-build = { path = "../odra-build", version = "2.4.1" }
 
 [dev-dependencies]
 odra-test = { path = "../odra-test", version = "2.4.1" }
-once_cell = "1"
-blake2 = "0.10.6"
 
 [build-dependencies]
 odra-build = { path = "../odra-build", version = "2.4.1" }
@@ -43,4 +39,3 @@ test = false
 
 [lints.rust]
 missing_docs = "warn"
-

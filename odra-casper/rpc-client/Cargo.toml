@@ -1,29 +1,31 @@
 [package]
 name = "odra-casper-rpc-client"
 description = "RPC Client for the Casper Node."
-edition = "2021"
-version = { workspace = true }
+
 authors = { workspace = true }
-license = { workspace = true }
+edition = { workspace = true }
 homepage = { workspace = true }
+license = { workspace = true }
+readme = { workspace = true }
 repository = { workspace = true }
+version = { workspace = true }
 
 [dependencies]
 odra-core = { workspace = true }
-casper-types = { workspace = true, features = ["std-fs-io"] }
-casper-client = { workspace = true }
-project-root = { workspace = true }
 
-serde_json = { version = "1.0", features = ["raw_value"] }
-itertools = "0.14.0"
-dotenv = "0.15.0"
-prettycli = "0.1.1"
-thiserror = "1.0.40"
+casper-client = { workspace = true }
+casper-types = { workspace = true, features = ["std-fs-io"] }
+
 base16 = { workspace = true }
+bytes = { workspace = true }
+dotenv = { workspace = true }
+futures-util = { workspace = true }
+itertools = { workspace = true }
+prettycli = { workspace = true }
+project-root = { workspace = true }
+rand = { workspace = true }
+reqwest = { workspace = true, features = ["stream"] }
+serde_json = { workspace = true, features = ["raw_value"] }
+thiserror = { workspace = true }
 tokio = { workspace = true, features = ["rt"] }
-toml = "0.8.20"
-rand = "0.8.5"
-reqwest = { version = "0.11", features = ["stream"] }
-futures-util = "0.3"
-serde = { version = "1.0", features = ["derive"] }
-bytes = "1.0"
+toml = { workspace = true }

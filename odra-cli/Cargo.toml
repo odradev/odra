@@ -1,29 +1,31 @@
 [package]
 name = "odra-cli"
 description = "Odra CLI - Command Line Interface for Odra smart contracts."
-edition = "2021"
-version.workspace = true
-authors.workspace = true
-license.workspace = true
-homepage.workspace = true
-repository.workspace = true
 
+authors = { workspace = true }
+edition = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+readme = { workspace = true }
+repository = { workspace = true }
+version = { workspace = true }
 
 [dependencies]
-clap = { version = "4.5.21", features = ["derive", "cargo", "string"] }
-prettycli = "0.1.1"
 odra = { path = "../odra", version = "2.4.1", default-features = false }
-odra-casper-livenet-env = { path = "../odra-casper/livenet-env", version = "2.4.1"}
-chrono = { version = "0.4", features = ["serde"] }
-serde = { version = "1", default-features = false }
-serde_json = { version = "1", default-features = false }
-serde_derive = { version = "1", features = ["default"] }
-toml = "0.8.13"
+odra-casper-livenet-env = { path = "../odra-casper/livenet-env", version = "2.4.1" }
+
+anyhow = { workspace = true }
+chrono = { workspace = true, features = ["serde"] }
+clap = { workspace = true, features = ["cargo", "derive", "string"] }
+hex = { workspace = true }
+pretty_assertions = { workspace = true }
+prettycli = { workspace = true }
 project-root = { workspace = true }
-pretty_assertions = "1.4.0"
-anyhow = "1.0.86"
-thiserror = "1.0.30"
-hex = "0.4.3"
+serde = { workspace = true, default-features = false }
+serde_derive = { workspace = true, features = ["default"] }
+serde_json = { workspace = true, default-features = false }
+thiserror = { workspace = true }
+toml = { workspace = true }
 
 [build-dependencies]
 odra-build = { path = "../odra-build", version = "2.4.1", default-features = false }

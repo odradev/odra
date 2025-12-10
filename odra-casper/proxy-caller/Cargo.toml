@@ -1,28 +1,35 @@
 [package]
 name = "odra-casper-proxy-caller"
+description = "Proxy caller used by Odra Framework"
+
+authors = [
+  "Jakub Płaskonka <kuba@odra.dev>",
+  "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
+  "Maciej Zieliński <maciej@odra.dev>",
+]
 edition = "2021"
-version = "2.4.1"
-authors = ["Jakub Płaskonka <kuba@odra.dev>", "Krzysztof Pobiarżyn <krzysztof@odra.dev>", "Maciej Zieliński <maciej@odra.dev>"]
-license = "MIT"
 homepage = "https://odra.dev/docs"
+license = "MIT"
+readme = "README.md"
 repository = "https://github.com/odradev/odra"
+version = "2.4.1"
 
 [dependencies]
-odra-core = { path = "../../core" }
 odra-casper-wasm-env = { path = "../wasm-env" }
+odra-core = { path = "../../core" }
 
 [[bin]]
-name = "proxy_caller"
-path = "bin/proxy_caller.rs"
 bench = false
 doctest = false
+name = "proxy_caller"
+path = "bin/proxy_caller.rs"
 test = false
 
 [[bin]]
-name = "proxy_caller_with_return"
-path = "bin/proxy_caller_with_return.rs"
 bench = false
 doctest = false
+name = "proxy_caller_with_return"
+path = "bin/proxy_caller_with_return.rs"
 test = false
 
 [lints.rust]

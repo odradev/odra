@@ -1,2 +1,2 @@
 [template]
-sub_templates = ["full", "blank"]
+sub_templates = ["blank", "full"]
