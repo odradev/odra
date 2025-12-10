@@ -23,7 +23,7 @@ futures-util = { workspace = true }
 itertools = { workspace = true }
 prettycli = { workspace = true }
 project-root = { workspace = true }
-rand = { workspace = true }
+rand = { workspace = true, features = ["default"] }
 reqwest = { workspace = true, features = ["stream"] }
 serde_json = { workspace = true, features = ["raw_value"] }
 thiserror = { workspace = true }

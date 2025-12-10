@@ -7,9 +7,9 @@
     "Maciej Zieliński <maciej@odra.dev>"
   ],
   "repository": "https://github.com/odradev/odra",
-  "homepage": null,
+  "homepage": "https://odra.dev/docs",
   "contract_name": "WrappedNativeToken",
-  "contract_version": "2.4.1",
+  "contract_version": "2.5.0",
   "types": [
     {
       "struct": {
@@ -253,6 +253,28 @@
       "description": "Withdraws native tokens from the contract.",
       "is_mutable": true,
       "arguments": [
+        {
+          "name": "amount",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "withdraw_to",
+      "description": "Withdraws native tokens from the contract to a specific recipient.",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "recipient",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
         {
           "name": "amount",
           "description": null,

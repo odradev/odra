@@ -99,25 +99,7 @@
       "name": "batch_upgrade_child_contract",
       "args": [
         {
-          "name": "default_args",
-          "ty": {
-            "List": "U8"
-          },
-          "is_ref": false,
-          "is_slice": false,
-          "is_required": true
-        },
-        {
-          "name": "names_to_upgrade",
-          "ty": {
-            "List": "U8"
-          },
-          "is_ref": false,
-          "is_slice": false,
-          "is_required": true
-        },
-        {
-          "name": "specific_args",
+          "name": "args",
           "ty": {
             "List": "U8"
           },

@@ -2,7 +2,7 @@
 
 Changelog for `odra`.
 
-## [2.4.1] - 2025-09-10
+## [2.5.0] - 2025-12-XX
 ### Changed
 - Refactor of `CEP-95` token implementation.
 

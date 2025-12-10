@@ -1,11 +1,15 @@
 {
   "casper_contract_schema_version": 1,
   "toolchain": "rustc 1.85.0-nightly (d117b7f21 2024-12-31)",
-  "authors": [],
-  "repository": null,
-  "homepage": null,
+  "authors": [
+    "Jakub Płaskonka <kuba@odra.dev>",
+    "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
+    "Maciej Zieliński <maciej@odra.dev>"
+  ],
+  "repository": "https://github.com/odradev/odra",
+  "homepage": "https://odra.dev/docs",
   "contract_name": "ReentrancyMock",
-  "contract_version": "2.4.1",
+  "contract_version": "2.5.0",
   "types": [],
   "errors": [],
   "entry_points": [

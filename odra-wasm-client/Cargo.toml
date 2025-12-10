@@ -16,7 +16,7 @@ odra-core = { workspace = true }
 casper-client = { workspace = true }
 casper-types = { workspace = true, features = ["datasize"] }
 
-gloo-utils = { workspace = true, default-features = false, features = ["serde"] }
+gloo-utils = { workspace = true, features = ["serde"] }
 hex = { workspace = true }
 js-sys = { workspace = true }
 serde = { workspace = true, features = ["derive"] }

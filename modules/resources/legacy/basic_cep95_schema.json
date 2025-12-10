@@ -166,6 +166,29 @@
           "is_required": true
         }
       ]
+    },
+    {
+      "name": "OwnershipTransferred",
+      "args": [
+        {
+          "name": "previous_owner",
+          "ty": {
+            "Option": "Key"
+          },
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "new_owner",
+          "ty": {
+            "Option": "Key"
+          },
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ]
     }
   ],
   "entrypoints": [
@@ -301,6 +324,14 @@
         }
       ],
       "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "assert_owner",
+      "args": [],
+      "is_mutable": false,
       "return_ty": "Unit",
       "ty": "Public",
       "attributes": []

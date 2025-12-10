@@ -7,9 +7,9 @@
     "Maciej Zieliński <maciej@odra.dev>"
   ],
   "repository": "https://github.com/odradev/odra",
-  "homepage": null,
+  "homepage": "https://odra.dev/docs",
   "contract_name": "Erc721Receiver",
-  "contract_version": "2.4.1",
+  "contract_version": "2.5.0",
   "types": [],
   "errors": [],
   "entry_points": [
