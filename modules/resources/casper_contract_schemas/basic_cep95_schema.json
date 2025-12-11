@@ -7,9 +7,9 @@
     "Maciej Zieliński <maciej@odra.dev>"
   ],
   "repository": "https://github.com/odradev/odra",
-  "homepage": null,
+  "homepage": "https://odra.dev/docs",
   "contract_name": "BasicCep95",
-  "contract_version": "2.4.1",
+  "contract_version": "2.5.0",
   "types": [
     {
       "struct": {
@@ -103,6 +103,28 @@
     },
     {
       "struct": {
+        "name": "OwnershipTransferred",
+        "description": null,
+        "members": [
+          {
+            "name": "previous_owner",
+            "description": null,
+            "ty": {
+              "Option": "Key"
+            }
+          },
+          {
+            "name": "new_owner",
+            "description": null,
+            "ty": {
+              "Option": "Key"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
         "name": "RevokeApproval",
         "description": null,
         "members": [
@@ -178,14 +200,39 @@
       "discriminant": 40004
     },
     {
+      "name": "CallerNotTheNewOwner",
+      "description": "The caller is not the new owner.",
+      "discriminant": 20002
+    },
+    {
+      "name": "CallerNotTheOwner",
+      "description": "The caller is not the owner.",
+      "discriminant": 20001
+    },
+    {
       "name": "InvalidTokenId",
       "description": "The token ID is invalid.",
       "discriminant": 40005
     },
     {
+      "name": "MissingRole",
+      "description": "The role is missing.",
+      "discriminant": 20003
+    },
+    {
       "name": "NotAnOwnerOrApproved",
       "description": "The token ID is invalid.",
       "discriminant": 40002
+    },
+    {
+      "name": "OwnerNotSet",
+      "description": "The owner is not set.",
+      "discriminant": 20000
+    },
+    {
+      "name": "RoleRenounceForAnotherAddress",
+      "description": "The role cannot be renounced for another address.",
+      "discriminant": 20004
     },
     {
       "name": "TokenAlreadyExists",
@@ -309,6 +356,15 @@
           "optional": false
         }
       ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "assert_owner",
+      "description": "",
+      "is_mutable": false,
+      "arguments": [],
       "return_ty": "Unit",
       "is_contract_context": true,
       "access": "public"
@@ -585,6 +641,10 @@
     {
       "name": "Mint",
       "ty": "Mint"
+    },
+    {
+      "name": "OwnershipTransferred",
+      "ty": "OwnershipTransferred"
     },
     {
       "name": "RevokeApproval",

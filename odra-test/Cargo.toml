@@ -1,16 +1,18 @@
 [package]
 name = "odra-test"
 description = "Test backend for the Odra smart contracts."
-edition = "2021"
-version = { workspace = true }
+
 authors = { workspace = true }
-license = { workspace = true }
+edition = { workspace = true }
 homepage = { workspace = true }
+license = { workspace = true }
+readme = { workspace = true }
 repository = { workspace = true }
+version = { workspace = true }
 
 [dependencies]
-odra-core = { workspace = true }
 odra-casper-test-vm = { workspace = true }
+odra-core = { workspace = true }
 odra-vm = { workspace = true }
 
 [lints.rust]

@@ -1,23 +1,28 @@
 [package]
 name = "odra-casper-wasm-env"
 description = "Odra Casper WASM backend."
-edition = "2021"
-version = { workspace = true }
+
 authors = { workspace = true }
-license = { workspace = true }
+edition = { workspace = true }
 homepage = { workspace = true }
+license = { workspace = true }
+readme = { workspace = true }
 repository = { workspace = true }
+version = { workspace = true }
 
 [dependencies]
-lazy_static = { workspace = true, features = [ "spin_no_std" ] }
 odra-core = { workspace = true }
 
+lazy_static = { workspace = true, features = ["spin_no_std"] }
+
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-casper-contract = { workspace = true,  default-features = false }
+casper-contract = { workspace = true, default-features = false }
 ink_allocator = { version = "5.0.0", default-features = false }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-casper-contract = { workspace = true, default-features = false, features = ["test-support"] }
+casper-contract = { workspace = true, default-features = false, features = [
+  "test-support",
+] }
 
 [lints.rust]
 missing_docs = "warn"

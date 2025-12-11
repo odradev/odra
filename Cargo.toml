@@ -1,85 +1,111 @@
 [workspace]
-members = [
-    "odra",
-    "odra-vm",
-    "benchmark",
-    "core",
-    "examples",
-    "examples/ourcoin",
-    "modules",
-    "odra-macros",
-    "odra-casper/rpc-client",
-    "odra-casper/livenet-env",
-    "odra-casper/wasm-env",
-    "odra-casper/test-vm",
-    "odra-cli",
-    "odra-schema",
-    "odra-test",
-    "odra-build",
-    "odra-bdd",
-    "odra-wasm-client",
-    "odra-wasm-client-builder",
-]
 exclude = [
-    "odra-casper/proxy-caller",
-    "templates/blank",
-    "templates/full",
-    "templates/workspace",
-    "tests",
+  "odra-casper/proxy-caller",
+  "templates/blank",
+  "templates/full",
+  "templates/workspace",
+  "tests",
+]
+members = [
+  "benchmark",
+  "core",
+  "examples",
+  "examples/ourcoin",
+  "modules",
+  "odra",
+  "odra-bdd",
+  "odra-build",
+  "odra-casper/livenet-env",
+  "odra-casper/rpc-client",
+  "odra-casper/test-vm",
+  "odra-casper/wasm-env",
+  "odra-cli",
+  "odra-macros",
+  "odra-schema",
+  "odra-test",
+  "odra-vm",
+  "odra-wasm-client",
+  "odra-wasm-client-builder",
 ]
 resolver = "2"
 
 [workspace.package]
-version = "2.4.1"
 authors = [
-    "Jakub Płaskonka <kuba@odra.dev>",
-    "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
-    "Maciej Zieliński <maciej@odra.dev>",
+  "Jakub Płaskonka <kuba@odra.dev>",
+  "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
+  "Maciej Zieliński <maciej@odra.dev>",
 ]
-license = "MIT"
+edition = "2021"
 homepage = "https://odra.dev/docs"
+license = "MIT"
+readme = "README.md"
 repository = "https://github.com/odradev/odra"
+version = "2.5.0"
 
 [workspace.dependencies]
-odra-core = { path = "core", version = "2.4.1" }
-odra-macros = { path = "odra-macros", version = "2.4.1" }
-odra-casper-test-vm = { path = "odra-casper/test-vm", version = "2.4.1" }
-odra-casper-rpc-client = { path = "odra-casper/rpc-client", version = "2.4.1" }
-odra-vm = { path = "odra-vm", version = "2.4.1" }
-odra-casper-wasm-env = { path = "odra-casper/wasm-env", version = "2.4.1" }
-odra-schema = { path = "odra-schema", version = "2.4.1" }
-odra-wasm-client = { path = "odra-wasm-client", version = "2.4.1" }
-casper-contract = { version = "5.1.0",  default-features = false }
-casper-contract-schema = { version = "0.6.0", git  ="https://github.com/odradev/casper-contract-schema.git",branch = "feature/schema-deser" }
-casper-types = "6.0.0"
-casper-execution-engine = "8.1.0"
-casper-engine-test-support = "8.1.0"
-casper-storage = "2.0.0"
+odra-casper-rpc-client = { path = "odra-casper/rpc-client", version = "2.5.0" }
+odra-casper-test-vm = { path = "odra-casper/test-vm", version = "2.5.0" }
+odra-casper-wasm-env = { path = "odra-casper/wasm-env", version = "2.5.0" }
+odra-core = { path = "core", version = "2.5.0" }
+odra-macros = { path = "odra-macros", version = "2.5.0" }
+odra-schema = { path = "odra-schema", version = "2.5.0" }
+odra-vm = { path = "odra-vm", version = "2.5.0" }
+odra-wasm-client = { path = "odra-wasm-client", version = "2.5.0" }
+
+casper-client = { version = "5.0", default-features = false }
+casper-contract = { version = "5.1", default-features = false }
+casper-contract-schema = { version = "0.6.0" }
+casper-engine-test-support = "8.1"
 casper-event-standard = "0.7"
-casper-client = { version = "5.0.0", default-features = false }
-blake2 = "0.10.6"
-log = "0.4.20"
-env_logger = "0.11.1"
-serde = { version = "1.0.195", default-features = false }
-serde_json = { version = "1.0.113", default-features = false }
-num-traits = { version = "0.2.14", default-features = false }
-mockall = { version = "0.12.1" }
-sha3 = { version = "0.10", default-features = false }
-hex = "0.4"
-tokio = "1.38"
+casper-execution-engine = "8.1"
+casper-storage = "2.1"
+casper-types = "6.1"
+
+anyhow = { version = "1.0", default-features = false }
+backtrace = { version = "0.3" }
 base16 = { version = "0.2", default-features = false }
 base64 = { version = "0.22", default-features = false, features = ["alloc"] }
-serde-json-wasm = { version = "1.0", default-features = false }
-anyhow = { version = "1.0.86", default-features = false }
+blake2 = "0.10"
+bytes = "1.11"
+chrono = { version = "0.4"}
+clap = { version = "4.5"}
+convert_case = "0.6"
+cucumber = "0.21"
+derive-try-from-ref = "0.1"
+derive_more = { version = "2.1.0", features = ["full"] }
+dotenv = "0.15"
+futures = "0.3"
+futures-util = "0.3"
+gloo-utils = { version = "0.2"}
+hex = "0.4"
+itertools = "0.14"
+js-sys = "0.3"
+lazy_static = "1.5.0"
+log = "0.4"
+mockall = { version = "0.14" }
+num-traits = { version = "0.2", default-features = false }
+pretty_assertions = "1.4"
+prettycli = "0.1"
+proc-macro2 = "1.0"
+project-root = "0.2"
+quote = "1.0"
 rand = { version = "0.9", default-features = false }
 rand_chacha = { version = "0.9", default-features = false }
-convert_case = "0.5.0"
-lazy_static = "1.5.0"
-cucumber = "0.21.1"
-futures = "0.3.5"
-derive_more = { version = "1.0.0", features = ["full"] }
-project-root = "0.2.2"
-backtrace = { version = "0.3" }
+reqwest = { version = "0.12" }
+serde = { version = "1.0", default-features = false }
+serde_derive = {  version = "1.0" }
+serde-json-wasm = { version = "1.0", default-features = false }
+serde_json = { version = "1.0", default-features = false }
+sha3 = { version = "0.10", default-features = false }
+syn = "2.0"
+syn_derive = "0.2"
+thiserror = "1.0"
+tokio = "1.48"
+toml = "0.9"
+wasm-bindgen = "=0.2.100"
+wasm-bindgen-futures = "0.4"
+web-sys = { version = "0.3"}
+
 
 [profile.release]
 codegen-units = 1

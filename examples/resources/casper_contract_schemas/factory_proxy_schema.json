@@ -8,59 +8,25 @@
   ],
   "repository": "https://github.com/odradev/odra",
   "homepage": "https://odra.dev/docs",
-  "contract_name": "DogContract3",
+  "contract_name": "FactoryProxy",
   "contract_version": "2.5.0",
   "types": [],
   "errors": [],
   "entry_points": [
     {
-      "name": "name",
-      "description": "Returns the dog's name.",
+      "name": "deploy_new_contract",
+      "description": "",
       "is_mutable": false,
       "arguments": [],
-      "return_ty": "String",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "walks_amount",
-      "description": "Returns the amount of walks the dog has taken.",
-      "is_mutable": false,
-      "arguments": [],
-      "return_ty": "U32",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "walks_total_length",
-      "description": "Returns the total length of the dog's walks.",
-      "is_mutable": false,
-      "arguments": [],
-      "return_ty": "U32",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "walk_the_dog",
-      "description": "Adds a walk to the dog's walks.",
-      "is_mutable": true,
-      "arguments": [
-        {
-          "name": "length",
-          "description": null,
-          "ty": "U32",
-          "optional": false
-        }
-      ],
-      "return_ty": "Unit",
+      "return_ty": "Key",
       "is_contract_context": true,
       "access": "public"
     }
   ],
   "events": [],
   "call": {
-    "wasm_file_name": "DogContract3.wasm",
-    "description": "Initializes the contract with the given parameters.",
+    "wasm_file_name": "FactoryProxy.wasm",
+    "description": "",
     "arguments": [
       {
         "name": "odra_cfg_package_hash_key_name",
@@ -87,9 +53,9 @@
         "optional": false
       },
       {
-        "name": "name",
+        "name": "address",
         "description": null,
-        "ty": "String",
+        "ty": "Key",
         "optional": false
       }
     ]

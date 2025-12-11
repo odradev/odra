@@ -1,19 +1,22 @@
 [package]
 name = "odra-vm"
 description = "Odra Virtual Machine for testing and development."
-edition = "2021"
-version = { workspace = true }
+
 authors = { workspace = true }
-license = { workspace = true }
+edition = { workspace = true }
 homepage = { workspace = true }
+license = { workspace = true }
+readme = { workspace = true }
 repository = { workspace = true }
+version = { workspace = true }
 
 [dependencies]
 odra-core = { workspace = true }
+
 anyhow = { workspace = true }
+backtrace = { workspace = true }
 blake2 = { workspace = true }
 rand = { workspace = true, features = ["thread_rng"] }
-backtrace = { workspace = true }
 
 [lints.rust]
 missing_docs = "warn"

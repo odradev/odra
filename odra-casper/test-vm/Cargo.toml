@@ -1,25 +1,29 @@
 [package]
 name = "odra-casper-test-vm"
-edition = "2021"
 description = "Odra test environment for the Casper Blockchain."
-keywords = ["wasm", "webassembly", "blockchain"]
-version = { workspace = true }
+
 authors = { workspace = true }
-license = { workspace = true }
+edition = { workspace = true }
 homepage = { workspace = true }
+license = { workspace = true }
+readme = { workspace = true }
 repository = { workspace = true }
+version = { workspace = true }
 
 [dependencies]
+odra-core = { workspace = true }
+
 casper-engine-test-support = { workspace = true }
 casper-execution-engine = { workspace = true }
 casper-storage = { workspace = true }
-odra-core = { workspace = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 casper-contract = { workspace = true, default-features = false }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-casper-contract = { workspace = true, default-features = false, features = ["test-support"] }
+casper-contract = { workspace = true, default-features = false, features = [
+  "test-support",
+] }
 
 [lints.rust]
 missing_docs = "warn"

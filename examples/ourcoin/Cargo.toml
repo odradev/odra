@@ -1,19 +1,20 @@
 [package]
 name = "ourcoin"
-version = "0.1.0"
 edition = "2021"
+version = "0.1.0"
 
 [dependencies]
-odra = { path = "../../odra", features = [], default-features = false }
-odra-modules = { path = "../../modules", features = [], default-features = false }
+odra = { path = "../../odra", default-features = false }
+odra-build = { path = "../../odra-build", default-features = false }
 odra-casper-livenet-env = { path = "../../odra-casper/livenet-env", optional = true }
-odra-build = { path = "../../odra-build", features = [], default-features = false }
+odra-modules = { path = "../../modules", default-features = false }
 
 [dev-dependencies]
-odra-test = { path = "../../odra-test", features = [], default-features = false }
+odra-test = { path = "../../odra-test", default-features = false }
 
 [build-dependencies]
-odra-build = { path = "../../odra-build", features = [], default-features = false }
+odra-build = { path = "../../odra-build", features = [
+], default-features = false }
 
 [features]
 default = []

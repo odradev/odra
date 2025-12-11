@@ -1,5 +1,5 @@
 CARGO_ODRA_GIT_REPO := "https://github.com/odradev/cargo-odra"
-CARGO_ODRA_BRANCH := "feature/wasm-client-kpob"
+CARGO_ODRA_BRANCH := "release/0.1.6"
 BINARYEN_VERSION := "version_116"
 BINARYEN_CHECKSUM := "c55b74f3109cdae97490faf089b0286d3bba926bb6ea5ed00c8c784fc53718fd"
 set dotenv-load := true
@@ -47,13 +47,9 @@ build-proxy-callers:
     wasm-opt --signext-lowering target/wasm32-unknown-unknown/release/proxy_caller.wasm  -o target/wasm32-unknown-unknown/release/proxy_caller.wasm
     wasm-opt --signext-lowering target/wasm32-unknown-unknown/release/proxy_caller_with_return.wasm  -o target/wasm32-unknown-unknown/release/proxy_caller_with_return.wasm
     cp target/wasm32-unknown-unknown/release/proxy_caller.wasm \
-        odra-casper/test-vm/resources/proxy_caller.wasm
+        resources/proxy_caller.wasm
     cp target/wasm32-unknown-unknown/release/proxy_caller_with_return.wasm \
-        odra-casper/test-vm/resources/proxy_caller_with_return.wasm
-    cp target/wasm32-unknown-unknown/release/proxy_caller.wasm \
-        odra-casper/rpc-client/resources/proxy_caller.wasm
-    cp target/wasm32-unknown-unknown/release/proxy_caller_with_return.wasm \
-        odra-casper/rpc-client/resources/proxy_caller_with_return.wasm
+        resources/proxy_caller_with_return.wasm
 
 test-odra:
     cargo test

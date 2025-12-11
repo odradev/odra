@@ -1,9 +1,5 @@
 [workspace]
-members = [
-    "cli",
-    "flipper",
-    "flapper",
-]
+members = ["cli", "flapper", "flipper"]
 resolver = "2"
 
 [workspace.dependencies]

@@ -1,15 +1,17 @@
 [package]
 name = "odra-bdd"
 description = "BDD helper for Odra smart contracts."
-edition = "2021"
-version.workspace = true
-authors.workspace = true
-license.workspace = true
-homepage.workspace = true
-repository.workspace = true
+
+authors = { workspace = true }
+edition = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+readme = { workspace = true }
+repository = { workspace = true }
+version = { workspace = true }
 
 [dependencies]
-cucumber.workspace = true
-futures.workspace = true
-derive_more.workspace = true
-odra = { path = "../odra", version = "2.4.1" }
+odra = { path = "../odra", version = "2.5.0" }
+
+cucumber = { workspace = true}
+futures = { workspace = true }

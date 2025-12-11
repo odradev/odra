@@ -1,7 +1,7 @@
 [package]
-name = "{{project-name}}-wasm-client"
 description = "Wasm client"
 edition = "2021"
+name = "{{project-name}}-wasm-client"
 
 [dependencies]
 #odra_wasm_client_dependency
@@ -16,9 +16,9 @@ name = "{{lib-name}}_wasm_client"
 path = "src/lib.rs"
 
 [features]
-default = ["client"]
-codegen = ["odra-wasm-client-builder"]
 client = []
+codegen = ["odra-wasm-client-builder"]
+default = ["client"]
 
 [[bin]]
 name = "codegen"

@@ -73,9 +73,8 @@ impl super::CasperClient {
         })
         .result;
         let toml_bytes: &[u8] = chainspec.chainspec_bytes.chainspec_bytes();
-        let toml = String::from_utf8_lossy(toml_bytes);
-        toml.parse::<Value>()
-            .unwrap_or_else(|_| panic!("Couldn't parse chainspec bytes: {:?}", toml))
+        let toml = String::from_utf8(toml_bytes.to_vec()).unwrap();
+        toml::from_str(&toml).unwrap_or_else(|e| panic!("Couldn't parse chainspec bytes: {:?}", e))
     }
 
     /// Extracts era duration from chainspec.
