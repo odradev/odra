@@ -6,6 +6,9 @@ Changelog for `odra`.
 ### Changed
 - Refactor of `CEP-95` token implementation.
 
+### Added
+- `set_name`, `set_symbol` and `set_decimals` functions to `CEP-18` module.
+
 ## [2.4.0] - 2025-09-02
 ### Changed
 - Refactor of `CEP-95` token implementation.
