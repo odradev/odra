@@ -221,6 +221,21 @@ impl Cep18 {
             amount: *amount
         });
     }
+
+    /// Set name of the token.
+    pub fn set_name(&mut self, name: String) {
+        self.name.set(name);
+    }
+
+    /// Set symbol of the token.
+    pub fn set_symbol(&mut self, symbol: String) {
+        self.symbol.set(symbol);
+    }
+
+    /// Set decimals of the token.
+    pub fn set_decimals(&mut self, decimals: u8) {
+        self.decimals.set(decimals);
+    }
 }
 
 pub(crate) mod utils {
