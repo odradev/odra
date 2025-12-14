@@ -8,6 +8,7 @@ pub mod access;
 pub mod cep18;
 pub mod cep18_token;
 pub mod cep95;
+pub mod cep96;
 pub mod erc1155;
 pub mod erc1155_receiver;
 pub mod erc1155_token;
