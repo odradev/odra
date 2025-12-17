@@ -198,18 +198,25 @@ impl super::CasperClient {
         let watcher = TransactionWatcher::new(self.configuration.events_url.clone(), timeout);
 
         // Wait for the transaction to appear in the events stream
-        let found = watcher
+        let found_result = watcher
             .wait_for_transaction_hash(&transaction_hash_str)
-            .await?;
+            .await;
 
-        if !found {
-            return Err(ExecutionError(String::from(
+        match found_result {
+            Ok(true) => {
+                // Transaction found! Fetch the execution result
+                self.fetch_execution_result(transaction_hash).await
+            }
+            Ok(false) => Err(ExecutionError(String::from(
                 "Events stream ended before transaction was processed."
-            )));
+            ))),
+            Err(crate::error::LivenetError::TransactionTimeout) => {
+                log::info("Transaction watcher timed out. Checking manually...");
+                tokio::time::sleep(Duration::from_millis(1000)).await;
+                self.fetch_execution_result(transaction_hash).await
+            }
+            Err(e) => Err(e)
         }
-
-        // Transaction found! Fetch the execution result
-        self.fetch_execution_result(transaction_hash).await
     }
 
     /// Fetches the execution result for a transaction, with retry logic.

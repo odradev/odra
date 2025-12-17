@@ -27,7 +27,7 @@ mod event_matcher;
 mod sse_parser;
 
 use crate::error::LivenetError;
-use crate::error::LivenetError::{ClientError, ExecutionError};
+use crate::error::LivenetError::ClientError;
 use crate::log;
 use event_matcher::EventMatcher;
 use futures_util::StreamExt;
@@ -90,11 +90,7 @@ impl TransactionWatcher {
             self.monitor_events_until_found(event_stream, transaction_hash)
         )
         .await
-        .map_err(|_| {
-            ExecutionError(String::from(
-                "Timeout waiting for transaction to be processed."
-            ))
-        })?
+        .map_err(|_| LivenetError::TransactionTimeout)?
     }
 
     /// Connects to the Casper node's event stream.

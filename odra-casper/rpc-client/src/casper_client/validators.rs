@@ -49,8 +49,8 @@ impl super::CasperClient {
 
         let stored_value = self.query_global_state_maybe(key, None).await;
         match stored_value {
-            None => U512::zero(),
-            Some(sv) => match sv {
+            Ok(None) | Err(_) => U512::zero(),
+            Ok(Some(sv)) => match sv {
                 StoredValue::BidKind(bid_kind) => bid_kind.staked_amount().unwrap_or_default(),
                 _ => {
                     panic!(

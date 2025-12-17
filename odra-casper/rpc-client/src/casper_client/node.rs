@@ -6,6 +6,7 @@ use casper_client::cli::{get_node_status, get_state_root_hash};
 use casper_client::get_chainspec;
 use casper_types::{Digest, TimeDiff};
 use std::str::FromStr;
+use std::time::Duration;
 use toml::Value;
 
 /// Node-related methods implementation for CasperClient.
@@ -34,6 +35,7 @@ impl super::CasperClient {
     }
 
     pub async fn get_state_root_hash_digest(&self) -> Result<Digest> {
+        tokio::time::sleep(Duration::from_millis(100)).await;
         let response = get_state_root_hash(
             &self.rpc_id(),
             self.configuration.node_address(),

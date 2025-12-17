@@ -15,7 +15,9 @@ pub enum LivenetError {
     #[error("Casper client error: {0}")]
     ClientError(String),
     #[error("Couldn't query dictionary")]
-    DictQueryError
+    DictQueryError,
+    #[error("Timeout waiting for transaction")]
+    TransactionTimeout
 }
 
 impl LivenetError {
@@ -27,7 +29,9 @@ impl LivenetError {
             LivenetError::SerializationError => self.to_string(),
             LivenetError::BlockTimeError => self.to_string(),
             LivenetError::ClientError(_) => self.to_string(),
-            LivenetError::DictQueryError => self.to_string()
+
+            LivenetError::DictQueryError => self.to_string(),
+            LivenetError::TransactionTimeout => self.to_string()
         }
     }
 }

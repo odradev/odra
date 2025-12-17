@@ -29,7 +29,18 @@ impl super::CasperClient {
         let entity_hash = self.query_global_state_for_entity_addr(address).await;
         let stored_value = self
             .query_global_state_maybe(Key::Hash(entity_hash.value()), Some(name.to_string()))
-            .await;
+            .await
+            .map_err(|e| {
+                log::error(format!(
+                    "Couldn't query {} from {:?}, error: {}",
+                    name,
+                    address.to_formatted_string(),
+                    e
+                ));
+                e
+            })
+            .ok()
+            .flatten();
         match stored_value {
             None => None,
             Some(value) => match value {
@@ -51,7 +62,18 @@ impl super::CasperClient {
     pub async fn get_proxy_result(&self) -> Bytes {
         let stored_value = self
             .query_global_state_maybe(self.caller().as_key(), Some(RESULT_KEY.to_string()))
-            .await;
+            .await
+            .map_err(|e| {
+                log::error(format!(
+                    "Couldn't query {} from {:?}, error: {}",
+                    RESULT_KEY,
+                    self.caller().to_formatted_string(),
+                    e
+                ));
+                e
+            })
+            .ok()
+            .flatten();
 
         match stored_value {
             None => {
@@ -106,7 +128,9 @@ impl super::CasperClient {
 
     /// Gets an uref for a main purse of an account or a contract.
     pub async fn get_main_purse(&self, address: &Address) -> Result<URef> {
-        let maybe_purse_uref = self.query_global_state_maybe(address.as_key(), None).await;
+        let maybe_purse_uref = self
+            .query_global_state_maybe(address.as_key(), None)
+            .await?;
         let purse_uref_value = maybe_purse_uref.ok_or_else(|| {
             ClientError(format!(
                 "Couldn't get purse uref for address: {:?}",
@@ -133,7 +157,14 @@ impl super::CasperClient {
                 })?;
                 let maybe_contract = self
                     .query_global_state_maybe(Key::Hash(last_version.value()), None)
-                    .await;
+                    .await
+                    .map_err(|e| {
+                        ClientError(format!(
+                            "Couldn't get contract for address: {:?}, error: {}",
+                            address.to_formatted_string(),
+                            e
+                        ))
+                    })?;
                 let contract_value = maybe_contract.ok_or_else(|| {
                     ClientError(format!(
                         "Couldn't get contract for address: {:?}",
@@ -278,8 +309,12 @@ impl super::CasperClient {
     async fn query_global_state_for_entity_addr(&self, address: &Address) -> EntityAddr {
         let maybe_result = self.query_global_state_maybe(address.as_key(), None).await;
         let entity_addr_value = match maybe_result {
-            None => panic!("Couldn't query for entity address value at {:?}", address),
-            Some(entity_addr_value) => entity_addr_value
+            Ok(Some(entity_addr_value)) => entity_addr_value,
+            Ok(None) => panic!("Couldn't query for entity address value at {:?}", address),
+            Err(e) => panic!(
+                "Error querying for entity address value at {:?}: {}",
+                address, e
+            )
         };
         match entity_addr_value {
             StoredValue::SmartContract(package) => EntityAddr::SmartContract(
@@ -354,15 +389,12 @@ impl super::CasperClient {
         &self,
         key: Key,
         path: Option<String>
-    ) -> Option<StoredValue> {
+    ) -> Result<Option<StoredValue>> {
         let path = match path {
             None => vec![],
             Some(string) => vec![string]
         };
-        let state_root_hash = match self.get_state_root_hash_digest().await {
-            Ok(hash) => hash,
-            Err(_) => return None
-        };
+        let state_root_hash = self.get_state_root_hash_digest().await?;
         let result = query_global_state(
             self.rpc_id_typed(),
             self.configuration.node_address(),
@@ -373,8 +405,8 @@ impl super::CasperClient {
         )
         .await;
         match result {
-            Ok(r) => Some(r.result.stored_value),
-            Err(_) => None
+            Ok(r) => Ok(Some(r.result.stored_value)),
+            Err(_) => Ok(None)
         }
     }
 }
