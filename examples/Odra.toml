@@ -96,3 +96,6 @@ fqn = "factory::token::FToken"
 
 [[contracts]]
 fqn = "factory::token::FactoryProxy"
+
+[[contracts]]
+fqn = "contracts::cep96_cep95::Cep96Cep95"
