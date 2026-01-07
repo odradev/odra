@@ -244,7 +244,9 @@ impl super::CasperClient {
     }
 
     async fn put_transaction(&self, transaction: Transaction) -> Result<TransactionHash> {
+        log::debug("[TX] Starting event watcher before sending transaction...");
         let watch = self.start_event_watcher().await?;
+        log::debug("[TX] Event watcher ready, now sending transaction...");
 
         let response = put_transaction(
             self.rpc_id_typed(),
@@ -265,6 +267,10 @@ impl super::CasperClient {
             _ => ExecutionError(format!("Failed to put transaction: {}", e))
         })?;
         let deploy_hash = response.result.transaction_hash;
+        log::debug(format!(
+            "[TX] Transaction sent with hash: {}",
+            deploy_hash.to_hex_string()
+        ));
         let result = self.wait_for_transaction(deploy_hash, watch).await?;
         self.process_transaction(result, deploy_hash)?;
         Ok(deploy_hash)

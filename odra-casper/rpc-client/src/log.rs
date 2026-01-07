@@ -52,6 +52,14 @@ pub fn info<T: AsRef<str>>(message: T) {
     }
 }
 
+/// Debug message.
+pub fn debug<T: AsRef<str>>(message: T) {
+    if should_log(LogLevel::Debug) {
+        // reuse info style for now but strictly filtered by Debug level
+        println!("[DEBUG] {}", message.as_ref());
+    }
+}
+
 /// Error message.
 pub fn error<T: AsRef<str>>(message: T) {
     if should_log(LogLevel::Error) {
