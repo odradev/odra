@@ -1,6 +1,6 @@
 //! Transaction building and deployment methods.
 
-use crate::casper_client::transaction_watcher::TransactionWatcher;
+use crate::casper_client::transaction_watcher::{TransactionWatch, TransactionWatcher};
 use crate::casper_client::Result;
 use crate::error::LivenetError::ExecutionError;
 use crate::error::LivenetError::RpcRequestError;
@@ -117,6 +117,8 @@ impl super::CasperClient {
             .into();
 
         let transaction = self.new_wasm_deploy_transaction(module_bytes, args, timestamp);
+        let watch = self.start_event_watcher().await?;
+
         let response = put_transaction(
             self.rpc_id_typed(),
             self.configuration.node_address(),
@@ -136,7 +138,7 @@ impl super::CasperClient {
             _ => ExecutionError(format!("Failed to put transaction: {}", e))
         })?;
         let deploy_hash = response.result.transaction_hash;
-        let result = self.wait_for_transaction(deploy_hash).await?;
+        let result = self.wait_for_transaction(deploy_hash, watch).await?;
         self.process_transaction(result, deploy_hash)?;
         Ok(self.get_proxy_result().await)
     }
@@ -155,6 +157,7 @@ impl super::CasperClient {
         ));
 
         let transaction = self.new_call_transaction(addr, call_def, timestamp)?;
+        let watch = self.start_event_watcher().await?;
 
         let response = put_transaction(
             self.rpc_id_typed(),
@@ -179,7 +182,7 @@ impl super::CasperClient {
                 }
             }
         };
-        let result = self.wait_for_transaction(deploy_hash).await?;
+        let result = self.wait_for_transaction(deploy_hash, watch).await?;
         self.process_transaction(result, deploy_hash).map(|_| {
             ().to_bytes()
                 .expect("Couldn't serialize (). This shouldn't happen.")
@@ -189,16 +192,11 @@ impl super::CasperClient {
 
     async fn wait_for_transaction(
         &self,
-        transaction_hash: TransactionHash
+        transaction_hash: TransactionHash,
+        watch: TransactionWatch
     ) -> Result<ExecutionResult> {
         let transaction_hash_str = transaction_hash.to_hex_string();
-        let timeout = Duration::from_secs(TRANSACTION_WAIT_TIME * TRANSACTION_MAX_RETRIES);
-
-        // Use TransactionWatcher to monitor events stream
-        let watcher = TransactionWatcher::new(self.configuration.events_url.clone(), timeout);
-
-        // Wait for the transaction to appear in the events stream
-        let found = watcher
+        let found = watch
             .wait_for_transaction_hash(&transaction_hash_str)
             .await?;
 
@@ -208,7 +206,6 @@ impl super::CasperClient {
             )));
         }
 
-        // Transaction found! Fetch the execution result
         self.fetch_execution_result(transaction_hash).await
     }
 
@@ -240,7 +237,15 @@ impl super::CasperClient {
         )))
     }
 
+    async fn start_event_watcher(&self) -> Result<TransactionWatch> {
+        let timeout = Duration::from_secs(TRANSACTION_WAIT_TIME * TRANSACTION_MAX_RETRIES);
+        let watcher = TransactionWatcher::new(self.configuration.events_url.clone(), timeout);
+        watcher.start_watching().await
+    }
+
     async fn put_transaction(&self, transaction: Transaction) -> Result<TransactionHash> {
+        let watch = self.start_event_watcher().await?;
+
         let response = put_transaction(
             self.rpc_id_typed(),
             self.configuration.node_address(),
@@ -260,7 +265,7 @@ impl super::CasperClient {
             _ => ExecutionError(format!("Failed to put transaction: {}", e))
         })?;
         let deploy_hash = response.result.transaction_hash;
-        let result = self.wait_for_transaction(deploy_hash).await?;
+        let result = self.wait_for_transaction(deploy_hash, watch).await?;
         self.process_transaction(result, deploy_hash)?;
         Ok(deploy_hash)
     }
@@ -294,7 +299,9 @@ impl super::CasperClient {
                         "Transaction {:?} successfully executed.",
                         &deploy_hash_str,
                     ));
-                    log::link(self.configuration.transaction_url(&deploy_hash_str));
+                    if let Some(url) = self.configuration.transaction_url(&deploy_hash_str) {
+                        log::link(url);
+                    }
                     Ok(())
                 }
                 Some(error_message) => {
@@ -302,7 +309,9 @@ impl super::CasperClient {
                         "Transaction {:?} failed with error: {:?}.",
                         deploy_hash_str, error_message,
                     ));
-                    log::link(self.configuration.transaction_url(&deploy_hash_str));
+                    if let Some(url) = self.configuration.transaction_url(&deploy_hash_str) {
+                        log::link(url);
+                    }
                     Err(ExecutionError(error_message.to_string()))
                 }
             }

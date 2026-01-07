@@ -115,11 +115,14 @@ impl CasperClientConfiguration {
         DEFAULT_GAS_TOLERANCE
     }
 
-    pub fn transaction_url(&self, transaction_id: &str) -> String {
+    pub fn transaction_url(&self, transaction_id: &str) -> Option<String> {
         match self.chain_name.as_str() {
-            "casper-test" => format!("https://testnet.cspr.live/transaction/{}", transaction_id),
-            "casper" => format!("https://cspr.live/transaction/{}", transaction_id),
-            _ => "".to_string()
+            "casper-test" => Some(format!(
+                "https://testnet.cspr.live/transaction/{}",
+                transaction_id
+            )),
+            "casper" => Some(format!("https://cspr.live/transaction/{}", transaction_id)),
+            _ => None
         }
     }
 }
