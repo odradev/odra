@@ -9,7 +9,7 @@ use crate::log;
 use event_matcher::EventMatcher;
 use futures_util::StreamExt;
 use reqwest::Client;
-use sse_parser::SseParser;
+use sse_parser::{SseEvent, SseParser};
 use std::pin::Pin;
 use std::time::Duration;
 
@@ -32,16 +32,20 @@ impl TransactionWatcher {
     }
 
     /// Starts watching the event stream and returns an active watch handle.
-    /// Call this BEFORE sending the transaction to ensure no events are missed.
+    /// Waits for the first event to ensure the connection is fully established.
     pub async fn start_watching(&self) -> Result<TransactionWatch, LivenetError> {
         let stream = self.connect_to_event_stream().await?;
+
+        // Wait for the first event to ensure stream is ready
+        let (stream, buffered_events) = Self::wait_for_first_event(stream).await?;
+
         Ok(TransactionWatch {
             stream,
+            buffered_events,
             timeout: self.timeout
         })
     }
 
-    /// Connects to the Casper node's event stream.
     async fn connect_to_event_stream(&self) -> Result<ByteStream, LivenetError> {
         let client = Client::new();
         let response = client
@@ -59,11 +63,37 @@ impl TransactionWatcher {
 
         Ok(Box::pin(response.bytes_stream()))
     }
+
+    /// Waits for the first event from the stream to confirm the connection is ready.
+    /// Returns the stream and any events received while waiting.
+    async fn wait_for_first_event(
+        mut stream: ByteStream
+    ) -> Result<(ByteStream, Vec<SseEvent>), LivenetError> {
+        let mut parser = SseParser::new();
+        let mut buffered_events = Vec::new();
+
+        // Wait for at least one event to confirm stream is active
+        while let Some(chunk) = stream.next().await {
+            if let Some(event) = parser.process_chunk(chunk).await? {
+                buffered_events.push(event);
+                break;
+            }
+        }
+
+        if buffered_events.is_empty() {
+            return Err(ClientError(
+                "Events stream closed before receiving first event".to_string()
+            ));
+        }
+
+        Ok((stream, buffered_events))
+    }
 }
 
 /// An active watch handle connected to the Casper event stream.
 pub struct TransactionWatch {
     stream: ByteStream,
+    buffered_events: Vec<SseEvent>,
     timeout: Duration
 }
 
@@ -80,7 +110,7 @@ impl TransactionWatch {
 
         tokio::time::timeout(
             self.timeout,
-            Self::monitor_events_until_found(self.stream, transaction_hash)
+            Self::monitor_events_until_found(self.stream, self.buffered_events, transaction_hash)
         )
         .await
         .map_err(|_| {
@@ -90,11 +120,18 @@ impl TransactionWatch {
         })?
     }
 
-    /// Monitors the event stream until the transaction is found or the stream ends.
     async fn monitor_events_until_found(
         mut stream: ByteStream,
+        buffered_events: Vec<SseEvent>,
         transaction_hash: &str
     ) -> Result<bool, LivenetError> {
+        // First check buffered events (received while waiting for connection)
+        for event in buffered_events {
+            if EventMatcher::matches_transaction_hash(&event.data, transaction_hash)? {
+                return Ok(true);
+            }
+        }
+
         let mut parser = SseParser::new();
 
         while let Some(chunk) = stream.next().await {
@@ -105,7 +142,6 @@ impl TransactionWatch {
             }
         }
 
-        // Check for any remaining event data when stream ends
         if let Some(event) = parser.finalize() {
             return EventMatcher::matches_transaction_hash(&event.data, transaction_hash);
         }
