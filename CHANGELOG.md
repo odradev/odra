@@ -2,12 +2,13 @@
 
 Changelog for `odra`.
 
-## [2.5.0] - 2025-12-XX
+## [2.5.0] - 2026-01-23
 ### Changed
 - Refactor of `CEP-95` token implementation.
 
 ### Added
 - `set_name`, `set_symbol` and `set_decimals` functions to `CEP-18` module.
+- Support for events from RPC to detect transaction success/failure.
 
 ## [2.4.0] - 2025-09-02
 ### Changed
