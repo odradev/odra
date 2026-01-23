@@ -32,21 +32,23 @@ impl SseParser {
         }
     }
 
-    /// Processes incoming bytes and yields complete SSE events.
-    /// Returns `None` when the stream ends.
+    /// Processes incoming bytes and yields all complete SSE events parsed from the chunk.
     pub async fn process_chunk(
         &mut self,
         chunk: Result<Bytes, reqwest::Error>
-    ) -> Result<Option<SseEvent>, LivenetError> {
+    ) -> Result<Vec<SseEvent>, LivenetError> {
         let bytes = chunk.map_err(|e| ClientError(format!("Error reading stream: {}", e)))?;
         self.buffer.push_str(&String::from_utf8_lossy(&bytes));
 
-        self.extract_complete_events()
+        let mut events = Vec::new();
+        while let Some(event) = self.extract_next_event()? {
+            events.push(event);
+        }
+        Ok(events)
     }
 
-    /// Extracts all complete events from the buffer.
-    /// Returns the first complete event found, or None if none are ready.
-    fn extract_complete_events(&mut self) -> Result<Option<SseEvent>, LivenetError> {
+    /// Extracts the next complete event from the buffer.
+    fn extract_next_event(&mut self) -> Result<Option<SseEvent>, LivenetError> {
         while let Some(newline_pos) = self.buffer.find('\n') {
             let line = self.buffer[..newline_pos].trim().to_string();
             self.buffer.replace_range(..=newline_pos, "");
