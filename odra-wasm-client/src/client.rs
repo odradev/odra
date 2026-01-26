@@ -37,7 +37,7 @@ const CHAIN_TESTNET: &str = "casper-test";
 const SECRET_KEY_PEM: &str = env!("WASM_CLIENT_SK");
 
 pub const PROXY_CALLER: &[u8; 52814] =
-    include_bytes!("../../resources/proxy_caller_with_return.wasm");
+    include_bytes!("../resources/proxy_caller_with_return.wasm");
 
 static GAS: OnceLock<Arc<Mutex<u64>>> = OnceLock::new();
 
