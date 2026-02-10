@@ -217,14 +217,14 @@ impl LivenetContractEnv {
         casper_client: Rc<RefCell<CasperClient>>,
         callstack: Rc<RefCell<Callstack>>,
         contract_register: Rc<RwLock<ContractRegister>>
-    ) -> Rc<RefCell<Self>> {
-        Rc::new(RefCell::new(Self {
+    ) -> Rc<Self> {
+        Rc::new(Self {
             casper_client,
             callstack,
             contract_register,
             runtime: Runtime::new().unwrap_or_else(|_| {
                 panic!("Couldn't create tokio runtime");
             })
-        }))
+        })
     }
 }

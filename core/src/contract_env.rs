@@ -40,7 +40,7 @@ pub trait ContractRef {
 pub struct ContractEnv {
     index: u32,
     mapping_data: Vec<u8>,
-    backend: Rc<RefCell<dyn ContractContext>>
+    backend: Rc<dyn ContractContext>
 }
 
 impl Revertible for ContractEnv {
@@ -51,7 +51,7 @@ impl Revertible for ContractEnv {
 
 impl ContractEnv {
     /// Creates a new ContractEnv instance.
-    pub const fn new(index: u32, backend: Rc<RefCell<dyn ContractContext>>) -> Self {
+    pub const fn new(index: u32, backend: Rc<dyn ContractContext>) -> Self {
         Self {
             index,
             mapping_data: Vec::new(),
@@ -65,7 +65,7 @@ impl ContractEnv {
         let mut key = Vec::with_capacity(INDEX_SIZE + self.mapping_data.len());
         key.extend_from_slice(self.index.to_be_bytes().as_ref());
         key.extend_from_slice(&self.mapping_data);
-        let hashed_key = self.backend.borrow().hash(key.as_slice());
+        let hashed_key = self.backend.hash(key.as_slice());
         utils::hex_to_slice(&hashed_key, &mut result);
         result
     }
@@ -80,7 +80,7 @@ impl ContractEnv {
         Self {
             index: (self.index << 4) + index as u32,
             mapping_data: self.mapping_data.clone(),
-            backend: self.backend.clone()
+            backend: Rc::clone(&self.backend)
         }
     }
 
@@ -91,22 +91,23 @@ impl ContractEnv {
     /// The value associated with the key, if it exists.
     pub fn get_value<T: FromBytes>(&self, key: &[u8]) -> Option<T> {
         self.backend
-            .borrow()
             .get_value(key)
             .map(|bytes| deserialize_from_slice(bytes).unwrap_or_revert(self))
     }
 
     /// Sets the value associated with the given key in the contract storage.
     pub fn set_value<T: ToBytes + CLTyped>(&self, key: &[u8], value: T) {
-        let result = value.to_bytes().map_err(ExecutionError::from);
-        let bytes = result.unwrap_or_revert(self);
-        self.backend.borrow().set_value(key, bytes.into());
+        let bytes = value
+            .to_bytes()
+            .map_err(ExecutionError::from)
+            .unwrap_or_revert(self);
+        self.backend.set_value(key, bytes.into());
     }
 
     /// Retrieves the value associated with the given named key from the contract storage.
     pub fn get_named_value<T: FromBytes + CLTyped, U: AsRef<str>>(&self, name: U) -> Option<T> {
         let key = name.as_ref();
-        let bytes = self.backend.borrow().get_named_value(key);
+        let bytes = self.backend.get_named_value(key);
         bytes.map(|b| deserialize_from_slice(b).unwrap_or_revert(self))
     }
 
@@ -122,7 +123,7 @@ impl ContractEnv {
                 })
             })
             .unwrap_or_revert(self);
-        self.backend.borrow().set_named_value(key, cl_value);
+        self.backend.set_named_value(key, cl_value);
     }
 
     /// Retrieves the value associated with the given named key from the named dictionary in the contract storage.
@@ -132,10 +133,7 @@ impl ContractEnv {
         key: &[u8]
     ) -> Option<T> {
         let dictionary_name = dictionary_name.as_ref();
-        let bytes = self
-            .backend
-            .borrow()
-            .get_dictionary_value(dictionary_name, key);
+        let bytes = self.backend.get_dictionary_value(dictionary_name, key);
         bytes.map(|b| {
             deserialize_from_slice(b)
                 .map_err(|_| ExecutionError::Formatting)
@@ -155,26 +153,24 @@ impl ContractEnv {
             .map_err(|_| ExecutionError::Formatting)
             .unwrap_or_revert(self);
         self.backend
-            .borrow()
             .set_dictionary_value(dictionary_name, key, cl_value);
     }
 
     /// Removes the dictionary from the contract storage.
     pub fn remove_dictionary<U: AsRef<str>>(&self, dictionary_name: U) {
         let dictionary_name = dictionary_name.as_ref();
-        self.backend.borrow().remove_dictionary(dictionary_name);
+        self.backend.remove_dictionary(dictionary_name);
     }
 
     /// Initializes the empty dictionary with the given name.
     pub fn init_dictionary<U: AsRef<str>>(&self, dictionary_name: U) {
         let dictionary_name = dictionary_name.as_ref();
-        self.backend.borrow().init_dictionary(dictionary_name);
+        self.backend.init_dictionary(dictionary_name);
     }
 
     /// Returns the address of the caller of the contract.
     pub fn caller(&self) -> Address {
-        let backend = self.backend.borrow();
-        backend.caller()
+        self.backend.caller()
     }
 
     /// Calls another contract with the specified address and call definition.
@@ -183,73 +179,65 @@ impl ContractEnv {
     ///
     /// The result of the contract call. If any error occurs during the call, the contract will revert.
     pub fn call_contract<T: FromBytes>(&self, address: Address, call: CallDef) -> T {
-        let backend = self.backend.borrow();
-        let bytes = backend.call_contract(address, call);
+        let bytes = self.backend.call_contract(address, call);
         deserialize_from_slice(bytes).unwrap_or_revert(self)
     }
 
     /// Returns the address of the current contract.
     pub fn self_address(&self) -> Address {
-        let backend = self.backend.borrow();
-        backend.self_address()
+        self.backend.self_address()
     }
 
     /// Transfers tokens to the specified address.
     pub fn transfer_tokens(&self, to: &Address, amount: &U512) {
-        let backend = self.backend.borrow();
-        backend.transfer_tokens(to, amount)
+        self.backend.transfer_tokens(to, amount);
     }
 
     /// Returns the current block time in milliseconds.
     pub fn get_block_time(&self) -> u64 {
-        let backend = self.backend.borrow();
-        backend.get_block_time()
+        self.backend.get_block_time()
     }
 
     /// Returns the current block time in milliseconds.
     pub fn get_block_time_millis(&self) -> u64 {
-        let backend = self.backend.borrow();
-        backend.get_block_time()
+        self.backend.get_block_time()
     }
 
     /// Returns the current block time in seconds.
     pub fn get_block_time_secs(&self) -> u64 {
-        let backend = self.backend.borrow();
-        backend.get_block_time().checked_div(1000).unwrap()
+        self.backend
+            .get_block_time()
+            .checked_div(1000)
+            .unwrap_or_revert(self)
     }
 
     /// Returns the value attached to the contract call.
     pub fn attached_value(&self) -> U512 {
-        let backend = self.backend.borrow();
-        backend.attached_value()
+        self.backend.attached_value()
     }
 
     /// Returns the CSPR balance of the current contract.
     pub fn self_balance(&self) -> U512 {
-        let backend = self.backend.borrow();
-        backend.self_balance()
+        self.backend.self_balance()
     }
 
     /// Reverts the contract execution with the specified error.
     pub fn revert<E: Into<OdraError>>(&self, error: E) -> ! {
-        let backend = self.backend.borrow();
-        backend.revert(error.into())
+        self.backend.revert(error.into())
     }
 
     /// Emits an event with the specified data.
     pub fn emit_event<T: ToBytes + EventInstance>(&self, event: T) {
-        let backend = self.backend.borrow();
         let result = event.to_bytes().map_err(ExecutionError::from);
         let bytes = result.unwrap_or_revert(self);
-        backend.emit_event(&bytes.into())
+        self.backend.emit_event(&bytes.into())
     }
 
     /// Emits an event with the specified data using the native mechanism.
     pub fn emit_native_event<T: ToBytes + EventInstance>(&self, event: T) {
-        let backend = self.backend.borrow();
         let result = event.to_bytes().map_err(ExecutionError::from);
         let bytes = result.unwrap_or_revert(self);
-        backend.emit_native_event(&bytes.into())
+        self.backend.emit_native_event(&bytes.into())
     }
 
     /// Verifies the signature of a message using the specified signature, public key, and message.
@@ -280,7 +268,7 @@ impl ContractEnv {
     ///
     /// The hash value as a 32-byte array.
     pub fn hash<T: AsRef<[u8]>>(&self, value: T) -> [u8; BLAKE2B_DIGEST_LENGTH] {
-        self.backend.borrow().hash(value.as_ref())
+        self.backend.hash(value.as_ref())
     }
 
     /// Delegate tokens to a validator
@@ -290,7 +278,7 @@ impl ContractEnv {
     /// * `validator` - The validator to delegate to
     /// * `amount` - The amount of tokens to delegate
     pub fn delegate(&self, validator: PublicKey, amount: U512) {
-        self.backend.borrow().delegate(validator, amount)
+        self.backend.delegate(validator, amount)
     }
 
     /// Undelegate tokens from a validator
@@ -300,7 +288,7 @@ impl ContractEnv {
     /// * `validator` - The validator to undelegate from
     /// * `amount` - The amount of tokens to undelegate
     pub fn undelegate(&self, validator: PublicKey, amount: U512) {
-        self.backend.borrow().undelegate(validator, amount)
+        self.backend.undelegate(validator, amount)
     }
 
     /// Returns the amount of tokens delegated to a validator
@@ -313,7 +301,7 @@ impl ContractEnv {
     ///
     /// The amount of tokens delegated to the validator
     pub fn delegated_amount(&self, validator: PublicKey) -> U512 {
-        self.backend.borrow().delegated_amount(validator)
+        self.backend.delegated_amount(validator)
     }
 
     /// Returns information about the validator
@@ -324,13 +312,13 @@ impl ContractEnv {
     /// # Returns
     /// Option<ValidatorBid>
     pub fn get_validator_info(&self, validator: PublicKey) -> Option<ValidatorInfo> {
-        self.backend.borrow().get_validator_info(validator)
+        self.backend.get_validator_info(validator)
     }
 
     /// Returns a vector of pseudorandom bytes of the specified size.
     /// There is no guarantee that the returned bytes are in any way cryptographically secure.
     pub fn pseudorandom_bytes(&self, size: usize) -> Vec<u8> {
-        let seed_bytes = self.backend.borrow().pseudorandom_bytes();
+        let seed_bytes = self.backend.pseudorandom_bytes();
 
         if size <= seed_bytes.len() {
             return seed_bytes[..size].to_vec();
@@ -349,7 +337,7 @@ impl ContractEnv {
 
     /// Returns a pseudorandom integer.
     pub fn pseudorandom_number(&self, high: U512) -> U512 {
-        let seed_bytes = self.backend.borrow().pseudorandom_bytes();
+        let seed_bytes = self.backend.pseudorandom_bytes();
         let mut rng = ChaCha8Rng::from_seed(seed_bytes);
         let bits = high.bits();
         let bytes_len = bits.div_ceil(8);
@@ -413,12 +401,12 @@ impl ExecutionEnv {
 
     /// Handles the attached value in the execution environment.
     pub fn handle_attached_value(&self) {
-        self.env.backend.borrow().handle_attached_value();
+        self.env.backend.handle_attached_value();
     }
 
     /// Clears the attached value in the execution environment.
     pub fn clear_attached_value(&self) {
-        self.env.backend.borrow().clear_attached_value();
+        self.env.backend.clear_attached_value();
     }
 
     /// Retrieves the value of a named argument from the execution environment.
@@ -429,13 +417,13 @@ impl ExecutionEnv {
     /// the contract will revert.
     pub fn get_named_arg<T: FromBytes + EntrypointArgument>(&self, name: &str) -> T {
         if T::is_required() {
-            let result = self.env.backend.borrow().get_named_arg_bytes(name);
+            let result = self.env.backend.get_named_arg_bytes(name);
             match result {
                 Ok(bytes) => deserialize_from_slice(bytes).unwrap_or_revert(self),
                 Err(err) => self.env.revert(err)
             }
         } else {
-            let bytes = self.env.backend.borrow().get_opt_named_arg_bytes(name);
+            let bytes = self.env.backend.get_opt_named_arg_bytes(name);
             let result = bytes.map(|bytes| deserialize_from_slice(bytes).unwrap_or_revert(self));
             T::unwrap(result, &self.env)
         }

@@ -27,12 +27,12 @@ use odra_core::{
 /// HostContext utilizing the Casper test virtual machine.
 pub struct CasperHost {
     /// The Casper VM used by the host.
-    pub vm: Rc<RefCell<CasperVm>>
+    pub vm: Rc<CasperVm>
 }
 
 impl HostContext for CasperHost {
     fn set_caller(&self, caller: Address) {
-        self.vm.borrow_mut().set_caller(caller)
+        self.vm.set_caller(caller)
     }
 
     fn set_gas(&self, gas: u64) {
@@ -40,59 +40,55 @@ impl HostContext for CasperHost {
     }
 
     fn caller(&self) -> Address {
-        self.vm.borrow().get_caller()
+        self.vm.get_caller()
     }
 
     fn get_account(&self, index: usize) -> Address {
-        self.vm.borrow().get_account(index)
+        self.vm.get_account(index)
     }
 
     fn get_validator(&self, index: usize) -> PublicKey {
-        self.vm.borrow().get_validator(index)
+        self.vm.get_validator(index)
     }
 
     fn remove_validator(&self, index: usize) {
         let validator = self.get_validator(index);
-        let mut backend = self.vm.borrow_mut();
-        backend.remove_validator(validator);
+        self.vm.remove_validator(validator);
     }
 
     fn balance_of(&self, address: &Address) -> U512 {
-        self.vm.borrow().balance_of(address)
+        self.vm.balance_of(address)
     }
 
     fn advance_block_time(&self, time_diff: u64) {
-        self.vm.borrow_mut().advance_block_time(time_diff)
+        self.vm.advance_block_time(time_diff)
     }
 
     fn advance_with_auctions(&self, time_diff: u64) {
-        self.vm.borrow_mut().advance_with_auctions(time_diff)
+        self.vm.advance_with_auctions(time_diff)
     }
 
     fn auction_delay(&self) -> u64 {
-        let mut backend = self.vm.borrow_mut();
-        backend.auction_delay()
+        self.vm.auction_delay()
     }
 
     fn unbonding_delay(&self) -> u64 {
-        let mut backend = self.vm.borrow_mut();
-        backend.unbonding_delay()
+        self.vm.unbonding_delay()
     }
 
     fn delegated_amount(&self, delegator: Address, validator: PublicKey) -> U512 {
-        let mut backend = self.vm.borrow_mut();
-        backend.delegated_amount(delegator, validator)
+        self.vm.delegated_amount(delegator, validator)
     }
 
     fn block_time(&self) -> u64 {
-        self.vm.borrow().block_time()
+        self.vm.block_time()
     }
 
     fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, EventError> {
         if !contract_address.is_contract() {
             return Err(EventError::TriedToQueryEventForNonContract);
         }
-        self.vm.borrow().get_event(contract_address, index)
+        self.vm.get_event(contract_address, index)
     }
 
     fn get_native_event(
@@ -103,15 +99,15 @@ impl HostContext for CasperHost {
         if !contract_address.is_contract() {
             return Err(EventError::TriedToQueryEventForNonContract);
         }
-        self.vm.borrow().get_native_event(contract_address, index)
+        self.vm.get_native_event(contract_address, index)
     }
 
     fn get_events_count(&self, address: &Address) -> Result<u32, EventError> {
-        self.vm.borrow().get_events_count(address)
+        self.vm.get_events_count(address)
     }
 
     fn get_native_events_count(&self, contract_address: &Address) -> Result<u32, EventError> {
-        self.vm.borrow().get_native_events_count(contract_address)
+        self.vm.get_native_events_count(contract_address)
     }
 
     fn call_contract(
@@ -122,17 +118,13 @@ impl HostContext for CasperHost {
     ) -> OdraResult<Bytes> {
         let mut opt_result: Option<Bytes> = None;
         let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            opt_result = Some(
-                self.vm
-                    .borrow_mut()
-                    .call_contract(address, call_def, use_proxy)
-            );
+            opt_result = Some(self.vm.call_contract(address, call_def, use_proxy));
         }));
 
         match opt_result {
             Some(result) => Ok(result),
             None => {
-                let error = self.vm.borrow().error();
+                let error = self.vm.error();
                 Err(error.unwrap_or(OdraError::VmError(VmError::Panic)))
             }
         }
@@ -146,17 +138,13 @@ impl HostContext for CasperHost {
     ) -> OdraResult<Address> {
         let mut opt_result: Option<Address> = None;
         let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            opt_result = Some(self.vm.borrow_mut().new_contract(
-                name,
-                init_args,
-                entry_points_caller
-            ));
+            opt_result = Some(self.vm.new_contract(name, init_args, entry_points_caller));
         }));
 
         match opt_result {
             Some(result) => Ok(result),
             None => {
-                let error = self.vm.borrow().error();
+                let error = self.vm.error();
                 Err(error.unwrap_or(OdraError::VmError(VmError::Panic)))
             }
         }
@@ -171,7 +159,7 @@ impl HostContext for CasperHost {
     ) -> OdraResult<Address> {
         let mut opt_result: Option<Address> = None;
         let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            opt_result = Some(self.vm.borrow_mut().upgrade_contract(
+            opt_result = Some(self.vm.upgrade_contract(
                 name,
                 contract_to_upgrade,
                 upgrade_args,
@@ -182,7 +170,7 @@ impl HostContext for CasperHost {
         match opt_result {
             Some(result) => Ok(result),
             None => {
-                let error = self.vm.borrow().error();
+                let error = self.vm.error();
                 Err(error.unwrap_or(OdraError::VmError(VmError::Panic)))
             }
         }
@@ -202,29 +190,29 @@ impl HostContext for CasperHost {
     }
 
     fn gas_report(&self) -> GasReport {
-        self.vm.borrow().gas_report().clone()
+        self.vm.gas_report()
     }
 
     fn last_call_gas_cost(&self) -> u64 {
-        self.vm.borrow().last_call_gas_cost()
+        self.vm.last_call_gas_cost()
     }
 
     fn sign_message(&self, message: &Bytes, address: &Address) -> Bytes {
-        self.vm.borrow().sign_message(message, address)
+        self.vm.sign_message(message, address)
     }
 
     fn public_key(&self, address: &Address) -> PublicKey {
-        self.vm.borrow().public_key(address)
+        self.vm.public_key(address)
     }
 
     fn transfer(&self, to: Address, amount: U512) -> OdraResult<()> {
-        self.vm.borrow_mut().transfer(to, amount)
+        self.vm.transfer(to, amount)
     }
 }
 
 impl CasperHost {
     /// Creates a new instance of the host.
-    pub fn new(vm: Rc<RefCell<CasperVm>>) -> Rc<RefCell<Self>> {
-        Rc::new(RefCell::new(Self { vm }))
+    pub fn new(vm: Rc<CasperVm>) -> Rc<Self> {
+        Rc::new(Self { vm })
     }
 }

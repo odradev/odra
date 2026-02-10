@@ -1,6 +1,6 @@
 use std::{
     str::FromStr,
-    sync::{Arc, Mutex, OnceLock}
+    sync::atomic::{AtomicU64, Ordering}
 };
 
 use crate::{
@@ -36,25 +36,20 @@ const DEFAULT_GAS_TOLERANCE: u8 = 5;
 const CHAIN_TESTNET: &str = "casper-test";
 const SECRET_KEY_PEM: &str = env!("WASM_CLIENT_SK");
 
-pub const PROXY_CALLER: &[u8; 52814] =
-    include_bytes!("../resources/proxy_caller_with_return.wasm");
+pub const PROXY_CALLER: &[u8; 52814] = include_bytes!("../resources/proxy_caller_with_return.wasm");
 
-static GAS: OnceLock<Arc<Mutex<u64>>> = OnceLock::new();
+static GAS: AtomicU64 = AtomicU64::new(DEFAULT_GAS);
 
 /// Returns the gas limit for the client for the next calls.
 #[wasm_bindgen]
 pub fn gas() -> u64 {
-    *GAS.get_or_init(|| Arc::new(Mutex::new(DEFAULT_GAS)))
-        .lock()
-        .unwrap()
+    GAS.load(Ordering::Relaxed)
 }
 
 /// Sets the gas limit for the client for the next calls.
 #[wasm_bindgen(js_name = "setGas")]
 pub fn set_gas(gas: u64) {
-    let g = GAS.get_or_init(|| Arc::new(Mutex::new(DEFAULT_GAS)));
-    let mut value = g.lock().unwrap();
-    *value = gas;
+    GAS.store(gas, Ordering::Relaxed);
 }
 
 /// Returns the default payment amount for transactions.

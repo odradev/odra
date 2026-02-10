@@ -10,7 +10,7 @@ use odra_core::casper_types::{
 };
 use odra_core::consts::*;
 use odra_core::prelude::*;
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::env;
 use std::hash::Hash;
 use std::path::PathBuf;
@@ -57,29 +57,30 @@ use odra_core::{
 pub struct CasperVm {
     accounts: Vec<Address>,
     validators: Vec<GenesisAccount>,
-    removed_validators: Vec<PublicKey>,
+    removed_validators: RefCell<Vec<PublicKey>>,
     key_pairs: BTreeMap<Address, (SecretKey, PublicKey)>,
-    messages: BTreeMap<EntityAddr, Vec<MessagePayload>>,
-    active_account: Address,
-    context: LmdbWasmTestBuilder,
-    block_time: u64,
-    calls_counter: u32,
-    error: Option<OdraError>,
-    attached_value: U512,
-    gas_used: BTreeMap<AccountHash, U512>,
-    gas_report: GasReport
+    messages: RefCell<BTreeMap<EntityAddr, Vec<MessagePayload>>>,
+    active_account: RefCell<Address>,
+    context: RefCell<LmdbWasmTestBuilder>,
+    block_time: Cell<u64>,
+    calls_counter: Cell<u32>,
+    error: RefCell<Option<OdraError>>,
+    attached_value: RefCell<U512>,
+    gas_used: RefCell<BTreeMap<AccountHash, U512>>,
+    gas_report: RefCell<GasReport>
 }
 
 impl CasperVm {
     /// Creates a new instance with predefined accounts.
-    pub fn new() -> Rc<RefCell<Self>> {
-        Rc::new(RefCell::new(Self::new_instance()))
+    pub fn new() -> Rc<Self> {
+        Rc::new(Self::new_instance())
     }
 
     /// Read a PackageHash of a given name, from the active account.
     pub fn package_hash_from_name(&self, name: &str) -> PackageHash {
         let named_keys = self
             .context
+            .borrow()
             .get_named_keys_by_account_hash(self.active_account_hash());
 
         let key: &Key = named_keys.get(name).unwrap();
@@ -87,13 +88,13 @@ impl CasperVm {
     }
 
     /// Updates the active account (caller) address.
-    pub fn set_caller(&mut self, caller: Address) {
-        self.active_account = caller;
+    pub fn set_caller(&self, caller: Address) {
+        *self.active_account.borrow_mut() = caller;
     }
 
     /// Gets the active account (caller) address.
     pub fn get_caller(&self) -> Address {
-        self.active_account
+        *self.active_account.borrow()
     }
 
     /// Gets the account address at the specified index.
@@ -110,24 +111,29 @@ impl CasperVm {
     }
 
     /// Advances the block time by the specified time difference in milliseconds.
-    pub fn advance_block_time(&mut self, time_diff_millis: u64) {
-        self.block_time += time_diff_millis
+    pub fn advance_block_time(&self, time_diff_millis: u64) {
+        self.block_time
+            .set(self.block_time.get() + time_diff_millis);
     }
 
     /// Advances the block time by the specified time difference in milliseconds
     /// and processes auctions giving the rewards to the validators.
-    pub fn advance_with_auctions(&mut self, time_diff_millis: u64) {
+    pub fn advance_with_auctions(&self, time_diff_millis: u64) {
         let time_between_auctions = self.auction_delay();
         // Calculate how many auctions we can run based on time_diff
         let num_auctions = time_diff_millis / time_between_auctions;
 
         // Run auctions and distribute rewards one at a time
         for _ in 0..num_auctions {
-            let mut step_request_builder = self.context.step_request_builder();
+            let mut step_request_builder = self.context.borrow_mut().step_request_builder();
             // distribute rewards to all validators
             let mut rewards = BTreeMap::new();
             for validator in &self.validators {
-                if self.removed_validators.contains(&validator.public_key()) {
+                if self
+                    .removed_validators
+                    .borrow()
+                    .contains(&validator.public_key())
+                {
                     continue;
                 }
                 rewards.insert(validator.public_key(), vec![U512::from(BLOCK_REWARD)]);
@@ -136,11 +142,15 @@ impl CasperVm {
             }
 
             let step_request = step_request_builder.build();
-            self.context.step(step_request);
-            self.context.advance_era();
+            self.context.borrow_mut().step(step_request);
+            self.context.borrow_mut().advance_era();
             self.advance_block_time(time_between_auctions);
-            self.context
-                .distribute(None, DEFAULT_PROTOCOL_VERSION, rewards, self.block_time);
+            self.context.borrow_mut().distribute(
+                None,
+                DEFAULT_PROTOCOL_VERSION,
+                rewards,
+                self.block_time.get()
+            );
         }
 
         // Run remaining auctions with the leftover time
@@ -149,26 +159,43 @@ impl CasperVm {
     }
 
     /// Gets the time between auctions.
-    pub fn auction_delay(&mut self) -> u64 {
+    pub fn auction_delay(&self) -> u64 {
+        let era_duration = self
+            .context
+            .borrow()
+            .chainspec()
+            .core_config
+            .era_duration
+            .millis();
         self.context
+            .borrow_mut()
             .get_auction_delay()
-            .saturating_mul(self.context.chainspec().core_config.era_duration.millis())
+            .saturating_mul(era_duration)
     }
 
     /// Returns the unbonding delay.
-    pub fn unbonding_delay(&mut self) -> u64 {
+    pub fn unbonding_delay(&self) -> u64 {
+        let era_duration = self
+            .context
+            .borrow()
+            .chainspec()
+            .core_config
+            .era_duration
+            .millis();
         self.context
+            .borrow_mut()
             .get_unbonding_delay()
-            .saturating_mul(self.context.chainspec().core_config.era_duration.millis())
+            .saturating_mul(era_duration)
     }
 
     /// Returns the delegated amount.
-    pub fn delegated_amount(&mut self, delegator: Address, validator: PublicKey) -> U512 {
+    pub fn delegated_amount(&self, delegator: Address, validator: PublicKey) -> U512 {
         let purse_uref = self.get_main_purse(delegator);
         let account_hash = validator.to_account_hash();
 
         let bid = self
             .context
+            .borrow_mut()
             .get_bids()
             .into_iter()
             .find(|bid| bid.validator_public_key() == validator && bid.is_delegator());
@@ -179,9 +206,10 @@ impl CasperVm {
         }
     }
 
-    fn total_delegated_amount(&mut self, validator: PublicKey) -> U512 {
+    fn total_delegated_amount(&self, validator: PublicKey) -> U512 {
         let bids = self
             .context
+            .borrow_mut()
             .get_bids()
             .into_iter()
             .filter(|bid| bid.validator_public_key() == validator)
@@ -194,11 +222,11 @@ impl CasperVm {
 
     /// Disables the validator.
     /// Undelegates the validator's stakes.
-    pub fn remove_validator(&mut self, validator: PublicKey) {
+    pub fn remove_validator(&self, validator: PublicKey) {
         let amount = self.total_delegated_amount(validator.clone());
         let withdraw_request = ExecuteRequestBuilder::contract_call_by_hash(
             validator.to_account_hash(),
-            self.context.get_auction_contract_hash(),
+            self.context.borrow().get_auction_contract_hash(),
             METHOD_WITHDRAW_BID,
             runtime_args! {
                 ARG_PUBLIC_KEY => validator.clone(),
@@ -208,19 +236,24 @@ impl CasperVm {
         .build();
 
         self.context
+            .borrow_mut()
             .exec(withdraw_request)
             .commit()
             .expect_success();
 
-        self.removed_validators.push(validator.clone());
+        self.removed_validators.borrow_mut().push(validator.clone());
     }
 
     fn get_main_purse(&self, address: Address) -> URef {
         match address {
             Address::Account(account) => {
-                let account = self.context.get_account(account).unwrap_or_else(|| {
-                    panic!("Account not found while getting entity addr: {:?}", account)
-                });
+                let account = self
+                    .context
+                    .borrow()
+                    .get_account(account)
+                    .unwrap_or_else(|| {
+                        panic!("Account not found while getting entity addr: {:?}", account)
+                    });
                 account.main_purse()
             }
             Address::Contract(contract) => self
@@ -236,7 +269,7 @@ impl CasperVm {
 
     /// Gets the current block time.
     pub fn block_time(&self) -> u64 {
-        self.block_time
+        self.block_time.get()
     }
 
     /// Gets the event at the specified index for the given contract address.
@@ -266,8 +299,8 @@ impl CasperVm {
         contract_address: &Address,
         index: u32
     ) -> Result<Bytes, EventError> {
-        let messages = self
-            .messages
+        let messages = self.messages.borrow();
+        let messages = messages
             .get(&self.get_contract_entity_addr(contract_address))
             .ok_or(EventError::IndexOutOfBounds)?;
         let message = messages
@@ -290,28 +323,23 @@ impl CasperVm {
 
     /// Gets the count of native events for the given contract address.
     pub fn get_native_events_count(&self, contract_address: &Address) -> Result<u32, EventError> {
-        let messages = self
-            .messages
+        let messages = self.messages.borrow();
+        let messages = messages
             .get(&self.get_contract_entity_addr(contract_address))
             .ok_or(EventError::IndexOutOfBounds)?;
         Ok(messages.len() as u32)
     }
 
     /// Attaches a value to the next call.
-    pub fn attach_value(&mut self, amount: U512) {
-        self.attached_value = amount;
+    pub fn attach_value(&self, amount: U512) {
+        *self.attached_value.borrow_mut() = amount;
     }
 
     /// Calls a contract with the specified address, call definition, and proxy usage flag.
     ///
     /// If the proxy usage flag is set to true, then the contract will be called via a proxy caller.
-    pub fn call_contract(
-        &mut self,
-        address: &Address,
-        call_def: CallDef,
-        use_proxy: bool
-    ) -> Bytes {
-        self.error = None;
+    pub fn call_contract(&self, address: &Address, call_def: CallDef, use_proxy: bool) -> Bytes {
+        *self.error.borrow_mut() = None;
         let hash = address
             .as_contract_package_hash()
             .expect("Contract hash expected");
@@ -355,34 +383,37 @@ impl CasperVm {
         };
 
         let execute_request = ExecuteRequestBuilder::from_deploy_item(&deploy_item)
-            .with_block_time(self.block_time)
+            .with_block_time(self.block_time.get())
             .build();
-        self.context.exec(execute_request).commit();
+        self.context.borrow_mut().exec(execute_request).commit();
         self.collect_gas();
-        self.gas_report.push(DeployReport::ContractCall {
-            gas: self.last_call_contract_gas_cost(),
-            contract_address: *address,
-            call_def: call_def.clone()
-        });
+        self.gas_report
+            .borrow_mut()
+            .push(DeployReport::ContractCall {
+                gas: self.last_call_contract_gas_cost(),
+                contract_address: *address,
+                call_def: call_def.clone()
+            });
 
         self.collect_messages();
 
-        self.attached_value = U512::zero();
-        if let Some(error) = self.context.get_error() {
+        *self.attached_value.borrow_mut() = U512::zero();
+        if let Some(error) = self.context.borrow().get_error() {
             let odra_error = parse_error(error);
-            self.error = Some(odra_error.clone());
+            *self.error.borrow_mut() = Some(odra_error.clone());
             self.panic_with_error(odra_error, call_def.entry_point(), hash);
         } else {
             self.get_active_account_result()
         }
     }
 
-    fn collect_messages(&mut self) {
-        let messages = self.context.get_last_exec_result().unwrap();
+    fn collect_messages(&self) {
+        let messages = self.context.borrow().get_last_exec_result().unwrap();
         let messages = messages.messages();
         messages.iter().for_each(|message| {
             let payload = message.payload().clone();
             self.messages
+                .borrow_mut()
                 .entry(*message.entity_addr())
                 .or_default()
                 .push(payload);
@@ -400,6 +431,7 @@ impl CasperVm {
             Address::Contract(contract) => {
                 let package = self
                     .context
+                    .borrow()
                     .get_package(PackageHash::new(contract.value()))
                     .unwrap_or_else(|| {
                         panic!(
@@ -424,6 +456,7 @@ impl CasperVm {
     ) -> AddressableEntity {
         let query_result = self
             .context
+            .borrow()
             .query(None, Key::AddressableEntity(*entity_addr), &[])
             .unwrap();
         if let StoredValue::AddressableEntity(entity) = query_result {
@@ -438,7 +471,7 @@ impl CasperVm {
 
     /// Creates a new contract with the specified name, initialisation arguments, and entry points caller.
     pub fn new_contract(
-        &mut self,
+        &self,
         name: &str,
         init_args: RuntimeArgs,
         entry_points_caller: EntryPointsCaller
@@ -454,7 +487,7 @@ impl CasperVm {
         let result = self.deploy_wasm(&wasm_path, &init_args);
         if let Some(error) = result {
             let odra_error = parse_error(error);
-            self.error = Some(odra_error.clone());
+            *self.error.borrow_mut() = Some(odra_error.clone());
             panic!("Revert: Contract deploy failed {:?}", odra_error);
         } else {
             let package_hash = self.package_hash_from_name(&package_hash_key_name);
@@ -465,7 +498,7 @@ impl CasperVm {
 
     /// Upgrades an existing contract with the specified name, initialisation arguments, and entry points caller.
     pub fn upgrade_contract(
-        &mut self,
+        &self,
         name: &str,
         contract_to_upgrade: Address,
         upgrade_args: RuntimeArgs,
@@ -475,7 +508,7 @@ impl CasperVm {
         let result = self.deploy_wasm(&wasm_path, &upgrade_args);
         if let Some(error) = result {
             let odra_error = parse_error(error);
-            self.error = Some(odra_error.clone());
+            *self.error.borrow_mut() = Some(odra_error.clone());
             panic!("Revert: Contract deploy failed {:?}", odra_error);
         } else {
             self.collect_messages();
@@ -485,7 +518,7 @@ impl CasperVm {
 
     /// Create a new instance with predefined accounts.
     pub fn active_account_hash(&self) -> AccountHash {
-        *self.active_account.as_account_hash().unwrap()
+        *self.active_account.borrow().as_account_hash().unwrap()
     }
 
     /// Returns the balance of the given address.
@@ -503,7 +536,7 @@ impl CasperVm {
     /// Transfers the specified number of tokens to the given address.
     ///
     /// Results an OdraError if the transfer fails.
-    pub fn transfer(&mut self, to: Address, amount: U512) -> OdraResult<()> {
+    pub fn transfer(&self, to: Address, amount: U512) -> OdraResult<()> {
         let deploy_item = DeployItemBuilder::new()
             .with_transfer_args(runtime_args! {
                 "amount" => amount,
@@ -516,11 +549,11 @@ impl CasperVm {
             .build();
 
         let execute_request = ExecuteRequestBuilder::from_deploy_item(&deploy_item)
-            .with_block_time(self.block_time)
+            .with_block_time(self.block_time.get())
             .build();
-        self.context.exec(execute_request).commit();
+        self.context.borrow_mut().exec(execute_request).commit();
 
-        if let Some(error) = self.context.get_error() {
+        if let Some(error) = self.context.borrow().get_error() {
             let odra_error = parse_error(error);
             Err(odra_error)
         } else {
@@ -536,6 +569,7 @@ impl CasperVm {
     ) -> Result<T, String> {
         let result: Result<StoredValue, String> =
             self.context
+                .borrow()
                 .query(None, Key::Account(hash), &[name.to_string()]);
 
         result.map(|value| value.as_cl_value().unwrap().clone().into_t().unwrap())
@@ -545,7 +579,7 @@ impl CasperVm {
     /// Keep in mind that this may be different from the cost of the transaction on the live network.
     /// This is NOT the amount of gas charged - see [last_call_contract_gas_used()](Self::last_call_contract_gas_used).
     pub fn last_call_contract_gas_cost(&self) -> U512 {
-        self.context.last_exec_gas_consumed().value()
+        self.context.borrow().last_exec_gas_consumed().value()
     }
 
     /// Returns the amount of gas used for the last call.
@@ -556,14 +590,19 @@ impl CasperVm {
     /// Returns total gas used by the account.
     pub fn total_gas_used(&self, address: Address) -> U512 {
         match &address {
-            Address::Account(address) => self.gas_used.get(address).cloned().unwrap_or_default(),
+            Address::Account(address) => self
+                .gas_used
+                .borrow()
+                .get(address)
+                .cloned()
+                .unwrap_or_default(),
             Address::Contract(address) => panic!("Contract {} can't burn gas.", address)
         }
     }
 
     /// Returns the report of the gas used during the whole lifetime of the CasperVM.
-    pub fn gas_report(&self) -> &GasReport {
-        &self.gas_report
+    pub fn gas_report(&self) -> GasReport {
+        self.gas_report.borrow().clone()
     }
 
     /// Returns the public key that corresponds to the given Account Address.
@@ -588,7 +627,7 @@ impl CasperVm {
 
     /// Gets the error, if any, encountered during execution.
     pub fn error(&self) -> Option<OdraError> {
-        self.error.clone()
+        self.error.borrow().clone()
     }
 
     fn get_active_account_result(&self) -> Bytes {
@@ -599,16 +638,17 @@ impl CasperVm {
         bytes
     }
 
-    fn collect_gas(&mut self) {
+    fn collect_gas(&self) {
         *self
             .gas_used
-            .entry(*self.active_account.as_account_hash().unwrap())
+            .borrow_mut()
+            .entry(*self.active_account.borrow().as_account_hash().unwrap())
             .or_insert_with(U512::zero) += *DEFAULT_PAYMENT;
     }
 
-    fn next_hash(&mut self) -> [u8; 32] {
-        let seed = self.calls_counter;
-        self.calls_counter += 1;
+    fn next_hash(&self) -> [u8; 32] {
+        let seed = self.calls_counter.get();
+        self.calls_counter.set(seed + 1);
         let mut hash = [0u8; 32];
         hash[0] = seed as u8;
         hash[1] = (seed >> 8) as u8;
@@ -618,10 +658,11 @@ impl CasperVm {
     fn get_account_cspr_balance(&self, account_hash: &AccountHash) -> U512 {
         let account: AddressableEntity = self
             .context
+            .borrow()
             .get_entity_by_account_hash(*account_hash)
             .unwrap();
         let purse = account.main_purse();
-        self.context.get_purse_balance(purse)
+        self.context.borrow().get_purse_balance(purse)
     }
 
     fn get_contract_cspr_balance(&self, package_hash: &PackageHash) -> U512 {
@@ -629,7 +670,7 @@ impl CasperVm {
         let purse_uref = self.get_contract_main_purse(*package_hash);
         match purse_uref {
             None => U512::zero(),
-            Some(uref) => self.context.get_purse_balance(uref)
+            Some(uref) => self.context.borrow().get_purse_balance(uref)
         }
     }
 
@@ -733,15 +774,15 @@ impl CasperVm {
         }
 
         Self {
-            active_account: accounts[0],
-            context: builder,
+            active_account: RefCell::new(accounts[0]),
+            context: RefCell::new(builder),
             accounts,
-            block_time: 0u64,
-            calls_counter: 0,
-            error: None,
-            attached_value: U512::zero(),
-            gas_used: BTreeMap::new(),
-            gas_report: GasReport::default(),
+            block_time: Cell::new(0u64),
+            calls_counter: Cell::new(0),
+            error: RefCell::new(None),
+            attached_value: RefCell::new(U512::zero()),
+            gas_used: RefCell::new(BTreeMap::new()),
+            gas_report: RefCell::new(GasReport::default()),
             key_pairs,
             messages: Default::default(),
             validators,
@@ -749,8 +790,8 @@ impl CasperVm {
         }
     }
 
-    fn deploy_wasm(&mut self, wasm_path: &str, args: &RuntimeArgs) -> Option<engine_state::Error> {
-        self.error = None;
+    fn deploy_wasm(&self, wasm_path: &str, args: &RuntimeArgs) -> Option<engine_state::Error> {
+        *self.error.borrow_mut() = None;
         let session_code = PathBuf::from(wasm_path);
         let deploy_item = DeployItemBuilder::new()
             .with_standard_payment(runtime_args! {ARG_AMOUNT => *DEFAULT_PAYMENT})
@@ -761,21 +802,21 @@ impl CasperVm {
             .build();
 
         let execute_request = ExecuteRequestBuilder::from_deploy_item(&deploy_item)
-            .with_block_time(self.block_time)
+            .with_block_time(self.block_time.get())
             .build();
-        let result = self.context.exec(execute_request).commit();
+        let result = self.context.borrow_mut().exec(execute_request).commit();
         self.collect_gas();
-        self.gas_report.push(DeployReport::WasmDeploy {
+        self.gas_report.borrow_mut().push(DeployReport::WasmDeploy {
             gas: self.last_call_contract_gas_cost(),
             file_name: wasm_path.to_string()
         });
-        self.context.get_error()
+        self.context.borrow().get_error()
     }
 }
 
 impl CasperVm {
     fn get_package(&self, package_hash: PackageHash) -> Package {
-        self.context.get_package(package_hash).unwrap()
+        self.context.borrow().get_package(package_hash).unwrap()
     }
 
     /// Gets current contract from contract package and
@@ -784,6 +825,7 @@ impl CasperVm {
         // TODO: fix unwraps
         let a = self
             .context
+            .borrow()
             .get_package(package_hash)
             .unwrap()
             .current_entity_hash()
@@ -791,6 +833,7 @@ impl CasperVm {
         let addressable_entity_hash = AddressableEntityHash::new(a.value());
         let named_keys = self
             .context
+            .borrow()
             .get_entity_with_named_keys_by_entity_hash(addressable_entity_hash)
             .unwrap();
         let keys = named_keys.named_keys();
@@ -811,7 +854,7 @@ impl CasperVm {
 
     // TODO: Make this return Result
     fn get_value<T: CLTyped + FromBytes>(&self, key: Key) -> T {
-        let value = self.context.query(None, key, &[]);
+        let value = self.context.borrow().query(None, key, &[]);
         value
             .unwrap()
             .as_cl_value()
@@ -823,7 +866,10 @@ impl CasperVm {
 
     // Make this return Result also
     fn get_dict_value<T: CLTyped + FromBytes>(&self, uref: URef, name: &str) -> T {
-        let value = self.context.query_dictionary_item(None, uref, name);
+        let value = self
+            .context
+            .borrow()
+            .query_dictionary_item(None, uref, name);
         value
             .unwrap()
             .as_cl_value()

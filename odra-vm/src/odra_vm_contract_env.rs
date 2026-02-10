@@ -16,36 +16,36 @@ use std::hash::Hasher;
 use std::io::Write;
 
 pub struct OdraVmContractEnv {
-    vm: Rc<RefCell<OdraVm>>
+    vm: Rc<OdraVm>
 }
 
 impl ContractContext for OdraVmContractEnv {
     fn get_value(&self, key: &[u8]) -> Option<Bytes> {
-        self.vm.borrow().get_var(key)
+        self.vm.get_var(key)
     }
 
     fn set_value(&self, key: &[u8], value: Bytes) {
-        self.vm.borrow().set_var(key, value)
+        self.vm.set_var(key, value)
     }
 
     fn get_named_value(&self, name: &str) -> Option<Bytes> {
-        self.vm.borrow().get_named_key(name)
+        self.vm.get_named_key(name)
     }
 
     fn set_named_value(&self, name: &str, value: CLValue) {
-        self.vm.borrow().set_named_key(name, value)
+        self.vm.set_named_key(name, value)
     }
 
     fn get_dictionary_value(&self, dictionary_name: &str, key: &[u8]) -> Option<Bytes> {
-        self.vm.borrow().get_dict_value(dictionary_name, key)
+        self.vm.get_dict_value(dictionary_name, key)
     }
 
     fn set_dictionary_value(&self, dictionary_name: &str, key: &[u8], value: CLValue) {
-        self.vm.borrow().set_dict_value(dictionary_name, key, value)
+        self.vm.set_dict_value(dictionary_name, key, value)
     }
 
     fn remove_dictionary(&self, dictionary_name: &str) {
-        self.vm.borrow().remove_dictionary(dictionary_name);
+        self.vm.remove_dictionary(dictionary_name);
     }
 
     fn init_dictionary(&self, dictionary_name: &str) {
@@ -53,51 +53,51 @@ impl ContractContext for OdraVmContractEnv {
     }
 
     fn caller(&self) -> Address {
-        self.vm.borrow().caller()
+        self.vm.caller()
     }
 
     fn self_address(&self) -> Address {
-        self.vm.borrow().self_address()
+        self.vm.self_address()
     }
 
     fn call_contract(&self, address: Address, call_def: CallDef) -> Bytes {
-        self.vm.borrow().call_contract(address, call_def)
+        self.vm.call_contract(address, call_def)
     }
 
     fn get_block_time(&self) -> u64 {
-        self.vm.borrow().get_block_time()
+        self.vm.get_block_time()
     }
 
     fn attached_value(&self) -> U512 {
-        self.vm.borrow().attached_value()
+        self.vm.attached_value()
     }
 
     fn self_balance(&self) -> U512 {
-        self.vm.borrow().self_balance()
+        self.vm.self_balance()
     }
 
     fn emit_event(&self, event: &Bytes) {
-        self.vm.borrow().emit_event(event);
+        self.vm.emit_event(event);
     }
 
     fn emit_native_event(&self, event: &Bytes) {
-        self.vm.borrow().emit_native_event(event);
+        self.vm.emit_native_event(event);
     }
 
     fn transfer_tokens(&self, to: &Address, amount: &U512) {
-        self.vm.borrow().transfer_tokens(to, amount)
+        self.vm.transfer_tokens(to, amount)
     }
 
     fn revert(&self, error: OdraError) -> ! {
-        self.vm.borrow().revert(error)
+        self.vm.revert(error)
     }
 
     fn get_named_arg_bytes(&self, name: &str) -> OdraResult<Bytes> {
-        self.vm.borrow().get_named_arg(name).map(Into::into)
+        self.vm.get_named_arg(name).map(Into::into)
     }
 
     fn get_opt_named_arg_bytes(&self, name: &str) -> Option<Bytes> {
-        self.vm.borrow().get_named_arg(name).ok().map(Into::into)
+        self.vm.get_named_arg(name).ok().map(Into::into)
     }
 
     fn handle_attached_value(&self) {
@@ -119,22 +119,22 @@ impl ContractContext for OdraVmContractEnv {
     }
 
     fn delegate(&self, validator: PublicKey, amount: U512) {
-        let delegator = self.vm.borrow().callee();
-        self.vm.borrow().delegate(validator, delegator, amount);
+        let delegator = self.vm.callee();
+        self.vm.delegate(validator, delegator, amount);
     }
 
     fn undelegate(&self, validator: PublicKey, amount: U512) {
-        let delegator = self.vm.borrow().callee();
-        self.vm.borrow().undelegate(validator, delegator, amount);
+        let delegator = self.vm.callee();
+        self.vm.undelegate(validator, delegator, amount);
     }
 
     fn delegated_amount(&self, validator: PublicKey) -> U512 {
-        let delegator = self.vm.borrow().callee();
-        self.vm.borrow().delegated_amount(delegator, validator)
+        let delegator = self.vm.callee();
+        self.vm.delegated_amount(delegator, validator)
     }
 
     fn get_validator_info(&self, validator: PublicKey) -> Option<ValidatorInfo> {
-        self.vm.borrow().get_validator_info(validator)
+        self.vm.get_validator_info(validator)
     }
 
     fn pseudorandom_bytes(&self) -> [u8; RANDOM_BYTES_COUNT] {
@@ -146,7 +146,7 @@ impl ContractContext for OdraVmContractEnv {
 }
 
 impl OdraVmContractEnv {
-    pub fn new(vm: Rc<RefCell<OdraVm>>) -> Rc<RefCell<Self>> {
-        Rc::new(RefCell::new(Self { vm }))
+    pub fn new(vm: Rc<OdraVm>) -> Rc<Self> {
+        Rc::new(Self { vm })
     }
 }
