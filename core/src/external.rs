@@ -80,7 +80,7 @@ impl<T: ContractRef> External<T> {
         if self.contract_ref.get().is_none() {
             let _ = self.contract_ref();
         }
-        self.contract_ref.get_mut().unwrap()
+        self.contract_ref.get_mut().unwrap_or_revert(&self.env)
     }
 
     fn contract_ref(&self) -> &T {
@@ -88,7 +88,7 @@ impl<T: ContractRef> External<T> {
             let address = self
                 .value
                 .get_or_revert_with(ExecutionError::MissingAddress);
-            T::new(self.env.clone(), address)
+            T::new(Rc::clone(&self.env), address)
         })
     }
 }

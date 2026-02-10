@@ -1,16 +1,21 @@
-use crate::casper_types::{
-    bytesrepr::{FromBytes, ToBytes},
-    CLTyped
-};
+use core::cell::OnceCell;
+
 use crate::contract_env::ContractEnv;
 use crate::module::{ModuleComponent, ModulePrimitive};
 use crate::prelude::*;
+use crate::{
+    casper_types::{
+        bytesrepr::{FromBytes, ToBytes},
+        CLTyped
+    },
+    contract_env::StorageKey
+};
 
 /// Data structure for storing a single value.
 pub struct Var<T> {
-    env: Rc<ContractEnv>,
+    env: ContractEnv,
     phantom: core::marker::PhantomData<T>,
-    index: u8
+    key: OnceCell<StorageKey>
 }
 
 impl<T> Revertible for Var<T> {
@@ -20,9 +25,8 @@ impl<T> Revertible for Var<T> {
 }
 
 impl<T> Var<T> {
-    /// Returns the contract environment associated with the variable.
-    pub fn env(&self) -> ContractEnv {
-        self.env.child(self.index)
+    fn key(&self) -> &StorageKey {
+        self.key.get_or_init(|| self.env.current_key())
     }
 }
 
@@ -31,9 +35,9 @@ impl<T> ModuleComponent for Var<T> {
     /// Creates a new instance of `Var` with the given environment and index.
     fn instance(env: Rc<ContractEnv>, index: u8) -> Self {
         Self {
-            env,
+            env: env.child(index),
             phantom: core::marker::PhantomData,
-            index
+            key: OnceCell::new()
         }
     }
 }
@@ -45,8 +49,7 @@ impl<T: FromBytes> Var<T> {
     ///
     /// Returns `Some(value)` if the variable has a value, or `None` if it is unset.
     pub fn get(&self) -> Option<T> {
-        let env = self.env();
-        env.get_value(&env.current_key())
+        self.env.get_value(self.key())
     }
 
     /// Retrieves the value of the variable or reverts with an error.
@@ -67,8 +70,7 @@ impl<T: FromBytes + Default> Var<T> {
 impl<T: ToBytes + CLTyped> Var<T> {
     /// Sets the value of the variable.
     pub fn set(&mut self, value: T) {
-        let env = self.env();
-        env.set_value(&env.current_key(), value);
+        self.env.set_value(self.key(), value);
     }
 }
 
@@ -79,11 +81,10 @@ impl<V: ToBytes + FromBytes + CLTyped + OverflowingAdd + Default> Var<V> {
     /// If the operation fails due to overflow, the currently executing contract reverts.
     #[inline(always)]
     pub fn add(&mut self, value: V) {
-        let env = self.env();
-        let key = env.current_key();
-        let current_value = env.get_value::<V>(&key).unwrap_or_default();
+        let key = self.key();
+        let current_value = self.env.get_value::<V>(key).unwrap_or_default();
         let new_value = current_value.overflowing_add(value).unwrap_or_revert(self);
-        env.set_value(&key, new_value);
+        self.env.set_value(key, new_value);
     }
 }
 
@@ -94,10 +95,9 @@ impl<V: ToBytes + FromBytes + CLTyped + OverflowingSub + Default> Var<V> {
     /// If the operation fails due to overflow, the currently executing contract reverts.
     #[inline(always)]
     pub fn subtract(&mut self, value: V) {
-        let env = self.env();
-        let key = env.current_key();
-        let current_value = env.get_value::<V>(&key).unwrap_or_default();
+        let key = self.key();
+        let current_value = self.env.get_value::<V>(key).unwrap_or_default();
         let new_value = current_value.overflowing_sub(value).unwrap_or_revert(self);
-        env.set_value(&key, new_value);
+        self.env.set_value(key, new_value);
     }
 }
