@@ -157,6 +157,11 @@ mod test {
                     pub fn airdrop(&self, to: &[Address], amount: &U256) {
                         self.try_airdrop(to, amount).unwrap()
                     }
+
+                    /// Swaps the given amount to the given addresses.
+                    pub fn swap(&mut self, to: Address, amount: U256) -> U256 {
+                        self.try_swap(to, amount).unwrap()
+                    }
                 }
 
                 impl Erc20HostRef {
@@ -290,6 +295,41 @@ mod test {
                             ).with_amount(self.attached_value),
                         )
                     }
+
+                    /// Swaps the given amount to the given addresses.
+                    /// Does not fail in case of error, returns `odra::OdraResult` instead.
+                    pub fn try_swap(&mut self, to: Address, amount: U256) -> OdraResult<U256> {
+                        self.env.call_contract(
+                            self.address,
+                            odra::CallDef::new(
+                                odra::prelude::string::String::from("swap"),
+                                true,
+                                {
+                                    let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                    if self.attached_value > odra::casper_types::U512::zero() {
+                                        let _ = named_args.insert("amount", self.attached_value);
+                                    }
+                                    odra::args::EntrypointArgument::insert_runtime_arg(to, "to", &mut named_args);
+                                    odra::args::EntrypointArgument::insert_runtime_arg(amount, "amount", &mut named_args);
+                                    named_args
+                                }
+                            ).with_amount(self.attached_value),
+                        )
+                    }
+                }
+
+                impl Erc20HostRef {
+                    /// Swaps the given amount to the given addresses.
+                    /// Ignores the result of the call.
+                    pub fn swap_no_ret(&mut self, to: Address, amount: U256) {
+                        self.try_swap_no_ret(to, amount).unwrap()
+                    }
+                    /// Swaps the given amount to the given addresses.
+                    /// Ignores the result of the call.
+                    pub fn try_swap_no_ret(&mut self, to: Address, amount: U256) -> OdraResult<()> {
+                        let _ = self.try_swap(to, amount)?;
+                        Ok(())
+                    }
                 }
 
                 impl odra::contract_def::HasIdent for Erc20HostRef {
@@ -337,6 +377,10 @@ mod test {
                             odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("airdrop"), odra::prelude::vec![
                                 odra::entry_point_callback::Argument::new::<odra::prelude::vec::Vec<Address> >(odra::prelude::string::String::from("to")),
                                 odra::entry_point_callback::Argument::new::<U256>(odra::prelude::string::String::from("amount"))
+                            ]),
+                            odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("swap"), odra::prelude::vec![
+                                odra::entry_point_callback::Argument::new::<Address>(odra::prelude::string::String::from("to")),
+                                odra::entry_point_callback::Argument::new::<U256>(odra::prelude::string::String::from("amount"))
                             ])
                         ];
                         odra::entry_point_callback::EntryPointsCaller::new(env.clone(), entry_points, |contract_env, call_def| {
@@ -363,6 +407,10 @@ mod test {
                                 }
                                 "airdrop" => {
                                     let result = __erc20_exec_parts::execute_airdrop(contract_env);
+                                    odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
+                                }
+                                "swap" => {
+                                    let result = __erc20_exec_parts::execute_swap(contract_env);
                                     odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
                                 }
                                 name => Err(OdraError::VmError(
@@ -439,6 +487,10 @@ mod test {
                         self.try_total_supply().unwrap()
                     }
 
+                    fn set_total_supply(&mut self) -> U256 {
+                        self.try_set_total_supply().unwrap()
+                    }
+
                     fn pay_to_mint(&mut self) {
                         self.try_pay_to_mint().unwrap()
                     }
@@ -464,6 +516,25 @@ mod test {
                     }
 
                     /// Does not fail in case of error, returns `odra::OdraResult` instead.
+                    pub fn try_set_total_supply(&mut self) -> OdraResult<U256> {
+                        self.env
+                            .call_contract(
+                                self.address,
+                                odra::CallDef::new(
+                                    odra::prelude::string::String::from("set_total_supply"),
+                                    true,
+                                    {
+                                        let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                        if self.attached_value > odra::casper_types::U512::zero() {
+                                            let _ = named_args.insert("amount", self.attached_value);
+                                        }
+                                        named_args
+                                    }
+                                ).with_amount(self.attached_value),
+                            )
+                    }
+
+                    /// Does not fail in case of error, returns `odra::OdraResult` instead.
                     pub fn try_pay_to_mint(&mut self) -> OdraResult<()> {
                         self.env
                             .call_contract(
@@ -484,6 +555,19 @@ mod test {
                     }
                 }
 
+                impl Erc20HostRef {
+                    /// Ignores the result of the call.
+                    pub fn set_total_supply_no_ret(&mut self) {
+                        self.try_set_total_supply_no_ret().unwrap()
+                    }
+
+                    /// Ignores the result of the call.
+                    pub fn try_set_total_supply_no_ret(&mut self) -> OdraResult<()> {
+                        let _ = self.try_set_total_supply()?;
+                        Ok(())
+                    }
+                }
+
                 impl odra::contract_def::HasIdent for Erc20HostRef {
                     fn ident() -> odra::prelude::string::String {
                         Erc20::ident()
@@ -494,12 +578,17 @@ mod test {
                     fn entry_points_caller(env: &odra::host::HostEnv) -> odra::entry_point_callback::EntryPointsCaller {
                         let entry_points = odra::prelude::vec![
                             odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("total_supply"), odra::prelude::vec![]),
+                            odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("set_total_supply"), odra::prelude::vec![]),
                             odra::entry_point_callback::EntryPoint::new_payable(odra::prelude::string::String::from("pay_to_mint"), odra::prelude::vec![])
                         ];
                         odra::entry_point_callback::EntryPointsCaller::new(env.clone(), entry_points, |contract_env, call_def| {
                             match call_def.entry_point() {
                                 "total_supply" => {
                                     let result = __erc20_exec_parts::execute_total_supply(contract_env);
+                                    odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
+                                }
+                                "set_total_supply" => {
+                                    let result = __erc20_exec_parts::execute_set_total_supply(contract_env);
                                     odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
                                 }
                                 "pay_to_mint" => {

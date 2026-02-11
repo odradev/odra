@@ -3,7 +3,6 @@ use crate::{
     ir::ModuleImplIR,
     utils::{self, misc::AsBlock}
 };
-use derive_try_from_ref::TryFromRef;
 use proc_macro2::Ident;
 use quote::{quote, ToTokens, TokenStreamExt};
 use syn::parse_quote;
@@ -159,6 +158,34 @@ impl TryFrom<&'_ ModuleImplIR> for HostRefImplItem {
 }
 
 #[derive(syn_derive::ToTokens)]
+struct HostRefMutNoRetImplItem {
+    impl_token: syn::token::Impl,
+    ref_ident: Ident,
+    #[syn(braced)]
+    brace_token: syn::token::Brace,
+    #[syn(in = brace_token)]
+    #[to_tokens(|tokens, f| tokens.append_all(f))]
+    functions: Vec<syn::ItemFn>
+}
+
+impl TryFrom<&'_ ModuleImplIR> for HostRefMutNoRetImplItem {
+    type Error = syn::Error;
+
+    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
+        Ok(Self {
+            impl_token: Default::default(),
+            ref_ident: module.host_ref_ident()?,
+            brace_token: Default::default(),
+            functions: module
+                .host_mut_ret_functions()?
+                .iter()
+                .flat_map(|f| vec![ref_utils::host_mut_no_ret_function_item(f), ref_utils::host_mut_try_no_ret_function_item(f)])
+                .collect()
+        })
+    }
+}
+
+#[derive(syn_derive::ToTokens)]
 struct HostRefTryImplItem {
     impl_token: syn::token::Impl,
     ref_ident: Ident,
@@ -301,14 +328,28 @@ impl TryFrom<&'_ ModuleImplIR> for IdentFnItem {
     }
 }
 
-#[derive(syn_derive::ToTokens, TryFromRef)]
-#[source(ModuleImplIR)]
-#[err(syn::Error)]
+#[derive(syn_derive::ToTokens)]
 pub struct HostRefItem {
     struct_item: HostRefStructItem,
     trait_impl_item: HostRefTraitImplItem,
     impl_item: HostRefImplItem,
-    try_impl_item: HostRefTryImplItem
+    try_impl_item: HostRefTryImplItem,
+    mut_no_ret_impl_item: Option<HostRefMutNoRetImplItem>,
+}
+
+impl TryFrom<&'_ ModuleImplIR> for HostRefItem {
+    type Error = syn::Error;
+
+    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
+        let has_mut_ret_functions = !module.host_mut_ret_functions()?.is_empty(); 
+        Ok(Self {
+            struct_item: HostRefStructItem::try_from(module)?,
+            trait_impl_item: HostRefTraitImplItem::try_from(module)?,
+            impl_item: HostRefImplItem::try_from(module)?,
+            try_impl_item: HostRefTryImplItem::try_from(module)?,
+            mut_no_ret_impl_item: if has_mut_ret_functions { Some(HostRefMutNoRetImplItem::try_from(module)?) } else { None },
+        })
+    }
 }
 
 #[cfg(test)]
@@ -394,6 +435,11 @@ mod ref_item_tests {
                 /// Airdrops the given amount to the given addresses.
                 pub fn airdrop(&self, to: &[Address], amount: &U256) {
                     self.try_airdrop(to, amount).unwrap()
+                }
+
+                /// Swaps the given amount to the given addresses.
+                pub fn swap(&mut self, to: Address, amount: U256) -> U256 {
+                    self.try_swap(to, amount).unwrap()
                 }
             }
 
@@ -528,6 +574,52 @@ mod ref_item_tests {
                         ).with_amount(self.attached_value),
                     )
                 }
+
+                /// Swaps the given amount to the given addresses.
+                /// Does not fail in case of error, returns `odra::OdraResult` instead.
+                pub fn try_swap(&mut self, to: Address, amount: U256) -> OdraResult<U256> {
+                    self.env
+                        .call_contract(
+                            self.address,
+                            odra::CallDef::new(
+                                odra::prelude::string::String::from("swap"),
+                                true,
+                                {
+                                    let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                    if self.attached_value > odra::casper_types::U512::zero() {
+                                        let _ = named_args.insert("amount", self.attached_value);
+                                    }
+                                    odra::args::EntrypointArgument::insert_runtime_arg(
+                                        to,
+                                        "to",
+                                        &mut named_args,
+                                    );
+                                    odra::args::EntrypointArgument::insert_runtime_arg(
+                                        amount,
+                                        "amount",
+                                        &mut named_args,
+                                    );
+                                    named_args
+                                },
+                            )
+                            .with_amount(self.attached_value),
+                        )
+                }
+            }
+
+            impl Erc20HostRef {
+                /// Swaps the given amount to the given addresses.
+                /// Ignores the result of the call.
+                pub fn swap_no_ret(&mut self, to: Address, amount: U256) {
+                    self.try_swap_no_ret(to, amount).unwrap()
+                }
+
+                /// Swaps the given amount to the given addresses.
+                /// Ignores the result of the call.
+                pub fn try_swap_no_ret(&mut self, to: Address, amount: U256) -> OdraResult<()> {
+                    let _ = self.try_swap(to, amount)?;
+                    Ok(())
+                }
             }
         };
         let actual = HostRefItem::try_from(&module).unwrap();
@@ -586,7 +678,9 @@ mod ref_item_tests {
                 fn total_supply(&self) -> U256 {
                     self.try_total_supply().unwrap()
                 }
-
+                fn set_total_supply(&mut self) -> U256 {
+                    self.try_set_total_supply().unwrap()
+                }
                 fn pay_to_mint(&mut self) {
                     self.try_pay_to_mint().unwrap()
                 }
@@ -611,6 +705,23 @@ mod ref_item_tests {
                     )
                 }
 
+                /// Does not fail in case of error, returns `odra::OdraResult` instead.
+                pub fn try_set_total_supply(&mut self) -> OdraResult<U256> {
+                    self.env.call_contract(
+                        self.address,
+                        odra::CallDef::new(
+                            odra::prelude::string::String::from("set_total_supply"),
+                            true,
+                            {
+                                let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                if self.attached_value > odra::casper_types::U512::zero() {
+                                    let _ = named_args.insert("amount", self.attached_value);
+                                }
+                                named_args
+                            }
+                        ).with_amount(self.attached_value),
+                    )
+                }
 
                 /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_pay_to_mint(&mut self) -> OdraResult<()>  {
@@ -630,6 +741,19 @@ mod ref_item_tests {
                                 )
                                 .with_amount(self.attached_value),
                         )
+                }
+            }
+
+            impl Erc20HostRef {
+                /// Ignores the result of the call.
+                pub fn set_total_supply_no_ret(&mut self) {
+                    self.try_set_total_supply_no_ret().unwrap()
+                }
+
+                /// Ignores the result of the call.
+                pub fn try_set_total_supply_no_ret(&mut self) -> OdraResult<()> {
+                    let _ = self.try_set_total_supply()?;
+                    Ok(())
                 }
             }
         };

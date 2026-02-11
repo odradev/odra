@@ -10,6 +10,7 @@ pub mod livenet;
 pub mod module_nesting;
 pub mod modules;
 pub mod native_token;
+pub mod no_ret;
 pub mod optional_args;
 pub mod pauseable;
 pub mod reentrancy_guard;

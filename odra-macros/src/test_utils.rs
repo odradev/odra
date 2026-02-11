@@ -53,6 +53,11 @@ pub mod mock {
                 fn private_function() {
 
                 }
+
+                /// Swaps the given amount to the given addresses.
+                pub fn swap(&mut self, to: Address, amount: U256) -> U256 {
+                    amount
+                }
             }
         };
 
@@ -123,6 +128,11 @@ pub mod mock {
             impl IErc20 for Erc20 {
                 fn total_supply(&self) -> U256 {
                     self.total_supply.get_or_default()
+                }
+
+                fn set_total_supply(&mut self) -> U256 {
+                    self.total_supply.set(1000.into());
+                    1000.into()
                 }
 
                 #[odra(payable)]

@@ -301,6 +301,17 @@ mod test {
                     let result = contract.airdrop(&to, &amount);
                     return result;
                 }
+
+                #[inline]
+                pub fn execute_swap(env: odra::ContractEnv) -> U256 {
+                    let env_rc = Rc::new(env);
+                    let exec_env = odra::ExecutionEnv::new(env_rc.clone());
+                    let to = exec_env.get_named_arg::<Address>("to");
+                    let amount = exec_env.get_named_arg::<U256>("amount");
+                    let mut contract = <Erc20 as Module>::new(env_rc);
+                    let result = contract.swap(to, amount);
+                    return result;
+                }
             }
         };
 
@@ -323,6 +334,14 @@ mod test {
                     let env_rc = Rc::new(env);
                     let contract = <Erc20 as Module>::new(env_rc);
                     let result = contract.total_supply();
+                    return result;
+                }
+
+                #[inline]
+                pub fn execute_set_total_supply(env: odra::ContractEnv) -> U256 {
+                    let env_rc = Rc::new(env);
+                    let mut contract = <Erc20 as Module>::new(env_rc);
+                    let result = contract.set_total_supply();
                     return result;
                 }
 

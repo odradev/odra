@@ -17,7 +17,8 @@ impl TryFrom<&ModuleImplIR> for FactorySchemaEntrypointsItem {
     fn try_from(module: &ModuleImplIR) -> Result<Self, Self::Error> {
         let item = SchemaEntrypointsItem {
             module_ident: module.module_ident()?,
-            fns: module.functions()?
+            fns: module
+                .functions()?
                 .into_iter()
                 .filter(|f| f.is_constructor())
                 .map(|f| {
@@ -31,7 +32,7 @@ impl TryFrom<&ModuleImplIR> for FactorySchemaEntrypointsItem {
                                 inputs,
                                 ..sig.clone()
                             }
-                        },
+                        }
                         FnIR::Def(fn_trait_ir) => {
                             let sig = fn_trait_ir.sig();
                             syn::Signature {
@@ -42,12 +43,14 @@ impl TryFrom<&ModuleImplIR> for FactorySchemaEntrypointsItem {
                     };
                     FnIR::Def(FnTraitIR::new(parse_quote!(#argless_sig;)))
                 })
-                .chain(vec![module.factory_fn(), module.factory_upgrade_fn(), module.factory_batch_upgrade_fn()])
+                .chain(vec![
+                    module.factory_fn(),
+                    module.factory_upgrade_fn(),
+                    module.factory_batch_upgrade_fn(),
+                ])
                 .collect()
         };
-        Ok(Self {
-            item
-        })
+        Ok(Self { item })
     }
 }
 
@@ -77,7 +80,7 @@ impl ToTokens for SchemaEntrypointsItem {
                 let mut args = if f.fn_type() == FnType::FactoryBatchUpgrader {
                     let ty_bytes = utils::ty::bytes();
                     vec![quote::quote!(odra::schema::argument::<#ty_bytes>("args"))]
-                } else  {
+                } else {
                     args_to_tokens(&f.raw_typed_args())
                 };
                 if f.is_payable() {
@@ -197,6 +200,15 @@ mod test {
                                 odra::schema::argument::<odra::prelude::vec::Vec<Address> >("to"),
                                 odra::schema::argument::<U256>("amount")
                             ]
+                        ),
+                        odra::schema::entry_point::<U256>(
+                            "swap",
+                            "Swaps the given amount to the given addresses.",
+                            true,
+                            odra::prelude::vec![
+                                odra::schema::argument::<Address>("to"),
+                                odra::schema::argument::<U256>("amount")
+                            ]
                         )
                     ]
                 }
@@ -221,6 +233,12 @@ mod test {
                             "total_supply",
                             "",
                             false,
+                            odra::prelude::vec![]
+                        ),
+                        odra::schema::entry_point::<U256>(
+                            "set_total_supply",
+                            "",
+                            true,
                             odra::prelude::vec![]
                         ),
                         odra::schema::entry_point::<()>(
@@ -299,36 +317,36 @@ mod test {
                 ) -> odra::prelude::vec::Vec<odra::schema::casper_contract_schema::Entrypoint>
                 {
                     odra::prelude::vec![
-                        odra::schema::entry_point::<()>(
-                            "init",
-                            "",
-                            true,
-                            odra::prelude::vec![]
-                        ),
-                        odra::schema::entry_point::<(odra::prelude::Address, odra::casper_types::URef)>(
+                        odra::schema::entry_point::<()>("init", "", true, odra::prelude::vec![]),
+                        odra::schema::entry_point::<(
+                            odra::prelude::Address,
+                            odra::casper_types::URef
+                        )>(
                             "new_contract",
                             "",
                             true,
                             odra::prelude::vec![
-                                odra::schema::argument::<odra::prelude::string::String>("contract_name"),
+                                odra::schema::argument::<odra::prelude::string::String>(
+                                    "contract_name"
+                                ),
                                 odra::schema::argument::<u32>("value")
                             ]
                         ),
                         odra::schema::entry_point::<()>(
                             "upgrade_child_contract",
-                            "", 
-                            true, 
-                            odra::prelude::vec![
-                                odra::schema::argument::<odra::prelude::string::String>("contract_name")
-                            ]
+                            "",
+                            true,
+                            odra::prelude::vec![odra::schema::argument::<
+                                odra::prelude::string::String
+                            >("contract_name")]
                         ),
                         odra::schema::entry_point::<()>(
                             "batch_upgrade_child_contract",
-                            "", 
-                            true, 
-                            odra::prelude::vec![
-                                odra::schema::argument::<odra::casper_types::bytesrepr::Bytes>("args")
-                            ]
+                            "",
+                            true,
+                            odra::prelude::vec![odra::schema::argument::<
+                                odra::casper_types::bytesrepr::Bytes
+                            >("args")]
                         )
                     ]
                 }
