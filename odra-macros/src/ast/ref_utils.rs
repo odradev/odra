@@ -74,15 +74,8 @@ pub fn host_mut_try_no_ret_function_item(fun: &FnIR) -> syn::ItemFn {
         output: syn::parse_quote!(-> #ret_ty),
         ..signature
     };
-    let try_func_name = fun.try_name();
-    let args = fun.arg_names();
-    syn::parse_quote!(
-        #(#attrs)*
-        pub #signature {
-            let _ = self.#try_func_name(#(#args),*)?;
-            Ok(())
-        }
-    )
+    let call_def_expr = call_def_with_amount(fun);
+    env_call(signature, call_def_expr, attrs, visibility_pub())
 }
 
 pub fn contract_function_item(fun: &FnIR, is_trait_impl: bool) -> syn::ItemFn {
