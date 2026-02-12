@@ -5,6 +5,7 @@
 //!
 //! If there is a module defined as:
 //!
+//! ```ignore
 //! #[odra::module]
 //! pub struct MockDex;
 //!
@@ -14,9 +15,11 @@
 //!         amount_in * 2
 //!     }
 //! }
+//! ```
 //!
 //! The generated code will contain an extra impl block with `_no_ret`-suffixed functions.
 //!
+//! ```ignore
 //! impl MockDexHostRef {
 //!     /// Ignores the result of the call.
 //!     pub fn swap_no_ret(&mut self, amount_in: U256) {
@@ -29,6 +32,7 @@
 //!         Ok(())
 //!     }
 //! }
+//! ```
 use odra::{casper_types::U256, prelude::*};
 
 /// A simple contract that represents a dog.
