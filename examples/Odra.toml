@@ -99,3 +99,6 @@ fqn = "factory::token::FactoryProxy"
 
 [[contracts]]
 fqn = "contracts::cep96_cep95::Cep96Cep95"
+
+[[contracts]]
+fqn = "features::no_ret::MockDex"

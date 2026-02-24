@@ -349,6 +349,28 @@ mod test {
                             .with_amount(self.attached_value),
                         )
                 }
+
+                /// Swaps the given amount to the given addresses.
+                pub fn swap(&mut self, to: Address, amount: U256) -> U256 {
+                    self.env
+                        .call_contract(
+                            self.address,
+                            odra::CallDef::new(
+                                odra::prelude::string::String::from("swap"),
+                                true,
+                                {
+                                    let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                    if self.attached_value > odra::casper_types::U512::zero() {
+                                        let _ = named_args.insert("amount", self.attached_value);
+                                    }
+                                    odra::args::EntrypointArgument::insert_runtime_arg(to, "to", &mut named_args);
+                                    odra::args::EntrypointArgument::insert_runtime_arg(amount, "amount", &mut named_args);
+                                    named_args
+                                }
+                            )
+                            .with_amount(self.attached_value),
+                        )
+                }
             }
 
             #[automatically_derived]
@@ -413,6 +435,25 @@ mod test {
                         )
                         .with_amount(self.attached_value),
                     )
+                }
+
+                fn set_total_supply(&mut self) -> U256 {
+                    self.env
+                        .call_contract(
+                            self.address,
+                            odra::CallDef::new(
+                                odra::prelude::string::String::from("set_total_supply"),
+                                true,
+                                {
+                                    let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                    if self.attached_value > odra::casper_types::U512::zero() {
+                                        let _ = named_args.insert("amount", self.attached_value);
+                                    }
+                                    named_args
+                                }
+                            )
+                            .with_amount(self.attached_value),
+                        )
                 }
 
                 fn pay_to_mint(&mut self) {
