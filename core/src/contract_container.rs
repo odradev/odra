@@ -99,7 +99,7 @@ mod tests {
 
     impl ContractContainer {
         fn empty() -> Self {
-            let ctx = Rc::new(RefCell::new(MockHostContext::new()));
+            let ctx = Rc::new(MockHostContext::new());
             let env = HostEnv::new(ctx);
             let entry_points_caller = EntryPointsCaller::new(env, vec![], |_, call_def| {
                 Err(OdraError::VmError(VmError::NoSuchMethod(
@@ -124,7 +124,7 @@ mod tests {
             ctx.expect_contract_env().returning(|| {
                 ContractEnv::new(0, Rc::new(RefCell::new(MockContractContext::new())))
             });
-            let env = HostEnv::new(Rc::new(RefCell::new(ctx)));
+            let env = HostEnv::new(Rc::new(ctx));
 
             let entry_points_caller = EntryPointsCaller::new(env, entry_points, |_, call_def| {
                 if call_def.entry_point() == TEST_ENTRYPOINT {

@@ -224,7 +224,7 @@ impl HostContext for CasperHost {
 
 impl CasperHost {
     /// Creates a new instance of the host.
-    pub fn new(vm: Rc<RefCell<CasperVm>>) -> Rc<RefCell<Self>> {
-        Rc::new(RefCell::new(Self { vm }))
+    pub fn new(vm: Rc<RefCell<CasperVm>>) -> Rc<Self> {
+        Rc::new(Self { vm })
     }
 }

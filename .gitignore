@@ -30,3 +30,4 @@ AGENTS.md
 odra-wasm-client/example/index.js
 odra-wasm-client/example/web/dist/**
 odra-wasm-client/package-lock.json
+CLAUDE.md

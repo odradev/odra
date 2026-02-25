@@ -1,7 +1,6 @@
 use std::cell::RefCell;
 use std::panic::{self, AssertUnwindSafe};
 use std::rc::Rc;
-use std::sync::{Arc, RwLock};
 
 use super::odra_vm_state::OdraVmState;
 use anyhow::Result;
@@ -26,16 +25,24 @@ use odra_core::{ContractContainer, ContractRegister};
 const NAMED_KEY_PREFIX: &str = "NAMED_KEY";
 
 /// Odra in-memory virtual machine.
-#[derive(Default)]
 pub struct OdraVm {
-    state: Arc<RwLock<OdraVmState>>,
-    contract_register: Arc<RwLock<ContractRegister>>
+    state: Rc<RefCell<OdraVmState>>,
+    contract_register: Rc<RefCell<ContractRegister>>
+}
+
+impl Default for OdraVm {
+    fn default() -> Self {
+        Self {
+            state: Rc::new(RefCell::new(OdraVmState::default())),
+            contract_register: Rc::new(RefCell::new(ContractRegister::default()))
+        }
+    }
 }
 
 impl OdraVm {
     /// Creates a new instance of OdraVm.
-    pub fn new() -> Rc<RefCell<Self>> {
-        Rc::new(RefCell::new(Self::default()))
+    pub fn new() -> Rc<Self> {
+        Rc::new(Self::default())
     }
 
     /// Adds a new contract to the virtual machine.
@@ -46,16 +53,15 @@ impl OdraVm {
         entry_points_caller: EntryPointsCaller
     ) -> Address {
         // Create a new address.
-        let address = self.state.write().unwrap().next_contract_address();
+         let address = self.state.borrow_mut().next_contract_address();
 
         // Register the contract under the address.
         {
             let contract = ContractContainer::new(name, entry_points_caller);
-            let mut contract_register = self.contract_register.write().unwrap();
+            let mut contract_register = self.contract_register.borrow_mut();
             contract_register.add(address, contract);
             self.state
-                .write()
-                .unwrap()
+                .borrow_mut()
                 .set_balance(address, U512::zero());
         }
 
@@ -70,7 +76,7 @@ impl OdraVm {
         upgrade_args: RuntimeArgs,
         entry_points_caller: EntryPointsCaller
     ) -> Address {
-        let mut contract_register = self.contract_register.write().unwrap();
+        let mut contract_register = self.contract_register.borrow_mut();
 
         // Register the contract under the address.
         let contract = ContractContainer::new(name, entry_points_caller);
@@ -80,8 +86,7 @@ impl OdraVm {
 
     pub(crate) fn post_install(&self, address: Address) {
         self.contract_register
-            .write()
-            .unwrap()
+            .borrow_mut()
             .post_install(&address);
     }
 
@@ -92,8 +97,7 @@ impl OdraVm {
     pub fn call_contract(&self, address: Address, call_def: CallDef) -> Bytes {
         let contract_name = self
             .contract_register
-            .read()
-            .unwrap()
+            .borrow()
             .get(&address)
             .map(|c| String::from(c.name()))
             .unwrap_or(String::from("UnknownContractName"));
@@ -108,8 +112,7 @@ impl OdraVm {
         }
         let result = self
             .contract_register
-            .read()
-            .unwrap()
+            .borrow()
             .call(&address, call_def);
 
         match result {
@@ -135,7 +138,7 @@ impl OdraVm {
             );
         }
 
-        let mut state = self.state.write().unwrap();
+        let mut state = self.state.borrow_mut();
         state.set_error(error.clone());
         state.clear_callstack();
         if state.is_in_caller_context() {
@@ -150,40 +153,40 @@ impl OdraVm {
     ///
     /// If the virtual machine is not in error state, returns `None`.
     pub fn error(&self) -> Option<OdraError> {
-        self.state.read().unwrap().error()
+        self.state.borrow().error()
     }
 
     /// Returns the callee, i.e. the currently executing contract.
     pub fn self_address(&self) -> Address {
-        self.state.read().unwrap().callee()
+        self.state.borrow().callee()
     }
 
     /// Retrieves from the state the address of the current caller.
     pub fn caller(&self) -> Address {
-        self.state.read().unwrap().caller()
+        self.state.borrow().caller()
     }
 
     /// Retrieves the callstack record.
     pub fn read_stack_record(&self) -> String {
-        self.state.read().unwrap().read_stack_record()
+        self.state.borrow().read_stack_record()
     }
 
     /// Retrieves from the state the address of the current callee. It is taken from the
     /// tip of the callstack.
     pub fn callee(&self) -> Address {
-        self.state.read().unwrap().callee()
+        self.state.borrow().callee()
     }
 
     /// Retrieves the first element from the callstack.
     pub fn callstack_tip(&self) -> CallstackElement {
-        self.state.read().unwrap().callstack_tip().clone()
+        self.state.borrow().callstack_tip().clone()
     }
 
     /// Gets the value of the named argument.
     ///
     /// The argument must be present in the call definition.
     pub fn get_named_arg(&self, name: &str) -> OdraResult<Vec<u8>> {
-        match self.state.read().unwrap().callstack_tip() {
+        match self.state.borrow().callstack_tip() {
             CallstackElement::Account(_) => todo!(),
             CallstackElement::ContractCall { call_def, .. } => call_def
                 .args()
@@ -195,14 +198,14 @@ impl OdraVm {
 
     /// Overrides the current caller address.
     pub fn set_caller(&self, caller: Address) {
-        self.state.write().unwrap().set_caller(caller);
+        self.state.borrow_mut().set_caller(caller);
     }
 
     /// Sets the value of the named argument.
     ///
     /// If the global state write fails, the virtual machine is in error state.
     pub fn set_var(&self, key: &[u8], value: Bytes) {
-        self.state.write().unwrap().set_var(key, value);
+        self.state.borrow_mut().set_var(key, value);
     }
 
     /// Gets the value of the named variable from the global state.
@@ -210,13 +213,12 @@ impl OdraVm {
     /// Returns `None` if the variable does not exist.
     /// If the global state read fails, the virtual machine is in error state.
     pub fn get_var(&self, key: &[u8]) -> Option<Bytes> {
-        let result = { self.state.read().unwrap().get_var(key) };
+        let result = { self.state.borrow().get_var(key) };
         match result {
             Ok(result) => result,
             Err(error) => {
                 self.state
-                    .write()
-                    .unwrap()
+                    .borrow_mut()
                     .set_error(Into::<ExecutionError>::into(error));
                 None
             }
@@ -237,7 +239,7 @@ impl OdraVm {
 
     /// Sets the value of the dictionary item.
     pub fn set_dict_value(&self, dict: &str, key: &[u8], value: CLValue) {
-        self.state.write().unwrap().set_dict_value(
+        self.state.borrow_mut().set_dict_value(
             dict.as_bytes(),
             key,
             Bytes::from(value.inner_bytes().as_slice())
@@ -247,8 +249,7 @@ impl OdraVm {
     /// Removes the dictionary from the global state.
     pub fn remove_dictionary(&self, dictionary_name: &str) {
         self.state
-            .write()
-            .unwrap()
+            .borrow_mut()
             .remove_dictionary(dictionary_name.as_bytes());
     }
 
@@ -259,16 +260,14 @@ impl OdraVm {
     pub fn get_dict_value(&self, dict: &str, key: &[u8]) -> Option<Bytes> {
         let result = {
             self.state
-                .read()
-                .unwrap()
+                .borrow()
                 .get_dict_value(dict.as_bytes(), key)
         };
         match result {
             Ok(result) => result,
             Err(error) => {
                 self.state
-                    .write()
-                    .unwrap()
+                    .borrow_mut()
                     .set_error(Into::<ExecutionError>::into(error));
                 None
             }
@@ -277,75 +276,72 @@ impl OdraVm {
 
     /// Writes an event data to the global state.
     pub fn emit_event(&self, event_data: &Bytes) {
-        self.state.write().unwrap().emit_event(event_data);
+        self.state.borrow_mut().emit_event(event_data);
     }
 
     /// Writes an event data to the global state and marks it as native.
     pub fn emit_native_event(&self, event_data: &Bytes) {
-        self.state.write().unwrap().emit_native_event(event_data);
+        self.state.borrow_mut().emit_native_event(event_data);
     }
 
     /// Gets the event emitted by the given address at the given index from the global state.
     pub fn get_event(&self, address: &Address, index: u32) -> Result<Bytes, EventError> {
-        self.state.read().unwrap().get_event(address, index)
+        self.state.borrow().get_event(address, index)
     }
 
     /// Gets the native event emitted by the given address at the given index from the global state.
     pub fn get_native_event(&self, address: &Address, index: u32) -> Result<Bytes, EventError> {
-        self.state.read().unwrap().get_native_event(address, index)
+        self.state.borrow().get_native_event(address, index)
     }
 
     /// Gets the number of events emitted by the given address from the global state.
     pub fn get_events_count(&self, address: &Address) -> Result<u32, EventError> {
-        self.state.read().unwrap().get_events_count(address)
+        self.state.borrow().get_events_count(address)
     }
 
     /// Gets the number of events emitted by the given address from the global state.
     pub fn get_native_events_count(&self, address: &Address) -> Result<u32, EventError> {
-        self.state.read().unwrap().get_native_events_count(address)
+        self.state.borrow().get_native_events_count(address)
     }
 
     /// Attaches the given amount of tokens to the current call from the global state.
     pub fn attach_value(&self, amount: U512) {
-        self.state.write().unwrap().attach_value(amount);
+        self.state.borrow_mut().attach_value(amount);
     }
 
     /// Gets the current block time.
     pub fn get_block_time(&self) -> u64 {
-        self.state.read().unwrap().block_time()
+        self.state.borrow().block_time()
     }
 
     /// Advances the block time by the given number of milliseconds.
     pub fn advance_block_time_by(&self, milliseconds: u64) {
         self.state
-            .write()
-            .unwrap()
+            .borrow_mut()
             .advance_block_time_by(milliseconds)
     }
 
     /// Advances the block time by the given number of milliseconds and updates the auctions.
     pub fn advance_with_auctions(&self, milliseconds: u64) {
         self.state
-            .write()
-            .unwrap()
+            .borrow_mut()
             .advance_with_auctions(milliseconds)
     }
 
     /// Gets the value attached to the current call.
     pub fn attached_value(&self) -> U512 {
-        self.state.read().unwrap().attached_value()
+        self.state.borrow().attached_value()
     }
 
     /// Gets the address of the account at the given index.
     pub fn get_account(&self, n: usize) -> Address {
-        self.state.read().unwrap().accounts.get(n).cloned().unwrap()
+        self.state.borrow().accounts.get(n).cloned().unwrap()
     }
 
     /// Gets the public key of the validator at the given index.
     pub fn get_validator(&self, n: usize) -> PublicKey {
         self.state
-            .read()
-            .unwrap()
+            .borrow()
             .validators
             .iter()
             .map(|a| a.0)
@@ -356,7 +352,7 @@ impl OdraVm {
 
     /// Reads the balance of the given address from the global state.
     pub fn balance_of(&self, address: &Address) -> U512 {
-        self.state.read().unwrap().balance_of(address)
+        self.state.borrow().balance_of(address)
     }
 
     /// Updates the balances of the given address and the current address in the global state.
@@ -372,7 +368,7 @@ impl OdraVm {
 
         let mut transfer_error = None;
         {
-            let mut state = self.state.write().unwrap();
+            let mut state = self.state.borrow_mut();
             if state.transfer(from, to, amount).is_err() {
                 transfer_error = Some(OdraError::VmError(VmError::BalanceExceeded));
             }
@@ -397,7 +393,7 @@ impl OdraVm {
             return Ok(());
         }
 
-        let mut state = self.state.write().unwrap();
+        let mut state = self.state.borrow_mut();
         if state.transfer(from, to, amount).is_err() {
             return Err(OdraError::VmError(VmError::BalanceExceeded));
         }
@@ -408,12 +404,12 @@ impl OdraVm {
     /// Reads the balance of the current contract from the global state.
     pub fn self_balance(&self) -> U512 {
         let address = self.self_address();
-        self.state.read().unwrap().balance_of(&address)
+        self.state.borrow().balance_of(&address)
     }
 
     /// Reads the public key of a given address from the global state.
     pub fn public_key(&self, address: &Address) -> PublicKey {
-        self.state.read().unwrap().public_key(address)
+        self.state.borrow().public_key(address)
     }
 
     /// Signs a message using the secret key associated with the public key of a given address.
@@ -430,7 +426,7 @@ impl OdraVm {
         let public_key = self.public_key(address);
         let signature = odra_core::casper_types::crypto::sign(
             message,
-            self.state.read().unwrap().secret_key(address),
+            self.state.borrow().secret_key(address),
             &public_key
         )
         .to_bytes()
@@ -450,8 +446,7 @@ impl OdraVm {
     /// The amount of tokens delegated to the validator.
     pub fn delegated_amount(&self, delegator: Address, validator: PublicKey) -> U512 {
         self.state
-            .read()
-            .unwrap()
+            .borrow()
             .delegated_amount(validator, delegator)
     }
 
@@ -464,8 +459,7 @@ impl OdraVm {
     /// Option<ValidatorBid>
     pub fn get_validator_info(&self, validator: PublicKey) -> Option<ValidatorInfo> {
         self.state
-            .read()
-            .unwrap()
+            .borrow()
             .validators
             .get(&validator)
             .cloned()
@@ -475,7 +469,7 @@ impl OdraVm {
     /// Undelegates all tokens from the validator.
     pub fn remove_validator(&self, index: usize) {
         let validator = self.get_validator(index);
-        self.state.write().unwrap().remove_validator(validator);
+        self.state.borrow_mut().remove_validator(validator);
     }
 
     /// Delegates the given amount of tokens to a given validator.
@@ -485,7 +479,7 @@ impl OdraVm {
     /// * `validator` - The public key of the validator.
     /// * `amount` - The amount of tokens to delegate.
     pub fn delegate(&self, validator: PublicKey, delegator: Address, amount: U512) {
-        let mut state = self.state.write().unwrap();
+        let mut state = self.state.borrow_mut();
         state.delegate(validator, delegator, amount);
     }
 
@@ -497,13 +491,13 @@ impl OdraVm {
     /// * `validator` - The public key of the validator.
     /// * `amount` - The amount of tokens to undelegate.
     pub fn undelegate(&self, validator: PublicKey, delegator: Address, amount: U512) {
-        let mut state = self.state.write().unwrap();
+        let mut state = self.state.borrow_mut();
         state.undelegate(validator, delegator, amount);
     }
 
     /// Gets the current auction delay.
     pub fn auction_delay(&self) -> u64 {
-        self.state.read().unwrap().auction_delay()
+        self.state.borrow().auction_delay()
     }
 
     /// Returns the delay between the unstaking and the moment when the tokens can be transferred.
@@ -514,7 +508,7 @@ impl OdraVm {
 
 impl OdraVm {
     fn prepare_call(&self, contract_name: String, address: Address, call_def: &CallDef) {
-        let mut state = self.state.write().unwrap();
+        let mut state = self.state.borrow_mut();
         // If only one address on the call_stack, record snapshot.
         if state.is_in_caller_context() {
             state.take_snapshot();
@@ -527,7 +521,7 @@ impl OdraVm {
     }
 
     fn handle_call_result(&self, result: Bytes) -> Bytes {
-        let mut state = self.state.write().unwrap();
+        let mut state = self.state.borrow_mut();
 
         // Drop the address from stack.
         state.pop_callstack_element();
@@ -858,7 +852,7 @@ mod tests {
 
     fn push_address(vm: &OdraVm, address: &Address) {
         let element = CallstackElement::new_account(*address);
-        vm.state.write().unwrap().push_callstack_element(element);
+        vm.state.borrow_mut().push_callstack_element(element);
     }
 
     fn test_call_result() -> Bytes {

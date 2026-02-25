@@ -30,8 +30,8 @@ pub struct LivenetHost {
 
 impl LivenetHost {
     /// Creates a new instance of LivenetHost.
-    pub fn new() -> Rc<RefCell<Self>> {
-        Rc::new(RefCell::new(Self::new_instance()))
+    pub fn new() -> Rc<Self> {
+        Rc::new(Self::new_instance())
     }
 
     fn new_instance() -> Self {

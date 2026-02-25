@@ -432,7 +432,7 @@ pub trait HostContext {
 /// the execution of contracts.
 #[derive(Clone)]
 pub struct HostEnv {
-    backend: Rc<RefCell<dyn HostContext>>,
+    backend: Rc<dyn HostContext>,
     last_call_result: Rc<RefCell<Option<CallResult>>>,
     deployed_contracts: Rc<RefCell<BTreeMap<Address, DeployedContract>>>,
     captures_events: Rc<RefCell<bool>>
@@ -440,7 +440,7 @@ pub struct HostEnv {
 
 impl HostEnv {
     /// Creates a new `HostEnv` instance with the specified backend.
-    pub fn new(backend: Rc<RefCell<dyn HostContext>>) -> HostEnv {
+    pub fn new(backend: Rc<dyn HostContext>) -> HostEnv {
         HostEnv {
             backend,
             last_call_result: RefCell::new(None).into(),
@@ -465,13 +465,13 @@ impl HostEnv {
 
     /// Returns the account address at the specified index.
     pub fn get_account(&self, index: usize) -> Address {
-        let backend = self.backend.borrow();
+        let backend = self.backend.as_ref();
         backend.get_account(index)
     }
 
     /// Returns the validator public key.
     pub fn get_validator(&self, index: usize) -> PublicKey {
-        let backend = self.backend.borrow();
+        let backend = self.backend.as_ref();
         backend.get_validator(index)
     }
 
@@ -480,62 +480,62 @@ impl HostEnv {
         if address.is_contract() {
             panic!("Caller cannot be a contract: {:?}", address)
         }
-        let backend = self.backend.borrow();
+        let backend = self.backend.as_ref();
         backend.set_caller(address)
     }
 
     /// Advances the block time by the specified time difference in milliseconds.
     pub fn advance_block_time(&self, time_diff: u64) {
-        let backend = self.backend.borrow();
+        let backend = self.backend.as_ref();
         backend.advance_block_time(time_diff)
     }
 
     /// Advances the block time by the specified time difference in milliseconds
     /// and processes auctions.
     pub fn advance_with_auctions(&self, time_diff: u64) {
-        let backend = self.backend.borrow();
+        let backend = self.backend.as_ref();
         backend.advance_with_auctions(time_diff);
     }
 
     /// Returns the era length in milliseconds.
     pub fn auction_delay(&self) -> u64 {
-        let backend = self.backend.borrow();
+        let backend = self.backend.as_ref();
         backend.auction_delay()
     }
 
     /// Returns the delay between unstaking and the transfer of funds back to the delegator in milliseconds.
     pub fn unbonding_delay(&self) -> u64 {
-        let backend = self.backend.borrow();
+        let backend = self.backend.as_ref();
         backend.unbonding_delay()
     }
 
     /// Returns the amount of CSPR delegated to the specified validator by the specified delegator.
     pub fn delegated_amount(&self, delegator: Address, validator: PublicKey) -> U512 {
-        let backend = self.backend.borrow();
+        let backend = self.backend.as_ref();
         backend.delegated_amount(delegator, validator)
     }
 
     /// Evicts the validator at the specified index from the validator set.
     pub fn remove_validator(&self, index: usize) {
-        let backend = self.backend.borrow();
+        let backend = self.backend.as_ref();
         backend.remove_validator(index);
     }
 
     /// Returns the current block time in milliseconds.
     pub fn block_time(&self) -> u64 {
-        let backend = self.backend.borrow();
+        let backend = self.backend.as_ref();
         backend.block_time()
     }
 
     /// Returns the current block time in milliseconds.
     pub fn block_time_millis(&self) -> u64 {
-        let backend = self.backend.borrow();
+        let backend = self.backend.as_ref();
         backend.block_time()
     }
 
     /// Returns the current block time in seconds.
     pub fn block_time_secs(&self) -> u64 {
-        let backend = self.backend.borrow();
+        let backend = self.backend.as_ref();
         backend.block_time().checked_div(1000).unwrap()
     }
 
@@ -550,7 +550,7 @@ impl HostEnv {
         let mut entry_points_caller = entry_points_caller.clone();
         entry_points_caller.remove_entry_point("upgrade");
 
-        let backend = self.backend.borrow();
+        let backend = self.backend.as_ref();
         let contract_address = backend.new_contract(name, init_args, entry_points_caller)?;
 
         self.deployed_contracts
@@ -572,7 +572,7 @@ impl HostEnv {
         let mut entry_points_caller = entry_points_caller.clone();
         entry_points_caller.remove_entry_point("init");
 
-        let backend = self.backend.borrow();
+        let backend = self.backend.as_ref();
         let upgraded_contract = backend.upgrade_contract(
             name,
             contract_to_upgrade,
@@ -595,7 +595,7 @@ impl HostEnv {
         contract_name: String,
         entry_points_caller: EntryPointsCaller
     ) {
-        let backend = self.backend.borrow();
+        let backend = self.backend.as_ref();
         backend.register_contract(address, contract_name, entry_points_caller);
         self.deployed_contracts
             .borrow_mut()
@@ -626,7 +626,7 @@ impl HostEnv {
         use_proxy: bool
     ) -> OdraResult<Bytes> {
         let call_result = {
-            let backend = self.backend.borrow();
+            let backend = self.backend.as_ref();
             backend.call_contract(&address, call_def, use_proxy)
         };
 
@@ -646,7 +646,7 @@ impl HostEnv {
             );
         }
 
-        let backend = self.backend.borrow();
+        let backend = self.backend.as_ref();
         let last_call_gas_cost = backend.last_call_gas_cost();
 
         self.last_call_result.replace(Some(CallResult::new(
@@ -663,17 +663,17 @@ impl HostEnv {
 
     /// Returns the gas cost of the last contract call.
     pub fn contract_env(&self) -> ContractEnv {
-        self.backend.borrow().contract_env()
+        self.backend.contract_env()
     }
 
     /// Prints the gas report for the current contract execution.
     pub fn gas_report(&self) -> GasReport {
-        self.backend.borrow().gas_report().clone()
+        self.backend.gas_report().clone()
     }
 
     /// Returns the CSPR balance of the specified address.
     pub fn balance_of<T: Addressable>(&self, addr: &T) -> U512 {
-        let backend = self.backend.borrow();
+        let backend = self.backend.as_ref();
         backend.balance_of(&addr.address())
     }
 
@@ -689,7 +689,7 @@ impl HostEnv {
         index: i32
     ) -> Result<T, EventError> {
         let contract_address = addr.address();
-        let backend = self.backend.borrow();
+        let backend = self.backend.as_ref();
         let events_count = self.events_count(&contract_address);
         let event_absolute_position = crate::utils::event_absolute_position(events_count, index)
             .ok_or(EventError::IndexOutOfBounds)?;
@@ -716,7 +716,7 @@ impl HostEnv {
         index: i32
     ) -> Result<T, EventError> {
         let contract_address = addr.address();
-        let backend = self.backend.borrow();
+        let backend = self.backend.as_ref();
         let events_count = self.native_events_count(&contract_address);
         let event_absolute_position = crate::utils::event_absolute_position(events_count, index)
             .ok_or(EventError::IndexOutOfBounds)?;
@@ -733,7 +733,7 @@ impl HostEnv {
         addr: &T,
         index: u32
     ) -> Result<Bytes, EventError> {
-        let backend = self.backend.borrow();
+        let backend = self.backend.as_ref();
         backend.get_event(&addr.address(), index)
     }
 
@@ -743,7 +743,7 @@ impl HostEnv {
         addr: &T,
         index: u32
     ) -> Result<Bytes, EventError> {
-        let backend = self.backend.borrow();
+        let backend = self.backend.as_ref();
         backend.get_native_event(&addr.address(), index)
     }
 
@@ -751,7 +751,7 @@ impl HostEnv {
     pub fn event_names<T: Addressable>(&self, addr: &T) -> Vec<String> {
         let events_count = self.events_count(addr);
 
-        let backend = self.backend.borrow();
+        let backend = self.backend.as_ref();
         (0..events_count)
             .map(|event_id| {
                 backend
@@ -764,7 +764,7 @@ impl HostEnv {
 
     /// Returns all events emitted by the specified contract.
     pub fn events<T: Addressable>(&self, addr: &T) -> Vec<Bytes> {
-        let backend = self.backend.borrow();
+        let backend = self.backend.as_ref();
         let contract_address = addr.address();
         let events_count = backend
             .get_events_count(&contract_address)
@@ -785,7 +785,7 @@ impl HostEnv {
 
     /// Returns the number of events emitted by the specified contract.
     pub fn events_count<T: Addressable>(&self, addr: &T) -> u32 {
-        let backend = self.backend.borrow();
+        let backend = self.backend.as_ref();
         backend
             .get_events_count(&addr.address())
             .unwrap_or_default()
@@ -793,7 +793,7 @@ impl HostEnv {
 
     /// Returns the number of native events emitted by the specified contract.
     pub fn native_events_count<T: Addressable>(&self, addr: &T) -> u32 {
-        let backend = self.backend.borrow();
+        let backend = self.backend.as_ref();
         backend
             .get_native_events_count(&addr.address())
             .unwrap_or_default()
@@ -914,25 +914,25 @@ impl HostEnv {
 
     /// Signs the specified message with the private key of the specified address.
     pub fn sign_message(&self, message: &Bytes, address: &Address) -> Bytes {
-        let backend = self.backend.borrow();
+        let backend = self.backend.as_ref();
         backend.sign_message(message, address)
     }
 
     /// Returns the public key associated with the specified address.
     pub fn public_key(&self, address: &Address) -> PublicKey {
-        let backend = self.backend.borrow();
+        let backend = self.backend.as_ref();
         backend.public_key(address)
     }
 
     /// Returns the caller address for the current contract execution.
     pub fn caller(&self) -> Address {
-        let backend = self.backend.borrow();
+        let backend = self.backend.as_ref();
         backend.caller()
     }
 
     /// Sets the gas limit for the current contract execution.
     pub fn set_gas(&self, gas: u64) {
-        let backend = self.backend.borrow();
+        let backend = self.backend.as_ref();
         backend.set_gas(gas)
     }
 
@@ -943,7 +943,7 @@ impl HostEnv {
                 ExecutionError::TransferToContract
             ));
         }
-        let backend = self.backend.borrow();
+        let backend = self.backend.as_ref();
         backend.transfer(to, amount)
     }
 
@@ -1093,7 +1093,7 @@ mod test {
         let mut ctx = MockHostContext::new();
         ctx.expect_new_contract()
             .returning(|_, _, _| Ok(Address::Account(AccountHash::new([0; 32]))));
-        let env = HostEnv::new(Rc::new(RefCell::new(ctx)));
+        let env = HostEnv::new(Rc::new(ctx));
         MockTestRef::deploy(&env, NoArgs);
     }
 
@@ -1126,7 +1126,7 @@ mod test {
             .times(1)
             .returning(|_, _| MockTestRef::default());
 
-        let env = HostEnv::new(Rc::new(RefCell::new(ctx)));
+        let env = HostEnv::new(Rc::new(ctx));
         let address = Address::Account(AccountHash::new([0; 32]));
         MockTestRef::load(&env, address);
     }
@@ -1142,7 +1142,7 @@ mod test {
         ctx.expect_gas_report().returning(GasReport::new).times(1);
         ctx.expect_set_gas().returning(|_| ()).times(1);
 
-        let env = HostEnv::new(Rc::new(RefCell::new(ctx)));
+        let env = HostEnv::new(Rc::new(ctx));
 
         assert_eq!(env.caller(), Address::Account(AccountHash::new([2; 32])));
         // should call the `HostContext`
@@ -1155,7 +1155,7 @@ mod test {
         // Given a host context that successfully transfers tokens.
         let mut ctx = MockHostContext::new();
         ctx.expect_transfer().returning(|_, _| Ok(()));
-        let env = HostEnv::new(Rc::new(RefCell::new(ctx)));
+        let env = HostEnv::new(Rc::new(ctx));
 
         let addr = Address::Account(AccountHash::new([0; 32]));
         // When transfer 100 tokens to an account.
@@ -1170,7 +1170,7 @@ mod test {
         let mut ctx = MockHostContext::new();
         ctx.expect_transfer()
             .returning(|_, _| Err(OdraError::ExecutionError(ExecutionError::UnwrapError)));
-        let env = HostEnv::new(Rc::new(RefCell::new(ctx)));
+        let env = HostEnv::new(Rc::new(ctx));
 
         let addr = Address::Account(AccountHash::new([0; 32]));
         // When transfer 100 tokens to an account.
@@ -1187,7 +1187,7 @@ mod test {
         // Given a host context that successfully transfers tokens.
         let mut ctx = MockHostContext::new();
         ctx.expect_transfer().returning(|_, _| Ok(()));
-        let env = HostEnv::new(Rc::new(RefCell::new(ctx)));
+        let env = HostEnv::new(Rc::new(ctx));
 
         let addr = Address::Contract(ContractPackageHash::new([0; 32]));
         // When transfer 100 tokens to a contract.
@@ -1217,7 +1217,7 @@ mod test {
             .with(predicate::always(), predicate::eq(1))
             .returning(|_, _| Ok(TestEv {}.to_bytes().unwrap().into()));
 
-        let env = HostEnv::new(Rc::new(RefCell::new(ctx)));
+        let env = HostEnv::new(Rc::new(ctx));
 
         assert_eq!(env.get_event(&addr, 1), Ok(TestEv {}));
         assert_eq!(env.get_event(&addr, -1), Ok(TestEv {}));
@@ -1255,7 +1255,7 @@ mod test {
             .with(predicate::always(), predicate::eq(1))
             .returning(|_, _| Ok(vec![1, 0, 1].into()));
 
-        let env = HostEnv::new(Rc::new(RefCell::new(ctx)));
+        let env = HostEnv::new(Rc::new(ctx));
 
         assert_eq!(
             env.events(&addr),
@@ -1278,7 +1278,7 @@ mod test {
             .with(predicate::always(), predicate::eq(0))
             .returning(|_, _| Err(EventError::CouldntExtractEventData));
 
-        let env = HostEnv::new(Rc::new(RefCell::new(ctx)));
+        let env = HostEnv::new(Rc::new(ctx));
 
         env.events(&addr);
     }
@@ -1292,7 +1292,7 @@ mod test {
         ctx.expect_get_event()
             .returning(|_, _| Ok(TestEv {}.to_bytes().unwrap().into()));
 
-        let env = HostEnv::new(Rc::new(RefCell::new(ctx)));
+        let env = HostEnv::new(Rc::new(ctx));
         assert!(env.emitted(&addr, "TestEv"));
         assert!(!env.emitted(&addr, "AnotherEvent"));
     }

@@ -11,13 +11,13 @@ use odra_core::{EventError, GasReport, VmError};
 
 /// HostContext utilizing the Odra in-memory virtual machine.
 pub struct OdraVmHost {
-    vm: Rc<RefCell<OdraVm>>,
+    vm: Rc<OdraVm>,
     contract_env: Rc<ContractEnv>
 }
 
 impl HostContext for OdraVmHost {
     fn set_caller(&self, caller: Address) {
-        self.vm.borrow().set_caller(caller)
+        self.vm.set_caller(caller)
     }
 
     fn set_gas(&self, gas: u64) {
@@ -25,51 +25,51 @@ impl HostContext for OdraVmHost {
     }
 
     fn caller(&self) -> Address {
-        *self.vm.borrow().callstack_tip().address()
+        *self.vm.callstack_tip().address()
     }
 
     fn get_account(&self, index: usize) -> Address {
-        self.vm.borrow().get_account(index)
+        self.vm.get_account(index)
     }
 
     fn get_validator(&self, index: usize) -> PublicKey {
-        self.vm.borrow().get_validator(index)
+        self.vm.get_validator(index)
     }
 
     fn remove_validator(&self, index: usize) {
-        self.vm.borrow().remove_validator(index);
+        self.vm.remove_validator(index);
     }
 
     fn balance_of(&self, address: &Address) -> U512 {
-        self.vm.borrow().balance_of(address)
+        self.vm.balance_of(address)
     }
 
     fn advance_block_time(&self, time_diff: u64) {
-        self.vm.borrow().advance_block_time_by(time_diff)
+        self.vm.advance_block_time_by(time_diff)
     }
 
     fn advance_with_auctions(&self, time_diff: u64) {
-        self.vm.borrow().advance_with_auctions(time_diff)
+        self.vm.advance_with_auctions(time_diff)
     }
 
     fn auction_delay(&self) -> u64 {
-        self.vm.borrow().auction_delay()
+        self.vm.auction_delay()
     }
 
     fn unbonding_delay(&self) -> u64 {
-        self.vm.borrow().unbonding_delay()
+        self.vm.unbonding_delay()
     }
 
     fn delegated_amount(&self, delegator: Address, validator: PublicKey) -> U512 {
-        self.vm.borrow().delegated_amount(delegator, validator)
+        self.vm.delegated_amount(delegator, validator)
     }
 
     fn block_time(&self) -> u64 {
-        self.vm.borrow().get_block_time()
+        self.vm.get_block_time()
     }
 
     fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, EventError> {
-        self.vm.borrow().get_event(contract_address, index)
+        self.vm.get_event(contract_address, index)
     }
 
     fn get_native_event(
@@ -77,15 +77,15 @@ impl HostContext for OdraVmHost {
         contract_address: &Address,
         index: u32
     ) -> Result<Bytes, EventError> {
-        self.vm.borrow().get_native_event(contract_address, index)
+        self.vm.get_native_event(contract_address, index)
     }
 
     fn get_events_count(&self, contract_address: &Address) -> Result<u32, EventError> {
-        self.vm.borrow().get_events_count(contract_address)
+        self.vm.get_events_count(contract_address)
     }
 
     fn get_native_events_count(&self, contract_address: &Address) -> Result<u32, EventError> {
-        self.vm.borrow().get_native_events_count(contract_address)
+        self.vm.get_native_events_count(contract_address)
     }
 
     fn call_contract(
@@ -98,14 +98,14 @@ impl HostContext for OdraVmHost {
 
         let mut opt_result: Option<Bytes> = None;
         let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            opt_result = Some(self.vm.borrow().call_contract(*address, call_def));
+            opt_result = Some(self.vm.call_contract(*address, call_def));
         }));
 
         match opt_result {
             Some(result) => Ok(result),
             None => {
-                eprintln!("↳ Stack trace:\n{}", self.vm.borrow().read_stack_record());
-                let error = self.vm.borrow().error();
+                eprintln!("↳ Stack trace:\n{}", self.vm.read_stack_record());
+                let error = self.vm.error();
                 Err(error.unwrap_or(OdraError::VmError(VmError::Panic)))
             }
         }
@@ -119,7 +119,6 @@ impl HostContext for OdraVmHost {
     ) -> OdraResult<Address> {
         let address =
             self.vm
-                .borrow()
                 .new_contract(name, init_args.clone(), entry_points_caller.clone());
 
         if entry_points_caller
@@ -132,7 +131,7 @@ impl HostContext for OdraVmHost {
                 CallDef::new(String::from("init"), true, init_args),
                 false
             )?;
-            self.vm.borrow().post_install(address);
+            self.vm.post_install(address);
         }
 
         Ok(address)
@@ -145,7 +144,7 @@ impl HostContext for OdraVmHost {
         upgrade_args: RuntimeArgs,
         entry_points_caller: EntryPointsCaller
     ) -> OdraResult<Address> {
-        let address = self.vm.borrow().upgrade_contract(
+        let address = self.vm.upgrade_contract(
             name,
             contract_to_upgrade,
             upgrade_args.clone(),
@@ -162,7 +161,7 @@ impl HostContext for OdraVmHost {
                 CallDef::new(String::from("upgrade"), true, upgrade_args),
                 false
             )?;
-            self.vm.borrow().post_install(address);
+            self.vm.post_install(address);
         }
 
         Ok(address)
@@ -192,25 +191,24 @@ impl HostContext for OdraVmHost {
     }
 
     fn sign_message(&self, message: &Bytes, address: &Address) -> Bytes {
-        self.vm.borrow().sign_message(message, address)
+        self.vm.sign_message(message, address)
     }
 
     fn public_key(&self, address: &Address) -> PublicKey {
-        self.vm.borrow().public_key(address)
+        self.vm.public_key(address)
     }
 
     fn transfer(&self, to: Address, amount: U512) -> OdraResult<()> {
         let caller = self.caller();
         self.vm
-            .borrow()
             .checked_transfer_tokens(&caller, &to, &amount)
     }
 }
 
 impl OdraVmHost {
     /// Creates a new `OdraVmHost` instance.
-    pub fn new(vm: Rc<RefCell<OdraVm>>) -> Rc<RefCell<Self>> {
+    pub fn new(vm: Rc<OdraVm>) -> Rc<Self> {
         let contract_env = Rc::new(ContractEnv::new(0, OdraVmContractEnv::new(vm.clone())));
-        Rc::new(RefCell::new(Self { vm, contract_env }))
+        Rc::new(Self { vm, contract_env })
     }
 }
