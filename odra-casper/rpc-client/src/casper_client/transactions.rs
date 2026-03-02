@@ -259,10 +259,10 @@ impl super::CasperClient {
             casper_client::Error::ResponseIsRpcError {
                 rpc_method, error, ..
             } => {
-                eprintln!(
+                log::error(format!(
                     "[TX] Received RPC error for method {}: {}.",
                     rpc_method, error
-                );
+                ));
                 RpcRequestError(
                     rpc_method.to_string(),
                     error
@@ -271,7 +271,7 @@ impl super::CasperClient {
                 )
             }
             _ => {
-                eprintln!("Failed to put transaction: {}.", e);
+                log::error(format!("Failed to put transaction: {}.", e));
                 ExecutionError(format!("Failed to put transaction: {}", e))
             }
         })?;
