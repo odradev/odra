@@ -247,7 +247,7 @@ impl super::CasperClient {
         log::debug("[TX] Starting event watcher before sending transaction...");
         let watch = self.start_event_watcher().await?;
         log::debug("[TX] Event watcher ready, now sending transaction...");
-
+        println!("Transaction sent, waiting for execution result...");
         let response = put_transaction(
             self.rpc_id_typed(),
             self.configuration.node_address(),
@@ -258,13 +258,22 @@ impl super::CasperClient {
         .map_err(|e| match e {
             casper_client::Error::ResponseIsRpcError {
                 rpc_method, error, ..
-            } => RpcRequestError(
-                rpc_method.to_string(),
-                error
-                    .data
-                    .map_or_else(|| "No data".to_string(), |d| d.to_string())
-            ),
-            _ => ExecutionError(format!("Failed to put transaction: {}", e))
+            } => {
+                log::debug(format!(
+                    "[TX] Received RPC error for method {}: {}.",
+                    rpc_method, error
+                ));
+                RpcRequestError(
+                    rpc_method.to_string(),
+                    error
+                        .data
+                        .map_or_else(|| "No data".to_string(), |d| d.to_string())
+                )
+            }
+            _ => {
+                log::debug(format!("Failed to put transaction: {}.", e));
+                ExecutionError(format!("Failed to put transaction: {}", e))
+            }
         })?;
         let deploy_hash = response.result.transaction_hash;
         log::debug(format!(
