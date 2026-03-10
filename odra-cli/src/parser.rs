@@ -1,6 +1,6 @@
 use clap::{builder::TypedValueParser, error::ErrorKind, Arg, Command, Error};
 use odra::{
-    casper_types::{CLValue, U512},
+    casper_types::{CLType, CLValue, U512},
     schema::{casper_contract_schema::NamedCLType, NamedCLTyped}
 };
 
@@ -34,16 +34,8 @@ impl<E: NamedCLTyped + Clone + Send + Sync + 'static> TypedValueParser for Gener
             .to_str()
             .ok_or_else(|| Error::new(ErrorKind::InvalidUtf8).with_cmd(cmd))?;
         let ty = E::ty();
-        let bytes = types::into_bytes(&ty, value).map_err(|err| {
-            let arg = arg
-                .map(|a| a.to_string())
-                .unwrap_or_else(|| "unknown argument".to_string());
-            let message = format!(
-                "Failed to parse arg {} with value '{}' for type '{:?}':\nCaused by: {}\n",
-                arg, value, ty, err
-            );
-            Error::raw(ErrorKind::InvalidValue, message).with_cmd(cmd)
-        })?;
+        let bytes = types::into_bytes(&ty, value)
+            .map_err(|err| make_parse_error(cmd, arg, value, &ty, err))?;
         let cl_type = types::named_cl_type_to_cl_type(&ty);
         Ok(CLValue::from_components(cl_type, bytes))
     }
@@ -80,16 +72,8 @@ impl TypedValueParser for CLTypedParser {
         let value = value
             .to_str()
             .ok_or_else(|| Error::new(ErrorKind::InvalidUtf8).with_cmd(cmd))?;
-        let bytes = types::into_bytes(&self.ty, value).map_err(|err| {
-            let arg = arg
-                .map(|a| a.to_string())
-                .unwrap_or_else(|| "unknown argument".to_string());
-            let message = format!(
-                "Failed to parse arg {} with value '{}' for type '{:?}':\nCaused by: {}\n",
-                arg, value, &self.ty, err
-            );
-            Error::raw(ErrorKind::InvalidValue, message).with_cmd(cmd)
-        })?;
+        let bytes = types::into_bytes(&self.ty, value)
+            .map_err(|err| make_parse_error(cmd, arg, value, &self.ty, err))?;
         let cl_type = types::named_cl_type_to_cl_type(&self.ty);
         Ok(CLValue::from_components(cl_type, bytes))
     }
@@ -139,6 +123,71 @@ impl TypedValueParser for GasParser {
             Ok(parsed_value.as_u64())
         }
     }
+}
+
+#[derive(Clone)]
+pub struct EnumCLParser {
+    variants: Vec<(String, u16)>
+}
+
+impl EnumCLParser {
+    pub fn new(variants: Vec<(String, u16)>) -> Self {
+        Self { variants }
+    }
+}
+
+impl TypedValueParser for EnumCLParser {
+    type Value = CLValue;
+
+    fn parse_ref(
+        &self,
+        cmd: &Command,
+        arg: Option<&Arg>,
+        value: &std::ffi::OsStr
+    ) -> Result<Self::Value, Error> {
+        let name = value
+            .to_str()
+            .ok_or_else(|| Error::new(ErrorKind::InvalidUtf8).with_cmd(cmd))?;
+        let discriminant = self
+            .variants
+            .iter()
+            .find(|(n, _)| n == name)
+            .map(|(_, d)| *d)
+            .ok_or_else(|| {
+                Error::raw(
+                    ErrorKind::InvalidValue,
+                    format!(
+                        "Unknown variant '{}' for --{}. Valid: {}\n",
+                        name,
+                        get_arg_long(arg),
+                        types::format_variant_list(&self.variants)
+                    )
+                )
+                .with_cmd(cmd)
+            })?;
+        Ok(CLValue::from_components(CLType::U8, vec![discriminant as u8]))
+    }
+}
+
+fn get_arg_long(arg: Option<&Arg>) -> &str {
+    arg.and_then(|a| a.get_long()).unwrap_or("unknown")
+}
+
+fn make_parse_error(
+    cmd: &Command,
+    arg: Option<&Arg>,
+    value: &str,
+    ty: &NamedCLType,
+    err: impl std::fmt::Display
+) -> Error {
+    let message = format!(
+        "Failed to parse --{}\n  Value:    '{}'\n  Expected: {}\n  Cause:    {}\n",
+        get_arg_long(arg),
+        value,
+        types::format_type_hint(ty),
+        err
+    );
+    Error::raw(ErrorKind::InvalidValue, message).with_cmd(cmd)
 }
 
 fn parse_cspr_token_amount(value: &str) -> Result<U512, &'static str> {

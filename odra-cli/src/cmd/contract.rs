@@ -250,7 +250,7 @@ mod tests {
         let cmd = ContractCmd::new::<TestContract>();
 
         assert_eq!(cmd.contract_name, "TestContract");
-        assert_eq!(cmd.entry_points.len(), 5);
+        assert_eq!(cmd.entry_points.len(), 6);
     }
 
     #[test]
@@ -365,6 +365,7 @@ mod tests {
     #[test]
     fn test_parsing_arguments() {
         let cmd = ContractCmd::new::<TestContract>();
+
         let clap_cmd: Command = (&cmd).into();
         let args = clap_cmd.try_get_matches_from(vec![
             "test",
@@ -386,10 +387,42 @@ mod tests {
             "--h",
             "('value1':'value2':'value3')",
             "--i",
-            "'key1': 1, 'key2': 2",
+            "key1=1,key2=2",
             "--j",
             "0x12,0x34,0x56,0x78,0x9a,0xbc,0xde,0xf0",
         ]);
         assert!(args.is_ok());
+
+        // Enum: valid variant names are accepted
+        for variant in &["Active", "Paused", "Terminated"] {
+            let clap_cmd: Command = (&cmd).into();
+            let result = clap_cmd.try_get_matches_from(vec![
+                "test",
+                "set_status",
+                "--gas",
+                "10000000000",
+                "--status",
+                variant,
+            ]);
+            assert!(result.is_ok(), "Expected '{}' to be a valid variant", variant);
+        }
+
+        // Enum: unknown variant name is rejected
+        let clap_cmd: Command = (&cmd).into();
+        let result = clap_cmd.try_get_matches_from(vec![
+            "test",
+            "set_status",
+            "--gas",
+            "10000000000",
+            "--status",
+            "Unknown",
+        ]);
+        assert!(result.is_err(), "Expected 'Unknown' to be rejected");
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("Active") && err_msg.contains("Paused") && err_msg.contains("Terminated"),
+            "Error should list valid variants, got: {}",
+            err_msg
+        );
     }
 }

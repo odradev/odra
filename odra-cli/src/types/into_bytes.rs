@@ -206,7 +206,7 @@ fn test_map() {
         value: Box::new(NamedCLType::String)
     };
     assert_eq!(
-        into_bytes(&ty, r#"1:a,2:b"#).unwrap(),
+        into_bytes(&ty, r#"1=a,2=b"#).unwrap(),
         vec![2, 0, 0, 0, 1, 1, 0, 0, 0, 97, 2, 1, 0, 0, 0, 98]
     );
 }

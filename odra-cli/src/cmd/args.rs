@@ -1,6 +1,9 @@
 use std::any::Any;
 
-use crate::parser::{CLTypedParser, CsprTokenAmountParser, GasParser};
+use crate::{
+    parser::{CLTypedParser, CsprTokenAmountParser, EnumCLParser, GasParser},
+    types
+};
 use clap::{builder::PathBufValueParser, ArgAction, ArgMatches};
 use odra::schema::casper_contract_schema::NamedCLType;
 
@@ -34,7 +37,8 @@ pub struct CommandArg {
     pub required: bool,
     pub description: String,
     pub ty: NamedCLType,
-    pub is_list_element: bool
+    pub is_list_element: bool,
+    pub enum_variants: Option<Vec<(String, u16)>>
 }
 
 impl CommandArg {
@@ -44,7 +48,8 @@ impl CommandArg {
             description: description.to_string(),
             ty,
             required: false,
-            is_list_element: false
+            is_list_element: false,
+            enum_variants: None
         }
     }
 
@@ -62,6 +67,13 @@ impl CommandArg {
         }
     }
 
+    pub fn with_enum_variants(self, variants: Vec<(String, u16)>) -> Self {
+        Self {
+            enum_variants: Some(variants),
+            ..self
+        }
+    }
+
     pub(crate) fn split_name(&self) -> Vec<String> {
         self.name
             .split('.')
@@ -72,16 +84,36 @@ impl CommandArg {
 
 impl From<CommandArg> for clap::Arg {
     fn from(arg: CommandArg) -> Self {
-        let result = clap::Arg::new(&arg.name)
-            .long(arg.name)
-            .value_name(format!("{:?}", arg.ty))
-            .required(arg.required)
-            .value_parser(CLTypedParser::new(arg.ty))
-            .help(arg.description);
+        let CommandArg {
+            name,
+            required,
+            description,
+            ty,
+            is_list_element,
+            enum_variants
+        } = arg;
 
-        match arg.is_list_element {
-            true => result.action(ArgAction::Append),
-            false => result.action(ArgAction::Set)
+        let value_hint = if let Some(ref variants) = enum_variants {
+            types::format_variant_list(variants)
+        } else {
+            types::format_type_hint(&ty)
+        };
+
+        let base = clap::Arg::new(&name)
+            .long(name)
+            .value_name(value_hint)
+            .required(required)
+            .help(description);
+
+        let base = if let Some(variants) = enum_variants {
+            base.value_parser(EnumCLParser::new(variants))
+        } else {
+            base.value_parser(CLTypedParser::new(ty))
+        };
+
+        match is_list_element {
+            true => base.action(ArgAction::Append),
+            false => base.action(ArgAction::Set)
         }
     }
 }

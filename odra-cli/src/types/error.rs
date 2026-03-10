@@ -70,7 +70,7 @@ impl Format {
                 "expected tuple with {} elements, found {}",
                 expected, actual
             )],
-            Format::Map => vec![String::from("'key1:value1,key2:value2,...'")],
+            Format::Map => vec![String::from("'key1=value1,key2=value2,...'")],
             Format::ByteArray => vec![
                 String::from("'0x000102...'"),
                 String::from("'0x00,0x01,...'"),
