@@ -24,8 +24,9 @@ impl OdraCommand for WhoamiCmd {
         _container: &DeployedContractsContainer
     ) -> Result<()> {
         let caller = env.caller();
-        prettycli::info(&format!("Address: {:?}", caller));
-        prettycli::info(&format!("{:?}", env.public_key(&caller)));
+        prettycli::info(&format!("Address: {}", caller.to_string()));
+        let pk = env.public_key(&caller);
+        prettycli::info(&format!("Public key: {pk}"));
         Ok(())
     }
 }

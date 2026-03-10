@@ -40,9 +40,9 @@ pub trait DeployerExt: Sized {
     {
         if let Ok(contract) = container.contract_ref::<Self::Contract>(env) {
             prettycli::info(&format!(
-                "Using existing contract {} at address {:?}",
+                "Using existing contract {} at address {}",
                 <Self::Contract as OdraContract>::HostRef::ident(),
-                contract.address()
+                contract.address().to_string()
             ));
             Ok(contract)
         } else {
@@ -67,9 +67,9 @@ pub trait DeployerExt: Sized {
             container.contract_ref_named::<Self::Contract>(env, package_name.clone())
         {
             prettycli::info(&format!(
-                "Using existing contract {} at address {:?}",
+                "Using existing contract {} at address {}",
                 <Self::Contract as OdraContract>::HostRef::ident(),
-                contract.address()
+                contract.address().to_string()
             ));
             Ok(contract)
         } else {

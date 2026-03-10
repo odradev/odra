@@ -44,6 +44,7 @@ impl MutableCommand for DeployCmd {
         container.apply_deploy_mode(deploy_mode)?;
 
         self.script.deploy(env, container)?;
+        crate::log("Deployment completed successfully.");
         Ok(())
     }
 }
@@ -82,7 +83,7 @@ pub enum DeployError {
 impl From<OdraError> for DeployError {
     fn from(err: OdraError) -> Self {
         DeployError::OdraError {
-            message: format!("{:?}", err)
+            message: format!("{err:?}")
         }
     }
 }
