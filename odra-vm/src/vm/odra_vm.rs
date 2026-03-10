@@ -53,16 +53,14 @@ impl OdraVm {
         entry_points_caller: EntryPointsCaller
     ) -> Address {
         // Create a new address.
-         let address = self.state.borrow_mut().next_contract_address();
+        let address = self.state.borrow_mut().next_contract_address();
 
         // Register the contract under the address.
         {
             let contract = ContractContainer::new(name, entry_points_caller);
             let mut contract_register = self.contract_register.borrow_mut();
             contract_register.add(address, contract);
-            self.state
-                .borrow_mut()
-                .set_balance(address, U512::zero());
+            self.state.borrow_mut().set_balance(address, U512::zero());
         }
 
         address
@@ -85,9 +83,7 @@ impl OdraVm {
     }
 
     pub(crate) fn post_install(&self, address: Address) {
-        self.contract_register
-            .borrow_mut()
-            .post_install(&address);
+        self.contract_register.borrow_mut().post_install(&address);
     }
 
     /// Calls a contract with the specified address and call definition.
@@ -110,10 +106,7 @@ impl OdraVm {
                 self.revert(err);
             }
         }
-        let result = self
-            .contract_register
-            .borrow()
-            .call(&address, call_def);
+        let result = self.contract_register.borrow().call(&address, call_def);
 
         match result {
             Err(err) => self.revert(err),
@@ -258,11 +251,7 @@ impl OdraVm {
     /// Returns `None` if the dictionary or the key does not exist.
     /// If the dictionary or the key does not exist, the virtual machine is in error state.
     pub fn get_dict_value(&self, dict: &str, key: &[u8]) -> Option<Bytes> {
-        let result = {
-            self.state
-                .borrow()
-                .get_dict_value(dict.as_bytes(), key)
-        };
+        let result = { self.state.borrow().get_dict_value(dict.as_bytes(), key) };
         match result {
             Ok(result) => result,
             Err(error) => {
@@ -316,16 +305,12 @@ impl OdraVm {
 
     /// Advances the block time by the given number of milliseconds.
     pub fn advance_block_time_by(&self, milliseconds: u64) {
-        self.state
-            .borrow_mut()
-            .advance_block_time_by(milliseconds)
+        self.state.borrow_mut().advance_block_time_by(milliseconds)
     }
 
     /// Advances the block time by the given number of milliseconds and updates the auctions.
     pub fn advance_with_auctions(&self, milliseconds: u64) {
-        self.state
-            .borrow_mut()
-            .advance_with_auctions(milliseconds)
+        self.state.borrow_mut().advance_with_auctions(milliseconds)
     }
 
     /// Gets the value attached to the current call.
@@ -445,9 +430,7 @@ impl OdraVm {
     ///
     /// The amount of tokens delegated to the validator.
     pub fn delegated_amount(&self, delegator: Address, validator: PublicKey) -> U512 {
-        self.state
-            .borrow()
-            .delegated_amount(validator, delegator)
+        self.state.borrow().delegated_amount(validator, delegator)
     }
 
     /// Returns information about the validator
@@ -458,11 +441,7 @@ impl OdraVm {
     /// # Returns
     /// Option<ValidatorBid>
     pub fn get_validator_info(&self, validator: PublicKey) -> Option<ValidatorInfo> {
-        self.state
-            .borrow()
-            .validators
-            .get(&validator)
-            .cloned()
+        self.state.borrow().validators.get(&validator).cloned()
     }
 
     /// Disables the validator at the given index.

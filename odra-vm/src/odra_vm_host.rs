@@ -117,9 +117,9 @@ impl HostContext for OdraVmHost {
         init_args: RuntimeArgs,
         entry_points_caller: EntryPointsCaller
     ) -> OdraResult<Address> {
-        let address =
-            self.vm
-                .new_contract(name, init_args.clone(), entry_points_caller.clone());
+        let address = self
+            .vm
+            .new_contract(name, init_args.clone(), entry_points_caller.clone());
 
         if entry_points_caller
             .entry_points()
@@ -200,8 +200,7 @@ impl HostContext for OdraVmHost {
 
     fn transfer(&self, to: Address, amount: U512) -> OdraResult<()> {
         let caller = self.caller();
-        self.vm
-            .checked_transfer_tokens(&caller, &to, &amount)
+        self.vm.checked_transfer_tokens(&caller, &to, &amount)
     }
 }
 
