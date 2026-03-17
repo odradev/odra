@@ -70,7 +70,7 @@ impl<T: Num + One + Zero + Default + Copy + ToBytes + FromBytes + CLTyped> Modul
         Self {
             env: env.clone(),
             index,
-            value: Var::instance(env.child(index).into(), 0)
+            value: Var::internal_instance(env.child(index).into(), 0)
         }
     }
 }

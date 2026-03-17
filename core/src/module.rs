@@ -9,7 +9,7 @@
 use crate::{contract_def::HasEvents, prelude::*};
 use core::cell::OnceCell;
 
-use crate::contract_env::ContractEnv;
+use crate::contract_env::{ContractEnv, StorageSlot};
 use core::ops::{Deref, DerefMut};
 
 /// Represents a module in the Odra system.
@@ -57,15 +57,25 @@ pub trait ModulePrimitive: ModuleComponent {}
 pub struct SubModule<T> {
     env: Rc<ContractEnv>,
     module: OnceCell<T>,
-    index: u8
+    slot: StorageSlot
 }
 
 impl<T: Module> ModuleComponent for SubModule<T> {
     fn instance(env: Rc<ContractEnv>, index: u8) -> Self {
+        Self::new_with_slot(env, StorageSlot::user(index))
+    }
+}
+
+impl<T: Module> SubModule<T> {
+    pub(crate) fn internal_instance(env: Rc<ContractEnv>, index: u8) -> Self {
+        Self::new_with_slot(env, StorageSlot::internal(index))
+    }
+
+    fn new_with_slot(env: Rc<ContractEnv>, slot: StorageSlot) -> Self {
         Self {
             env,
             module: OnceCell::new(),
-            index
+            slot
         }
     }
 }
@@ -88,12 +98,18 @@ impl<M: HasEvents> HasEvents for SubModule<M> {
 
 /// Wrapper for a module implementing the `Module` trait.
 impl<T: Module> SubModule<T> {
+    fn child_env(&self) -> ContractEnv {
+        match self.slot {
+            StorageSlot::User(index) => self.env.child(index),
+            StorageSlot::Internal(index) => self.env.internal_child(index)
+        }
+    }
+
     /// Returns a reference to the module.
     ///
     /// If the module is not yet initialized, it will be lazily initialized.
     pub fn module(&self) -> &T {
-        self.module
-            .get_or_init(|| T::new(Rc::new(self.env.child(self.index))))
+        self.module.get_or_init(|| T::new(Rc::new(self.child_env())))
     }
 
     /// Returns a mutable reference to the module.

@@ -2,7 +2,7 @@ use crate::casper_types::{
     bytesrepr::{FromBytes, ToBytes},
     CLTyped
 };
-use crate::contract_env::ContractEnv;
+use crate::contract_env::{ContractEnv, StorageSlot};
 use crate::module::{ModuleComponent, ModulePrimitive};
 use crate::prelude::*;
 
@@ -10,7 +10,7 @@ use crate::prelude::*;
 pub struct Var<T> {
     env: Rc<ContractEnv>,
     phantom: core::marker::PhantomData<T>,
-    index: u8
+    slot: StorageSlot
 }
 
 impl<T> Revertible for Var<T> {
@@ -22,7 +22,22 @@ impl<T> Revertible for Var<T> {
 impl<T> Var<T> {
     /// Returns the contract environment associated with the variable.
     pub fn env(&self) -> ContractEnv {
-        self.env.child(self.index)
+        match self.slot {
+            StorageSlot::User(index) => self.env.child(index),
+            StorageSlot::Internal(index) => self.env.internal_child(index)
+        }
+    }
+
+    pub(crate) fn internal_instance(env: Rc<ContractEnv>, index: u8) -> Self {
+        Self::new_with_slot(env, StorageSlot::internal(index))
+    }
+
+    fn new_with_slot(env: Rc<ContractEnv>, slot: StorageSlot) -> Self {
+        Self {
+            env,
+            phantom: core::marker::PhantomData,
+            slot
+        }
     }
 }
 
@@ -30,11 +45,7 @@ impl<T> Var<T> {
 impl<T> ModuleComponent for Var<T> {
     /// Creates a new instance of `Var` with the given environment and index.
     fn instance(env: Rc<ContractEnv>, index: u8) -> Self {
-        Self {
-            env,
-            phantom: core::marker::PhantomData,
-            index
-        }
+        Self::new_with_slot(env, StorageSlot::user(index))
     }
 }
 

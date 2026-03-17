@@ -32,8 +32,8 @@ impl<T> ModuleComponent for List<T> {
         Self {
             env: env.clone(),
             index,
-            values: Mapping::instance(env.child(index).into(), 0),
-            current_index: Var::instance(env.child(index).into(), 1)
+            values: Mapping::internal_instance(env.child(index).into(), 0),
+            current_index: Var::internal_instance(env.child(index).into(), 1)
         }
     }
 }

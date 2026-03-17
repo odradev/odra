@@ -15,7 +15,51 @@ use rand_chacha::ChaCha8Rng;
 
 const INDEX_SIZE: usize = 4;
 const KEY_LEN: usize = 64;
+const V2_KEY_TAG: &[u8] = b"odra-v2";
 pub(crate) type StorageKey = [u8; KEY_LEN];
+
+#[derive(Clone, Copy)]
+pub(crate) enum StorageSlot {
+    User(u8),
+    Internal(u8)
+}
+
+impl StorageSlot {
+    const V2_USER_TAG: u8 = 0;
+    const V2_INTERNAL_TAG: u8 = 1;
+    const LEGACY_MAX_INDEX: u8 = 15;
+
+    pub(crate) const fn user(index: u8) -> Self {
+        Self::User(index)
+    }
+
+    pub(crate) const fn internal(index: u8) -> Self {
+        Self::Internal(index)
+    }
+
+    const fn raw_index(self) -> u8 {
+        match self {
+            Self::User(index) | Self::Internal(index) => index
+        }
+    }
+
+    const fn is_legacy_compatible(self) -> bool {
+        self.raw_index() <= Self::LEGACY_MAX_INDEX
+    }
+
+    fn encode_v2(self, output: &mut Vec<u8>) {
+        match self {
+            Self::User(index) => {
+                output.push(Self::V2_USER_TAG);
+                output.push(index);
+            }
+            Self::Internal(index) => {
+                output.push(Self::V2_INTERNAL_TAG);
+                output.push(index);
+            }
+        }
+    }
+}
 
 /// Trait that needs to be implemented by all contract refs.
 pub trait ContractRef {
@@ -38,7 +82,8 @@ pub trait ContractRef {
 /// The `ContractEnv` is available for the user to use in the module code.
 #[derive(Clone)]
 pub struct ContractEnv {
-    index: u32,
+    legacy_index: Option<u32>,
+    path: Vec<StorageSlot>,
     mapping_data: Vec<u8>,
     backend: Rc<RefCell<dyn ContractContext>>
 }
@@ -53,7 +98,8 @@ impl ContractEnv {
     /// Creates a new ContractEnv instance.
     pub const fn new(index: u32, backend: Rc<RefCell<dyn ContractContext>>) -> Self {
         Self {
-            index,
+            legacy_index: Some(index),
+            path: Vec::new(),
             mapping_data: Vec::new(),
             backend
         }
@@ -62,9 +108,7 @@ impl ContractEnv {
     /// Returns the current storage key for the contract environment.
     pub(crate) fn current_key(&self) -> StorageKey {
         let mut result = [0u8; KEY_LEN];
-        let mut key = Vec::with_capacity(INDEX_SIZE + self.mapping_data.len());
-        key.extend_from_slice(self.index.to_be_bytes().as_ref());
-        key.extend_from_slice(&self.mapping_data);
+        let key = self.key_bytes();
         let hashed_key = self.backend.borrow().hash(key.as_slice());
         utils::hex_to_slice(&hashed_key, &mut result);
         result
@@ -77,11 +121,64 @@ impl ContractEnv {
 
     /// Returns a child contract environment with the specified index.
     pub(crate) fn child(&self, index: u8) -> Self {
+        self.slot_child(StorageSlot::user(index))
+    }
+
+    /// Returns an internal child contract environment with the specified index.
+    pub(crate) fn internal_child(&self, index: u8) -> Self {
+        self.slot_child(StorageSlot::internal(index))
+    }
+
+    fn slot_child(&self, slot: StorageSlot) -> Self {
+        let mut path = self.path.clone();
+        path.push(slot);
+
         Self {
-            index: (self.index << 4) + index as u32,
+            legacy_index: self.next_legacy_index(slot),
+            path,
             mapping_data: self.mapping_data.clone(),
             backend: self.backend.clone()
         }
+    }
+
+    fn next_legacy_index(&self, slot: StorageSlot) -> Option<u32> {
+        if !slot.is_legacy_compatible() {
+            return None;
+        }
+
+        self.legacy_index
+            .map(|index| index.wrapping_shl(4) | slot.raw_index() as u32)
+    }
+
+    fn key_bytes(&self) -> Vec<u8> {
+        match self.legacy_index {
+            Some(index) => {
+                let mut key = Vec::with_capacity(INDEX_SIZE + self.mapping_data.len());
+                key.extend_from_slice(index.to_be_bytes().as_ref());
+                key.extend_from_slice(&self.mapping_data);
+                key
+            }
+            None => {
+                let path_bytes = self.encoded_path();
+                let path_len = path_bytes.len() as u32;
+                let mut key = Vec::with_capacity(
+                    V2_KEY_TAG.len() + INDEX_SIZE + path_bytes.len() + self.mapping_data.len()
+                );
+                key.extend_from_slice(V2_KEY_TAG);
+                key.extend_from_slice(path_len.to_be_bytes().as_ref());
+                key.extend_from_slice(&path_bytes);
+                key.extend_from_slice(&self.mapping_data);
+                key
+            }
+        }
+    }
+
+    fn encoded_path(&self) -> Vec<u8> {
+        let mut bytes = Vec::with_capacity(self.path.len() * 2);
+        for slot in &self.path {
+            slot.encode_v2(&mut bytes);
+        }
+        bytes
     }
 
     /// Retrieves the value associated with the given key from the contract storage.
