@@ -52,7 +52,7 @@ odra-schema = { path = "odra-schema", version = "2.5.0" }
 odra-vm = { path = "odra-vm", version = "2.5.0" }
 odra-wasm-client = { path = "odra-wasm-client", version = "2.5.0" }
 
-casper-client = { version = "5.0", default-features = false }
+casper-client = { version = "=5.0.0", default-features = false }
 casper-contract = { version = "5.1", default-features = false }
 casper-contract-schema = { version = "0.6.0" }
 casper-engine-test-support = "8.1"
