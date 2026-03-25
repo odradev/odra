@@ -122,7 +122,10 @@ mod tests {
             )];
             let mut ctx = MockHostContext::new();
             ctx.expect_contract_env().returning(|| {
-                ContractEnv::new(0, Rc::new(RefCell::new(MockContractContext::new())))
+                ContractEnv::new(
+                    crate::contract_env::KeyEncoding::Legacy,
+                    Rc::new(RefCell::new(MockContractContext::new()))
+                )
             });
             let env = HostEnv::new(Rc::new(ctx));
 

@@ -134,6 +134,9 @@ impl ContractContext for WasmContractEnv {
 impl WasmContractEnv {
     /// Creates new ContractEnv with WasmContractEnv as backend.
     pub fn new_env() -> ContractEnv {
-        ContractEnv::new(0, Rc::new(RefCell::new(WasmContractEnv)))
+        ContractEnv::new(
+            odra_core::KeyEncoding::Legacy,
+            Rc::new(RefCell::new(WasmContractEnv))
+        )
     }
 }

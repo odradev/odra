@@ -43,7 +43,10 @@ impl LivenetHost {
             callstack.clone(),
             contract_register.clone()
         );
-        let contract_env = Rc::new(ContractEnv::new(0, livenet_contract_env));
+        let contract_env = Rc::new(ContractEnv::new(
+            odra_core::KeyEncoding::Legacy,
+            livenet_contract_env
+        ));
         Self {
             casper_client,
             contract_register,
