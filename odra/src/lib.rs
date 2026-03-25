@@ -50,7 +50,7 @@ pub mod named_keys {
 pub use odra_core::{casper_event_standard, casper_event_standard::Event, casper_types};
 pub use odra_core::{
     AddressError, CallDef, CollectionError, ContractCallResult, ContractContext, ContractEnv,
-    ContractRef, DeployReport, EventError, ExecutionEnv, GasReport, OdraContract, VmError
+    ContractRef, DeployReport, EventError, ExecutionEnv, GasReport, KeyEncoding, OdraContract, VmError
 };
 
 pub use odra_macros::*;
