@@ -7,6 +7,7 @@ pub mod events;
 pub mod handling_errors;
 pub mod host_functions;
 pub mod livenet;
+pub mod many_fields;
 pub mod module_nesting;
 pub mod modules;
 pub mod native_token;
