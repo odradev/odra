@@ -133,7 +133,7 @@ pub(crate) fn into_bytes(ty: &NamedCLType, input: &str) -> TypeResult<Vec<u8>> {
                 result.extend(into_bytes(ty, value)?);
                 Ok(result)
             } else {
-                return Err(Error::Formatting(Format::Option));
+                Err(Error::Formatting(Format::Option))
             }
         }
         NamedCLType::Result { ok, err } => {
@@ -225,7 +225,7 @@ pub(crate) fn into_bytes(ty: &NamedCLType, input: &str) -> TypeResult<Vec<u8>> {
                         };
                     }
 
-                    if n % pattern_len != 0 {
+                    if !n.is_multiple_of(pattern_len) {
                         return Err(Error::Formatting(Format::PatternLength {
                             actual: pattern_len,
                             expected: n

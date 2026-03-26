@@ -32,21 +32,6 @@ pub fn new_entry_points() -> syn::Expr {
     parse_quote!(#ty::new())
 }
 
-pub fn entry_point_contract() -> syn::Expr {
-    let ty = super::ty::entry_point_type();
-    parse_quote!(#ty::Called)
-}
-
-pub fn entry_point_payment() -> syn::Expr {
-    let ty = super::ty::entry_point_payment();
-    parse_quote!(#ty::Caller)
-}
-
-pub fn entry_point_access_public() -> syn::Expr {
-    let ty = super::ty::entry_point_access();
-    parse_quote!(#ty::Public)
-}
-
 pub fn new_parameter(name: String, ty: syn::Type) -> syn::Expr {
     let ty = super::ty::unreferenced_ty(&ty);
 
@@ -152,10 +137,6 @@ pub fn vec_try_into<T: ToTokens>(content: T) -> syn::Expr {
         .map(TryInto::try_into)
         .collect::<Result<_, _>>()
         .unwrap_or_default())
-}
-
-pub fn clone<T: ToTokens>(caller: &T) -> syn::Expr {
-    parse_quote!(#caller.clone())
 }
 
 pub fn user_error(error: &syn::Ident) -> syn::Expr {

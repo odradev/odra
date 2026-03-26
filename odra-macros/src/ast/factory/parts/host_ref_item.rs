@@ -28,7 +28,7 @@ impl TryFrom<&'_ ModuleImplIR> for FactoryHostRefImplItem {
     type Error = syn::Error;
 
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
-        let fns = vec![module.factory_fn(), module.factory_upgrade_fn(), module.factory_batch_upgrade_fn()];
+        let fns = [module.factory_fn(), module.factory_upgrade_fn(), module.factory_batch_upgrade_fn()];
         Ok(Self {
             ref_ident: module.host_ref_ident()?,
             factory_fns: fns.iter().map(|f| ref_utils::host_function_item(f, false)).collect()
@@ -57,7 +57,7 @@ impl TryFrom<&'_ ModuleImplIR> for FactoryHostRefTryImplItem {
     type Error = syn::Error;
 
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
-        let fns = vec![module.factory_fn(), module.factory_upgrade_fn(), module.factory_batch_upgrade_fn()];
+        let fns = [module.factory_fn(), module.factory_upgrade_fn(), module.factory_batch_upgrade_fn()];
 
         Ok(Self {
             ref_ident: module.host_ref_ident()?,

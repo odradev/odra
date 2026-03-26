@@ -12,7 +12,7 @@ use syn::{punctuated::Punctuated, Meta, Path, Token};
 #[derive(Clone)]
 pub enum Attribute {
     Odra(OdraAttribute),
-    Other(syn::Attribute)
+    Other(Box<syn::Attribute>)
 }
 
 impl PartialEq for Attribute {
@@ -46,7 +46,7 @@ impl TryFrom<syn::Attribute> for Attribute {
         if attr.path().is_ident("odra") {
             return <OdraAttribute as TryFrom<_>>::try_from(attr).map(Into::into);
         }
-        Ok(Attribute::Other(attr))
+        Ok(Attribute::Other(Box::new(attr)))
     }
 }
 
@@ -179,7 +179,7 @@ where
         .into_iter()
         .partition_map(|attr| match attr {
             Attribute::Odra(odra_attr) => Either::Left(odra_attr),
-            Attribute::Other(other_attr) => Either::Right(other_attr)
+            Attribute::Other(other_attr) => Either::Right(*other_attr)
         });
 
     let attrs = odra_attrs
@@ -233,7 +233,10 @@ mod tests {
         let expected_value: syn::Attribute = syn::parse_quote! {
             #[yoyo(abc)]
         };
-        assert_attribute_try_from(expected_value.clone(), Ok(Attribute::Other(expected_value)));
+        assert_attribute_try_from(
+            expected_value.clone(),
+            Ok(Attribute::Other(Box::new(expected_value)))
+        );
     }
 
     #[test]
@@ -274,7 +277,7 @@ mod tests {
                         .collect::<Vec<_>>(),
                     other_attrs
                         .into_iter()
-                        .map(Attribute::Other)
+                        .map(|a| Attribute::Other(Box::new(a)))
                         .collect::<Vec<_>>()
                 )
             })

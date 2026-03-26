@@ -3,7 +3,7 @@
 //! The Odra CLI is a command line interface built on top of the [clap] crate
 //! that allows users to interact with smart contracts.
 
-#![feature(box_patterns, error_generic_member_access, path_add_extension)]
+#![feature(box_patterns, error_generic_member_access)]
 mod cli;
 mod cmd;
 mod container;

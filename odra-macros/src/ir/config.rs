@@ -7,7 +7,7 @@ use syn::{
 };
 
 pub enum ConfigItem {
-    Module(ModuleConfiguration),
+    Module(Box<ModuleConfiguration>),
     Empty
 }
 
@@ -17,7 +17,7 @@ impl Parse for ConfigItem {
             return Ok(Self::Empty);
         }
         let module = input.parse::<ModuleConfiguration>()?;
-        Ok(Self::Module(module))
+        Ok(Self::Module(Box::new(module)))
     }
 }
 
