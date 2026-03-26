@@ -6,7 +6,6 @@ use odra::{
 
 use crate::types;
 
-
 #[derive(Clone)]
 #[non_exhaustive]
 pub struct CLTypedParser {
