@@ -89,6 +89,20 @@ impl ContractEnv {
     /// `path_len` byte makes the boundary with appended `mapping_data` unambiguous,
     /// preventing collisions between e.g. a `Var` at a deeper path and a `Mapping`
     /// at a shallower path with matching key bytes.
+    ///
+    /// **Why `path_len` is necessary — collision example:**
+    ///
+    /// Consider two fields whose path bytes and mapping data concatenate identically:
+    /// - Field A: `Var` at path `[3, 5]` (depth 2), no mapping data.
+    /// - Field B: `Mapping` at path `[3]` (depth 1), mapping key serializes to `[5]`.
+    ///
+    /// The final hash input is `index_bytes ++ mapping_data`.
+    ///
+    /// Without `path_len` (hypothetical `[0xFF, path..., mapping_data...]`):
+    /// - A → `[0xFF, 3, 5]`, B → `[0xFF, 3] ++ [5]` = `[0xFF, 3, 5]` — **collision!**
+    ///
+    /// With `path_len` (actual `[0xFF, path_len, path..., mapping_data...]`):
+    /// - A → `[0xFF, 2, 3, 5]`, B → `[0xFF, 1, 3] ++ [5]` = `[0xFF, 1, 3, 5]` — **distinct.**
     pub(crate) fn index_bytes(&self) -> Vec<u8> {
         let path = &self.path[..self.path_len as usize];
         match self.encoding {
