@@ -126,9 +126,10 @@ impl TryFrom<&'_ ModuleImplIR> for CallFnItem {
         let ident_schemas = utils::ident::schemas();
         let ty_args = utils::ty::runtime_args();
         let ident_entry_points = utils::ident::entry_points();
+        let new_env_expr = utils::expr::new_wasm_contract_env(module.is_v2_keys());
         let exec_env_stmt: syn::Stmt = parse_quote!(
             let exec_env = {
-                let env = odra::odra_casper_wasm_env::WasmContractEnv::new_env();
+                let env = #new_env_expr;
                 let env_rc = Rc::new(env);
                 odra::ExecutionEnv::new(env_rc)
             };
@@ -224,7 +225,7 @@ impl TryFrom<(&'_ ModuleImplIR, &'_ FnIR)> for NoMangleFnItem<ModuleContext> {
         let result_ident = utils::ident::result();
         let exec_parts_ident = module.exec_parts_mod_ident()?;
         let exec_fn = func.execute_name();
-        let new_env = utils::expr::new_wasm_contract_env();
+        let new_env = utils::expr::new_wasm_contract_env(module.is_v2_keys());
 
         let execute_stmt = match func.return_type() {
             syn::ReturnType::Default => parse_quote!(#exec_parts_ident::#exec_fn(#new_env);),

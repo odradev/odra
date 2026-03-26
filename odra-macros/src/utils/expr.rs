@@ -55,8 +55,12 @@ pub fn schemas(events: &syn::Expr) -> syn::Expr {
     parse_quote!(#ty(#events))
 }
 
-pub fn new_wasm_contract_env() -> syn::Expr {
-    parse_quote!(odra::odra_casper_wasm_env::WasmContractEnv::new_env())
+pub fn new_wasm_contract_env(v2: bool) -> syn::Expr {
+    if v2 {
+        parse_quote!(odra::odra_casper_wasm_env::WasmContractEnv::new_env_v2())
+    } else {
+        parse_quote!(odra::odra_casper_wasm_env::WasmContractEnv::new_env())
+    }
 }
 
 pub fn into_event(ty: &syn::Type) -> syn::Expr {
