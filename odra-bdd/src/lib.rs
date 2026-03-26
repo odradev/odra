@@ -1,5 +1,5 @@
 pub mod bdd_env;
-mod odra_world;
+pub mod odra_world;
 pub mod types;
 pub mod utils;
 mod virtual_balances;
