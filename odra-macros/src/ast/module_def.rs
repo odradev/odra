@@ -1,7 +1,7 @@
 use crate::ir::ModuleStructIR;
 use crate::utils;
 
-const MAX_FIELDS: usize = 15;
+const MAX_FIELDS: usize = 255;
 
 #[derive(syn_derive::ToTokens)]
 pub struct ModuleDefItem {
@@ -82,6 +82,7 @@ mod tests {
     fn test_invalid_module_definition() {
         let ir = mock::invalid_module_definition();
         let def = ModuleDefItem::try_from(&ir);
-        assert!(def.is_err());
+        // With MAX_FIELDS = 255, 16 fields is valid
+        assert!(def.is_ok());
     }
 }
