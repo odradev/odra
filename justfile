@@ -1,5 +1,5 @@
 CARGO_ODRA_GIT_REPO := "https://github.com/odradev/cargo-odra"
-CARGO_ODRA_BRANCH := "release/0.1.6"
+CARGO_ODRA_BRANCH := "features/wasm-opt-flags"
 BINARYEN_VERSION := "version_116"
 BINARYEN_CHECKSUM := "c55b74f3109cdae97490faf089b0286d3bba926bb6ea5ed00c8c784fc53718fd"
 set dotenv-load := true
@@ -44,8 +44,8 @@ build-proxy-callers:
     cd odra-casper/proxy-caller && cargo build --release --target wasm32-unknown-unknown --target-dir ../../target
     wasm-strip target/wasm32-unknown-unknown/release/proxy_caller.wasm
     wasm-strip target/wasm32-unknown-unknown/release/proxy_caller_with_return.wasm
-    wasm-opt --signext-lowering target/wasm32-unknown-unknown/release/proxy_caller.wasm  -o target/wasm32-unknown-unknown/release/proxy_caller.wasm
-    wasm-opt --signext-lowering target/wasm32-unknown-unknown/release/proxy_caller_with_return.wasm  -o target/wasm32-unknown-unknown/release/proxy_caller_with_return.wasm
+    wasm-opt --enable-bulk-memory --signext-lowering --llvm-memory-copy-fill-lowering target/wasm32-unknown-unknown/release/proxy_caller.wasm  -o target/wasm32-unknown-unknown/release/proxy_caller.wasm
+    wasm-opt --enable-bulk-memory --signext-lowering --llvm-memory-copy-fill-lowering target/wasm32-unknown-unknown/release/proxy_caller_with_return.wasm  -o target/wasm32-unknown-unknown/release/proxy_caller_with_return.wasm
     cp target/wasm32-unknown-unknown/release/proxy_caller.wasm \
         resources/proxy_caller.wasm
     cp target/wasm32-unknown-unknown/release/proxy_caller_with_return.wasm \
