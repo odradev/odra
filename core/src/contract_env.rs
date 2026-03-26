@@ -25,7 +25,7 @@ pub enum KeyEncoding {
     /// Default: fields 1-15 use legacy 4-bit u32 encoding, fields 16+ use path encoding.
     Legacy,
     /// All fields use path encoding. For new contracts only.
-    V2,
+    V2
 }
 
 /// Trait that needs to be implemented by all contract refs.
@@ -75,13 +75,31 @@ impl ContractEnv {
     }
 
     /// Returns the index bytes for the current path, using the appropriate encoding.
+    ///
+    /// Two encoding modes exist to support backward compatibility:
+    ///
+    /// **Legacy encoding** (default, when all path indices fit in 4 bits):
+    /// Packs indices into a `u32` using 4-bit left shifts, identical to the original
+    /// `(parent << 4) + child` formula. Produces 4 big-endian bytes. This ensures
+    /// deployed contracts with ≤15 fields per module get the same storage keys.
+    ///
+    /// **Path encoding** (indices > 15, or V2 mode):
+    /// Emits `[0xFF, path_len, path[0], ..., path[n]]`. The `0xFF` prefix cannot
+    /// collide with legacy keys (whose first byte never exceeds `0x0F`). The
+    /// `path_len` byte makes the boundary with appended `mapping_data` unambiguous,
+    /// preventing collisions between e.g. a `Var` at a deeper path and a `Mapping`
+    /// at a shallower path with matching key bytes.
     pub(crate) fn index_bytes(&self) -> Vec<u8> {
         let path = &self.path[..self.path_len as usize];
         match self.encoding {
+            // Legacy: pack indices into u32 via 4-bit shifts (e.g. path [3, 15] → 0x3F).
+            // Only used when all indices fit in a nibble, preserving old storage keys.
             KeyEncoding::Legacy if path.iter().all(|&idx| idx <= 15) => {
                 let index: u32 = path.iter().fold(0u32, |acc, &idx| (acc << 4) + idx as u32);
                 index.to_be_bytes().to_vec()
             }
+            // Path encoding: [0xFF, len, idx_0, idx_1, ...]. Used for fields 16+
+            // in Legacy mode or for all fields in V2 mode.
             _ => {
                 let mut bytes = Vec::with_capacity(2 + path.len());
                 bytes.push(0xFF);
@@ -540,13 +558,22 @@ mod tests {
     fn legacy_encoding_matches_old_u32_formula() {
         let env = make_env(KeyEncoding::Legacy);
         let child = env.child(3);
-        assert_eq!(child.index_bytes(), legacy_u32_for_path(&[3]).to_be_bytes().to_vec());
+        assert_eq!(
+            child.index_bytes(),
+            legacy_u32_for_path(&[3]).to_be_bytes().to_vec()
+        );
 
         let grandchild = child.child(15);
-        assert_eq!(grandchild.index_bytes(), legacy_u32_for_path(&[3, 15]).to_be_bytes().to_vec());
+        assert_eq!(
+            grandchild.index_bytes(),
+            legacy_u32_for_path(&[3, 15]).to_be_bytes().to_vec()
+        );
 
         let deep = env.child(1).child(2).child(3).child(4);
-        assert_eq!(deep.index_bytes(), legacy_u32_for_path(&[1, 2, 3, 4]).to_be_bytes().to_vec());
+        assert_eq!(
+            deep.index_bytes(),
+            legacy_u32_for_path(&[1, 2, 3, 4]).to_be_bytes().to_vec()
+        );
     }
 
     #[test]
