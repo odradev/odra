@@ -184,6 +184,17 @@ mod test {
                             return_ty: <() as odra::casper_types::CLTyped>::cl_type(),
                             ty: odra::contract_def::EntrypointType::Public,
                             attributes: odra::prelude::vec![]
+                        },
+                        odra::contract_def::Entrypoint {
+                            name: odra::prelude::string::String::from("swap"),
+                            args: odra::prelude::vec![
+                                odra::args::odra_argument::<Address>("to"),
+                                odra::args::odra_argument::<U256>("amount")
+                            ],
+                            is_mutable: true,
+                            return_ty: <U256 as odra::casper_types::CLTyped>::cl_type(),
+                            ty: odra::contract_def::EntrypointType::Public,
+                            attributes: odra::prelude::vec![]
                         }
                     ]
                 }
@@ -204,6 +215,14 @@ mod test {
                             name: odra::prelude::string::String::from("total_supply"),
                             args: odra::prelude::vec![],
                             is_mutable: false,
+                            return_ty: <U256 as odra::casper_types::CLTyped>::cl_type(),
+                            ty: odra::contract_def::EntrypointType::Public,
+                            attributes: odra::prelude::vec![]
+                        },
+                        odra::contract_def::Entrypoint {
+                            name: odra::prelude::string::String::from("set_total_supply"),
+                            args: odra::prelude::vec![],
+                            is_mutable: true,
                             return_ty: <U256 as odra::casper_types::CLTyped>::cl_type(),
                             ty: odra::contract_def::EntrypointType::Public,
                             attributes: odra::prelude::vec![]

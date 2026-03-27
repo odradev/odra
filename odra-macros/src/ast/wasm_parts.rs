@@ -270,7 +270,13 @@ impl TryFrom<&'_ FnIR> for AddEntryPointStmtItem {
         } else if func.is_upgrader() {
             utils::expr::upgrader_ep(args)
         } else {
-            utils::expr::regular_ep(func.name_str(), args, wasm_parts_utils::param_ret_ty(func), func.is_payable(), func.is_non_reentrant())
+            utils::expr::regular_ep(
+                func.name_str(),
+                args,
+                wasm_parts_utils::param_ret_ty(func),
+                func.is_payable(),
+                func.is_non_reentrant()
+            )
         };
         Ok(Self {
             var_ident: utils::ident::entry_points(),
@@ -342,6 +348,16 @@ mod test {
                             odra::args::parameter::<U256>("amount")
                         ],
                         ret_ty: <() as odra::casper_types::CLTyped>::cl_type(),
+                        is_non_reentrant: false,
+                        is_payable: false,
+                    });
+                    entry_points.add(odra::entry_point::EntryPoint::Regular {
+                        name: "swap",
+                        args: vec![
+                            odra::args::parameter::<Address>("to"),
+                            odra::args::parameter::<U256>("amount")
+                        ],
+                        ret_ty: <U256 as odra::casper_types::CLTyped>::cl_type(),
                         is_non_reentrant: false,
                         is_payable: false,
                     });
@@ -427,6 +443,16 @@ mod test {
                 fn airdrop() {
                     __erc20_exec_parts::execute_airdrop(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                 }
+
+                #[no_mangle]
+                fn swap() {
+                    let result = __erc20_exec_parts::execute_swap(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
+                    odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
+                        odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
+                            odra::casper_types::CLValue::from_t(result)
+                        )
+                    );
+                }
             }
         };
 
@@ -451,6 +477,13 @@ mod test {
                     let mut entry_points = odra::casper_types::EntryPoints::new();
                     entry_points.add(odra::entry_point::EntryPoint::Regular {
                         name: "total_supply",
+                        args: vec![],
+                        ret_ty: <U256 as odra::casper_types::CLTyped>::cl_type(),
+                        is_non_reentrant: false,
+                        is_payable: false,
+                    });
+                    entry_points.add(odra::entry_point::EntryPoint::Regular {
+                        name: "set_total_supply",
                         args: vec![],
                         ret_ty: <U256 as odra::casper_types::CLTyped>::cl_type(),
                         is_non_reentrant: false,
@@ -492,6 +525,16 @@ mod test {
                 #[no_mangle]
                 fn total_supply() {
                     let result = __erc20_exec_parts::execute_total_supply(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
+                    odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
+                        odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
+                            odra::casper_types::CLValue::from_t(result)
+                        )
+                    );
+                }
+
+                #[no_mangle]
+                fn set_total_supply() {
+                    let result = __erc20_exec_parts::execute_set_total_supply(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                     odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
                         odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
                             odra::casper_types::CLValue::from_t(result)

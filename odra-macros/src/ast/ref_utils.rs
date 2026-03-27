@@ -6,7 +6,7 @@ use crate::{
     ir::{FnArgIR, FnIR},
     utils::{self, syn::visibility_pub}
 };
-use quote::ToTokens;
+use quote::{ToTokens, format_ident};
 use syn::{parse_quote, Attribute, Visibility};
 
 pub fn host_try_function_item(fun: &FnIR) -> syn::ItemFn {
@@ -43,6 +43,39 @@ pub fn host_function_item(fun: &FnIR, is_trait_impl: bool) -> syn::ItemFn {
             self.#try_func_name(#(#args),*).unwrap()
         }
     )
+}
+
+pub fn host_mut_no_ret_function_item(fun: &FnIR) -> syn::ItemFn {
+    let mut attrs = function_filtered_attrs(fun);
+    attrs.push(parse_quote!(#[doc = " Ignores the result of the call."]));
+    let signature = function_signature(fun);
+    let signature = syn::Signature {
+        ident: format_ident!("{}_no_ret", fun.name()),
+        output: syn::ReturnType::Default,
+        ..signature
+    };
+    let try_func_name = fun.try_no_ret_name();
+    let args = fun.arg_names();
+    syn::parse_quote!(
+        #(#attrs)*
+        pub #signature {
+            self.#try_func_name(#(#args),*).unwrap()
+        }
+    )
+}
+
+pub fn host_mut_try_no_ret_function_item(fun: &FnIR) -> syn::ItemFn {
+    let mut attrs = function_filtered_attrs(fun);
+    attrs.push(parse_quote!(#[doc = " Ignores the result of the call."]));
+    let ret_ty = utils::ty::odra_result_unit();
+    let signature = function_signature(fun);
+    let signature = syn::Signature {
+        ident: fun.try_no_ret_name(),
+        output: syn::parse_quote!(-> #ret_ty),
+        ..signature
+    };
+    let call_def_expr = call_def_with_amount(fun);
+    env_call(signature, call_def_expr, attrs, visibility_pub())
 }
 
 pub fn contract_function_item(fun: &FnIR, is_trait_impl: bool) -> syn::ItemFn {
@@ -190,9 +223,7 @@ fn runtime_args_with_amount_block<F: FnMut(&FnArgIR) -> syn::Stmt>(
             let args_ty = utils::ty::batch_upgrade_args();
             vec![parse_quote!(#ty::insert_runtime_arg(#args_ty::from(args), "args", &mut #args);)]
         }
-        FnType::Factory => {
-             fn_utils::insert_args_stmts(fun, insert_arg_fn)
-        }
+        FnType::Factory => fn_utils::insert_args_stmts(fun, insert_arg_fn),
         _ => fn_utils::insert_args_stmts(fun, insert_arg_fn)
     };
 

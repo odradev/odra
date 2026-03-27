@@ -357,6 +357,14 @@ impl ModuleImplIR {
         Ok(self.functions()?.into_iter().collect())
     }
 
+    pub fn host_mut_ret_functions(&self) -> syn::Result<Vec<FnIR>> {
+        Ok(self
+            .host_functions()?
+            .into_iter()
+            .filter(|f| f.is_mut() && f.return_type() != syn::ReturnType::Default)
+            .collect())
+    }
+
     pub fn constructor(&self) -> Option<FnIR> {
         self.functions()
             .unwrap_or_default()
@@ -612,6 +620,10 @@ impl FnIR {
 
     pub fn try_name(&self) -> Ident {
         format_ident!("try_{}", self.name())
+    }
+
+    pub fn try_no_ret_name(&self) -> Ident {
+        format_ident!("try_{}_no_ret", self.name())
     }
 
     pub fn execute_name(&self) -> Ident {

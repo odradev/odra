@@ -65,6 +65,10 @@ pub fn odra_result(ty: syn::Type) -> syn::Type {
     parse_quote!(OdraResult<#ty>)
 }
 
+pub fn odra_result_unit() -> syn::Type {
+    parse_quote!(OdraResult<()>)
+}
+
 pub fn module() -> syn::Type {
     parse_quote!(Module)
 }

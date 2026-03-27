@@ -11,7 +11,7 @@ repository = { workspace = true }
 version = { workspace = true }
 
 [dependencies]
-odra = { path = "../odra", version = "2.5.0" }
+odra = { path = "../odra", version = "2.6.0" }
 
 cucumber = { workspace = true}
 futures = { workspace = true }
