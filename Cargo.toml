@@ -4,6 +4,7 @@ exclude = [
   "templates/blank",
   "templates/full",
   "templates/workspace",
+  "templates/starter",
   "tests",
 ]
 members = [
