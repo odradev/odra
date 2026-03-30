@@ -24,6 +24,12 @@
     "template_type":"Project"
   },
   {
+    "name":"starter",
+    "description":"Project template with workspace layout and Claude Code skills for guided development",
+    "path":"templates/starter",
+    "template_type":"Project"
+  },
+  {
     "name":"cep18",
     "description":"Project template with a sample CEP-18 contract",
     "path":"templates/cep18",
