@@ -1,0 +1,16 @@
+[workspace]
+members = ["contracts", "cli"]
+resolver = "2"
+
+[workspace.dependencies]
+#odra_dependency
+#odra_test_dependency
+#odra_build_dependency
+#odra_cli_dependency
+
+[profile.release]
+codegen-units = 1
+lto = true
+
+[profile.dev.package."*"]
+opt-level = 3

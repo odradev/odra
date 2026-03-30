@@ -1,0 +1,4 @@
+# Register contracts here. Each [[contracts]] entry needs a fully qualified name (fqn).
+# Example:
+# [[contracts]]
+# fqn = "contracts::my_module::MyModule"
