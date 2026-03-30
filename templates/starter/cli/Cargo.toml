@@ -1,0 +1,13 @@
+[package]
+edition = "2021"
+name = "{{project-name}}-cli"
+version = "0.1.0"
+
+[dependencies]
+contracts = { path = "../contracts" }
+odra = { workspace = true }
+odra-cli = { workspace = true }
+
+[[bin]]
+name = "{{project-name}}_cli"
+path = "cli.rs"
