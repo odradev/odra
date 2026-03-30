@@ -1,19 +1,27 @@
-# Onboarding Template Design
+# Starter Template Design
 
 **Date**: 2026-03-30
 **Status**: Approved
 
 ## Goal
 
-Create a dedicated `onboarding` template for Odra that helps developers build and deploy their first smart contract end-to-end, guided by Claude Code skills. Scaffolded via `cargo odra new --template onboarding`.
+Create a `starter` template for Odra — the go-to project scaffold for both newcomers and experienced developers. Scaffolded via `cargo odra new --template starter`.
+
+The template ships with composable Claude Code skills that support two usage modes:
+
+- **Guided mode** (`/onboard`) — for newcomers. A step-by-step learning path with verbose explanations, baby steps, and progressive concept introduction. Culminates in deploying the first contract.
+- **Development mode** (individual skills) — for developers who know Odra. Use `/new-contract`, `/new-entrypoint`, `/new-version`, etc. directly to pave the development workflow.
+
+Both modes use the same skill set. The `onboard` skill orchestrates the others with extra teaching between steps.
 
 ## Target Audience
 
-Any developer new to Odra — whether they know Rust, Casper, or neither. The CLAUDE.md and skills help AI assistants guide the user regardless of experience level.
+Any developer working with Odra — from first-timers to experienced users. The skills adapt: newcomers get guided through `/onboard`, experienced developers invoke skills directly.
 
 ## Design Principles
 
 - **Skills-first**: CLAUDE.md is minimal (~20 lines). All guidance lives in small, composable skills.
+- **Two modes, one skill set**: `onboard` adds verbosity and teaching around the same skills used in development mode.
 - **Progressive**: OdraVM testing first, NCTL deployment optional.
 - **Workspace layout**: Multi-crate structure (contracts + CLI), extensible for future backend/frontend crates.
 - **No guessing**: Skills ask for information they need; they never infer contract names, arguments, or types.
@@ -23,7 +31,7 @@ Any developer new to Odra — whether they know Rust, Casper, or neither. The CL
 ## Template Layout
 
 ```
-templates/onboarding/
+templates/starter/
   _Cargo.toml              # workspace: members = ["contracts", "cli"]
   Odra.toml                # empty [[contracts]] list
   rust-toolchain
@@ -80,7 +88,9 @@ ODRA_CASPER_LIVENET_CHAIN_NAME=
 
 Minimal file (~20 lines):
 - Describes the project as an Odra smart contract workspace
-- Points to `/onboard` to start the guided experience
+- Two-path entry point:
+  - **New to Odra?** Run `/onboard` for a guided walkthrough
+  - **Know Odra?** Use skills directly: `/new-contract`, `/new-entrypoint`, `/new-version`, etc.
 - Lists the 9 available skills and one-line descriptions
 - No tutorial content — that lives in the skills
 
@@ -105,16 +115,21 @@ Checks the full cargo-odra prerequisite chain:
 
 Reports missing items with platform-appropriate install commands (macOS: brew, Linux: apt/wget). Non-blocking: tells user what's missing and what it's needed for.
 
-#### 2. `onboard` — Guided learning path orchestrator
+#### 2. `onboard` — Guided learning path (newcomer mode)
+
+Orchestrates the same skills used in development mode, but wraps each step with:
+- **Concept explanations** — what Odra storage types are, how entry points work, what the VM does
+- **Baby steps** — breaks each skill invocation into smaller, explained chunks
+- **Checkpoints** — confirms understanding before moving on
 
 Progressive walkthrough:
 
 1. **Environment check** — invokes `check-env`
-2. **Write your first contract** — invokes `new-contract`, explains Odra concepts (storage types, entry points, events, errors) as each piece is generated
-3. **Test on OdraVM** — teaches `cargo odra test`, explains the in-memory VM
-4. **(Optional) Deploy to local node** — invokes `start-nctl` then `deploy-to-livenet`
+2. **Write your first contract** — invokes `new-contract`, explains each concept as it appears
+3. **Test on OdraVM** — teaches `cargo odra test`, explains the in-memory VM and what happens under the hood
+4. **(Optional) Deploy to local node** — invokes `start-nctl` then `deploy-to-livenet`, explains the Casper network model
 
-Tracks progress, lets user stop and resume. Explains concepts progressively — doesn't front-load theory.
+Tracks progress, lets user stop and resume. The key difference from development mode: `onboard` teaches *why*, not just *what*.
 
 ---
 
@@ -223,13 +238,26 @@ Scoped to nctl only — no testnet/mainnet support (out of scope for onboarding)
 
 ---
 
+## Two Modes, One Skill Set
+
+| Aspect | Guided mode (`/onboard`) | Development mode (direct skills) |
+|---|---|---|
+| Entry point | `/onboard` | `/new-contract`, `/new-entrypoint`, etc. |
+| Audience | Newcomers | Developers who know Odra |
+| Verbosity | High — explains concepts, checks understanding | Low — asks requirements, generates code |
+| Flow | Linear, progressive | On-demand, any order |
+| Extra steps | Concept intros, checkpoints, "why" explanations | None — just the skill |
+| Skills used | Same 9 skills | Same 9 skills |
+
+The `onboard` skill does not contain duplicate logic. It invokes the same skills a developer would use directly, adding teaching scaffolding around each invocation.
+
 ## Relationship to Existing Skills
 
-The existing skills (`gen-module`, `run-example-on-livenet`, `nctl-test`) remain untouched in the main Odra repo. They serve framework development. The onboarding skills are independent, ship with the template, and are designed for end-user projects.
+The existing skills (`gen-module`, `run-example-on-livenet`, `nctl-test`) remain untouched in the main Odra repo. They serve framework development. The starter template skills are independent, ship with the template, and are designed for end-user projects.
 
 ## What's NOT in Scope
 
 - Adding CLAUDE.md to existing templates (blank, full, workspace, cep18, cep95)
-- Testnet/mainnet deployment in onboarding
+- Testnet/mainnet deployment
 - Frontend/backend scaffolding (workspace is extensible for this, but skills don't cover it)
 - Advanced topics: cross-contract calls, delegate!, external contracts
