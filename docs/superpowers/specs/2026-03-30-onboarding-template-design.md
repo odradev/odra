@@ -140,7 +140,10 @@ Tracks progress, lets user stop and resume. The key difference from development 
 Asks for:
 - Module name (PascalCase)
 - Brief description
-- Storage fields (`Var<T>`, `Mapping<K, V>`, `SubModule<T>`)
+- Storage fields (`Var<T>`, `Mapping<K, V>`)
+- SubModules (`SubModule<T>`) — for composing existing modules (e.g., `Ownable`, `Erc20`)
+- External contract references (`External<ContractRef>`) — for cross-contract calls
+- Delegation (`delegate!`) — for forwarding methods from submodules
 - Events (if any)
 - Errors (if any)
 
@@ -149,8 +152,10 @@ Generates:
 - Adds `pub mod <snake_name>;` to `contracts/src/lib.rs`
 - Adds `[[contracts]] fqn = "<snake_name>::ModuleName"` to `Odra.toml`
 - Wires into `cli/cli.rs` — adds to deploy script and registers contract
+- If SubModules used: generates `init()` that initializes children, `delegate!` block if requested
+- If External used: generates cross-contract call patterns with `External<ContractRef>`
 
-Teaches: what `#[odra::module]` generates (HostRef, InitArgs, ContractRef), how storage works, how events/errors are declared.
+Teaches: what `#[odra::module]` generates (HostRef, InitArgs, ContractRef), how storage works, how events/errors are declared, how composition and cross-contract calls work.
 
 #### 4. `new-factory-contract` — Scaffold a factory contract
 
@@ -234,7 +239,7 @@ Single responsibility — node lifecycle only:
 3. Run CLI binary with `--features=livenet`
 4. Report deployment results (exit code, key events, errors)
 
-Scoped to nctl only — no testnet/mainnet support (out of scope for onboarding).
+Supports nctl, testnet, and mainnet. For nctl, auto-configures `.env` from `.env.sample`. For testnet/mainnet, discovers responsive nodes via RPC peer list, asks for secret key path, and writes `.env.<network>`.
 
 ---
 
@@ -258,6 +263,4 @@ The existing skills (`gen-module`, `run-example-on-livenet`, `nctl-test`) remain
 ## What's NOT in Scope
 
 - Adding CLAUDE.md to existing templates (blank, full, workspace, cep18, cep95)
-- Testnet/mainnet deployment
 - Frontend/backend scaffolding (workspace is extensible for this, but skills don't cover it)
-- Advanced topics: cross-contract calls, delegate!, external contracts
