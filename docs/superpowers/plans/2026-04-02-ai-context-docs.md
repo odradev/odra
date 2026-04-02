@@ -1,0 +1,1515 @@
+# AI Context Docs Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Add a modular, AI-only reference documentation layer to the Odra starter template that skills load on demand to provide accurate framework context.
+
+**Architecture:** Ten Markdown files split into `overview/` (3 files, broad tasks) and `reference/` (7 files, targeted tasks) live in `templates/starter/.claude/context/`. Skills declare a `## Context` section listing which files to read before proceeding. CLAUDE.md gains a one-section index so the AI knows what's available without loading everything.
+
+**Tech Stack:** Markdown, Claude Code skills (`.claude/` conventions), Odra framework (Rust smart contract framework for Casper Network)
+
+---
+
+## Task 1: Restore deleted starter template files from git
+
+The skill files and CLAUDE.md were deleted in the working tree. Restore them from the last commit that added them.
+
+**Files:**
+- Restore: `templates/starter/.claude/CLAUDE.md`
+- Restore: `templates/starter/.claude/skills/check-env/SKILL.md`
+- Restore: `templates/starter/.claude/skills/new-contract/SKILL.md`
+- Restore: `templates/starter/.claude/skills/new-factory-contract/SKILL.md`
+- Restore: `templates/starter/.claude/skills/new-entrypoint/SKILL.md`
+- Restore: `templates/starter/.claude/skills/new-version/SKILL.md`
+- Restore: `templates/starter/.claude/skills/new-scenario/SKILL.md`
+- Restore: `templates/starter/.claude/skills/start-nctl/SKILL.md`
+- Restore: `templates/starter/.claude/skills/start-nctl/scripts/extract-keys.sh`
+- Restore: `templates/starter/.claude/skills/start-nctl/scripts/wait-for-nctl.sh`
+- Restore: `templates/starter/.claude/skills/deploy-to-livenet/SKILL.md`
+- Restore: `templates/starter/.claude/skills/onboard/SKILL.md`
+
+- [ ] **Step 1: Restore all deleted files from commit b0783f0**
+
+```bash
+git checkout b0783f0 -- templates/starter/.claude/
+```
+
+- [ ] **Step 2: Verify all files are restored**
+
+```bash
+ls templates/starter/.claude/CLAUDE.md
+ls templates/starter/.claude/skills/
+```
+
+Expected: CLAUDE.md exists, `skills/` lists all 9 skill directories.
+
+- [ ] **Step 3: Commit the restore**
+
+```bash
+git add templates/starter/.claude/
+git commit -m "feat(starter): restore skills and CLAUDE.md"
+```
+
+---
+
+## Task 2: Update CLAUDE.md with AI Context Docs index
+
+**Files:**
+- Modify: `templates/starter/.claude/CLAUDE.md`
+
+- [ ] **Step 1: Read the current CLAUDE.md**
+
+Read `templates/starter/.claude/CLAUDE.md` to see existing content.
+
+- [ ] **Step 2: Append the Context Docs section**
+
+Add the following section at the end of `templates/starter/.claude/CLAUDE.md`:
+
+```markdown
+## AI Context Docs
+
+Reference docs for Odra concepts live in `.claude/context/`. Skills load them
+on demand. You can also read them directly when answering questions about Odra.
+
+- `overview/` — architecture, contract model, testing model
+- `reference/` — storage, entry points, events, errors, cross-contract, testing, deployment
+```
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add templates/starter/.claude/CLAUDE.md
+git commit -m "feat(starter): add AI context docs index to CLAUDE.md"
+```
+
+---
+
+## Task 3: Create `context/overview/architecture.md`
+
+**Files:**
+- Create: `templates/starter/.claude/context/overview/architecture.md`
+
+- [ ] **Step 1: Create the file**
+
+Write `templates/starter/.claude/context/overview/architecture.md` with this content:
+
+````markdown
+# Odra Architecture Overview
+
+## What Odra Is
+
+Odra is a smart contract framework for the Casper Network. It provides a macro-driven
+developer experience where contracts are plain Rust structs, and multiple backends handle
+execution: an in-memory VM for fast unit tests, a full Casper execution engine for
+integration tests, and a livenet client for production deployments.
+
+## Crate Map
+
+```
+odra/                   User-facing facade — re-exports core + macros. Import this.
+odra-macros/            Proc macros: #[odra::module], #[odra::event], etc.
+core/                   HostEnv, HostContext, ContractContext, storage traits
+odra-vm/                In-memory VM backend for unit tests (OdraVmHost)
+odra-casper/
+  test-vm/              Full Casper execution engine backend (CasperHost)
+  livenet-env/          Real Casper blockchain backend (LivenetHost)
+  wasm-env/             On-chain WASM execution environment
+odra-cli/               CLI tool for livenet contract management
+odra-schema/            JSON schema generation from contract definitions
+odra-test/              Test environment selector (env() + ODRA_BACKEND switching)
+```
+
+In a project scaffolded from the starter template, you work in:
+- `contracts/` — contract crate, depends on `odra`
+- `cli/` — CLI binary, depends on `odra-cli`
+
+## Execution Flow
+
+```
+Test/CLI call
+  → HostRef method (generated by #[odra::module])
+  → HostEnv::call_contract
+  → HostContext::call_contract (backend implementation)
+  → EntryPointsCaller (routes to the correct fn)
+  → Contract function (reads/writes via ContractContext)
+```
+
+## Two Context Layers
+
+**`HostContext`** (host-side interface):
+- Used by `HostEnv` for deploying and calling contracts from tests/CLI
+- All methods take `&self`; implementations use `Rc<RefCell<...>>` internally
+- Three backends: `OdraVmHost`, `CasperHost`, `LivenetHost`
+
+**`ContractContext`** (on-chain execution interface):
+- Used by contract code at runtime to read storage, emit events, get caller, etc.
+- Accessed via `self.env()` inside a contract impl
+- Wrapped in `Rc<RefCell<dyn ContractContext>>` by `ContractEnv`
+
+## Smart Pointer Conventions
+
+The framework is entirely single-threaded:
+- `Rc<T>` for shared ownership (not `Arc<T>`)
+- `RefCell<T>` for interior mutability (not `RwLock<T>`)
+````
+
+- [ ] **Step 2: Commit**
+
+```bash
+git add templates/starter/.claude/context/overview/architecture.md
+git commit -m "feat(starter): add architecture overview context doc"
+```
+
+---
+
+## Task 4: Create `context/overview/contract-model.md`
+
+**Files:**
+- Create: `templates/starter/.claude/context/overview/contract-model.md`
+
+- [ ] **Step 1: Create the file**
+
+Write `templates/starter/.claude/context/overview/contract-model.md` with this content:
+
+````markdown
+# Odra Contract Model
+
+## The `#[odra::module]` Macro
+
+Apply `#[odra::module]` to both the struct and its impl block. The struct's fields are
+on-chain storage. Every `pub fn` in the impl block becomes an entry point (callable on-chain).
+
+```rust
+use odra::prelude::*;
+
+#[odra::module]
+pub struct Counter {
+    value: Var<u32>,
+}
+
+#[odra::module]
+impl Counter {
+    pub fn init(&mut self, start: u32) {
+        self.value.set(start);
+    }
+
+    pub fn increment(&mut self) {
+        let v = self.value.get_or_default();
+        self.value.set(v + 1);
+    }
+
+    pub fn get(&self) -> u32 {
+        self.value.get_or_default()
+    }
+}
+```
+
+## What the Macro Generates
+
+For a contract named `Counter`, the macro generates:
+
+| Generated type | Purpose |
+|---|---|
+| `CounterHostRef` | Host-side proxy — all entry points as Rust methods |
+| `CounterInitArgs` | Struct built from `init`'s parameters (if `init` exists) |
+| `CounterContractRef` | Used for cross-contract calls (see cross-contract.md) |
+| `EntryPointsCaller` | Internal bridge from host call to contract function |
+
+## Constructor: `init`
+
+The function named `init` is the constructor. It runs once at deploy time.
+Its parameters become fields of the generated `<Name>InitArgs` struct.
+
+```rust
+// init with parameters → generates CounterInitArgs { start: u32 }
+pub fn init(&mut self, start: u32) { ... }
+```
+
+Contracts with no constructor omit `init`. When deploying, use `NoArgs`:
+
+```rust
+use odra::host::{Deployer, NoArgs};
+let contract = MyContract::deploy(&env, NoArgs);
+```
+
+## Module Attributes
+
+The struct attribute accepts optional lists:
+
+```rust
+#[odra::module(events = [TransferEvent, ApprovalEvent], errors = Error)]
+pub struct Token { ... }
+```
+
+- `events` — list of event types emitted by this module (for schema generation)
+- `errors` — the error enum for this module (for schema generation)
+
+## The `self.env()` Method
+
+Inside any entry point, `self.env()` returns a `ContractEnv` reference for accessing
+on-chain context:
+
+```rust
+self.env().caller()           // Address of the caller
+self.env().get_block_time()   // Current block time (milliseconds)
+self.env().emit_event(e)      // Emit an event
+self.env().revert(err)        // Revert with an error
+self.env().self_balance()     // Contract's native token balance (U512)
+self.env().transfer_tokens(&to, &amount) // Transfer native tokens
+```
+
+## SubModules
+
+Contracts can nest other modules as fields using `SubModule<T>`:
+
+```rust
+#[odra::module]
+pub struct ManagedToken {
+    ownable: SubModule<Ownable>,
+    token: SubModule<Erc20>,
+}
+```
+
+SubModule methods are called directly: `self.ownable.get_owner()`.
+To forward entry points to a SubModule, use the `delegate!` macro.
+````
+
+- [ ] **Step 2: Commit**
+
+```bash
+git add templates/starter/.claude/context/overview/contract-model.md
+git commit -m "feat(starter): add contract model overview context doc"
+```
+
+---
+
+## Task 5: Create `context/overview/testing-model.md`
+
+**Files:**
+- Create: `templates/starter/.claude/context/overview/testing-model.md`
+
+- [ ] **Step 1: Create the file**
+
+Write `templates/starter/.claude/context/overview/testing-model.md` with this content:
+
+````markdown
+# Odra Testing Model
+
+## Three Backends
+
+### OdraVM (default — use for unit tests)
+
+Fast in-memory VM. No blockchain, no WASM. Runs in milliseconds.
+
+```bash
+cargo odra test           # from the contracts/ or project root
+```
+
+Use OdraVM for: all contract logic tests, event assertions, error assertions,
+caller-switching tests, balance tests.
+
+### CasperVM (use for integration tests)
+
+Full Casper execution engine. Compiles contracts to WASM and runs them through
+the real Casper runtime. Much slower than OdraVM but catches WASM-specific issues.
+
+```bash
+cargo odra test -b casper
+```
+
+Use CasperVM for: pre-deployment validation, testing contracts that interact
+with Casper-specific types, verifying WASM compilation succeeds.
+
+### Livenet (use for deployment)
+
+Real Casper blockchain node. Requires a running node (NCTL locally or testnet/mainnet).
+Not used for automated tests — used via the CLI binary in `cli/`.
+
+```bash
+# from cli/ directory
+cargo run --bin cli --features=livenet -- deploy
+```
+
+Use livenet for: deploying to nctl/testnet/mainnet, running scenarios against a live node.
+
+## Switching Backends
+
+The backend is selected via the `ODRA_BACKEND` environment variable:
+
+```bash
+ODRA_BACKEND=casper cargo odra test    # force CasperVM
+cargo odra test                         # OdraVM (default)
+```
+
+In test code, `odra_test::env()` returns the correct backend automatically.
+
+## Test Structure
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::{MyContract, MyContractInitArgs};
+    use odra::host::Deployer;
+
+    #[test]
+    fn my_test() {
+        let env = odra_test::env();
+        let mut contract = MyContract::deploy(&env, MyContractInitArgs { /* ... */ });
+        // call entry points on contract
+        // assert using env.emitted_event, env.balance_of, etc.
+    }
+}
+```
+
+For contracts with no constructor args, import and use `NoArgs`:
+
+```rust
+use odra::host::{Deployer, NoArgs};
+let contract = MyContract::deploy(&env, NoArgs);
+```
+
+## Key Testing Utilities
+
+See `reference/testing.md` for full API details.
+
+- `env.set_caller(address)` — change the active caller
+- `env.advance_block_time(ms)` — move block time forward
+- `env.balance_of(&contract_ref)` — check native token balance
+- `env.emitted_event(&contract, Event { .. })` — assert event was emitted
+- `contract.try_method()` — call that returns Result instead of panicking
+````
+
+- [ ] **Step 2: Commit**
+
+```bash
+git add templates/starter/.claude/context/overview/testing-model.md
+git commit -m "feat(starter): add testing model overview context doc"
+```
+
+---
+
+## Task 6: Create `context/reference/storage.md`
+
+**Files:**
+- Create: `templates/starter/.claude/context/reference/storage.md`
+
+- [ ] **Step 1: Create the file**
+
+Write `templates/starter/.claude/context/reference/storage.md` with this content:
+
+````markdown
+# Odra Storage Types
+
+All storage fields are declared on the contract struct. They read from and write to
+the blockchain's key-value store — not in-memory. Access them via `self.field_name`.
+
+## `Var<T>` — single value
+
+```rust
+name: Var<String>,
+count: Var<u32>,
+owner: Var<Address>,
+```
+
+| Method | Description |
+|---|---|
+| `self.name.set(value)` | Write a value |
+| `self.name.get()` | Returns `Option<T>` |
+| `self.name.get_or_default()` | Returns `T`, uses `Default::default()` if unset |
+| `self.name.get_or_revert_with(err)` | Returns `T`, reverts if unset |
+| `self.name.is_none()` | Returns `true` if no value has been set |
+
+**Common pattern — initialize in `init`, update in entry points:**
+
+```rust
+pub fn init(&mut self, name: String) {
+    self.name.set(name);
+}
+
+pub fn rename(&mut self, new_name: String) {
+    self.name.set(new_name);
+}
+
+pub fn get_name(&self) -> String {
+    self.name.get_or_default()
+}
+```
+
+## `Mapping<K, V>` — key-value store
+
+```rust
+balances: Mapping<Address, U256>,
+visits: Mapping<String, u32>,
+```
+
+| Method | Description |
+|---|---|
+| `self.balances.set(&key, value)` | Write a value for a key |
+| `self.balances.get(&key)` | Returns `Option<V>` |
+| `self.balances.get_or_default(&key)` | Returns `V`, uses `Default::default()` if unset |
+
+**Common pattern:**
+
+```rust
+pub fn add_visit(&mut self, name: &String) {
+    let count = self.visits.get_or_default(name);
+    self.visits.set(name, count + 1);
+}
+
+pub fn visit_count(&self, name: &String) -> u32 {
+    self.visits.get_or_default(name)
+}
+```
+
+## `List<T>` — append-only list
+
+```rust
+walks: List<u32>,
+items: List<Address>,
+```
+
+| Method | Description |
+|---|---|
+| `self.walks.push(value)` | Append a value |
+| `self.walks.len()` | Number of elements (`u32`) |
+| `self.walks.iter()` | Iterator over values |
+| `self.walks.pop()` | Remove and return last element (`Option<T>`) |
+
+**Common pattern:**
+
+```rust
+pub fn add_walk(&mut self, distance: u32) {
+    self.walks.push(distance);
+}
+
+pub fn total_distance(&self) -> u32 {
+    self.walks.iter().sum()
+}
+```
+
+## `Sequence<T>` — auto-incrementing counter
+
+```rust
+next_id: Sequence<u32>,
+```
+
+| Method | Description |
+|---|---|
+| `self.next_id.get_current_value()` | Read without incrementing |
+| `self.next_id.next_value()` | Increment and return new value |
+
+**Common pattern — generating unique IDs:**
+
+```rust
+pub fn create_item(&mut self) -> u32 {
+    self.next_id.next_value()
+}
+```
+
+## Storing Contract References: `External<T>`
+
+To store a reference to another contract (for cross-contract calls):
+
+```rust
+token: External<TokenContractRef>,
+```
+
+| Method | Description |
+|---|---|
+| `self.token.set(address)` | Store a contract address |
+| `self.token.method(args)` | Call a method on the referenced contract |
+
+See `reference/cross-contract.md` for the full cross-contract pattern.
+````
+
+- [ ] **Step 2: Commit**
+
+```bash
+git add templates/starter/.claude/context/reference/storage.md
+git commit -m "feat(starter): add storage reference context doc"
+```
+
+---
+
+## Task 7: Create `context/reference/entry-points.md`
+
+**Files:**
+- Create: `templates/starter/.claude/context/reference/entry-points.md`
+
+- [ ] **Step 1: Create the file**
+
+Write `templates/starter/.claude/context/reference/entry-points.md` with this content:
+
+````markdown
+# Odra Entry Points
+
+## What Makes a Function an Entry Point
+
+Only `pub fn` methods in the `#[odra::module]` impl block become entry points (callable
+on-chain). Non-public functions are internal helpers only.
+
+```rust
+#[odra::module]
+impl Counter {
+    pub fn increment(&mut self) { ... }  // ✓ entry point
+    pub fn get(&self) -> u32 { ... }     // ✓ entry point
+    fn internal_helper(&self) { ... }    // ✗ not an entry point
+}
+```
+
+## `&self` vs `&mut self`
+
+- Use `&self` for read-only entry points (don't write to storage)
+- Use `&mut self` for entry points that write to storage or emit events
+
+## Constructor: `init`
+
+The function named `init` is the constructor — it runs once at deploy time.
+Its parameters are collected into a generated `<Name>InitArgs` struct.
+
+```rust
+// Generates: CounterInitArgs { initial_value: u32 }
+pub fn init(&mut self, initial_value: u32) {
+    self.value.set(initial_value);
+}
+```
+
+Deploying with constructor args:
+
+```rust
+Counter::deploy(&env, CounterInitArgs { initial_value: 0 })
+```
+
+Contracts with no `init` function are deployed with `NoArgs`:
+
+```rust
+use odra::host::{Deployer, NoArgs};
+Counter::deploy(&env, NoArgs)
+```
+
+## Return Types
+
+```rust
+pub fn get_count(&self) -> u32 { ... }         // returns value directly
+pub fn maybe_value(&self) -> Option<String> { ... } // Option is valid
+pub fn transfer(&mut self) { ... }              // () — no return needed
+```
+
+On-chain, return values are serialized via `casper_types`. Use types that implement
+`CLTyped + ToBytes + FromBytes`: primitive integers, `bool`, `String`, `Address`,
+`U256`, `U512`, `Vec<T>`, `Option<T>`, tuples, custom types with `#[odra::odra_type]`.
+
+## Payable Entry Points
+
+Mark an entry point with `#[odra(payable)]` to allow it to receive native CSPR tokens:
+
+```rust
+#[odra(payable)]
+pub fn deposit(&mut self) {
+    // self.env().self_balance() now includes the attached tokens
+}
+```
+
+Calling a payable entry point from a test:
+
+```rust
+contract.with_tokens(U512::from(100)).deposit();
+```
+
+Calling a non-payable entry point with tokens fails and refunds the tokens.
+
+## Accessing On-Chain Context
+
+Inside any entry point, use `self.env()`:
+
+```rust
+pub fn do_something(&mut self) {
+    let caller = self.env().caller();             // Address
+    let now = self.env().get_block_time();         // u64 (milliseconds)
+    let balance = self.env().self_balance();       // U512 (contract balance)
+    self.env().transfer_tokens(&caller, &amount);  // send native tokens
+    self.env().emit_event(MyEvent { ... });        // emit event
+    self.env().revert(MyError::SomeVariant);       // revert (never returns)
+}
+```
+
+## Optional Arguments
+
+Use `Maybe<T>` (Odra's optional argument type) for truly optional init/entry args:
+
+```rust
+pub fn init(&mut self, name: String, metadata: Maybe<String>) {
+    if let Some(m) = metadata.into() {
+        self.metadata.set(m);
+    }
+}
+```
+````
+
+- [ ] **Step 2: Commit**
+
+```bash
+git add templates/starter/.claude/context/reference/entry-points.md
+git commit -m "feat(starter): add entry-points reference context doc"
+```
+
+---
+
+## Task 8: Create `context/reference/events.md`
+
+**Files:**
+- Create: `templates/starter/.claude/context/reference/events.md`
+
+- [ ] **Step 1: Create the file**
+
+Write `templates/starter/.claude/context/reference/events.md` with this content:
+
+````markdown
+# Odra Events
+
+## Defining an Event
+
+Apply `#[odra::event]` to a public struct. All fields must implement `CLTyped`:
+
+```rust
+#[odra::event]
+pub struct Transfer {
+    pub from: Address,
+    pub to: Address,
+    pub amount: U256,
+}
+
+#[odra::event]
+pub struct Approval {
+    pub owner: Address,
+    pub spender: Address,
+    pub amount: U256,
+}
+```
+
+## Registering Events on the Module
+
+List emitted events in the module attribute for schema generation:
+
+```rust
+#[odra::module(events = [Transfer, Approval])]
+pub struct Token { ... }
+```
+
+## Emitting Events
+
+Inside an entry point, use `self.env().emit_event(...)`:
+
+```rust
+pub fn transfer(&mut self, to: Address, amount: U256) {
+    // ... update balances ...
+    self.env().emit_event(Transfer {
+        from: self.env().caller(),
+        to,
+        amount,
+    });
+}
+```
+
+## Native Events (Casper-specific)
+
+For events that need to be recorded in Casper's native event schema:
+
+```rust
+self.env().emit_native_event(Transfer { from, to, amount });
+```
+
+Most contracts use `emit_event`. Use `emit_native_event` only when targeting
+Casper's native CEP-47/CEP-78 event standards.
+
+## Asserting Events in Tests
+
+Use `env.emitted_event(&contract_ref, event_value)` to assert a specific event
+was emitted. Struct fields can be partially matched:
+
+```rust
+assert!(env.emitted_event(
+    &token,
+    Transfer {
+        from: env.get_account(0),
+        to: env.get_account(1),
+        amount: 100.into(),
+    }
+));
+```
+
+Check if any event with a given name was emitted (without checking fields):
+
+```rust
+assert!(env.emitted(&token, "Transfer"));
+```
+
+Count total events emitted by a contract since last check:
+
+```rust
+assert_eq!(env.events_count(&token), 1);
+```
+
+For native events:
+
+```rust
+assert!(env.emitted_native_event(&token, Transfer { ... }));
+assert!(env.emitted_native(&token, "Transfer"));
+assert_eq!(env.native_events_count(&token), 1);
+```
+
+## Complete Example
+
+```rust
+#[odra::event]
+pub struct NameChanged {
+    pub old_name: String,
+    pub new_name: String,
+}
+
+#[odra::module(events = [NameChanged])]
+pub struct Registry {
+    name: Var<String>,
+}
+
+#[odra::module]
+impl Registry {
+    pub fn init(&mut self, name: String) {
+        self.name.set(name);
+    }
+
+    pub fn rename(&mut self, new_name: String) {
+        let old_name = self.name.get_or_default();
+        self.name.set(new_name.clone());
+        self.env().emit_event(NameChanged { old_name, new_name });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{NameChanged, Registry, RegistryInitArgs};
+    use odra::host::Deployer;
+
+    #[test]
+    fn test_rename_emits_event() {
+        let env = odra_test::env();
+        let mut registry = Registry::deploy(&env, RegistryInitArgs {
+            name: "Alice".to_string(),
+        });
+        registry.rename("Bob".to_string());
+        assert!(env.emitted_event(&registry, NameChanged {
+            old_name: "Alice".to_string(),
+            new_name: "Bob".to_string(),
+        }));
+    }
+}
+```
+````
+
+- [ ] **Step 2: Commit**
+
+```bash
+git add templates/starter/.claude/context/reference/events.md
+git commit -m "feat(starter): add events reference context doc"
+```
+
+---
+
+## Task 9: Create `context/reference/errors.md`
+
+**Files:**
+- Create: `templates/starter/.claude/context/reference/errors.md`
+
+- [ ] **Step 1: Create the file**
+
+Write `templates/starter/.claude/context/reference/errors.md` with this content:
+
+````markdown
+# Odra Errors
+
+## Defining an Error Enum
+
+Apply `#[odra::odra_error]` to an enum. Each variant needs a unique `u16` discriminant:
+
+```rust
+#[odra::odra_error]
+pub enum Error {
+    OwnerNotSet = 1,
+    NotAnOwner = 2,
+    InsufficientBalance = 3,
+    AlreadyInitialized = 4,
+}
+```
+
+Discriminants must be unique within the project across all error enums to avoid
+collisions in the final WASM binary.
+
+## Registering Errors on the Module
+
+```rust
+#[odra::module(errors = Error)]
+pub struct OwnedContract { ... }
+```
+
+## Reverting with an Error
+
+Use `self.env().revert(error)` — it never returns (the transaction is rolled back):
+
+```rust
+pub fn change_name(&mut self, name: String) {
+    if self.env().caller() != self.owner.get_or_revert_with(Error::OwnerNotSet) {
+        self.env().revert(Error::NotAnOwner);
+    }
+    self.name.set(name);
+}
+```
+
+Alternatively, implement `Revertible` (via `SubModule<...>` composition) and call
+`self.revert(Error::Variant)` directly.
+
+## Convenience Methods on Storage Types
+
+`Var<T>` and `Mapping<K, V>` provide revert shortcuts:
+
+```rust
+// Reverts with Error::OwnerNotSet if value is None
+let owner = self.owner.get_or_revert_with(Error::OwnerNotSet);
+```
+
+## `unwrap_or_revert`
+
+The `UnwrapOrRevert` trait adds `.unwrap_or_revert(self)` to `Option<T>` and `Result<T, E>`.
+Import it via `use odra::prelude::*`:
+
+```rust
+use odra::prelude::*;
+
+// Option — reverts with a generic ExecutionError if None
+let value = self.some_field.get().unwrap_or_revert(self);
+
+// Result — reverts with the error if Err
+let parsed = some_result.unwrap_or_revert(self);
+```
+
+## Asserting Errors in Tests
+
+Use `.try_method()` to get a `Result` instead of panicking. The error type is `OdraError`:
+
+```rust
+let err = contract.try_change_name("Bob".to_string()).unwrap_err();
+assert_eq!(err, Error::NotAnOwner.into());
+```
+
+## Complete Example
+
+```rust
+#[odra::module(errors = Error)]
+pub struct Vault {
+    owner: Var<Address>,
+    balance: Var<U256>,
+}
+
+#[odra::odra_error]
+pub enum Error {
+    NotOwner = 1,
+    InsufficientFunds = 2,
+}
+
+#[odra::module]
+impl Vault {
+    pub fn init(&mut self) {
+        self.owner.set(self.env().caller());
+        self.balance.set(U256::zero());
+    }
+
+    pub fn withdraw(&mut self, amount: U256) {
+        let owner = self.owner.get_or_revert_with(Error::NotOwner);
+        if self.env().caller() != owner {
+            self.env().revert(Error::NotOwner);
+        }
+        let bal = self.balance.get_or_default();
+        if bal < amount {
+            self.env().revert(Error::InsufficientFunds);
+        }
+        self.balance.set(bal - amount);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Error, Vault};
+    use odra::host::{Deployer, NoArgs};
+
+    #[test]
+    fn non_owner_cannot_withdraw() {
+        let env = odra_test::env();
+        env.set_caller(env.get_account(0));
+        let mut vault = Vault::deploy(&env, NoArgs);
+
+        env.set_caller(env.get_account(1));
+        let err = vault.try_withdraw(100.into()).unwrap_err();
+        assert_eq!(err, Error::NotOwner.into());
+    }
+}
+```
+````
+
+- [ ] **Step 2: Commit**
+
+```bash
+git add templates/starter/.claude/context/reference/errors.md
+git commit -m "feat(starter): add errors reference context doc"
+```
+
+---
+
+## Task 10: Create `context/reference/cross-contract.md`
+
+**Files:**
+- Create: `templates/starter/.claude/context/reference/cross-contract.md`
+
+- [ ] **Step 1: Create the file**
+
+Write `templates/starter/.claude/context/reference/cross-contract.md` with this content:
+
+````markdown
+# Cross-Contract Calls
+
+## Two Patterns
+
+Odra supports two cross-contract patterns:
+
+1. **`External<T>` field** — stores a contract address as a field, calls it like a sub-field
+2. **`ContractRef::new()`** — constructs a ref on the fly from an address (no storage field)
+
+Both produce the same on-chain behavior. `External<T>` is cleaner when the address is
+stored long-term; `ContractRef::new()` is useful for one-off or injected addresses.
+
+## Pattern 1: `External<T>` Field
+
+Define the external contract's interface with `#[odra::external_contract]`:
+
+```rust
+#[odra::external_contract]
+pub trait Token {
+    fn balance_of(&self, owner: &Address) -> U256;
+    fn transfer(&mut self, to: &Address, amount: &U256);
+}
+```
+
+This generates a `TokenContractRef` type. Store it in a contract field:
+
+```rust
+#[odra::module]
+pub struct Wallet {
+    token: External<TokenContractRef>,
+}
+
+#[odra::module]
+impl Wallet {
+    pub fn init(&mut self, token_address: Address) {
+        self.token.set(token_address);
+    }
+
+    pub fn my_balance(&self) -> U256 {
+        self.token.balance_of(&self.env().caller())
+    }
+}
+```
+
+## Pattern 2: `ContractRef::new()`
+
+When you have the address but don't store it permanently:
+
+```rust
+use odra::ContractRef;
+
+pub fn query_balance(&self, token_address: Address, owner: &Address) -> U256 {
+    TokenContractRef::new(self.env(), token_address).balance_of(owner)
+}
+```
+
+## Using Cross-Contract in Tests
+
+Deploy both contracts, wire the address:
+
+```rust
+#[test]
+fn test_wallet() {
+    let env = odra_test::env();
+
+    // Deploy the token first
+    let token = MyToken::deploy(&env, MyTokenInitArgs {
+        initial_supply: 1000.into(),
+    });
+
+    // Deploy wallet with token address
+    let wallet = Wallet::deploy(&env, WalletInitArgs {
+        token_address: token.address(),
+    });
+
+    assert_eq!(wallet.my_balance(), 1000.into());
+}
+```
+
+## Important: Mutable vs Immutable Calls
+
+- Entry points that mutate state (`&mut self`) require the `ContractRef` to be `mut`
+- Read-only entry points (`&self`) work on an immutable ref
+
+```rust
+// Mutable cross-contract call
+TokenContractRef::new(self.env(), addr).transfer(&recipient, &amount);
+
+// Read-only cross-contract call
+let supply = TokenContractRef::new(self.env(), addr).total_supply();
+```
+````
+
+- [ ] **Step 2: Commit**
+
+```bash
+git add templates/starter/.claude/context/reference/cross-contract.md
+git commit -m "feat(starter): add cross-contract reference context doc"
+```
+
+---
+
+## Task 11: Create `context/reference/testing.md`
+
+**Files:**
+- Create: `templates/starter/.claude/context/reference/testing.md`
+
+- [ ] **Step 1: Create the file**
+
+Write `templates/starter/.claude/context/reference/testing.md` with this content:
+
+````markdown
+# Testing Reference
+
+See `overview/testing-model.md` for the big picture on backends (OdraVM, CasperVM, livenet).
+This file covers the test API.
+
+## Setting Up a Test
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::{MyContract, MyContractInitArgs};
+    use odra::host::Deployer;
+
+    #[test]
+    fn my_test() {
+        let env = odra_test::env();
+        let mut contract = MyContract::deploy(&env, MyContractInitArgs {
+            initial_value: 42,
+        });
+        assert_eq!(contract.get_value(), 42);
+    }
+}
+```
+
+For contracts with no constructor, use `NoArgs`:
+
+```rust
+use odra::host::{Deployer, NoArgs};
+let contract = MyContract::deploy(&env, NoArgs);
+```
+
+## `HostEnv` — Test Environment API
+
+```rust
+let env = odra_test::env();
+```
+
+| Method | Description |
+|---|---|
+| `env.get_account(n)` | Returns the n-th test account (`Address`). Account 0 is the default caller. |
+| `env.set_caller(address)` | Change the active caller for subsequent calls |
+| `env.advance_block_time(ms)` | Advance the block time by `ms` milliseconds |
+| `env.balance_of(&contract_ref)` | Native token balance of a contract or address (`U512`) |
+| `env.emitted_event(&contract, event)` | Returns `true` if the event was emitted |
+| `env.emitted_native_event(&contract, event)` | Same for native events |
+| `env.emitted(&contract, "EventName")` | Returns `true` if any event with that name was emitted |
+| `env.events_count(&contract)` | Number of events emitted since last check |
+
+## Calling Entry Points
+
+```rust
+// Normal call — panics on revert
+contract.increment();
+let value = contract.get();
+
+// Try call — returns Result, does not panic on revert
+let result = contract.try_increment();
+let err = contract.try_restricted_action().unwrap_err();
+```
+
+## Switching Callers
+
+```rust
+let alice = env.get_account(0);
+let bob = env.get_account(1);
+
+env.set_caller(alice);
+let mut contract = MyContract::deploy(&env, NoArgs);
+
+env.set_caller(bob);
+// subsequent calls are made as bob
+contract.some_action();
+```
+
+## Native Token Transfers (Payable Calls)
+
+```rust
+// Send 100 motes to a payable entry point
+contract.with_tokens(U512::from(100)).deposit();
+
+// Check contract balance
+let balance = env.balance_of(&contract);
+assert_eq!(balance, U512::from(100));
+```
+
+## Advancing Time
+
+```rust
+env.advance_block_time(1000); // advance 1 second (1000 ms)
+let time = contract.get_timestamp(); // should reflect new block time
+```
+
+## Asserting Events
+
+See `reference/events.md` for the full events API.
+
+```rust
+assert!(env.emitted_event(&contract, MyEvent {
+    field: expected_value,
+}));
+```
+
+## Asserting Errors
+
+See `reference/errors.md` for error definition. Use `.try_method()`:
+
+```rust
+let err = contract.try_restricted_action().unwrap_err();
+assert_eq!(err, MyError::Unauthorized.into());
+```
+
+## Getting a Contract from Another Contract's Env
+
+If you need the env from a deployed contract ref:
+
+```rust
+let env = contract.env();
+```
+````
+
+- [ ] **Step 2: Commit**
+
+```bash
+git add templates/starter/.claude/context/reference/testing.md
+git commit -m "feat(starter): add testing reference context doc"
+```
+
+---
+
+## Task 12: Create `context/reference/deployment.md`
+
+**Files:**
+- Create: `templates/starter/.claude/context/reference/deployment.md`
+
+- [ ] **Step 1: Create the file**
+
+Write `templates/starter/.claude/context/reference/deployment.md` with this content:
+
+````markdown
+# Deployment Reference
+
+## Environment Variables
+
+Set these before running the CLI binary against a live node. Copy `.env.sample` to `.env`
+and fill in your values:
+
+```env
+ODRA_CASPER_LIVENET_SECRET_KEY_PATH=/path/to/secret_key.pem
+ODRA_CASPER_LIVENET_NODE_ADDRESS=http://localhost:11101
+ODRA_CASPER_LIVENET_EVENTS_URL=http://localhost:18101/events/main
+ODRA_CASPER_LIVENET_CHAIN_NAME=casper-net-1
+```
+
+| Variable | Description |
+|---|---|
+| `SECRET_KEY_PATH` | Path to PEM file for signing transactions |
+| `NODE_ADDRESS` | RPC endpoint of the Casper node |
+| `EVENTS_URL` | SSE events endpoint (for waiting on deploys) |
+| `CHAIN_NAME` | `casper-net-1` (nctl), `casper-test` (testnet), `casper` (mainnet) |
+
+Load at runtime with:
+
+```bash
+set -a && source .env && set +a && cargo run --bin cli --features=livenet -- deploy
+```
+
+## `load_or_deploy` Pattern
+
+In your deploy script, use `ContractType::load_or_deploy(env, args, container, gas)`.
+On first run it deploys and saves the address. On subsequent runs it loads the existing
+contract from `resources/<chain>-contracts.toml`:
+
+```rust
+use odra_cli::DeployerExt;
+
+fn deploy(&self, env: &HostEnv, container: &mut DeployedContractsContainer)
+    -> Result<(), Error>
+{
+    let _token = MyToken::load_or_deploy(
+        env,
+        MyTokenInitArgs {
+            name: "My Token".to_string(),
+            symbol: "MTK".to_string(),
+            decimals: 18,
+            initial_supply: Some(1_000_000.into()),
+        },
+        container,
+        cspr!(350),   // gas budget in motes; cspr!(350) = 350 CSPR
+    )?;
+    Ok(())
+}
+```
+
+## `OdraCli` Builder
+
+Wire up the CLI in `cli/cli.rs`:
+
+```rust
+OdraCli::new()
+    .about("My project CLI")
+    .deploy(MyDeployScript)          // deploy script
+    .contract::<MyToken>()           // expose contract entry points as commands
+    .scenario::<CheckBalance>(CheckBalance) // register a scenario
+    .build()
+    .run();
+```
+
+## Writing a Scenario
+
+A scenario is a named set of actions against deployed contracts. Implement both
+`Scenario` and `ScenarioMetadata` traits:
+
+```rust
+use odra_cli::{
+    deploy::DeployScript,
+    scenario::{Args, Error, Scenario, ScenarioMetadata},
+    CommandArg, ContractProvider, DeployedContractsContainer,
+};
+use odra::schema::casper_contract_schema::NamedCLType;
+
+pub struct CheckBalanceScenario;
+
+impl Scenario for CheckBalanceScenario {
+    fn args(&self) -> Vec<CommandArg> {
+        // Declare CLI arguments for this scenario
+        vec![
+            CommandArg::new("account", "Account address to check", NamedCLType::Key)
+                .required(),
+        ]
+    }
+
+    fn run(
+        &self,
+        env: &HostEnv,
+        container: &DeployedContractsContainer,
+        args: Args,
+    ) -> Result<(), Error> {
+        let token = container.contract_ref::<MyToken>(env)?;
+        let account: Address = args.get_single::<Address>("account")?;
+        env.set_gas(50_000_000);
+        let balance = token.try_balance_of(&account)?;
+        odra_cli::log(format!("Balance: {}", balance));
+        Ok(())
+    }
+}
+
+impl ScenarioMetadata for CheckBalanceScenario {
+    const NAME: &'static str = "check-balance";
+    const DESCRIPTION: &'static str = "Check the token balance of an account";
+}
+```
+
+## Running the CLI
+
+```bash
+# Deploy (or load existing) contracts
+cargo run --bin cli --features=livenet -- deploy
+
+# Call a contract entry point interactively
+cargo run --bin cli --features=livenet -- contract MyToken balance_of --owner <address>
+
+# Run a scenario
+cargo run --bin cli --features=livenet -- scenario check-balance --account <address>
+```
+
+## Network Differences
+
+| Network | `CHAIN_NAME` | Node setup |
+|---|---|---|
+| nctl (local) | `casper-net-1` | Docker — use `/start-nctl` skill |
+| Testnet | `casper-test` | Public node or self-hosted |
+| Mainnet | `casper` | Public node or self-hosted |
+
+Keys for nctl are in `nctl/assets/users/user-1/secret_key.pem` after NCTL starts.
+````
+
+- [ ] **Step 2: Commit**
+
+```bash
+git add templates/starter/.claude/context/reference/deployment.md
+git commit -m "feat(starter): add deployment reference context doc"
+```
+
+---
+
+## Task 13: Add `## Context` sections to skill files
+
+Each skill gets a `## Context` section immediately after the frontmatter/title,
+listing which context files to read before proceeding.
+
+**Files:**
+- Modify: `templates/starter/.claude/skills/new-contract/SKILL.md`
+- Modify: `templates/starter/.claude/skills/new-factory-contract/SKILL.md`
+- Modify: `templates/starter/.claude/skills/new-entrypoint/SKILL.md`
+- Modify: `templates/starter/.claude/skills/new-version/SKILL.md`
+- Modify: `templates/starter/.claude/skills/new-scenario/SKILL.md`
+- Modify: `templates/starter/.claude/skills/deploy-to-livenet/SKILL.md`
+- Modify: `templates/starter/.claude/skills/start-nctl/SKILL.md`
+- Modify: `templates/starter/.claude/skills/onboard/SKILL.md`
+- No change: `templates/starter/.claude/skills/check-env/SKILL.md` (no Odra API needed)
+
+- [ ] **Step 1: Update `new-contract/SKILL.md`**
+
+After the first `---` (end of frontmatter title line `# Scaffold New Contract`), insert:
+
+```markdown
+## Context
+
+Read these before proceeding:
+
+- `.claude/context/overview/contract-model.md`
+- `.claude/context/reference/storage.md`
+- `.claude/context/reference/entry-points.md`
+```
+
+- [ ] **Step 2: Update `new-factory-contract/SKILL.md`**
+
+After the title heading, insert:
+
+```markdown
+## Context
+
+Read these before proceeding:
+
+- `.claude/context/overview/contract-model.md`
+- `.claude/context/reference/storage.md`
+- `.claude/context/reference/entry-points.md`
+```
+
+- [ ] **Step 3: Update `new-entrypoint/SKILL.md`**
+
+After the title heading, insert:
+
+```markdown
+## Context
+
+Read these before proceeding:
+
+- `.claude/context/reference/entry-points.md`
+
+If the entry point emits events, also read:
+- `.claude/context/reference/events.md`
+
+If the entry point can revert, also read:
+- `.claude/context/reference/errors.md`
+```
+
+- [ ] **Step 4: Update `new-version/SKILL.md`**
+
+After the title heading, insert:
+
+```markdown
+## Context
+
+Read these before proceeding:
+
+- `.claude/context/overview/contract-model.md`
+- `.claude/context/reference/storage.md`
+- `.claude/context/reference/entry-points.md`
+```
+
+- [ ] **Step 5: Update `new-scenario/SKILL.md`**
+
+After the title heading, insert:
+
+```markdown
+## Context
+
+Read these before proceeding:
+
+- `.claude/context/reference/deployment.md`
+```
+
+- [ ] **Step 6: Update `deploy-to-livenet/SKILL.md`**
+
+After the title heading, insert:
+
+```markdown
+## Context
+
+Read these before proceeding:
+
+- `.claude/context/reference/deployment.md`
+```
+
+- [ ] **Step 7: Update `start-nctl/SKILL.md`**
+
+After the title heading, insert:
+
+```markdown
+## Context
+
+Read these before proceeding:
+
+- `.claude/context/reference/deployment.md`
+```
+
+- [ ] **Step 8: Update `onboard/SKILL.md`**
+
+After the title heading, insert:
+
+```markdown
+## Context
+
+Read these before proceeding:
+
+- `.claude/context/overview/architecture.md`
+- `.claude/context/overview/contract-model.md`
+- `.claude/context/overview/testing-model.md`
+```
+
+- [ ] **Step 9: Commit all skill updates**
+
+```bash
+git add templates/starter/.claude/skills/
+git commit -m "feat(starter): add Context sections to skills"
+```
+
+---
+
+## Self-Review Checklist
+
+- [x] Spec coverage: all 10 context files specified, CLAUDE.md update, all 8 skills with context sections
+- [x] No placeholders: all file contents are complete markdown with real Odra API
+- [x] Type consistency: `NoArgs`, `HostEnv`, `DeployerExt`, `Scenario`/`ScenarioMetadata`, `External<T>`, `List<T>`, `Sequence<T>` used consistently throughout
+- [x] Spec note corrected: `#[odra(init)]` attribute does not exist — `init` is just a conventionally-named function
+- [x] `Sequence<T>` verified to exist in `core/src/sequence.rs`
+- [x] All code snippets use real API patterns observed in `examples/`
