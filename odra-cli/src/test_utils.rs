@@ -333,7 +333,7 @@ impl HostContext for DummyHostCtx {
 }
 
 pub fn mock_host_env() -> HostEnv {
-    HostEnv::new(Rc::new(RefCell::new(DummyHostCtx)))
+    HostEnv::new(Rc::new(DummyHostCtx))
 }
 
 struct MockContractStorage;
