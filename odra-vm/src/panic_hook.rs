@@ -42,29 +42,26 @@ pub fn set_odra_panic_hook() {
             let mut should_print = false;
             for frame in backtrace.frames() {
                 for symbol in frame.symbols() {
-                    match (symbol.name(), symbol.filename(), symbol.lineno()) {
-                        (Some(name), Some(filename), Some(lineno)) => {
-                            let name = name.to_string();
-                            if should_print {
-                                if !name.contains("HostRef::") {
-                                    print_symbol_with_location(symbol);
-                                    return;
-                                }
-                                should_print = false;
+                    if let (Some(name), Some(_filename), Some(_lineno)) =
+                        (symbol.name(), symbol.filename(), symbol.lineno())
+                    {
+                        let name = name.to_string();
+                        if should_print {
+                            if !name.contains("HostRef::") {
+                                print_symbol_with_location(symbol);
+                                return;
                             }
-                            if name.contains(EXEC_PARTS_PREFIX) {
-                                if let Some(prev) = &prev_symbol {
-                                    print_symbol_with_location(prev);
-                                }
-                            }
-                            if name.contains("HostRef::") {
-                                if let Some(prev) = &prev_symbol {
-                                    should_print = true;
-                                }
-                            }
-                            prev_symbol = Some(symbol.clone());
+                            should_print = false;
                         }
-                        _ => {} // no-op
+                        if name.contains(EXEC_PARTS_PREFIX) {
+                            if let Some(prev) = &prev_symbol {
+                                print_symbol_with_location(prev);
+                            }
+                        }
+                        if name.contains("HostRef::") && prev_symbol.is_some() {
+                            should_print = true;
+                        }
+                        prev_symbol = Some(symbol.clone());
                     }
                 }
             }
@@ -93,15 +90,14 @@ fn extract_contract_address(panic_message: &str) -> Option<String> {
 }
 
 fn print_symbol_with_location(symbol: &backtrace::BacktraceSymbol) {
-    match (symbol.name(), symbol.filename(), symbol.lineno()) {
-        (Some(name), Some(filename), Some(lineno)) => {
-            let name = name.to_string();
-            let name = name
-                .rfind("::")
-                .map_or(name.clone(), |pos| name[..pos].to_string());
-            eprintln!("  ↳ {name}");
-            eprintln!("    ↳ at {}:{lineno}", filename.to_string_lossy());
-        }
-        _ => {} // no-op
+    if let (Some(name), Some(filename), Some(lineno)) =
+        (symbol.name(), symbol.filename(), symbol.lineno())
+    {
+        let name = name.to_string();
+        let name = name
+            .rfind("::")
+            .map_or(name.clone(), |pos| name[..pos].to_string());
+        eprintln!("  ↳ {name}");
+        eprintln!("    ↳ at {}:{lineno}", filename.to_string_lossy());
     }
 }

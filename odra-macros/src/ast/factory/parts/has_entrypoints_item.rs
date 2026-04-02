@@ -1,4 +1,3 @@
-use std::vec;
 
 use quote::ToTokens;
 use syn::parse_quote;
@@ -74,10 +73,10 @@ impl ToTokens for EntrypointsFnItem {
 }
 
 fn struct_entrypoints_expr(ir: &ModuleImplIR) -> syn::Result<syn::Expr> {
-    let struct_entrypoints = vec![ir.constructor()]
+    let struct_entrypoints = [ir.constructor()]
         .iter()
         .filter_map(|f| f.as_ref())
-        .chain(vec![ir.factory_fn(), ir.factory_upgrade_fn(), ir.factory_batch_upgrade_fn()].iter())
+        .chain([ir.factory_fn(), ir.factory_upgrade_fn(), ir.factory_batch_upgrade_fn()].iter())
         .map(|f| {
             let args = wasm_parts_utils::param_parameters(f);
             let expr = match f.fn_type() {

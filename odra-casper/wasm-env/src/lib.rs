@@ -28,7 +28,6 @@ use odra_core::ExecutionEnv;
 /// Panic handler for the WASM target architecture.
 #[cfg(target_arch = "wasm32")]
 #[panic_handler]
-#[no_mangle]
 pub fn panic(_info: &core::panic::PanicInfo) -> ! {
     core::intrinsics::abort();
 }

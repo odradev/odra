@@ -95,7 +95,7 @@ impl EntrypointCallerExpr {
             .functions()?
             .iter()
             .map(|f| FunctionCallBranch::try_from((module, f)))
-            .map(|r| r.map(CallerBranch::Function))
+            .map(|r| r.map(|b| CallerBranch::Function(Box::new(b))))
             .collect::<syn::Result<_>>()?;
         branches.push(CallerBranch::Default(DefaultBranch));
 
@@ -109,42 +109,10 @@ impl EntrypointCallerExpr {
     }
 }
 
-#[derive(syn_derive::ToTokens)]
-pub struct HostRefInstanceExpr {
-    ident: syn::Ident,
-    #[syn(braced)]
-    braces: syn::token::Brace,
-    #[syn(in = braces)]
-    fields: syn::punctuated::Punctuated<syn::FieldValue, syn::Token![,]>
-}
-
-impl TryFrom<&'_ ModuleImplIR> for HostRefInstanceExpr {
-    type Error = syn::Error;
-
-    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
-        let address_ident = utils::ident::address();
-        let env_ident = utils::ident::env();
-        let attached_value_ident = utils::ident::attached_value();
-        let zero = utils::expr::u512_zero();
-        let env_expr = utils::expr::clone(&env_ident);
-
-        let fields = parse_quote!(
-            #address_ident,
-            #env_ident: #env_expr,
-            #attached_value_ident: #zero
-
-        );
-        Ok(Self {
-            ident: module.host_ref_ident()?,
-            braces: Default::default(),
-            fields
-        })
-    }
-}
 
 #[derive(syn_derive::ToTokens)]
 enum CallerBranch {
-    Function(FunctionCallBranch),
+    Function(Box<FunctionCallBranch>),
     Default(DefaultBranch)
 }
 

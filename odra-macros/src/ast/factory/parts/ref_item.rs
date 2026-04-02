@@ -28,7 +28,7 @@ impl TryFrom<&'_ ModuleImplIR> for ContractRefImplItem {
     type Error = syn::Error;
 
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
-        let fns = vec![module.factory_fn(), module.factory_upgrade_fn(), module.factory_batch_upgrade_fn()];
+        let fns = [module.factory_fn(), module.factory_upgrade_fn(), module.factory_batch_upgrade_fn()];
         Ok(Self {
             ref_ident: module.contract_ref_ident()?,
             factory_fns: fns.iter().map(|fun| ref_utils::factory_contract_function_item(fun, false)).collect()
