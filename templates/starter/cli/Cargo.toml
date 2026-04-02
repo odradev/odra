@@ -9,5 +9,5 @@ odra = { workspace = true }
 odra-cli = { workspace = true }
 
 [[bin]]
-name = "{{project-name}}_cli"
+name = "cli"
 path = "cli.rs"

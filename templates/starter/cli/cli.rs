@@ -2,6 +2,8 @@
 
 use odra::host::HostEnv;
 use odra_cli::{
+    cspr,
+    DeployerExt,
     deploy::DeployScript,
     DeployedContractsContainer, OdraCli,
 };
@@ -12,11 +14,11 @@ pub struct ContractsDeployScript;
 impl DeployScript for ContractsDeployScript {
     fn deploy(
         &self,
-        _env: &HostEnv,
-        _container: &mut DeployedContractsContainer,
+        env: &HostEnv,
+        container: &mut DeployedContractsContainer,
     ) -> Result<(), odra_cli::deploy::Error> {
         // Add contract deployments here using:
-        //   let _ = MyContract::load_or_deploy(&env, args, container, 250_000_000_000)?;
+        //   let _ = MyContract::load_or_deploy(&env, args, container, cspr!(350))?;
         Ok(())
     }
 }
