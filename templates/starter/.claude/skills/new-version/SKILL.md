@@ -8,6 +8,14 @@ description: >
 
 # Create Upgraded Contract Version
 
+## Context
+
+Read these before proceeding:
+
+- `.claude/context/overview/contract-model.md`
+- `.claude/context/reference/storage.md`
+- `.claude/context/reference/entry-points.md`
+
 Creates an upgraded version of an existing contract. Upgrades are additive: they preserve all existing entry points and signatures, add new ones, and include an `upgrade` entry point for state migration.
 
 Reference: `examples/src/features/upgrade.rs` in the Odra repository.

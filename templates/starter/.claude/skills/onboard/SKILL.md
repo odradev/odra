@@ -9,6 +9,14 @@ description: >
 
 # Odra Onboarding
 
+## Context
+
+Read these before proceeding:
+
+- `.claude/context/overview/architecture.md`
+- `.claude/context/overview/contract-model.md`
+- `.claude/context/overview/testing-model.md`
+
 A guided walkthrough for writing, testing, and deploying your first Odra smart contract. Each step explains the concepts behind what you're doing.
 
 ---

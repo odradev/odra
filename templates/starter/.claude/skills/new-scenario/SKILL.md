@@ -8,6 +8,12 @@ description: >
 
 # Implement New CLI Scenario
 
+## Context
+
+Read these before proceeding:
+
+- `.claude/context/reference/deployment.md`
+
 Creates a new scenario in `cli/cli.rs` for interacting with deployed contracts on livenet.
 
 ---

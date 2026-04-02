@@ -8,6 +8,18 @@ description: >
 
 # Add Entry Point to Existing Contract
 
+## Context
+
+Read these before proceeding:
+
+- `.claude/context/reference/entry-points.md`
+
+If the entry point emits events, also read:
+- `.claude/context/reference/events.md`
+
+If the entry point can revert, also read:
+- `.claude/context/reference/errors.md`
+
 Adds a new public method to an existing contract's `#[odra::module] impl` block.
 
 ---

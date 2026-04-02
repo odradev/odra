@@ -9,6 +9,12 @@ allowed-tools: Bash(docker ps:*),Bash(curl *),Bash(jq *),Bash(casper-client *),B
 
 # Deploy Contracts to Livenet
 
+## Context
+
+Read these before proceeding:
+
+- `.claude/context/reference/deployment.md`
+
 Deploys contracts using the CLI binary against a Casper network.
 
 ---

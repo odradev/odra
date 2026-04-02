@@ -8,6 +8,14 @@ description: >
 
 # Scaffold New Factory Contract
 
+## Context
+
+Read these before proceeding:
+
+- `.claude/context/overview/contract-model.md`
+- `.claude/context/reference/storage.md`
+- `.claude/context/reference/entry-points.md`
+
 Creates a new Odra factory contract module in the `contracts/` crate. Factory contracts can deploy and manage child contracts on-chain.
 
 ---

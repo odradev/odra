@@ -9,6 +9,12 @@ allowed-tools: Bash(docker *),Bash(chmod *),Bash(curl *),Bash(wc *),Bash(.claude
 
 # Start Local Casper Node (NCTL)
 
+## Context
+
+Read these before proceeding:
+
+- `.claude/context/reference/deployment.md`
+
 Starts a local Casper blockchain node via Docker for testing contract deployments.
 
 ---

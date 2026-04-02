@@ -8,6 +8,14 @@ description: >
 
 # Scaffold New Contract
 
+## Context
+
+Read these before proceeding:
+
+- `.claude/context/overview/contract-model.md`
+- `.claude/context/reference/storage.md`
+- `.claude/context/reference/entry-points.md`
+
 Creates a new Odra contract module in the `contracts/` crate.
 
 ---
