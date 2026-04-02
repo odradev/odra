@@ -1,11 +1,9 @@
 use crate::{
     ast::{
-        fn_utils,
         parts_utils::{UsePreludeItem, UseSuperItem},
-        wasm_parts_utils
     },
     ir::{FnIR, ModuleImplIR},
-    utils::{self, misc::AsType}
+    utils
 };
 use quote::{format_ident, ToTokens, TokenStreamExt};
 use syn::{parse_quote, Ident};
@@ -87,116 +85,6 @@ impl TryFrom<(&'_ ModuleImplIR, &'_ FnIR)> for ExecFunctionItem {
     }
 }
 
-struct InstallerFnBodyItem {
-    module_ident: syn::Ident,
-    runtime_args_expr: syn::Expr,
-    items: Vec<AddEntryPointStmtItem>
-}
-
-impl TryFrom<(&'_ ModuleImplIR, &'_ FnIR)> for InstallerFnBodyItem {
-    type Error = syn::Error;
-
-    fn try_from(value: (&'_ ModuleImplIR, &'_ FnIR)) -> Result<Self, Self::Error> {
-        let (module, _func) = value;
-        let module_ident = module.module_ident()?;
-        let items = module
-            .functions()?
-            .iter()
-            .map(TryInto::try_into)
-            .collect::<Result<Vec<_>, _>>()?;
-
-        let ty_args = utils::ty::runtime_args();
-        let runtime_args_expr: syn::Expr = match module.constructor() {
-            Some(f) => {
-                let arg_block = fn_utils::runtime_args_block(&f, wasm_parts_utils::insert_arg_stmt);
-                parse_quote!({
-                    Some(#arg_block)
-                })
-            }
-            None => parse_quote!(Option::<#ty_args>::None)
-        };
-
-        Ok(Self {
-            module_ident,
-            items,
-            runtime_args_expr
-        })
-    }
-}
-
-impl ToTokens for InstallerFnBodyItem {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let module_ident = self.module_ident.as_type();
-        let ident_args = utils::ident::named_args();
-        let ident_schemas = utils::ident::schemas();
-        let events_expr = utils::expr::event_schemas(&module_ident);
-        let expr_new_schemas = utils::expr::schemas(&events_expr);
-        let ident_entry_points = utils::ident::entry_points();
-        let expr_entry_points = utils::expr::new_entry_points();
-        let runtime_args_expr = &self.runtime_args_expr;
-        let items = &self.items;
-
-        let install_or_upgrade_stmt = utils::stmt::install_or_upgrade(
-            parse_quote!(#ident_entry_points),
-            parse_quote!(#ident_schemas),
-            parse_quote!(args)
-        );
-
-        tokens.append_all(quote::quote! {
-            let #ident_schemas = #expr_new_schemas;
-            let #ident_args = #runtime_args_expr;
-            let #ident_entry_points = {
-                let mut #ident_entry_points = #expr_entry_points;
-                #(#items)*
-                #ident_entry_points
-            };
-
-            #install_or_upgrade_stmt
-        });
-    }
-}
-
-struct AddEntryPointStmtItem {
-    entry_point_params: syn::punctuated::Punctuated<syn::Expr, syn::token::Comma>
-}
-
-impl ToTokens for AddEntryPointStmtItem {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let var_ident = utils::ident::entry_points();
-        let fn_ident = utils::ident::add_entry_point();
-        let entry_point = utils::ty::entry_point();
-        let params = &self.entry_point_params;
-        tokens.append_all(quote::quote! {
-            #var_ident.#fn_ident(#entry_point::new(
-                #params
-            ));
-        });
-    }
-}
-
-impl TryFrom<&'_ FnIR> for AddEntryPointStmtItem {
-    type Error = syn::Error;
-
-    fn try_from(func: &'_ FnIR) -> Result<Self, Self::Error> {
-        let func_name = func.name_str();
-        let param_name = parse_quote!(#func_name);
-        let param_parameters = wasm_parts_utils::param_parameters(func);
-        let param_ret_ty = wasm_parts_utils::param_ret_ty(func);
-        let param_access = utils::expr::entry_point_access_public();
-        let param_type = utils::expr::entry_point_contract();
-
-        let mut entry_point_params = syn::punctuated::Punctuated::new();
-        entry_point_params.extend(vec![
-            param_name,
-            param_parameters,
-            param_ret_ty,
-            param_access,
-            param_type,
-            utils::expr::entry_point_payment(),
-        ]);
-        Ok(Self { entry_point_params })
-    }
-}
 
 #[derive(syn_derive::ToTokens)]
 struct ExecutableFnBodyItem {

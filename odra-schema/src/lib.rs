@@ -266,7 +266,7 @@ fn call_method(
     CallMethod {
         wasm_file_name: file_name.to_string(),
         description,
-        arguments: vec![
+        arguments: [
             Argument {
                 name: odra_core::consts::PACKAGE_HASH_KEY_NAME_ARG.to_string(),
                 description: Some("The arg name for the package hash key name.".to_string()),

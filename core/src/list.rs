@@ -97,7 +97,7 @@ impl<T: ToBytes + FromBytes + CLTyped> List<T> {
     }
 
     /// Returns an iterator.
-    pub fn iter(&self) -> ListIter<T> {
+    pub fn iter(&self) -> ListIter<'_, T> {
         ListIter::new(self)
     }
 }

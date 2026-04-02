@@ -81,22 +81,6 @@ pub fn entry_points() -> syn::Type {
     parse_quote!(odra::casper_types::EntryPoints)
 }
 
-pub fn entry_point() -> syn::Type {
-    parse_quote!(odra::casper_types::EntityEntryPoint)
-}
-
-pub fn entry_point_access() -> syn::Type {
-    parse_quote!(odra::casper_types::EntryPointAccess)
-}
-
-pub fn entry_point_type() -> syn::Type {
-    parse_quote!(odra::casper_types::EntryPointType)
-}
-
-pub fn entry_point_payment() -> syn::Type {
-    parse_quote!(odra::casper_types::EntryPointPayment)
-}
-
 pub fn schemas() -> syn::Type {
     parse_quote!(odra::casper_event_standard::Schemas)
 }

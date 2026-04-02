@@ -1,51 +1,10 @@
 use clap::{builder::TypedValueParser, error::ErrorKind, Arg, Command, Error};
 use odra::{
-    casper_types::{CLType, CLValue, U512},
-    schema::{casper_contract_schema::NamedCLType, NamedCLTyped}
+    casper_types::{CLValue, U512},
+    schema::casper_contract_schema::NamedCLType
 };
 
 use crate::types;
-
-#[derive(Clone)]
-#[non_exhaustive]
-pub struct GenericCLValueParser<E: NamedCLTyped + Clone + Send + Sync + 'static> {
-    _marker: std::marker::PhantomData<E>
-}
-
-impl<E: NamedCLTyped + Clone + Send + Sync + 'static> GenericCLValueParser<E> {
-    /// Parse non-empty string values
-    pub fn new() -> Self {
-        Self {
-            _marker: std::marker::PhantomData
-        }
-    }
-}
-
-impl<E: NamedCLTyped + Clone + Send + Sync + 'static> TypedValueParser for GenericCLValueParser<E> {
-    type Value = CLValue;
-
-    fn parse_ref(
-        &self,
-        cmd: &Command,
-        arg: Option<&Arg>,
-        value: &std::ffi::OsStr
-    ) -> Result<Self::Value, Error> {
-        let value = value
-            .to_str()
-            .ok_or_else(|| Error::new(ErrorKind::InvalidUtf8).with_cmd(cmd))?;
-        let ty = E::ty();
-        let bytes = types::into_bytes(&ty, value)
-            .map_err(|err| make_parse_error(cmd, arg, value, &ty, err))?;
-        let cl_type = types::named_cl_type_to_cl_type(&ty);
-        Ok(CLValue::from_components(cl_type, bytes))
-    }
-}
-
-impl<E: NamedCLTyped + Clone + Send + Sync + 'static> Default for GenericCLValueParser<E> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
 
 #[derive(Clone)]
 #[non_exhaustive]
