@@ -34,10 +34,3 @@ cargo odra test -b casper    # test on Casper VM (full execution engine)
 cargo odra build -b casper   # build WASM binaries
 ```
 
-## AI Context Docs
-
-Reference docs for Odra concepts live in `.claude/context/`. Skills load them
-on demand. You can also read them directly when answering questions about Odra.
-
-- `overview/` — architecture, contract model, testing model
-- `reference/` — storage, entry points, events, errors, cross-contract, testing, deployment
