@@ -10,7 +10,7 @@ run-name: Benchmarking gas costs for ${{ github.head_ref || github.ref_name }}
 jobs:
   benchmark:
     name: Benchmark
-    runs-on: buildjet-8vcpu-ubuntu-2204
+    runs-on: ubuntu-latest
     steps:
       - name: Setup just
         uses: extractions/setup-just@v1
