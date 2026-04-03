@@ -17,7 +17,7 @@ run-name: Running lints and tests for ${{ github.head_ref }}
 jobs:
   test:
     name: Test
-    runs-on: buildjet-8vcpu-ubuntu-2204
+    runs-on: ubuntu-latest
     services:
       casper-nctl:
         image: makesoftware/casper-nctl:v203
