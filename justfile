@@ -146,3 +146,4 @@ evaluate-benchmark: benchmark
 generate-schemas:
     cd modules && cargo odra schema
     cd examples && cargo odra schema
+
