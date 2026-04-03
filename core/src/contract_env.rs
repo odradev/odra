@@ -19,15 +19,6 @@ pub(crate) type StorageKey = [u8; KEY_LEN];
 /// Maximum nesting depth for module paths.
 pub(crate) const MAX_PATH_LEN: usize = 8;
 
-/// Determines how storage keys are encoded.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum KeyEncoding {
-    /// Default: fields 1-15 use legacy 4-bit u32 encoding, fields 16+ use path encoding.
-    Legacy,
-    /// All fields use path encoding. For new contracts only.
-    V2
-}
-
 /// Trait that needs to be implemented by all contract refs.
 pub trait ContractRef {
     /// Creates a new instance of the Contract Ref.
@@ -51,7 +42,6 @@ pub trait ContractRef {
 pub struct ContractEnv {
     path: [u8; MAX_PATH_LEN],
     path_len: u8,
-    encoding: KeyEncoding,
     mapping_data: Vec<u8>,
     backend: Rc<RefCell<dyn ContractContext>>
 }
@@ -64,11 +54,10 @@ impl Revertible for ContractEnv {
 
 impl ContractEnv {
     /// Creates a new ContractEnv instance.
-    pub const fn new(encoding: KeyEncoding, backend: Rc<RefCell<dyn ContractContext>>) -> Self {
+    pub const fn new(backend: Rc<RefCell<dyn ContractContext>>) -> Self {
         Self {
             path: [0u8; MAX_PATH_LEN],
             path_len: 0,
-            encoding,
             mapping_data: Vec::new(),
             backend
         }
@@ -105,22 +94,18 @@ impl ContractEnv {
     /// - A → `[0xFF, 2, 3, 5]`, B → `[0xFF, 1, 3] ++ [5]` = `[0xFF, 1, 3, 5]` — **distinct.**
     pub(crate) fn index_bytes(&self) -> Vec<u8> {
         let path = &self.path[..self.path_len as usize];
-        match self.encoding {
-            // Legacy: pack indices into u32 via 4-bit shifts (e.g. path [3, 15] → 0x3F).
-            // Only used when all indices fit in a nibble, preserving old storage keys.
-            KeyEncoding::Legacy if path.iter().all(|&idx| idx <= 15) => {
-                let index: u32 = path.iter().fold(0u32, |acc, &idx| (acc << 4) + idx as u32);
-                index.to_be_bytes().to_vec()
-            }
-            // Path encoding: [0xFF, len, idx_0, idx_1, ...]. Used for fields 16+
-            // in Legacy mode or for all fields in V2 mode.
-            _ => {
-                let mut bytes = Vec::with_capacity(2 + path.len());
-                bytes.push(0xFF);
-                bytes.push(self.path_len);
-                bytes.extend_from_slice(path);
-                bytes
-            }
+        // Legacy: pack indices into u32 via 4-bit shifts (e.g. path [3, 15] → 0x3F).
+        // Only used when all indices fit in a nibble, preserving old storage keys.
+        if path.iter().all(|&idx| idx <= 15) {
+            let index: u32 = path.iter().fold(0u32, |acc, &idx| (acc << 4) + idx as u32);
+            index.to_be_bytes().to_vec()
+        } else {
+            // Path encoding: [0xFF, len, idx_0, idx_1, ...]. Used for fields 16+.
+            let mut bytes = Vec::with_capacity(2 + path.len());
+            bytes.push(0xFF);
+            bytes.push(self.path_len);
+            bytes.extend_from_slice(path);
+            bytes
         }
     }
 
@@ -153,7 +138,6 @@ impl ContractEnv {
         Self {
             path: new_path,
             path_len: self.path_len + 1,
-            encoding: self.encoding,
             mapping_data: self.mapping_data.clone(),
             backend: self.backend.clone()
         }
@@ -550,7 +534,7 @@ mod tests {
     use super::*;
     use crate::contract_context::MockContractContext;
 
-    fn make_env(encoding: KeyEncoding) -> ContractEnv {
+    fn make_env() -> ContractEnv {
         let mut ctx = MockContractContext::new();
         ctx.expect_hash().returning(|input| {
             let mut result = [0u8; 32];
@@ -561,7 +545,7 @@ mod tests {
             }
             result
         });
-        ContractEnv::new(encoding, Rc::new(RefCell::new(ctx)))
+        ContractEnv::new(Rc::new(RefCell::new(ctx)))
     }
 
     fn legacy_u32_for_path(path: &[u8]) -> u32 {
@@ -569,8 +553,8 @@ mod tests {
     }
 
     #[test]
-    fn legacy_encoding_matches_old_u32_formula() {
-        let env = make_env(KeyEncoding::Legacy);
+    fn encoding_matches_old_u32_formula() {
+        let env = make_env();
         let child = env.child(3);
         assert_eq!(
             child.index_bytes(),
@@ -592,7 +576,7 @@ mod tests {
 
     #[test]
     fn path_encoding_used_for_indices_above_15() {
-        let env = make_env(KeyEncoding::Legacy);
+        let env = make_env();
         let child = env.child(3).child(16);
         let bytes = child.index_bytes();
         assert_eq!(bytes[0], 0xFF);
@@ -602,27 +586,8 @@ mod tests {
     }
 
     #[test]
-    fn v2_encoding_always_uses_path() {
-        let env = make_env(KeyEncoding::V2);
-        let child = env.child(3);
-        let bytes = child.index_bytes();
-        assert_eq!(bytes[0], 0xFF);
-        assert_eq!(bytes[1], 1);
-        assert_eq!(bytes[2], 3);
-    }
-
-    #[test]
-    fn v2_and_legacy_produce_different_keys_for_same_path() {
-        let legacy_env = make_env(KeyEncoding::Legacy);
-        let v2_env = make_env(KeyEncoding::V2);
-        let legacy_key = legacy_env.child(3).child(5).current_key();
-        let v2_key = v2_env.child(3).child(5).current_key();
-        assert_ne!(legacy_key, v2_key);
-    }
-
-    #[test]
     fn no_collision_between_var_and_mapping() {
-        let env = make_env(KeyEncoding::Legacy);
+        let env = make_env();
 
         let var_key = env.child(3).child(16).current_key();
         let mut map_env = env.child(3);
@@ -638,10 +603,10 @@ mod tests {
     }
 
     #[test]
-    fn no_collision_between_legacy_and_path_encoding() {
-        let env = make_env(KeyEncoding::Legacy);
-        let legacy_key = env.child(1).child(2).current_key();
+    fn no_collision_between_small_and_path_encoding() {
+        let env = make_env();
+        let small_key = env.child(1).child(2).current_key();
         let path_key = env.child(1).child(20).current_key();
-        assert_ne!(legacy_key, path_key);
+        assert_ne!(small_key, path_key);
     }
 }

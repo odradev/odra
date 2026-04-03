@@ -22,7 +22,7 @@ impl TryFrom<(&'_ ModuleImplIR, &'_ FnIR)> for NoMangleFnItem<FactoryContext> {
         let result_ident = utils::ident::result();
         let exec_parts_ident = module.exec_parts_mod_ident()?;
         let exec_fn = func.execute_name();
-        let new_env = utils::expr::new_wasm_contract_env(module.is_v2_keys());
+        let new_env = utils::expr::new_wasm_contract_env();
 
         let execute_stmt = match func.return_type() {
             syn::ReturnType::Default => parse_quote!(#exec_parts_ident::#exec_fn(#new_env);),
@@ -323,7 +323,7 @@ impl TryFrom<&'_ ModuleImplIR> for CallFnItem {
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
             module_ident: module.module_ident()?,
-            new_env_expr: utils::expr::new_wasm_contract_env(module.is_v2_keys())
+            new_env_expr: utils::expr::new_wasm_contract_env()
         })
     }
 }
@@ -346,7 +346,7 @@ impl TryFrom<&'_ ModuleImplIR> for NoMangleFactoryFnItem {
             module_ident,
             event_ident,
             init_fn: module.constructor(),
-            new_env_expr: utils::expr::new_wasm_contract_env(module.is_v2_keys()),
+            new_env_expr: utils::expr::new_wasm_contract_env(),
         })
     }
 }
@@ -430,7 +430,7 @@ impl TryFrom<&'_ ModuleImplIR> for NoMangleFactoryUpgradeFnItem {
             module_ident,
             event_ident,
             upgrader_args,
-            new_env_expr: utils::expr::new_wasm_contract_env(module.is_v2_keys()),
+            new_env_expr: utils::expr::new_wasm_contract_env(),
         })
     }
 }

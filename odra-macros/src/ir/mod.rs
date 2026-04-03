@@ -127,15 +127,6 @@ impl ModuleStructIR {
         }
     }
 
-    #[allow(dead_code)]
-    pub fn is_v2_keys(&self) -> bool {
-        if let ConfigItem::Module(cfg) = &self.config {
-            *cfg.keys
-        } else {
-            false
-        }
-    }
-
     pub fn is_factory(&self) -> bool {
         if let ConfigItem::Module(cfg) = &self.config {
             *cfg.factory
@@ -254,18 +245,7 @@ impl ModuleImplIR {
         }
     }
 
-    pub fn is_v2_keys(&self) -> bool {
-        match self {
-            ModuleImplIR::Impl(ir) => {
-                if let ConfigItem::Module(cfg) = &ir.config {
-                    *cfg.keys
-                } else {
-                    false
-                }
-            }
-            ModuleImplIR::Trait(_) => false
-        }
-    }
+
 
     pub fn is_factory(&self) -> bool {
         match self {

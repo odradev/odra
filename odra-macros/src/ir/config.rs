@@ -27,7 +27,6 @@ mod kw {
     syn::custom_keyword!(events);
     syn::custom_keyword!(errors);
     syn::custom_keyword!(factory);
-    syn::custom_keyword!(keys);
 }
 
 #[derive(Default, Clone)]
@@ -36,9 +35,7 @@ pub struct ModuleConfiguration {
     pub errors: ModuleErrors,
     pub name: ModuleName,
     pub version: ModuleVersion,
-    pub factory: Factory,
-    #[allow(dead_code)]
-    pub keys: ModuleKeys
+    pub factory: Factory
 }
 
 impl Parse for ModuleConfiguration {
@@ -48,8 +45,6 @@ impl Parse for ModuleConfiguration {
         let mut events = None;
         let mut errors = None;
         let mut factory = None;
-        let mut keys = None;
-
         while !input.is_empty() {
             if events.is_none() && input.peek(kw::events) {
                 events = Some(input.parse::<ModuleEvents>()?);
@@ -81,11 +76,6 @@ impl Parse for ModuleConfiguration {
                 continue;
             }
 
-            if keys.is_none() && input.peek(kw::keys) {
-                keys = Some(input.parse::<ModuleKeys>()?);
-                let _ = input.parse::<Token![,]>();
-                continue;
-            }
             return Err(input.error("Unexpected token"));
         }
 
@@ -94,8 +84,7 @@ impl Parse for ModuleConfiguration {
             version: version.unwrap_or_default(),
             events: events.unwrap_or_default(),
             errors: errors.unwrap_or_default(),
-            factory: factory.unwrap_or_default(),
-            keys: keys.unwrap_or_default()
+            factory: factory.unwrap_or_default()
         })
     }
 }
@@ -203,32 +192,6 @@ impl Parse for Factory {
         let value = input.parse::<syn::Ident>()?;
         let value = matches!(value.to_string().as_str(), "on");
         Ok(Factory(value))
-    }
-}
-
-#[derive(Default, Clone, Debug)]
-pub struct ModuleKeys(bool); // true = V2, false = Legacy
-
-impl Deref for ModuleKeys {
-    type Target = bool;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl Parse for ModuleKeys {
-    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        input.parse::<kw::keys>()?;
-        input.parse::<Token![=]>()?;
-        let value = input.parse::<syn::LitStr>()?;
-        match value.value().as_str() {
-            "v2" => Ok(Self(true)),
-            other => Err(syn::Error::new_spanned(
-                value,
-                format!("Unknown keys mode '{}'. Expected 'v2'.", other)
-            ))
-        }
     }
 }
 

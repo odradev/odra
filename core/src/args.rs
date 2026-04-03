@@ -216,10 +216,7 @@ mod tests {
         let none: Maybe<u32> = Maybe::None;
 
         let ctx = MockContractContext::new();
-        let env = ContractEnv::new(
-            crate::contract_env::KeyEncoding::Legacy,
-            Rc::new(RefCell::new(ctx))
-        );
+        let env = ContractEnv::new(Rc::new(RefCell::new(ctx)));
 
         assert!(some.is_some());
         assert!(!some.is_none());
@@ -237,10 +234,7 @@ mod tests {
         let none: Maybe<u32> = Maybe::None;
         let mut ctx = MockContractContext::new();
         ctx.expect_revert().returning(|_| panic!("revert"));
-        let env = ContractEnv::new(
-            crate::contract_env::KeyEncoding::Legacy,
-            Rc::new(RefCell::new(ctx))
-        );
+        let env = ContractEnv::new(Rc::new(RefCell::new(ctx)));
 
         none.unwrap(&env);
     }

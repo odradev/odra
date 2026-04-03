@@ -126,7 +126,7 @@ impl TryFrom<&'_ ModuleImplIR> for CallFnItem {
         let ident_schemas = utils::ident::schemas();
         let ty_args = utils::ty::runtime_args();
         let ident_entry_points = utils::ident::entry_points();
-        let new_env_expr = utils::expr::new_wasm_contract_env(module.is_v2_keys());
+        let new_env_expr = utils::expr::new_wasm_contract_env();
         let exec_env_stmt: syn::Stmt = parse_quote!(
             let exec_env = {
                 let env = #new_env_expr;
@@ -225,7 +225,7 @@ impl TryFrom<(&'_ ModuleImplIR, &'_ FnIR)> for NoMangleFnItem<ModuleContext> {
         let result_ident = utils::ident::result();
         let exec_parts_ident = module.exec_parts_mod_ident()?;
         let exec_fn = func.execute_name();
-        let new_env = utils::expr::new_wasm_contract_env(module.is_v2_keys());
+        let new_env = utils::expr::new_wasm_contract_env();
 
         let execute_stmt = match func.return_type() {
             syn::ReturnType::Default => parse_quote!(#exec_parts_ident::#exec_fn(#new_env);),
