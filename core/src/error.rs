@@ -182,6 +182,8 @@ pub enum ExecutionError {
     FactoryModuleCall = 135,
     /// Cannot get an immediate caller
     CannotGetAnImmediateCaller = 136,
+    /// Path index out of bounds.
+    PathIndexOutOfBounds = 137,
     /// Maximum code for user errors
     MaxUserError = 64535,
     /// User error too high. The code should be in range 0..32767.

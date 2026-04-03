@@ -128,13 +128,12 @@ impl ContractEnv {
 
     /// Returns a child contract environment with the specified index.
     pub(crate) fn child(&self, index: u8) -> Self {
-        assert!(
-            (self.path_len as usize) < MAX_PATH_LEN,
-            "Module nesting depth exceeds maximum of {}",
-            MAX_PATH_LEN
-        );
         let mut new_path = self.path;
-        new_path[self.path_len as usize] = index;
+        let Some(slot) = new_path.get_mut(self.path_len as usize) else {
+            self.revert(ExecutionError::PathIndexOutOfBounds)
+        };
+        *slot = index;
+        
         Self {
             path: new_path,
             path_len: self.path_len + 1,
