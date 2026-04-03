@@ -13,9 +13,11 @@ use casper_types::CLValueError;
 use rand_chacha::rand_core::{RngCore, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 
-const INDEX_SIZE: usize = 4;
 const KEY_LEN: usize = 64;
 pub(crate) type StorageKey = [u8; KEY_LEN];
+
+/// Maximum nesting depth for module paths.
+pub(crate) const MAX_PATH_LEN: usize = 8;
 
 /// Trait that needs to be implemented by all contract refs.
 pub trait ContractRef {
@@ -38,7 +40,8 @@ pub trait ContractRef {
 /// The `ContractEnv` is available for the user to use in the module code.
 #[derive(Clone)]
 pub struct ContractEnv {
-    index: u32,
+    path: [u8; MAX_PATH_LEN],
+    path_len: u8,
     mapping_data: Vec<u8>,
     backend: Rc<RefCell<dyn ContractContext>>
 }
@@ -51,19 +54,67 @@ impl Revertible for ContractEnv {
 
 impl ContractEnv {
     /// Creates a new ContractEnv instance.
-    pub const fn new(index: u32, backend: Rc<RefCell<dyn ContractContext>>) -> Self {
+    pub const fn new(backend: Rc<RefCell<dyn ContractContext>>) -> Self {
         Self {
-            index,
+            path: [0u8; MAX_PATH_LEN],
+            path_len: 0,
             mapping_data: Vec::new(),
             backend
+        }
+    }
+
+    /// Returns the index bytes for the current path, using the appropriate encoding.
+    ///
+    /// Two encoding modes exist to support backward compatibility:
+    ///
+    /// **Legacy encoding** (default, when all path indices fit in 4 bits):
+    /// Packs indices into a `u32` using 4-bit left shifts, identical to the original
+    /// `(parent << 4) + child` formula. Produces 4 big-endian bytes. This ensures
+    /// deployed contracts with ≤15 fields per module get the same storage keys.
+    ///
+    /// **Path encoding** (indices > 15, or V2 mode):
+    /// Emits `[0xFF, path_len, path[0], ..., path[n]]`. The `0xFF` prefix cannot
+    /// collide with legacy keys (whose first byte never exceeds `0x0F`). The
+    /// `path_len` byte makes the boundary with appended `mapping_data` unambiguous,
+    /// preventing collisions between e.g. a `Var` at a deeper path and a `Mapping`
+    /// at a shallower path with matching key bytes.
+    ///
+    /// **Why `path_len` is necessary — collision example:**
+    ///
+    /// Consider two fields whose path bytes and mapping data concatenate identically:
+    /// - Field A: `Var` at path `[3, 5]` (depth 2), no mapping data.
+    /// - Field B: `Mapping` at path `[3]` (depth 1), mapping key serializes to `[5]`.
+    ///
+    /// The final hash input is `index_bytes ++ mapping_data`.
+    ///
+    /// Without `path_len` (hypothetical `[0xFF, path..., mapping_data...]`):
+    /// - A → `[0xFF, 3, 5]`, B → `[0xFF, 3] ++ [5]` = `[0xFF, 3, 5]` — **collision!**
+    ///
+    /// With `path_len` (actual `[0xFF, path_len, path..., mapping_data...]`):
+    /// - A → `[0xFF, 2, 3, 5]`, B → `[0xFF, 1, 3] ++ [5]` = `[0xFF, 1, 3, 5]` — **distinct.**
+    pub(crate) fn index_bytes(&self) -> Vec<u8> {
+        let path = &self.path[..self.path_len as usize];
+        // Legacy: pack indices into u32 via 4-bit shifts (e.g. path [3, 15] → 0x3F).
+        // Only used when all indices fit in a nibble, preserving old storage keys.
+        if path.iter().all(|&idx| idx <= 15) {
+            let index: u32 = path.iter().fold(0u32, |acc, &idx| (acc << 4) + idx as u32);
+            index.to_be_bytes().to_vec()
+        } else {
+            // Path encoding: [0xFF, len, idx_0, idx_1, ...]. Used for fields 16+.
+            let mut bytes = Vec::with_capacity(2 + path.len());
+            bytes.push(0xFF);
+            bytes.push(self.path_len);
+            bytes.extend_from_slice(path);
+            bytes
         }
     }
 
     /// Returns the current storage key for the contract environment.
     pub(crate) fn current_key(&self) -> StorageKey {
         let mut result = [0u8; KEY_LEN];
-        let mut key = Vec::with_capacity(INDEX_SIZE + self.mapping_data.len());
-        key.extend_from_slice(self.index.to_be_bytes().as_ref());
+        let index_bytes = self.index_bytes();
+        let mut key = Vec::with_capacity(index_bytes.len() + self.mapping_data.len());
+        key.extend_from_slice(&index_bytes);
         key.extend_from_slice(&self.mapping_data);
         let hashed_key = self.backend.borrow().hash(key.as_slice());
         utils::hex_to_slice(&hashed_key, &mut result);
@@ -77,8 +128,15 @@ impl ContractEnv {
 
     /// Returns a child contract environment with the specified index.
     pub(crate) fn child(&self, index: u8) -> Self {
+        let mut new_path = self.path;
+        let Some(slot) = new_path.get_mut(self.path_len as usize) else {
+            self.revert(ExecutionError::PathIndexOutOfBounds)
+        };
+        *slot = index;
+
         Self {
-            index: (self.index << 4) + index as u32,
+            path: new_path,
+            path_len: self.path_len + 1,
             mapping_data: self.mapping_data.clone(),
             backend: self.backend.clone()
         }
@@ -467,5 +525,87 @@ impl ExecutionEnv {
     /// Emits an event with the specified data.
     pub fn emit_event<T: ToBytes + EventInstance>(&self, event: T) {
         self.env.emit_event(event);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::contract_context::MockContractContext;
+
+    fn make_env() -> ContractEnv {
+        let mut ctx = MockContractContext::new();
+        ctx.expect_hash().returning(|input| {
+            let mut result = [0u8; 32];
+            for (i, byte) in input.iter().enumerate() {
+                if i < 32 {
+                    result[i] = *byte;
+                }
+            }
+            result
+        });
+        ContractEnv::new(Rc::new(RefCell::new(ctx)))
+    }
+
+    fn legacy_u32_for_path(path: &[u8]) -> u32 {
+        path.iter().fold(0u32, |acc, &idx| (acc << 4) + idx as u32)
+    }
+
+    #[test]
+    fn encoding_matches_old_u32_formula() {
+        let env = make_env();
+        let child = env.child(3);
+        assert_eq!(
+            child.index_bytes(),
+            legacy_u32_for_path(&[3]).to_be_bytes().to_vec()
+        );
+
+        let grandchild = child.child(15);
+        assert_eq!(
+            grandchild.index_bytes(),
+            legacy_u32_for_path(&[3, 15]).to_be_bytes().to_vec()
+        );
+
+        let deep = env.child(1).child(2).child(3).child(4);
+        assert_eq!(
+            deep.index_bytes(),
+            legacy_u32_for_path(&[1, 2, 3, 4]).to_be_bytes().to_vec()
+        );
+    }
+
+    #[test]
+    fn path_encoding_used_for_indices_above_15() {
+        let env = make_env();
+        let child = env.child(3).child(16);
+        let bytes = child.index_bytes();
+        assert_eq!(bytes[0], 0xFF);
+        assert_eq!(bytes[1], 2);
+        assert_eq!(bytes[2], 3);
+        assert_eq!(bytes[3], 16);
+    }
+
+    #[test]
+    fn no_collision_between_var_and_mapping() {
+        let env = make_env();
+
+        let var_key = env.child(3).child(16).current_key();
+        let mut map_env = env.child(3);
+        map_env.add_to_mapping_data(&[16]);
+        let map_key = map_env.current_key();
+        assert_ne!(var_key, map_key);
+
+        let var_key2 = env.child(3).child(1).current_key();
+        let mut map_env2 = env.child(3);
+        map_env2.add_to_mapping_data(&[0xFF, 2, 3, 1]);
+        let map_key2 = map_env2.current_key();
+        assert_ne!(var_key2, map_key2);
+    }
+
+    #[test]
+    fn no_collision_between_small_and_path_encoding() {
+        let env = make_env();
+        let small_key = env.child(1).child(2).current_key();
+        let path_key = env.child(1).child(20).current_key();
+        assert_ne!(small_key, path_key);
     }
 }

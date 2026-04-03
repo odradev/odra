@@ -45,7 +45,6 @@ impl Parse for ModuleConfiguration {
         let mut events = None;
         let mut errors = None;
         let mut factory = None;
-
         while !input.is_empty() {
             if events.is_none() && input.peek(kw::events) {
                 events = Some(input.parse::<ModuleEvents>()?);
@@ -76,6 +75,7 @@ impl Parse for ModuleConfiguration {
                 let _ = input.parse::<Token![,]>(); // optional comma
                 continue;
             }
+
             return Err(input.error("Unexpected token"));
         }
 

@@ -1,7 +1,7 @@
 use crate::ir::ModuleStructIR;
 use crate::utils;
 
-const MAX_FIELDS: usize = 15;
+const MAX_FIELDS: usize = 255;
 
 #[derive(syn_derive::ToTokens)]
 pub struct ModuleDefItem {

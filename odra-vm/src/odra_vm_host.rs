@@ -207,7 +207,7 @@ impl HostContext for OdraVmHost {
 impl OdraVmHost {
     /// Creates a new `OdraVmHost` instance.
     pub fn new(vm: Rc<OdraVm>) -> Rc<Self> {
-        let contract_env = Rc::new(ContractEnv::new(0, OdraVmContractEnv::new(vm.clone())));
+        let contract_env = Rc::new(ContractEnv::new(OdraVmContractEnv::new(vm.clone())));
         Rc::new(Self { vm, contract_env })
     }
 }

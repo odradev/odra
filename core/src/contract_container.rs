@@ -121,9 +121,8 @@ mod tests {
                     .collect()
             )];
             let mut ctx = MockHostContext::new();
-            ctx.expect_contract_env().returning(|| {
-                ContractEnv::new(0, Rc::new(RefCell::new(MockContractContext::new())))
-            });
+            ctx.expect_contract_env()
+                .returning(|| ContractEnv::new(Rc::new(RefCell::new(MockContractContext::new()))));
             let env = HostEnv::new(Rc::new(ctx));
 
             let entry_points_caller = EntryPointsCaller::new(env, entry_points, |_, call_def| {

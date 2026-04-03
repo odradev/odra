@@ -282,7 +282,8 @@ impl TryFrom<&'_ ModuleImplIR> for AddEntryPointStmtItem<FactoryBatchUpgradeCont
 }
 
 struct CallFnItem {
-    module_ident: syn::Ident
+    module_ident: syn::Ident,
+    new_env_expr: syn::Expr
 }
 
 impl ToTokens for CallFnItem {
@@ -299,16 +300,17 @@ impl ToTokens for CallFnItem {
             parse_quote!(Option::<#ty_args>::None)
         );
 
+        let new_env_expr = &self.new_env_expr;
         tokens.append_all(quote::quote! {
             #attr
             fn call() {
                 let #ident_schemas = #expr_new_schemas;
                 let exec_env = {
-                    let env = odra::odra_casper_wasm_env::WasmContractEnv::new_env();
+                    let env = #new_env_expr;
                     let env_rc = Rc::new(env);
                     odra::ExecutionEnv::new(env_rc)
                 };
-                
+
                 #install_or_upgrade_stmt
             }
         });
@@ -320,7 +322,8 @@ impl TryFrom<&'_ ModuleImplIR> for CallFnItem {
 
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
-            module_ident: module.module_ident()?
+            module_ident: module.module_ident()?,
+            new_env_expr: utils::expr::new_wasm_contract_env()
         })
     }
 }
@@ -329,6 +332,7 @@ struct NoMangleFactoryFnItem {
     module_ident: syn::Ident,
     event_ident: syn::Ident,
     init_fn: Option<FnIR>,
+    new_env_expr: syn::Expr,
 }
 
 impl TryFrom<&'_ ModuleImplIR> for NoMangleFactoryFnItem {
@@ -342,6 +346,7 @@ impl TryFrom<&'_ ModuleImplIR> for NoMangleFactoryFnItem {
             module_ident,
             event_ident,
             init_fn: module.constructor(),
+            new_env_expr: utils::expr::new_wasm_contract_env(),
         })
     }
 }
@@ -365,13 +370,14 @@ impl ToTokens for NoMangleFactoryFnItem {
             vec![]
         };
         let event_ident = &self.event_ident;
+        let new_env_expr = &self.new_env_expr;
         tokens.append_all(quote::quote! {
             #[no_mangle]
             fn new_contract() {
                  odra::odra_casper_wasm_env::host_functions::override_factory_caller();
                 let #ident_schemas = #expr_new_schemas;
                 let exec_env = {
-                    let env = odra::odra_casper_wasm_env::WasmContractEnv::new_env();
+                    let env = #new_env_expr;
                     let env_rc = Rc::new(env);
                     odra::ExecutionEnv::new(env_rc)
                 };
@@ -404,6 +410,7 @@ struct NoMangleFactoryUpgradeFnItem {
     module_ident: syn::Ident,
     event_ident: syn::Ident,
     upgrader_args: Vec<(String, syn::Type)>,
+    new_env_expr: syn::Expr,
 }
 
 impl TryFrom<&'_ ModuleImplIR> for NoMangleFactoryUpgradeFnItem {
@@ -422,7 +429,8 @@ impl TryFrom<&'_ ModuleImplIR> for NoMangleFactoryUpgradeFnItem {
         Ok(Self {
             module_ident,
             event_ident,
-            upgrader_args
+            upgrader_args,
+            new_env_expr: utils::expr::new_wasm_contract_env(),
         })
     }
 }
@@ -446,13 +454,14 @@ impl ToTokens for NoMangleFactoryUpgradeFnItem {
         let args = self.upgrader_args.iter().map(|(name, ty)| {
             quote::quote! { let _ = named_args.insert(#name, exec_env.get_named_arg::<#ty>(#name)); }
         }).collect::<TokenStream>();
+        let new_env_expr = &self.new_env_expr;
         tokens.append_all(quote::quote! {
             #[no_mangle]
             fn upgrade_child_contract() {
                 use #unwrap_or_revert;
                 let #ident_schemas = #expr_new_schemas;
                 let exec_env = {
-                    let env = odra::odra_casper_wasm_env::WasmContractEnv::new_env();
+                    let env = #new_env_expr;
                     let env_rc = Rc::new(env);
                     odra::ExecutionEnv::new(env_rc)
                 };
@@ -490,7 +499,7 @@ impl ToTokens for NoMangleFactoryUpgradeFnItem {
 
                 let #ident_schemas = #expr_new_schemas;
                 let exec_env = {
-                    let env = odra::odra_casper_wasm_env::WasmContractEnv::new_env();
+                    let env = #new_env_expr;
                     let env_rc = Rc::new(env);
                     odra::ExecutionEnv::new(env_rc)
                 };

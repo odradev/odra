@@ -126,9 +126,10 @@ impl TryFrom<&'_ ModuleImplIR> for CallFnItem {
         let ident_schemas = utils::ident::schemas();
         let ty_args = utils::ty::runtime_args();
         let ident_entry_points = utils::ident::entry_points();
+        let new_env_expr = utils::expr::new_wasm_contract_env();
         let exec_env_stmt: syn::Stmt = parse_quote!(
             let exec_env = {
-                let env = odra::odra_casper_wasm_env::WasmContractEnv::new_env();
+                let env = #new_env_expr;
                 let env_rc = Rc::new(env);
                 odra::ExecutionEnv::new(env_rc)
             };
