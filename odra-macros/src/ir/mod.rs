@@ -245,8 +245,6 @@ impl ModuleImplIR {
         }
     }
 
-
-
     pub fn is_factory(&self) -> bool {
         match self {
             ModuleImplIR::Impl(ir) => {
