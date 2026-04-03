@@ -11,12 +11,7 @@ An Odra smart contract workspace. Contracts live in `contracts/`, the CLI for de
 | Skill | What it does |
 |---|---|
 | `/odra:check-env` | Verify your development environment |
-| `/odra:new-contract` | Scaffold a new contract module |
-| `/odra:new-factory-contract` | Scaffold a factory contract |
-| `/odra:new-entrypoint` | Add an entry point to an existing contract |
-| `/odra:new-version` | Create an upgraded contract version |
-| `/odra:new-scenario` | Add a CLI deployment/interaction scenario |
-| `/odra:start-nctl` | Start a local Casper node via Docker |
+| `/odra:setup-nctl` | Setup a local Casper node via Docker |
 | `/odra:deploy-to-livenet` | Deploy contracts to nctl, testnet, or mainnet |
 
 ## Project Structure
