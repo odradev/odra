@@ -147,7 +147,7 @@ impl UpgradedContract {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use odra::host::{Deployer, NoArgs};
+    use odra::host::{Deployer, InstallConfig, NoArgs};
     use odra::prelude::Addressable;
 
     #[test]
@@ -166,7 +166,11 @@ mod tests {
         let env = odra_test::env();
 
         // Deploy "original" contract and write data
-        let mut original = OriginalContract::deploy(&env, NoArgs);
+        let mut original = OriginalContract::deploy_with_cfg(
+            &env,
+            NoArgs,
+            InstallConfig::upgradable::<OriginalContract>()
+        );
         original.set_all();
         assert_eq!(original.get_f1(), 100);
         assert_eq!(original.get_f10(), 1000);

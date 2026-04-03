@@ -102,3 +102,12 @@ fqn = "contracts::cep96_cep95::Cep96Cep95"
 
 [[contracts]]
 fqn = "features::no_ret::MockDex"
+
+[[contracts]]
+fqn = "features::many_fields::OriginalContract"
+
+[[contracts]]
+fqn = "features::many_fields::UpgradedContract"
+
+[[contracts]]
+fqn = "features::many_fields::ManyFieldsContract"
