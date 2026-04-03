@@ -233,10 +233,8 @@ pub mod mock {
 
     pub fn invalid_module_definition() -> ModuleStructIR {
         let fields = (0..256).map(|i| {
-            let field_name = syn::Ident::new(
-                &format!("field{}", i),
-                proc_macro2::Span::call_site(),
-            );
+            let field_name =
+                syn::Ident::new(&format!("field{}", i), proc_macro2::Span::call_site());
             quote!(#field_name: Var<u32>,)
         });
         let module = quote!(

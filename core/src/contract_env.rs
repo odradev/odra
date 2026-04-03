@@ -133,7 +133,7 @@ impl ContractEnv {
             self.revert(ExecutionError::PathIndexOutOfBounds)
         };
         *slot = index;
-        
+
         Self {
             path: new_path,
             path_len: self.path_len + 1,
