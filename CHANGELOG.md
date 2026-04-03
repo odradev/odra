@@ -2,6 +2,20 @@
 
 Changelog for `odra`.
 
+## [2.6.0] - 2026-04-03
+### Added
+- It is possible to use 255 elements in a single module (previously 15).
+
+### Removed
+- Host context no longer has RefCell.
+
+### Changed
+- `rust-toolchain` updated to `nightly-2026-01-01`.
+
+## [2.5.1] - 2026-03-20
+### Fixed
+- `casper-client` dependencies are now fixed.
+
 ## [2.5.0] - 2026-01-23
 ### Changed
 - Refactor of `CEP-95` token implementation.
