@@ -103,7 +103,7 @@ impl OdraCommand for PrintContractEventsCmd {
             .min(events_count);
 
         prettycli::info(&format!(
-            "Printing {:?} the most recent events for contract '{}'",
+            "Printing {} most recent events for contract '{}'",
             max_events, self.contract_name
         ));
         for i in 0..max_events {

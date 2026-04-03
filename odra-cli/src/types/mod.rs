@@ -46,6 +46,52 @@ macro_rules! big_int_to_bytes {
     };
 }
 
+pub(crate) fn format_variant_list(variants: &[(String, u16)]) -> String {
+    variants
+        .iter()
+        .map(|(n, _)| n.as_str())
+        .collect::<Vec<_>>()
+        .join("|")
+}
+
+pub(crate) fn format_type_hint(ty: &NamedCLType) -> String {
+    match ty {
+        NamedCLType::Bool => "true|false".into(),
+        NamedCLType::I32 | NamedCLType::I64 => "INT".into(),
+        NamedCLType::U8 => "0-255|0x00|0b00000000".into(),
+        NamedCLType::U32 | NamedCLType::U64 => "UINT".into(),
+        NamedCLType::U128 | NamedCLType::U256 | NamedCLType::U512 => "DECIMAL".into(),
+        NamedCLType::String => "TEXT".into(),
+        NamedCLType::Key => "hash-...|account-hash-...".into(),
+        NamedCLType::URef => "uref-...-NNN".into(),
+        NamedCLType::PublicKey => "HEX_PUBLIC_KEY".into(),
+        NamedCLType::Option(t) => format!("none|some:{}", format_type_hint(t)),
+        NamedCLType::Result { ok, err } => {
+            format!("ok:{}|err:{}", format_type_hint(ok), format_type_hint(err))
+        }
+        NamedCLType::List(box NamedCLType::U8) => "BYTE,BYTE,...".into(),
+        NamedCLType::List(t) => format!("{} (repeatable)", format_type_hint(t)),
+        NamedCLType::Map { key, value } => {
+            let k = format_type_hint(key);
+            let v = format_type_hint(value);
+            format!("{}={}[,{}={}]", k, v, k, v)
+        }
+        NamedCLType::Tuple1(t) => format_type_hint(&t[0]),
+        NamedCLType::Tuple2(t) => {
+            format!("{}:{}", format_type_hint(&t[0]), format_type_hint(&t[1]))
+        }
+        NamedCLType::Tuple3(t) => format!(
+            "{}:{}:{}",
+            format_type_hint(&t[0]),
+            format_type_hint(&t[1]),
+            format_type_hint(&t[2])
+        ),
+        NamedCLType::ByteArray(_) => "0xHEX".into(),
+        NamedCLType::Unit => "(empty)".into(),
+        NamedCLType::Custom(name) => name.clone()
+    }
+}
+
 pub(crate) fn named_cl_type_to_cl_type(ty: &NamedCLType) -> CLType {
     match ty {
         NamedCLType::Bool => CLType::Bool,
@@ -185,7 +231,7 @@ pub(crate) fn into_bytes(ty: &NamedCLType, input: &str) -> TypeResult<Vec<u8>> {
             let parts = input
                 .split(',')
                 .map(|part| {
-                    let key_value = part.split(':').collect::<Vec<_>>();
+                    let key_value = part.split('=').collect::<Vec<_>>();
                     if key_value.len() != 2 {
                         return Err(Error::Formatting(Format::Map));
                     }

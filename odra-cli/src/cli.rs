@@ -166,7 +166,7 @@ impl OdraCli {
                     None => get_default_contracts_file()
                 };
                 prettycli::error(&format!(
-                    "Caller for `{}` not found. The contract is registered in {:?} file, but not in the CLI builder. Make sure you have added it to the builder using `.contract::<{}>()`.",
+                    "Caller for `{}` not found. The contract is registered in '{}' file, but not in the CLI builder. Make sure you have added it to the builder using `.contract::<{}>()`.",
                     &deployed_contract.key_name(), path, &deployed_contract.name()
                 ));
                 std::process::exit(1);
@@ -195,8 +195,8 @@ impl OdraCli {
         };
 
         match result {
-            Ok(_) => prettycli::info("Command executed successfully"),
-            Err(err) => prettycli::error(&format!("{:?}", err))
+            Ok(_) => {}
+            Err(err) => prettycli::error(&format!("{err}"))
         }
     }
 

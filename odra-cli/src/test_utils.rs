@@ -133,6 +133,13 @@ impl NameMintInfo {
     }
 }
 
+#[odra::odra_type]
+pub enum Status {
+    Active,
+    Paused,
+    Terminated
+}
+
 #[odra::module]
 pub struct TestContract;
 
@@ -147,6 +154,8 @@ impl TestContract {
     }
 
     pub fn mutable(&mut self) {}
+
+    pub fn set_status(&mut self, status: Status) {}
 
     #[allow(clippy::too_many_arguments)]
     pub fn various_args(

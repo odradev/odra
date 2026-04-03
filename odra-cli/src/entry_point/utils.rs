@@ -39,14 +39,24 @@ pub(super) fn flatten_schema_arg(
                         .collect::<Result<Vec<_>, _>>()?;
                     Ok(commands.into_iter().flatten().collect())
                 }
-                CustomType::Enum { .. } => {
-                    let variant_arg = Argument {
-                        name: arg.name.clone(),
-                        ty: Type(NamedCLType::U8),
-                        optional: arg.optional,
-                        description: arg.description.clone()
-                    };
-                    flatten_schema_arg(&variant_arg, types, is_list_element)
+                CustomType::Enum { variants, .. } => {
+                    let variant_info: Vec<(String, u16)> = variants
+                        .iter()
+                        .map(|v| (v.name.clone(), v.discriminant))
+                        .collect();
+                    let mut ca = CommandArg::new(
+                        &arg.name,
+                        &arg.description.clone().unwrap_or_default(),
+                        NamedCLType::U8
+                    )
+                    .with_enum_variants(variant_info);
+                    if !arg.optional {
+                        ca = ca.required();
+                    }
+                    if is_list_element {
+                        ca = ca.list();
+                    }
+                    Ok(vec![ca])
                 }
             }
         }
