@@ -1,6 +1,6 @@
 use clap::{builder::TypedValueParser, error::ErrorKind, Arg, Command, Error};
 use odra::{
-    casper_types::{CLValue, U512},
+    casper_types::{CLType, CLValue, U512},
     schema::casper_contract_schema::NamedCLType
 };
 
@@ -124,7 +124,10 @@ impl TypedValueParser for EnumCLParser {
                 )
                 .with_cmd(cmd)
             })?;
-        Ok(CLValue::from_components(CLType::U8, vec![discriminant as u8]))
+        Ok(CLValue::from_components(
+            CLType::U8,
+            vec![discriminant as u8]
+        ))
     }
 }
 

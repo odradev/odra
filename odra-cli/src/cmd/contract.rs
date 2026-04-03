@@ -404,7 +404,11 @@ mod tests {
                 "--status",
                 variant,
             ]);
-            assert!(result.is_ok(), "Expected '{}' to be a valid variant", variant);
+            assert!(
+                result.is_ok(),
+                "Expected '{}' to be a valid variant",
+                variant
+            );
         }
 
         // Enum: unknown variant name is rejected
@@ -420,7 +424,9 @@ mod tests {
         assert!(result.is_err(), "Expected 'Unknown' to be rejected");
         let err_msg = result.unwrap_err().to_string();
         assert!(
-            err_msg.contains("Active") && err_msg.contains("Paused") && err_msg.contains("Terminated"),
+            err_msg.contains("Active")
+                && err_msg.contains("Paused")
+                && err_msg.contains("Terminated"),
             "Error should list valid variants, got: {}",
             err_msg
         );
