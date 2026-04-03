@@ -12,7 +12,7 @@ run-name: Calculating coverage for ${{ github.head_ref }}
 jobs:
   coverage:
     name: Calculate test coverage
-    runs-on: buildjet-8vcpu-ubuntu-2204
+    runs-on: ubuntu-latest
     steps:
       - name: Setup just
         uses: extractions/setup-just@v1
