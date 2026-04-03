@@ -82,7 +82,6 @@ mod tests {
     fn test_invalid_module_definition() {
         let ir = mock::invalid_module_definition();
         let def = ModuleDefItem::try_from(&ir);
-        // With MAX_FIELDS = 255, 16 fields is valid
-        assert!(def.is_ok());
+        assert!(def.is_err());
     }
 }
