@@ -21,11 +21,3 @@ An Odra smart contract workspace. Contracts live in `contracts/`, the CLI for de
 - `Odra.toml` — contract registry for `cargo odra`
 - `.env.sample` — livenet environment variable template
 
-## Commands
-
-```bash
-cargo odra test              # test on OdraVM (fast, in-memory)
-cargo odra test -b casper    # test on Casper VM (full execution engine)
-cargo odra build -b casper   # build WASM binaries
-```
-

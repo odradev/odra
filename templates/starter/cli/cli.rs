@@ -17,8 +17,6 @@ impl DeployScript for ContractsDeployScript {
         env: &HostEnv,
         container: &mut DeployedContractsContainer,
     ) -> Result<(), odra_cli::deploy::Error> {
-        // Add contract deployments here using:
-        //   let _ = MyContract::load_or_deploy(&env, args, container, cspr!(350))?;
         Ok(())
     }
 }
@@ -28,8 +26,6 @@ pub fn main() {
     OdraCli::new()
         .about("CLI tool for {{project-name}} smart contracts")
         .deploy(ContractsDeployScript)
-        // Register contracts with .contract::<MyContract>()
-        // Register scenarios with .scenario(MyScenario)
         .build()
         .run();
 }
