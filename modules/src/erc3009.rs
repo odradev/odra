@@ -1,4 +1,4 @@
-use crate::cep18_token::Cep18;
+use crate::{cep18_token::Cep18, eip712};
 use casper_eip_712::{Address as Eip712Address, DomainSeparator};
 use odra::{
     casper_types::{
@@ -249,23 +249,15 @@ impl ERC3009 {
         nonce_padded[..len].copy_from_slice(&nonce[..len]);
 
         let mut encoded_data = Vec::with_capacity(6 * 32);
-        encoded_data.extend(casper_eip_712::encode_address(
-            odra_address_to_eip712_address(from)
-        ));
-        encoded_data.extend(casper_eip_712::encode_address(
-            odra_address_to_eip712_address(to)
-        ));
+        encoded_data.extend(eip712::encode_address(from));
+        encoded_data.extend(eip712::encode_address(to));
         encoded_data.extend(casper_eip_712::encode_uint256(value_bytes));
-        encoded_data.extend(casper_eip_712::encode_uint256(u64_to_be_bytes32(
-            valid_after
-        )));
-        encoded_data.extend(casper_eip_712::encode_uint256(u64_to_be_bytes32(
-            valid_before
-        )));
+        encoded_data.extend(casper_eip_712::encode_uint64(valid_after));
+        encoded_data.extend(casper_eip_712::encode_uint64(valid_before));
         encoded_data.extend(casper_eip_712::encode_bytes32(nonce_padded));
         let domain = self.domain_separator();
 
-        Bytes::from(hash_typed_data(domain, typehash, encoded_data).to_vec())
+        Bytes::from(crate::eip712::hash_typed_data(domain, typehash, encoded_data).to_vec())
     }
 
     fn build_cancel_message(&self, authorizer: Address, nonce: &[u8]) -> Bytes {
@@ -274,53 +266,19 @@ impl ERC3009 {
         nonce_padded[..len].copy_from_slice(&nonce[..len]);
 
         let mut encoded_data = Vec::with_capacity(64);
-        encoded_data.extend(casper_eip_712::encode_address(
-            odra_address_to_eip712_address(authorizer)
-        ));
+        encoded_data.extend(eip712::encode_address(authorizer));
         encoded_data.extend(casper_eip_712::encode_bytes32(nonce_padded));
         let domain = self.domain_separator();
 
-        Bytes::from(hash_typed_data(domain, CANCEL_AUTHORIZATION_TYPEHASH, encoded_data).to_vec())
+        Bytes::from(
+            eip712::hash_typed_data(domain, CANCEL_AUTHORIZATION_TYPEHASH, encoded_data).to_vec()
+        )
     }
 
     fn domain_separator(&self) -> DomainSeparator {
         let self_address = self.env().self_address();
         let name = self.token.name();
         let chain_id = self.chain_name.get().unwrap_or_revert(self);
-        crate::eip712::domain_separator(&name, chain_id, self_address)
+        eip712::domain_separator(&name, chain_id, self_address)
     }
-}
-
-#[inline(always)]
-fn u64_to_be_bytes32(value: u64) -> [u8; 32] {
-    let mut bytes = [0u8; 32];
-    bytes[24..].copy_from_slice(&value.to_be_bytes());
-    bytes
-}
-
-#[inline(always)]
-fn odra_address_to_eip712_address(addr: Address) -> Eip712Address {
-    let mut bytes = [0u8; 33];
-    match addr {
-        Address::Account(_) => bytes[0] = KeyTag::Account as u8,
-        Address::Contract(_) => bytes[0] = KeyTag::Hash as u8
-    }
-    bytes[1..33].copy_from_slice(&addr.value());
-    Eip712Address::Casper(bytes)
-}
-
-fn hash_typed_data(domain: DomainSeparator, typehash: [u8; 32], encoded_data: Vec<u8>) -> [u8; 32] {
-    let mut data = [0u8; 66];
-    data[0] = 0x19;
-    data[1] = 0x01;
-    data[2..34].copy_from_slice(&domain.separator_hash());
-    let struct_hash = {
-        let mut struct_data = Vec::with_capacity(32 + encoded_data.len());
-        struct_data.extend_from_slice(&typehash);
-        struct_data.extend_from_slice(&encoded_data);
-        casper_eip_712::keccak256(&struct_data)
-    };
-
-    data[34..66].copy_from_slice(&struct_hash);
-    casper_eip_712::keccak256(&data)
 }

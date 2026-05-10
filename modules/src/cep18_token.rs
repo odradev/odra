@@ -94,13 +94,7 @@ impl Cep18 {
         if owner == *spender {
             self.env().revert(Error::CannotTargetSelfUser);
         }
-
-        self.allowances.set(&owner, spender, *amount);
-        self.env().emit_event(SetAllowance {
-            owner,
-            spender: *spender,
-            allowance: *amount
-        });
+        self.raw_approve(&owner, spender, amount);
     }
 
     /// Decreases the allowance of the spender by the given amount.
@@ -204,6 +198,15 @@ impl Cep18 {
         self.env().emit_event(Mint {
             recipient: *owner,
             amount: *amount
+        });
+    }
+
+    pub fn raw_approve(&mut self, owner: &Address, spender: &Address, amount: &U256) {
+        self.allowances.set(owner, spender, *amount);
+        self.env().emit_event(SetAllowance {
+            owner: *owner,
+            spender: *spender,
+            allowance: *amount
         });
     }
 
