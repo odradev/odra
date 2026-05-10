@@ -1,10 +1,9 @@
+//! ERC-3009 implementation for Casper, allowing gasless token transfers via off-chain signatures.
+
 use crate::{cep18_token::Cep18, eip712};
-use casper_eip_712::{Address as Eip712Address, DomainSeparator};
+use casper_eip_712::DomainSeparator;
 use odra::{
-    casper_types::{
-        bytesrepr::{Bytes, ToBytes},
-        Key, KeyTag, PublicKey, U256
-    },
+    casper_types::{bytesrepr::Bytes, PublicKey, U256},
     prelude::*
 };
 

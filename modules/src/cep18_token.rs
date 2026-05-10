@@ -201,6 +201,7 @@ impl Cep18 {
         });
     }
 
+    /// Approves the spender to spend the given amount of tokens on behalf of the owner without checking the permissions.
     pub fn raw_approve(&mut self, owner: &Address, spender: &Address, amount: &U256) {
         self.allowances.set(owner, spender, *amount);
         self.env().emit_event(SetAllowance {

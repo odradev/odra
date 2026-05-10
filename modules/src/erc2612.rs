@@ -1,3 +1,5 @@
+//! ERC-2612 implementation for Casper, allowing token approvals via off-chain signatures.
+//!
 use casper_eip_712::DomainSeparator;
 use odra::{
     casper_types::{bytesrepr::Bytes, PublicKey, U256},
