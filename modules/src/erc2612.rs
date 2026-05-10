@@ -29,14 +29,14 @@ pub enum Error {
 
 /// A module implementing EIP-2612 permit functionality for a CEP-18 token.
 #[odra::module]
-pub struct EIP2612 {
+pub struct ERC2612 {
     permit_nonces: Mapping<Address, U256>,
     chain_name: Var<String>,
     token: SubModule<Cep18>
 }
 
 #[odra::module]
-impl EIP2612 {
+impl ERC2612 {
     /// Initializes the module with the given chain name (e.g., "Casper Mainnet").
     pub fn init(&mut self, chain_name: String) {
         self.chain_name.set(chain_name);
@@ -101,5 +101,384 @@ impl EIP2612 {
         let domain = self.domain_separator();
 
         crate::eip712::hash_typed_data(domain, PERMIT_TYPEHASH, encoded_data)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::cep18::events::SetAllowance;
+    use odra::host::{Deployer, HostEnv};
+
+    const TOKEN_NAME: &str = "Test Token";
+    const TOKEN_SYMBOL: &str = "TEST";
+    const TOKEN_DECIMALS: u8 = 8;
+    const INITIAL_SUPPLY: u64 = 1_000_000;
+    const CHAIN_NAME: &str = "casper-test";
+
+    #[odra::module]
+    pub struct ERC2612Wrapper {
+        erc2612: SubModule<ERC2612>,
+        token: SubModule<Cep18>
+    }
+
+    #[odra::module]
+    impl ERC2612Wrapper {
+        pub fn init(
+            &mut self,
+            chain_name: String,
+            symbol: String,
+            name: String,
+            decimals: u8,
+            initial_supply: U256
+        ) {
+            self.erc2612.init(chain_name);
+            self.token.init(symbol, name, decimals, initial_supply);
+        }
+
+        delegate! {
+            to self.erc2612 {
+                fn permit(
+                    &mut self,
+                    owner: Address,
+                    spender: Address,
+                    value: U256,
+                    deadline: u64,
+                    public_key: PublicKey,
+                    signature: Bytes
+                );
+            }
+        }
+
+        pub fn allowance(&self, owner: &Address, spender: &Address) -> U256 {
+            self.token.allowance(owner, spender)
+        }
+    }
+
+    struct Setup {
+        env: HostEnv,
+        wrapper: ERC2612WrapperHostRef,
+        alice: Address,
+        bob: Address,
+        charlie: Address,
+        alice_pubkey: PublicKey
+    }
+
+    fn setup() -> Setup {
+        let env = odra_test::env();
+        let alice = env.get_account(0);
+        let bob = env.get_account(1);
+        let charlie = env.get_account(2);
+        let alice_pubkey = env.public_key(&alice);
+
+        let wrapper = ERC2612Wrapper::deploy(
+            &env,
+            ERC2612WrapperInitArgs {
+                chain_name: CHAIN_NAME.to_string(),
+                symbol: TOKEN_SYMBOL.to_string(),
+                name: TOKEN_NAME.to_string(),
+                decimals: TOKEN_DECIMALS,
+                initial_supply: INITIAL_SUPPLY.into()
+            }
+        );
+
+        Setup {
+            env,
+            wrapper,
+            alice,
+            bob,
+            charlie,
+            alice_pubkey
+        }
+    }
+
+    #[test]
+    fn permit_happy_path() {
+        let Setup {
+            env,
+            mut wrapper,
+            alice,
+            bob,
+            charlie,
+            alice_pubkey
+        } = setup();
+
+        assert_eq!(wrapper.allowance(&alice, &bob), U256::zero());
+
+        let value: U256 = 500u64.into();
+        let deadline: u64 = u64::MAX;
+        let nonce: U256 = U256::zero();
+
+        let signature = sign_permit(
+            &env,
+            &alice,
+            wrapper.address(),
+            alice,
+            bob,
+            value,
+            nonce,
+            deadline
+        );
+
+        // Charlie relays alice's permit (gas-less for alice).
+        env.set_caller(charlie);
+        wrapper.permit(alice, bob, value, deadline, alice_pubkey, signature);
+
+        assert_eq!(wrapper.allowance(&alice, &bob), value);
+        assert!(env.emitted_event(
+            &wrapper,
+            SetAllowance {
+                owner: alice,
+                spender: bob,
+                allowance: value
+            }
+        ));
+    }
+
+    #[test]
+    fn permit_replay_reverts() {
+        let Setup {
+            env,
+            mut wrapper,
+            alice,
+            bob,
+            charlie,
+            alice_pubkey
+        } = setup();
+
+        let value: U256 = 500u64.into();
+        let deadline: u64 = u64::MAX;
+        let nonce: U256 = U256::zero();
+
+        let signature = sign_permit(
+            &env,
+            &alice,
+            wrapper.address(),
+            alice,
+            bob,
+            value,
+            nonce,
+            deadline
+        );
+
+        env.set_caller(charlie);
+        wrapper.permit(
+            alice,
+            bob,
+            value,
+            deadline,
+            alice_pubkey.clone(),
+            signature.clone()
+        );
+
+        // Resubmitting fails: the on-chain nonce is now 1, so the contract
+        // recomputes a different digest and the old signature no longer matches.
+        assert_eq!(
+            wrapper.try_permit(alice, bob, value, deadline, alice_pubkey, signature),
+            Err(Error::InvalidSignature.into())
+        );
+    }
+
+    #[test]
+    fn permit_subsequent_with_next_nonce_succeeds() {
+        let Setup {
+            env,
+            mut wrapper,
+            alice,
+            bob,
+            charlie,
+            alice_pubkey
+        } = setup();
+
+        let deadline: u64 = u64::MAX;
+        let first_value: U256 = 500u64.into();
+        let second_value: U256 = 1_000u64.into();
+
+        let first_signature = sign_permit(
+            &env,
+            &alice,
+            wrapper.address(),
+            alice,
+            bob,
+            first_value,
+            U256::zero(),
+            deadline
+        );
+        let second_signature = sign_permit(
+            &env,
+            &alice,
+            wrapper.address(),
+            alice,
+            bob,
+            second_value,
+            U256::one(),
+            deadline
+        );
+
+        env.set_caller(charlie);
+        wrapper.permit(
+            alice,
+            bob,
+            first_value,
+            deadline,
+            alice_pubkey.clone(),
+            first_signature
+        );
+        assert_eq!(wrapper.allowance(&alice, &bob), first_value);
+
+        wrapper.permit(
+            alice,
+            bob,
+            second_value,
+            deadline,
+            alice_pubkey,
+            second_signature
+        );
+        // raw_approve overwrites (does not add) the allowance.
+        assert_eq!(wrapper.allowance(&alice, &bob), second_value);
+    }
+
+    #[test]
+    fn permit_expired() {
+        let Setup {
+            env,
+            mut wrapper,
+            alice,
+            bob,
+            charlie,
+            alice_pubkey
+        } = setup();
+
+        // Move block time past the chosen deadline.
+        env.advance_block_time(60_000);
+
+        let value: U256 = 500u64.into();
+        let deadline: u64 = 1_000;
+        let nonce: U256 = U256::zero();
+
+        let signature = sign_permit(
+            &env,
+            &alice,
+            wrapper.address(),
+            alice,
+            bob,
+            value,
+            nonce,
+            deadline
+        );
+
+        env.set_caller(charlie);
+        assert_eq!(
+            wrapper.try_permit(alice, bob, value, deadline, alice_pubkey, signature),
+            Err(Error::PermitExpired.into())
+        );
+    }
+
+    #[test]
+    fn permit_max_deadline_skips_expiry_check() {
+        let Setup {
+            env,
+            mut wrapper,
+            alice,
+            bob,
+            charlie,
+            alice_pubkey
+        } = setup();
+
+        // Even after a long time, a permit with deadline = u64::MAX is valid.
+        env.advance_block_time(1_000_000);
+
+        let value: U256 = 500u64.into();
+        let deadline: u64 = u64::MAX;
+        let nonce: U256 = U256::zero();
+
+        let signature = sign_permit(
+            &env,
+            &alice,
+            wrapper.address(),
+            alice,
+            bob,
+            value,
+            nonce,
+            deadline
+        );
+
+        env.set_caller(charlie);
+        wrapper.permit(alice, bob, value, deadline, alice_pubkey, signature);
+
+        assert_eq!(wrapper.allowance(&alice, &bob), value);
+    }
+
+    #[test]
+    fn permit_invalid_signature() {
+        let Setup {
+            env,
+            mut wrapper,
+            alice,
+            bob,
+            charlie,
+            alice_pubkey
+        } = setup();
+
+        let deadline: u64 = u64::MAX;
+        let nonce: U256 = U256::zero();
+
+        // Alice signs for value=100 ...
+        let signature = sign_permit(
+            &env,
+            &alice,
+            wrapper.address(),
+            alice,
+            bob,
+            U256::from(100u64),
+            nonce,
+            deadline
+        );
+
+        // ... but charlie submits with value=200, so the digest the contract
+        // recomputes won't match the signature.
+        env.set_caller(charlie);
+        assert_eq!(
+            wrapper.try_permit(
+                alice,
+                bob,
+                U256::from(200u64),
+                deadline,
+                alice_pubkey,
+                signature
+            ),
+            Err(Error::InvalidSignature.into())
+        );
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn sign_permit(
+        env: &HostEnv,
+        signer: &Address,
+        contract_address: Address,
+        owner: Address,
+        spender: Address,
+        value: U256,
+        nonce: U256,
+        deadline: u64
+    ) -> Bytes {
+        let mut value_bytes = [0u8; 32];
+        value.to_big_endian(&mut value_bytes);
+        let mut nonce_bytes = [0u8; 32];
+        nonce.to_big_endian(&mut nonce_bytes);
+
+        let mut encoded_data = Vec::with_capacity(32 * 5);
+        encoded_data.extend(crate::eip712::encode_address(owner));
+        encoded_data.extend(crate::eip712::encode_address(spender));
+        encoded_data.extend(casper_eip_712::encode_uint256(value_bytes));
+        encoded_data.extend(casper_eip_712::encode_uint256(nonce_bytes));
+        encoded_data.extend(casper_eip_712::encode_uint64(deadline));
+
+        let domain =
+            crate::eip712::domain_separator(TOKEN_NAME, CHAIN_NAME.to_string(), contract_address);
+        let message_hash = crate::eip712::hash_typed_data(domain, PERMIT_TYPEHASH, encoded_data);
+        let message = Bytes::from(message_hash.to_vec());
+
+        env.sign_message(&message, signer)
     }
 }

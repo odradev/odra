@@ -281,3 +281,689 @@ impl ERC3009 {
         eip712::domain_separator(&name, chain_id, self_address)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use odra::host::{Deployer, HostEnv};
+
+    const TOKEN_NAME: &str = "Test Token";
+    const TOKEN_SYMBOL: &str = "TEST";
+    const TOKEN_DECIMALS: u8 = 8;
+    const INITIAL_SUPPLY: u64 = 1_000_000;
+    const CHAIN_NAME: &str = "casper-test";
+
+    #[odra::module]
+    pub struct ERC3009Wrapper {
+        erc3009: SubModule<ERC3009>,
+        token: SubModule<Cep18>
+    }
+
+    #[odra::module]
+    impl ERC3009Wrapper {
+        pub fn init(
+            &mut self,
+            chain_name: String,
+            symbol: String,
+            name: String,
+            decimals: u8,
+            initial_supply: U256
+        ) {
+            self.erc3009.init(chain_name);
+            self.token.init(symbol, name, decimals, initial_supply);
+        }
+
+        delegate! {
+            to self.erc3009 {
+                fn authorization_state(&self, authorizer: Address, nonce: Bytes) -> bool;
+                fn transfer_with_authorization(
+                    &mut self,
+                    from: Address,
+                    to: Address,
+                    amount: U256,
+                    valid_after: u64,
+                    valid_before: u64,
+                    nonce: Bytes,
+                    public_key: PublicKey,
+                    signature: Bytes
+                );
+                fn receive_with_authorization(
+                    &mut self,
+                    from: Address,
+                    to: Address,
+                    amount: U256,
+                    valid_after: u64,
+                    valid_before: u64,
+                    nonce: Bytes,
+                    public_key: PublicKey,
+                    signature: Bytes
+                );
+                fn cancel_authorization(
+                    &mut self,
+                    authorizer: Address,
+                    nonce: Bytes,
+                    public_key: PublicKey,
+                    signature: Bytes
+                );
+            }
+        }
+
+        pub fn balance_of(&self, address: &Address) -> U256 {
+            self.token.balance_of(address)
+        }
+    }
+
+    struct Setup {
+        env: HostEnv,
+        wrapper: ERC3009WrapperHostRef,
+        alice: Address,
+        bob: Address,
+        charlie: Address,
+        alice_pubkey: PublicKey
+    }
+
+    /// Deploys the wrapper with alice as deployer (so she gets the initial supply)
+    /// and advances block time past `valid_after = 0`.
+    fn setup() -> Setup {
+        let env = odra_test::env();
+        let alice = env.get_account(0);
+        let bob = env.get_account(1);
+        let charlie = env.get_account(2);
+        let alice_pubkey = env.public_key(&alice);
+
+        let wrapper = ERC3009Wrapper::deploy(
+            &env,
+            ERC3009WrapperInitArgs {
+                chain_name: CHAIN_NAME.to_string(),
+                symbol: TOKEN_SYMBOL.to_string(),
+                name: TOKEN_NAME.to_string(),
+                decimals: TOKEN_DECIMALS,
+                initial_supply: INITIAL_SUPPLY.into()
+            }
+        );
+
+        env.advance_block_time(1_000);
+
+        Setup {
+            env,
+            wrapper,
+            alice,
+            bob,
+            charlie,
+            alice_pubkey
+        }
+    }
+
+    fn fresh_nonce(seed: u8) -> Bytes {
+        Bytes::from(vec![seed; 32])
+    }
+
+    #[test]
+    fn transfer_with_authorization_happy_path() {
+        let Setup {
+            env,
+            mut wrapper,
+            alice,
+            bob,
+            charlie,
+            alice_pubkey
+        } = setup();
+
+        assert_eq!(wrapper.balance_of(&alice), INITIAL_SUPPLY.into());
+        assert_eq!(wrapper.balance_of(&bob), U256::zero());
+
+        let amount: U256 = 100u64.into();
+        let valid_after: u64 = 0;
+        let valid_before: u64 = u64::MAX;
+        let nonce = fresh_nonce(1);
+
+        let signature = sign_transfer_authorization(
+            &env,
+            &alice,
+            wrapper.address(),
+            TRANSFER_WITH_AUTHORIZATION_TYPEHASH,
+            alice,
+            bob,
+            amount,
+            valid_after,
+            valid_before,
+            &nonce
+        );
+
+        // Charlie relays the authorization on alice's behalf.
+        env.set_caller(charlie);
+        wrapper.transfer_with_authorization(
+            alice,
+            bob,
+            amount,
+            valid_after,
+            valid_before,
+            nonce.clone(),
+            alice_pubkey,
+            signature
+        );
+
+        assert_eq!(
+            wrapper.balance_of(&alice),
+            U256::from(INITIAL_SUPPLY) - amount
+        );
+        assert_eq!(wrapper.balance_of(&bob), amount);
+        assert!(wrapper.authorization_state(alice, nonce.clone()));
+        assert!(env.emitted_event(
+            &wrapper,
+            AuthorizationUsed {
+                authorizer: alice,
+                nonce
+            }
+        ));
+    }
+
+    #[test]
+    fn transfer_with_authorization_replay_protection() {
+        let Setup {
+            env,
+            mut wrapper,
+            alice,
+            bob,
+            charlie,
+            alice_pubkey
+        } = setup();
+
+        let amount: U256 = 100u64.into();
+        let valid_after: u64 = 0;
+        let valid_before: u64 = u64::MAX;
+        let nonce = fresh_nonce(2);
+
+        let signature = sign_transfer_authorization(
+            &env,
+            &alice,
+            wrapper.address(),
+            TRANSFER_WITH_AUTHORIZATION_TYPEHASH,
+            alice,
+            bob,
+            amount,
+            valid_after,
+            valid_before,
+            &nonce
+        );
+
+        env.set_caller(charlie);
+        wrapper.transfer_with_authorization(
+            alice,
+            bob,
+            amount,
+            valid_after,
+            valid_before,
+            nonce.clone(),
+            alice_pubkey.clone(),
+            signature.clone()
+        );
+
+        // Submitting the same authorization a second time reverts.
+        assert_eq!(
+            wrapper.try_transfer_with_authorization(
+                alice,
+                bob,
+                amount,
+                valid_after,
+                valid_before,
+                nonce,
+                alice_pubkey,
+                signature
+            ),
+            Err(Error::NonceAlreadyUsed.into())
+        );
+    }
+
+    #[test]
+    fn transfer_with_authorization_not_yet_valid() {
+        let Setup {
+            env,
+            mut wrapper,
+            alice,
+            bob,
+            charlie,
+            alice_pubkey
+        } = setup();
+
+        // Block time is at 1 second; require it to be in the future.
+        let valid_after: u64 = 60;
+        let valid_before: u64 = u64::MAX;
+        let amount: U256 = 100u64.into();
+        let nonce = fresh_nonce(3);
+
+        let signature = sign_transfer_authorization(
+            &env,
+            &alice,
+            wrapper.address(),
+            TRANSFER_WITH_AUTHORIZATION_TYPEHASH,
+            alice,
+            bob,
+            amount,
+            valid_after,
+            valid_before,
+            &nonce
+        );
+
+        env.set_caller(charlie);
+        assert_eq!(
+            wrapper.try_transfer_with_authorization(
+                alice,
+                bob,
+                amount,
+                valid_after,
+                valid_before,
+                nonce,
+                alice_pubkey,
+                signature
+            ),
+            Err(Error::AuthorizationNotYetValid.into())
+        );
+    }
+
+    #[test]
+    fn transfer_with_authorization_expired() {
+        let Setup {
+            env,
+            mut wrapper,
+            alice,
+            bob,
+            charlie,
+            alice_pubkey
+        } = setup();
+
+        // Move further into the future so that valid_before is in the past.
+        env.advance_block_time(60_000);
+
+        let valid_after: u64 = 0;
+        let valid_before: u64 = 10;
+        let amount: U256 = 100u64.into();
+        let nonce = fresh_nonce(4);
+
+        let signature = sign_transfer_authorization(
+            &env,
+            &alice,
+            wrapper.address(),
+            TRANSFER_WITH_AUTHORIZATION_TYPEHASH,
+            alice,
+            bob,
+            amount,
+            valid_after,
+            valid_before,
+            &nonce
+        );
+
+        env.set_caller(charlie);
+        assert_eq!(
+            wrapper.try_transfer_with_authorization(
+                alice,
+                bob,
+                amount,
+                valid_after,
+                valid_before,
+                nonce,
+                alice_pubkey,
+                signature
+            ),
+            Err(Error::AuthorizationExpired.into())
+        );
+    }
+
+    #[test]
+    fn transfer_with_authorization_invalid_signature() {
+        let Setup {
+            env,
+            mut wrapper,
+            alice,
+            bob,
+            charlie,
+            alice_pubkey
+        } = setup();
+
+        let valid_after: u64 = 0;
+        let valid_before: u64 = u64::MAX;
+        let nonce = fresh_nonce(5);
+
+        // Alice signs for an amount of 100 ...
+        let signature = sign_transfer_authorization(
+            &env,
+            &alice,
+            wrapper.address(),
+            TRANSFER_WITH_AUTHORIZATION_TYPEHASH,
+            alice,
+            bob,
+            U256::from(100u64),
+            valid_after,
+            valid_before,
+            &nonce
+        );
+
+        // ... but charlie submits with a different amount, so the digest the
+        // contract recomputes won't match the signature.
+        env.set_caller(charlie);
+        assert_eq!(
+            wrapper.try_transfer_with_authorization(
+                alice,
+                bob,
+                U256::from(200u64),
+                valid_after,
+                valid_before,
+                nonce,
+                alice_pubkey,
+                signature
+            ),
+            Err(Error::InvalidSignature.into())
+        );
+    }
+
+    #[test]
+    fn transfer_with_authorization_public_key_mismatch() {
+        let Setup {
+            env,
+            mut wrapper,
+            alice,
+            bob,
+            charlie,
+            ..
+        } = setup();
+
+        let valid_after: u64 = 0;
+        let valid_before: u64 = u64::MAX;
+        let amount: U256 = 100u64.into();
+        let nonce = fresh_nonce(6);
+
+        // Sign with bob's key while declaring alice as `from`.
+        let bob_pubkey = env.public_key(&bob);
+        let signature = sign_transfer_authorization(
+            &env,
+            &bob,
+            wrapper.address(),
+            TRANSFER_WITH_AUTHORIZATION_TYPEHASH,
+            alice,
+            bob,
+            amount,
+            valid_after,
+            valid_before,
+            &nonce
+        );
+
+        env.set_caller(charlie);
+        assert_eq!(
+            wrapper.try_transfer_with_authorization(
+                alice,
+                bob,
+                amount,
+                valid_after,
+                valid_before,
+                nonce,
+                bob_pubkey,
+                signature
+            ),
+            Err(Error::InvalidPublicKey.into())
+        );
+    }
+
+    #[test]
+    fn receive_with_authorization_happy_path() {
+        let Setup {
+            env,
+            mut wrapper,
+            alice,
+            bob,
+            alice_pubkey,
+            ..
+        } = setup();
+
+        let amount: U256 = 250u64.into();
+        let valid_after: u64 = 0;
+        let valid_before: u64 = u64::MAX;
+        let nonce = fresh_nonce(7);
+
+        let signature = sign_transfer_authorization(
+            &env,
+            &alice,
+            wrapper.address(),
+            RECEIVE_WITH_AUTHORIZATION_TYPEHASH,
+            alice,
+            bob,
+            amount,
+            valid_after,
+            valid_before,
+            &nonce
+        );
+
+        // Bob (the recipient) must be the caller for receive_with_authorization.
+        env.set_caller(bob);
+        wrapper.receive_with_authorization(
+            alice,
+            bob,
+            amount,
+            valid_after,
+            valid_before,
+            nonce.clone(),
+            alice_pubkey,
+            signature
+        );
+
+        assert_eq!(
+            wrapper.balance_of(&alice),
+            U256::from(INITIAL_SUPPLY) - amount
+        );
+        assert_eq!(wrapper.balance_of(&bob), amount);
+        assert!(wrapper.authorization_state(alice, nonce));
+    }
+
+    #[test]
+    fn receive_with_authorization_wrong_caller_reverts() {
+        let Setup {
+            env,
+            mut wrapper,
+            alice,
+            bob,
+            charlie,
+            alice_pubkey
+        } = setup();
+
+        let amount: U256 = 250u64.into();
+        let valid_after: u64 = 0;
+        let valid_before: u64 = u64::MAX;
+        let nonce = fresh_nonce(8);
+
+        let signature = sign_transfer_authorization(
+            &env,
+            &alice,
+            wrapper.address(),
+            RECEIVE_WITH_AUTHORIZATION_TYPEHASH,
+            alice,
+            bob,
+            amount,
+            valid_after,
+            valid_before,
+            &nonce
+        );
+
+        // Charlie tries to relay even though `to` is bob.
+        env.set_caller(charlie);
+        assert_eq!(
+            wrapper.try_receive_with_authorization(
+                alice,
+                bob,
+                amount,
+                valid_after,
+                valid_before,
+                nonce,
+                alice_pubkey,
+                signature
+            ),
+            Err(Error::InvalidCaller.into())
+        );
+    }
+
+    #[test]
+    fn cancel_authorization_happy_path() {
+        let Setup {
+            env,
+            mut wrapper,
+            alice,
+            bob,
+            charlie,
+            alice_pubkey
+        } = setup();
+
+        let nonce = fresh_nonce(9);
+        let cancel_signature =
+            sign_cancel_authorization(&env, &alice, wrapper.address(), alice, &nonce);
+
+        env.set_caller(charlie);
+        wrapper.cancel_authorization(alice, nonce.clone(), alice_pubkey.clone(), cancel_signature);
+
+        assert!(wrapper.authorization_state(alice, nonce.clone()));
+        assert!(env.emitted_event(
+            &wrapper,
+            AuthorizationCanceled {
+                authorizer: alice,
+                nonce: nonce.clone()
+            }
+        ));
+
+        // A subsequent transfer reusing the cancelled nonce is rejected.
+        let amount: U256 = 1u64.into();
+        let valid_after: u64 = 0;
+        let valid_before: u64 = u64::MAX;
+        let transfer_signature = sign_transfer_authorization(
+            &env,
+            &alice,
+            wrapper.address(),
+            TRANSFER_WITH_AUTHORIZATION_TYPEHASH,
+            alice,
+            bob,
+            amount,
+            valid_after,
+            valid_before,
+            &nonce
+        );
+        assert_eq!(
+            wrapper.try_transfer_with_authorization(
+                alice,
+                bob,
+                amount,
+                valid_after,
+                valid_before,
+                nonce,
+                alice_pubkey,
+                transfer_signature
+            ),
+            Err(Error::NonceAlreadyUsed.into())
+        );
+    }
+
+    #[test]
+    fn cancel_authorization_already_used_reverts() {
+        let Setup {
+            env,
+            mut wrapper,
+            alice,
+            bob,
+            charlie,
+            alice_pubkey
+        } = setup();
+
+        let amount: U256 = 100u64.into();
+        let valid_after: u64 = 0;
+        let valid_before: u64 = u64::MAX;
+        let nonce = fresh_nonce(10);
+
+        // Consume the nonce via a successful transfer first.
+        let transfer_signature = sign_transfer_authorization(
+            &env,
+            &alice,
+            wrapper.address(),
+            TRANSFER_WITH_AUTHORIZATION_TYPEHASH,
+            alice,
+            bob,
+            amount,
+            valid_after,
+            valid_before,
+            &nonce
+        );
+        env.set_caller(charlie);
+        wrapper.transfer_with_authorization(
+            alice,
+            bob,
+            amount,
+            valid_after,
+            valid_before,
+            nonce.clone(),
+            alice_pubkey.clone(),
+            transfer_signature
+        );
+
+        // Cancelling an already-consumed nonce reverts.
+        let cancel_signature =
+            sign_cancel_authorization(&env, &alice, wrapper.address(), alice, &nonce);
+        assert_eq!(
+            wrapper.try_cancel_authorization(alice, nonce, alice_pubkey, cancel_signature),
+            Err(Error::AuthorizationUsed.into())
+        );
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn sign_transfer_authorization(
+        env: &HostEnv,
+        signer: &Address,
+        contract_address: Address,
+        typehash: [u8; 32],
+        from: Address,
+        to: Address,
+        amount: U256,
+        valid_after: u64,
+        valid_before: u64,
+        nonce: &Bytes
+    ) -> Bytes {
+        let mut value_bytes = [0u8; 32];
+        amount.to_big_endian(&mut value_bytes);
+
+        let mut nonce_padded = [0u8; 32];
+        let len = nonce.len().min(32);
+        nonce_padded[..len].copy_from_slice(&nonce[..len]);
+
+        let mut encoded_data = Vec::with_capacity(6 * 32);
+        encoded_data.extend(crate::eip712::encode_address(from));
+        encoded_data.extend(crate::eip712::encode_address(to));
+        encoded_data.extend(casper_eip_712::encode_uint256(value_bytes));
+        encoded_data.extend(casper_eip_712::encode_uint64(valid_after));
+        encoded_data.extend(casper_eip_712::encode_uint64(valid_before));
+        encoded_data.extend(casper_eip_712::encode_bytes32(nonce_padded));
+
+        let domain =
+            crate::eip712::domain_separator(TOKEN_NAME, CHAIN_NAME.to_string(), contract_address);
+        let message_hash = crate::eip712::hash_typed_data(domain, typehash, encoded_data);
+        let message = Bytes::from(message_hash.to_vec());
+
+        env.sign_message(&message, signer)
+    }
+
+    fn sign_cancel_authorization(
+        env: &HostEnv,
+        signer: &Address,
+        contract_address: Address,
+        authorizer: Address,
+        nonce: &Bytes
+    ) -> Bytes {
+        let mut nonce_padded = [0u8; 32];
+        let len = nonce.len().min(32);
+        nonce_padded[..len].copy_from_slice(&nonce[..len]);
+
+        let mut encoded_data = Vec::with_capacity(64);
+        encoded_data.extend(crate::eip712::encode_address(authorizer));
+        encoded_data.extend(casper_eip_712::encode_bytes32(nonce_padded));
+
+        let domain =
+            crate::eip712::domain_separator(TOKEN_NAME, CHAIN_NAME.to_string(), contract_address);
+        let message_hash =
+            crate::eip712::hash_typed_data(domain, CANCEL_AUTHORIZATION_TYPEHASH, encoded_data);
+        let message = Bytes::from(message_hash.to_vec());
+
+        env.sign_message(&message, signer)
+    }
+}
