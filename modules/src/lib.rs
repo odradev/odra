@@ -9,10 +9,13 @@ pub mod cep18;
 pub mod cep18_token;
 pub mod cep95;
 pub mod cep96;
+pub mod eip712;
 pub mod erc1155;
 pub mod erc1155_receiver;
 pub mod erc1155_token;
 pub mod erc20;
+#[cfg(feature = "eip712")]
+pub mod erc3009;
 pub mod erc721;
 pub mod erc721_receiver;
 pub mod erc721_token;

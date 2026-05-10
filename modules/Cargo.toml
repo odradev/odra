@@ -13,6 +13,7 @@ version = { workspace = true }
 [dependencies]
 base64 = { workspace = true }
 odra = { path = "../odra", version = "2.7.0", default-features = false }
+casper-eip-712 = {version = "1.2.0", optional = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 odra-build = { path = "../odra-build", version = "2.7.0" }
@@ -24,8 +25,9 @@ odra-test = { path = "../odra-test", version = "2.7.0" }
 odra-build = { path = "../odra-build", version = "2.7.0" }
 
 [features]
-default = []
+default = ["eip712"]
 disable-allocator = ["odra/disable-allocator"]
+eip712 = ["casper-eip-712"]
 
 [[bin]]
 name = "odra_modules_build_contract"
