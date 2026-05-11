@@ -1,3 +1,4 @@
+#![allow(clippy::too_many_arguments)]
 //! ERC-3009 implementation for Casper, allowing gasless token transfers via off-chain signatures.
 
 use crate::{cep18_token::Cep18, eip712};
@@ -911,7 +912,6 @@ mod tests {
         );
     }
 
-    #[allow(clippy::too_many_arguments)]
     fn sign_transfer_authorization(
         env: &HostEnv,
         signer: &Address,
