@@ -1,5 +1,5 @@
 CARGO_ODRA_GIT_REPO := "https://github.com/odradev/cargo-odra"
-CARGO_ODRA_BRANCH := "feature/wasm-opt-flags"
+CARGO_ODRA_BRANCH := "release/0.1.7"
 BINARYEN_VERSION := "version_125"
 BINARYEN_CHECKSUM := "7c3bc16599c8274a04d34a504fe4be2047884f900e0e2da2f6fb9cd667183be4"
 set dotenv-load := true
