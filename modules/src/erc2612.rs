@@ -104,6 +104,49 @@ impl ERC2612 {
     }
 }
 
+/// Wrapper contract that combines ERC-2612 functionality with a CEP-18 token for testing purposes.
+#[odra::module]
+pub struct ERC2612Wrapper {
+    erc2612: SubModule<ERC2612>,
+    token: SubModule<Cep18>
+}
+
+/// Wrapper contract that combines ERC-2612 functionality with a CEP-18 token for testing purposes.
+/// In a real deployment, the ERC-2612 module would likely be separate and interact with an existing token contract.
+#[odra::module]
+impl ERC2612Wrapper {
+    /// Initializes the wrapper by deploying the ERC-2612 module and the CEP-18 token, and setting up the EIP-712 domain.
+    pub fn init(
+        &mut self,
+        chain_name: String,
+        symbol: String,
+        name: String,
+        decimals: u8,
+        initial_supply: U256
+    ) {
+        self.erc2612.init(chain_name);
+        self.token.init(symbol, name, decimals, initial_supply);
+    }
+
+    delegate! {
+        to self.erc2612 {
+            fn permit(
+                &mut self,
+                owner: Address,
+                spender: Address,
+                value: U256,
+                deadline: u64,
+                public_key: PublicKey,
+                signature: Bytes
+            );
+        }
+
+        to self.token {
+            fn allowance(&self, owner: &Address, spender: &Address) -> U256;
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -115,45 +158,6 @@ mod tests {
     const TOKEN_DECIMALS: u8 = 8;
     const INITIAL_SUPPLY: u64 = 1_000_000;
     const CHAIN_NAME: &str = "casper-test";
-
-    #[odra::module]
-    pub struct ERC2612Wrapper {
-        erc2612: SubModule<ERC2612>,
-        token: SubModule<Cep18>
-    }
-
-    #[odra::module]
-    impl ERC2612Wrapper {
-        pub fn init(
-            &mut self,
-            chain_name: String,
-            symbol: String,
-            name: String,
-            decimals: u8,
-            initial_supply: U256
-        ) {
-            self.erc2612.init(chain_name);
-            self.token.init(symbol, name, decimals, initial_supply);
-        }
-
-        delegate! {
-            to self.erc2612 {
-                fn permit(
-                    &mut self,
-                    owner: Address,
-                    spender: Address,
-                    value: U256,
-                    deadline: u64,
-                    public_key: PublicKey,
-                    signature: Bytes
-                );
-            }
-        }
-
-        pub fn allowance(&self, owner: &Address, spender: &Address) -> U256 {
-            self.token.allowance(owner, spender)
-        }
-    }
 
     struct Setup {
         env: HostEnv,

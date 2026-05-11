@@ -282,6 +282,70 @@ impl ERC3009 {
     }
 }
 
+/// Wrapper contract that combines ERC-3009 functionality with a CEP-18 token for testing purposes.
+#[odra::module]
+pub struct ERC3009Wrapper {
+    erc3009: SubModule<ERC3009>,
+    token: SubModule<Cep18>
+}
+
+/// Wrapper contract that combines ERC-3009 functionality with a CEP-18 token for testing purposes.
+/// In a real deployment, the ERC-3009 module would likely be separate and interact with an existing token contract.
+#[odra::module]
+impl ERC3009Wrapper {
+    /// Initializes the wrapper by deploying the ERC-3009 module and the CEP-18 token, and setting up the EIP-712 domain.
+    pub fn init(
+        &mut self,
+        chain_name: String,
+        symbol: String,
+        name: String,
+        decimals: u8,
+        initial_supply: U256
+    ) {
+        self.erc3009.init(chain_name);
+        self.token.init(symbol, name, decimals, initial_supply);
+    }
+
+    delegate! {
+        to self.erc3009 {
+            fn authorization_state(&self, authorizer: Address, nonce: Bytes) -> bool;
+            fn transfer_with_authorization(
+                &mut self,
+                from: Address,
+                to: Address,
+                amount: U256,
+                valid_after: u64,
+                valid_before: u64,
+                nonce: Bytes,
+                public_key: PublicKey,
+                signature: Bytes
+            );
+            fn receive_with_authorization(
+                &mut self,
+                from: Address,
+                to: Address,
+                amount: U256,
+                valid_after: u64,
+                valid_before: u64,
+                nonce: Bytes,
+                public_key: PublicKey,
+                signature: Bytes
+            );
+            fn cancel_authorization(
+                &mut self,
+                authorizer: Address,
+                nonce: Bytes,
+                public_key: PublicKey,
+                signature: Bytes
+            );
+        }
+
+        to self.token {
+            fn balance_of(&self, address: &Address) -> U256;
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -292,66 +356,6 @@ mod tests {
     const TOKEN_DECIMALS: u8 = 8;
     const INITIAL_SUPPLY: u64 = 1_000_000;
     const CHAIN_NAME: &str = "casper-test";
-
-    #[odra::module]
-    pub struct ERC3009Wrapper {
-        erc3009: SubModule<ERC3009>,
-        token: SubModule<Cep18>
-    }
-
-    #[odra::module]
-    impl ERC3009Wrapper {
-        pub fn init(
-            &mut self,
-            chain_name: String,
-            symbol: String,
-            name: String,
-            decimals: u8,
-            initial_supply: U256
-        ) {
-            self.erc3009.init(chain_name);
-            self.token.init(symbol, name, decimals, initial_supply);
-        }
-
-        delegate! {
-            to self.erc3009 {
-                fn authorization_state(&self, authorizer: Address, nonce: Bytes) -> bool;
-                fn transfer_with_authorization(
-                    &mut self,
-                    from: Address,
-                    to: Address,
-                    amount: U256,
-                    valid_after: u64,
-                    valid_before: u64,
-                    nonce: Bytes,
-                    public_key: PublicKey,
-                    signature: Bytes
-                );
-                fn receive_with_authorization(
-                    &mut self,
-                    from: Address,
-                    to: Address,
-                    amount: U256,
-                    valid_after: u64,
-                    valid_before: u64,
-                    nonce: Bytes,
-                    public_key: PublicKey,
-                    signature: Bytes
-                );
-                fn cancel_authorization(
-                    &mut self,
-                    authorizer: Address,
-                    nonce: Bytes,
-                    public_key: PublicKey,
-                    signature: Bytes
-                );
-            }
-        }
-
-        pub fn balance_of(&self, address: &Address) -> U256 {
-            self.token.balance_of(address)
-        }
-    }
 
     struct Setup {
         env: HostEnv,
