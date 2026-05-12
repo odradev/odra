@@ -3,7 +3,7 @@
 use alloc::collections::BTreeMap;
 use odra::{
     casper_types::{
-        bytesrepr::{Bytes, ToBytes},
+        bytesrepr::Bytes,
         U256
     },
     named_keys::{

@@ -1,6 +1,5 @@
 #![allow(missing_docs)]
 
-use odra::casper_types::bytesrepr::ToBytes;
 use odra::casper_types::U256;
 use odra::named_keys::{
     base64_encoded_key_value_storage, compound_key_value_storage, single_value_storage

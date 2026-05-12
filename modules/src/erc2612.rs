@@ -1,9 +1,10 @@
+#![allow(missing_docs)]
+
 //! ERC-2612 implementation for Casper, allowing token approvals via off-chain signatures.
 //!
 use casper_eip_712::DomainSeparator;
 use odra::{
-    casper_types::{bytesrepr::Bytes, PublicKey, U256},
-    prelude::*
+    casper_types::{PublicKey, U256, bytesrepr::Bytes}, named_keys::{base64_encoded_key_value_storage, single_value_storage}, prelude::*
 };
 
 use crate::{cep18_token::Cep18, eip712};
@@ -23,11 +24,29 @@ pub enum Error {
     PermitExpired = 36_001
 }
 
+/// Storage defined as named keys.
+const CHAIN_NAME_KEY: &str = "chain_name";
+const PERMIT_NONCES_KEY: &str = "permit_nonces";
+
+single_value_storage!(
+    ERC2612ChainNameStorage,
+    String,
+    CHAIN_NAME_KEY,
+    ExecutionError::KeyNotFound
+);
+
+base64_encoded_key_value_storage!(
+    ERC2612PermitNoncesStorage,
+    PERMIT_NONCES_KEY,
+    Address,
+    U256
+);
+
 /// A module implementing EIP-2612 permit functionality for a CEP-18 token.
 #[odra::module]
 pub struct ERC2612 {
-    permit_nonces: Mapping<Address, U256>,
-    chain_name: Var<String>,
+    permit_nonces: SubModule<ERC2612PermitNoncesStorage>,
+    chain_name: SubModule<ERC2612ChainNameStorage>,
     token: SubModule<Cep18>
 }
 
@@ -36,6 +55,7 @@ impl ERC2612 {
     /// Initializes the module with the given chain name (e.g., "Casper Mainnet").
     pub fn init(&mut self, chain_name: String) {
         self.chain_name.set(chain_name);
+        self.permit_nonces.init();
     }
 
     /// Returns the current nonce for a given owner address, which should be included in the permit signature.
@@ -52,7 +72,7 @@ impl ERC2612 {
             self.revert(Error::PermitExpired);
         }
 
-        let nonce = self.permit_nonces.get_or_default(&owner);
+        let nonce = self.permit_nonces.get(&owner).unwrap_or_default();
         let message_hash = self.message_hash(owner, spender, value, nonce, deadline);
         let message = Bytes::from(message_hash.to_vec());
 
@@ -71,7 +91,7 @@ impl ERC2612 {
     fn domain_separator(&self) -> DomainSeparator {
         let self_address = self.env().self_address();
         let name = self.token.name();
-        let chain_id = self.chain_name.get().unwrap_or_revert(self);
+        let chain_id = self.chain_name.get();
         crate::eip712::domain_separator(&name, chain_id, self_address)
     }
 

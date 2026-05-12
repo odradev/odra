@@ -1,11 +1,11 @@
 #![allow(clippy::too_many_arguments)]
+#![allow(missing_docs)]
 //! ERC-3009 implementation for Casper, allowing gasless token transfers via off-chain signatures.
 
 use crate::{cep18_token::Cep18, eip712};
 use casper_eip_712::DomainSeparator;
 use odra::{
-    casper_types::{bytesrepr::Bytes, PublicKey, U256},
-    prelude::*
+    casper_types::{PublicKey, U256, bytesrepr::Bytes}, named_keys::{compound_key_value_storage, single_value_storage}, prelude::*
 };
 
 // keccak256("TransferWithAuthorization(address from,address to,uint256 value,uint256 validAfter,uint256 validBefore,bytes32 nonce)")
@@ -59,11 +59,31 @@ pub enum Error {
     AuthorizationUsed = 37_006
 }
 
+/// Storage defined as named keys.
+const CHAIN_NAME_KEY: &str = "chain_name";
+const USED_NONCES_KEY: &str = "used_nonces";
+
+single_value_storage!(
+    ERC3009ChainNameStorage,
+    String,
+    CHAIN_NAME_KEY,
+    ExecutionError::KeyNotFound
+);
+
+compound_key_value_storage!(
+    ERC3009UsedNoncesStorage,
+    USED_NONCES_KEY,
+    Address,
+    Bytes,
+    bool
+);
+
+
 /// ERC-3009 implementation for Casper, allowing gasless token transfers via off-chain signatures.
 #[odra::module(events = [AuthorizationUsed, AuthorizationCanceled], errors = Error)]
 pub struct ERC3009 {
-    used_nonces: Mapping<(Address, Bytes), bool>,
-    chain_name: Var<String>,
+    used_nonces: SubModule<ERC3009UsedNoncesStorage>,
+    chain_name: SubModule<ERC3009ChainNameStorage>,
     token: SubModule<Cep18>
 }
 
@@ -72,11 +92,12 @@ impl ERC3009 {
     /// Initializes the module with the given chain name (used in EIP-712 domain) and the address of the CEP-18 token contract.
     pub fn init(&mut self, chain_name: String) {
         self.chain_name.set(chain_name);
+        self.used_nonces.init();
     }
 
     /// Check the authorization state for a given authorizer and nonce.
     pub fn authorization_state(&self, authorizer: Address, nonce: Bytes) -> bool {
-        self.used_nonces.get_or_default(&(authorizer, nonce))
+        self.used_nonces.get_or_default(&authorizer, &nonce)
     }
 
     /// Authorizes a transfer from `from` to `to` if the signature is valid and the authorization is not expired or used.
@@ -154,7 +175,7 @@ impl ERC3009 {
             self.env().revert(Error::InvalidSignature);
         }
 
-        self.used_nonces.set(&(authorizer, nonce.clone()), true);
+        self.used_nonces.set(&authorizer, &nonce, true);
         self.env()
             .emit_event(AuthorizationCanceled { authorizer, nonce });
     }
@@ -174,7 +195,7 @@ impl ERC3009 {
         signature: Bytes
     ) {
         // 1. Replay protection
-        if self.used_nonces.get_or_default(&(from, nonce.clone())) {
+        if self.used_nonces.get_or_default(&from, &nonce) {
             self.env().revert(Error::NonceAlreadyUsed);
         }
 
@@ -216,7 +237,7 @@ impl ERC3009 {
         }
 
         // 7. Mark nonce as used
-        self.used_nonces.set(&(from, nonce.clone()), true);
+        self.used_nonces.set(&from, &nonce, true);
 
         // 8. Emit event
         self.env().emit_event(AuthorizationUsed {
@@ -276,7 +297,7 @@ impl ERC3009 {
     fn domain_separator(&self) -> DomainSeparator {
         let self_address = self.env().self_address();
         let name = self.token.name();
-        let chain_id = self.chain_name.get().unwrap_or_revert(self);
+        let chain_id = self.chain_name.get();
         eip712::domain_separator(&name, chain_id, self_address)
     }
 }

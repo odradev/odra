@@ -95,8 +95,8 @@ macro_rules! base64_encoded_key_value_storage {
             #[inline]
             fn key<R: odra::module::Revertible>(rev: &R, key: &$key) -> String {
                 use base64::prelude::{Engine, BASE64_STANDARD};
-
-                let preimage = key.to_bytes().unwrap_or_revert(rev);
+                let key = odra::casper_types::bytesrepr::ToBytes::to_bytes(key);
+                let preimage = key.unwrap_or_revert(rev);
                 BASE64_STANDARD.encode(preimage)
             }
         }
@@ -119,8 +119,10 @@ macro_rules! compound_key_value_storage {
             pub fn set(&self, key1: &$k1_type, key2: &$k2_type, value: $value_type) {
                 let mut key = [0u8; 64];
                 let mut preimage = odra::prelude::Vec::new();
-                preimage.extend_from_slice(&key1.to_bytes().unwrap_or_revert(self));
-                preimage.extend_from_slice(&key2.to_bytes().unwrap_or_revert(self));
+                let key1 = odra::casper_types::bytesrepr::ToBytes::to_bytes(key1);
+                let key2 = odra::casper_types::bytesrepr::ToBytes::to_bytes(key2);
+                preimage.extend_from_slice(&key1.unwrap_or_revert(self));
+                preimage.extend_from_slice(&key2.unwrap_or_revert(self));
 
                 let env = self.env();
                 let key_bytes = env.hash(&preimage);
@@ -131,8 +133,10 @@ macro_rules! compound_key_value_storage {
             pub fn get_or_default(&self, key1: &$k1_type, key2: &$k2_type) -> $value_type {
                 let mut key = [0u8; 64];
                 let mut preimage = odra::prelude::Vec::new();
-                preimage.extend_from_slice(&key1.to_bytes().unwrap_or_revert(self));
-                preimage.extend_from_slice(&key2.to_bytes().unwrap_or_revert(self));
+                let key1 = odra::casper_types::bytesrepr::ToBytes::to_bytes(key1);
+                let key2 = odra::casper_types::bytesrepr::ToBytes::to_bytes(key2);
+                preimage.extend_from_slice(&key1.unwrap_or_revert(self));
+                preimage.extend_from_slice(&key2.unwrap_or_revert(self));
 
                 let env = self.env();
                 let key_bytes = env.hash(&preimage);
