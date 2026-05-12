@@ -111,3 +111,6 @@ fqn = "features::many_fields::UpgradedContract"
 
 [[contracts]]
 fqn = "features::many_fields::ManyFieldsContract"
+
+[[contracts]]
+fqn = "contracts::gasless_cep18::GaslessCep18"

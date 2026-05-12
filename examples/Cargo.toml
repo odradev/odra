@@ -13,8 +13,8 @@ version = { workspace = true }
 [dependencies]
 odra = { path = "../odra", features = [], default-features = false }
 odra-casper-livenet-env = { path = "../odra-casper/livenet-env", optional = true }
-odra-modules = { path = "../modules", features = [], default-features = false }
-
+odra-modules = { path = "../modules", features = ["eip712"], default-features = false }
+casper-eip-712 = { version = "1.2.0", optional = true }
 sha3 = { workspace = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
@@ -31,6 +31,7 @@ odra-build = { path = "../odra-build" }
 [features]
 default = []
 livenet = ["odra-casper-livenet-env"]
+eip712 = ["odra-modules/eip712", "casper-eip-712"]
 
 [[bin]]
 name = "odra_examples_build_contract"
@@ -92,6 +93,11 @@ path = "bin/odra_cli.rs"
 name = "factory_example"
 path = "bin/factory_example.rs"
 required-features = ["livenet"]
+
+[[bin]]
+name = "gassless_example"
+path = "bin/gassless_payment.rs"
+required-features = ["livenet", "eip712"]
 
 [lints.rust]
 missing_docs = "warn"
