@@ -44,21 +44,19 @@ pub struct AuthorizationCanceled {
 #[odra::odra_error]
 pub enum Error {
     /// The provided nonce has already been used or canceled.
-    NonceAlreadyUsed = 1,
+    NonceAlreadyUsed = 37_000,
     /// The current block time is past the `valid_before` timestamp.
-    AuthorizationExpired = 2,
+    AuthorizationExpired = 37_001,
     /// The current block time is before the `valid_after` timestamp.
-    AuthorizationNotYetValid = 3,
+    AuthorizationNotYetValid = 37_002,
     /// The provided signature is invalid.
-    InvalidSignature = 4,
-    /// The provided public key does not match the `from` address.
-    InvalidFromAddress = 5,
+    InvalidSignature = 37_003,
     /// The provided public key is invalid.
-    InvalidPublicKey = 6,
+    InvalidPublicKey = 37_004,
     /// The caller of `receive_with_authorization` is not the `to` address.
-    InvalidCaller = 7,
+    InvalidCaller = 37_005,
     /// The authorization has already been used (for cancellation).
-    AuthorizationUsed = 8
+    AuthorizationUsed = 37_006
 }
 
 /// ERC-3009 implementation for Casper, allowing gasless token transfers via off-chain signatures.

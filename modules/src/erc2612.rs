@@ -18,13 +18,9 @@ const PERMIT_TYPEHASH: [u8; 32] = [
 #[odra::odra_error]
 pub enum Error {
     /// The provided signature is invalid.
-    InvalidSignature = 1,
-    /// The provided public key does not match the `owner` address.
-    InvalidOwnerAddress = 2,
-    /// The provided public key is invalid.
-    InvalidPublicKey = 3,
+    InvalidSignature = 36_000,
     /// The current block time is past the `deadline` timestamp.
-    PermitExpired = 4
+    PermitExpired = 36_001
 }
 
 /// A module implementing EIP-2612 permit functionality for a CEP-18 token.
