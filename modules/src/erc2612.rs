@@ -4,7 +4,9 @@
 //!
 use casper_eip_712::DomainSeparator;
 use odra::{
-    casper_types::{PublicKey, U256, bytesrepr::Bytes}, named_keys::{base64_encoded_key_value_storage, single_value_storage}, prelude::*
+    casper_types::{bytesrepr::Bytes, PublicKey, U256},
+    named_keys::{base64_encoded_key_value_storage, single_value_storage},
+    prelude::*
 };
 
 use crate::{cep18_token::Cep18, eip712};
@@ -21,12 +23,17 @@ pub enum Error {
     /// The provided signature is invalid.
     InvalidSignature = 36_000,
     /// The current block time is past the `deadline` timestamp.
-    PermitExpired = 36_001
+    PermitExpired = 36_001,
+    /// The provided public key does not correspond to the `owner` address.
+    InvalidPublicKey = 36_002
 }
 
 /// Storage defined as named keys.
 const CHAIN_NAME_KEY: &str = "chain_name";
 const PERMIT_NONCES_KEY: &str = "permit_nonces";
+
+/// Domain separator version.
+const DOMAIN_VERSION: &str = "1";
 
 single_value_storage!(
     ERC2612ChainNameStorage,
@@ -35,12 +42,7 @@ single_value_storage!(
     ExecutionError::KeyNotFound
 );
 
-base64_encoded_key_value_storage!(
-    ERC2612PermitNoncesStorage,
-    PERMIT_NONCES_KEY,
-    Address,
-    U256
-);
+base64_encoded_key_value_storage!(ERC2612PermitNoncesStorage, PERMIT_NONCES_KEY, Address, U256);
 
 /// A module implementing EIP-2612 permit functionality for a CEP-18 token.
 #[odra::module]
@@ -72,6 +74,10 @@ impl ERC2612 {
             self.revert(Error::PermitExpired);
         }
 
+        if Address::from(public_key.clone()) != owner {
+            self.revert(Error::InvalidPublicKey);
+        }
+
         let nonce = self.permit_nonces.get(&owner).unwrap_or_default();
         let message_hash = self.message_hash(owner, spender, value, nonce, deadline);
         let message = Bytes::from(message_hash.to_vec());
@@ -92,7 +98,7 @@ impl ERC2612 {
         let self_address = self.env().self_address();
         let name = self.token.name();
         let chain_id = self.chain_name.get();
-        crate::eip712::domain_separator(&name, chain_id, self_address)
+        crate::eip712::domain_separator(&name, DOMAIN_VERSION, chain_id, self_address)
     }
 
     fn message_hash(
@@ -471,6 +477,49 @@ mod tests {
         );
     }
 
+    #[test]
+    fn permit_with_mismatched_public_key_reverts() {
+        let Setup {
+            env,
+            mut wrapper,
+            alice,
+            bob,
+            charlie,
+            ..
+        } = setup();
+
+        let attacker = env.get_account(3);
+        let attacker_pubkey = env.public_key(&attacker);
+
+        let value: U256 = 500u64.into();
+        let deadline: u64 = u64::MAX;
+        let nonce: U256 = U256::zero();
+
+        // Attacker signs a permit message that names alice as the owner,
+        // using their own keypair.
+        let signature = sign_permit(
+            &env,
+            &attacker,
+            wrapper.address(),
+            alice,
+            bob,
+            value,
+            nonce,
+            deadline
+        );
+
+        // Submitting with owner=alice but public_key=attacker_pubkey must fail,
+        // even though the signature itself verifies against the attacker's key.
+        env.set_caller(charlie);
+        assert_eq!(
+            wrapper.try_permit(alice, bob, value, deadline, attacker_pubkey, signature),
+            Err(Error::InvalidPublicKey.into())
+        );
+
+        // Allowance must remain unchanged.
+        assert_eq!(wrapper.allowance(&alice, &bob), U256::zero());
+    }
+
     #[allow(clippy::too_many_arguments)]
     fn sign_permit(
         env: &HostEnv,
@@ -494,8 +543,12 @@ mod tests {
         encoded_data.extend(casper_eip_712::encode_uint256(nonce_bytes));
         encoded_data.extend(casper_eip_712::encode_uint64(deadline));
 
-        let domain =
-            crate::eip712::domain_separator(TOKEN_NAME, CHAIN_NAME.to_string(), contract_address);
+        let domain = crate::eip712::domain_separator(
+            TOKEN_NAME,
+            DOMAIN_VERSION,
+            CHAIN_NAME.to_string(),
+            contract_address
+        );
         let message_hash = crate::eip712::hash_typed_data(domain, PERMIT_TYPEHASH, encoded_data);
         let message = Bytes::from(message_hash.to_vec());
 

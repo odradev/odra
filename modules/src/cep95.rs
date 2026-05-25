@@ -2,10 +2,7 @@
 
 use alloc::collections::BTreeMap;
 use odra::{
-    casper_types::{
-        bytesrepr::Bytes,
-        U256
-    },
+    casper_types::{bytesrepr::Bytes, U256},
     named_keys::{
         base64_encoded_key_value_storage, compound_key_value_storage, single_value_storage
     },

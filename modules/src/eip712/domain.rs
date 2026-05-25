@@ -2,11 +2,13 @@ use odra::prelude::*;
 
 pub(crate) fn domain_separator(
     name: &str,
+    version: &str,
     chain_id: String,
     contract_address: Address
 ) -> casper_eip_712::DomainSeparator {
     casper_eip_712::DomainBuilder::new()
         .name(name)
+        .version(version)
         .custom_field(
             "chain_id",
             casper_eip_712::DomainFieldValue::String(chain_id)

@@ -5,7 +5,9 @@
 use crate::{cep18_token::Cep18, eip712};
 use casper_eip_712::DomainSeparator;
 use odra::{
-    casper_types::{PublicKey, U256, bytesrepr::Bytes}, named_keys::{compound_key_value_storage, single_value_storage}, prelude::*
+    casper_types::{bytesrepr::Bytes, PublicKey, U256},
+    named_keys::{compound_key_value_storage, single_value_storage},
+    prelude::*
 };
 
 // keccak256("TransferWithAuthorization(address from,address to,uint256 value,uint256 validAfter,uint256 validBefore,bytes32 nonce)")
@@ -63,6 +65,9 @@ pub enum Error {
 const CHAIN_NAME_KEY: &str = "chain_name";
 const USED_NONCES_KEY: &str = "used_nonces";
 
+/// Domain separator version.
+const DOMAIN_VERSION: &str = "1";
+
 single_value_storage!(
     ERC3009ChainNameStorage,
     String,
@@ -77,7 +82,6 @@ compound_key_value_storage!(
     Bytes,
     bool
 );
-
 
 /// ERC-3009 implementation for Casper, allowing gasless token transfers via off-chain signatures.
 #[odra::module(events = [AuthorizationUsed, AuthorizationCanceled], errors = Error)]
@@ -165,6 +169,10 @@ impl ERC3009 {
     ) {
         if self.authorization_state(authorizer, nonce.clone()) {
             self.env().revert(Error::AuthorizationUsed);
+        }
+
+        if Address::from(public_key.clone()) != authorizer {
+            self.env().revert(Error::InvalidPublicKey);
         }
 
         let message = self.build_cancel_message(authorizer, &nonce);
@@ -298,7 +306,7 @@ impl ERC3009 {
         let self_address = self.env().self_address();
         let name = self.token.name();
         let chain_id = self.chain_name.get();
-        eip712::domain_separator(&name, chain_id, self_address)
+        eip712::domain_separator(&name, DOMAIN_VERSION, chain_id, self_address)
     }
 }
 
@@ -931,6 +939,37 @@ mod tests {
         );
     }
 
+    #[test]
+    fn cancel_authorization_with_mismatched_public_key_reverts() {
+        let Setup {
+            env,
+            mut wrapper,
+            alice,
+            bob,
+            charlie,
+            ..
+        } = setup();
+
+        let nonce = fresh_nonce(11);
+
+        // Bob signs a cancel message that names alice as the authorizer,
+        // using his own keypair.
+        let bob_pubkey = env.public_key(&bob);
+        let cancel_signature =
+            sign_cancel_authorization(&env, &bob, wrapper.address(), alice, &nonce);
+
+        // Submitting with authorizer=alice but public_key=bob_pubkey must fail,
+        // otherwise an attacker could burn alice's nonces.
+        env.set_caller(charlie);
+        assert_eq!(
+            wrapper.try_cancel_authorization(alice, nonce.clone(), bob_pubkey, cancel_signature),
+            Err(Error::InvalidPublicKey.into())
+        );
+
+        // The nonce must remain unused so alice's pending authorization is not bricked.
+        assert!(!wrapper.authorization_state(alice, nonce));
+    }
+
     fn sign_transfer_authorization(
         env: &HostEnv,
         signer: &Address,
@@ -958,8 +997,12 @@ mod tests {
         encoded_data.extend(casper_eip_712::encode_uint64(valid_before));
         encoded_data.extend(casper_eip_712::encode_bytes32(nonce_padded));
 
-        let domain =
-            crate::eip712::domain_separator(TOKEN_NAME, CHAIN_NAME.to_string(), contract_address);
+        let domain = crate::eip712::domain_separator(
+            TOKEN_NAME,
+            DOMAIN_VERSION,
+            CHAIN_NAME.to_string(),
+            contract_address
+        );
         let message_hash = crate::eip712::hash_typed_data(domain, typehash, encoded_data);
         let message = Bytes::from(message_hash.to_vec());
 
@@ -981,8 +1024,12 @@ mod tests {
         encoded_data.extend(crate::eip712::encode_address(authorizer));
         encoded_data.extend(casper_eip_712::encode_bytes32(nonce_padded));
 
-        let domain =
-            crate::eip712::domain_separator(TOKEN_NAME, CHAIN_NAME.to_string(), contract_address);
+        let domain = crate::eip712::domain_separator(
+            TOKEN_NAME,
+            DOMAIN_VERSION,
+            CHAIN_NAME.to_string(),
+            contract_address
+        );
         let message_hash =
             crate::eip712::hash_typed_data(domain, CANCEL_AUTHORIZATION_TYPEHASH, encoded_data);
         let message = Bytes::from(message_hash.to_vec());
