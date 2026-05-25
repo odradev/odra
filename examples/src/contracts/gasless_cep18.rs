@@ -4,21 +4,21 @@ use odra::casper_types::bytesrepr::Bytes;
 use odra::casper_types::{PublicKey, U256};
 use odra::prelude::*;
 use odra_modules::cep18_token::Cep18;
-use odra_modules::erc2612::ERC2612;
-use odra_modules::erc3009::ERC3009;
+use odra_modules::cep2612::CEP2612;
+use odra_modules::cep3009::CEP3009;
 
 #[odra::module]
 pub struct GaslessCep18 {
     token: SubModule<Cep18>,
-    erc3009: SubModule<ERC3009>,
-    erc2612: SubModule<ERC2612>
+    cep3009: SubModule<CEP3009>,
+    cep2612: SubModule<CEP2612>
 }
 
 #[odra::module]
 impl GaslessCep18 {
     pub fn init(&mut self, chain_name: String) {
-        self.erc3009.init(chain_name.clone());
-        self.erc2612.init(chain_name);
+        self.cep3009.init(chain_name.clone());
+        self.cep2612.init(chain_name);
         self.token.init(
             "USDC".to_string(),
             "USDC".to_string(),
@@ -42,13 +42,13 @@ impl GaslessCep18 {
             fn increase_allowance(&mut self, spender: &Address, inc_by: &U256);
         }
 
-        to self.erc3009 {
+        to self.cep3009 {
             fn authorization_state(&self, authorizer: Address, nonce: Bytes) -> bool;
             fn transfer_with_authorization(&mut self, from: Address, to: Address, amount: U256, valid_after: u64, valid_before: u64, nonce: Bytes, public_key: PublicKey, signature: Bytes);
             fn receive_with_authorization(&mut self, from: Address, to: Address, amount: U256, valid_after: u64, valid_before: u64, nonce: Bytes, public_key: PublicKey, signature: Bytes);
         }
 
-        to self.erc2612 {
+        to self.cep2612 {
             fn permit(&mut self, owner: Address, spender: Address, value: U256, deadline: u64, public_key: PublicKey, signature: Bytes);
         }
     }

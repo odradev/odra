@@ -69,14 +69,14 @@ const USED_NONCES_KEY: &str = "used_nonces";
 const DOMAIN_VERSION: &str = "1";
 
 single_value_storage!(
-    ERC3009ChainNameStorage,
+    CEP3009ChainNameStorage,
     String,
     CHAIN_NAME_KEY,
     ExecutionError::KeyNotFound
 );
 
 compound_key_value_storage!(
-    ERC3009UsedNoncesStorage,
+    CEP3009UsedNoncesStorage,
     USED_NONCES_KEY,
     Address,
     Bytes,
@@ -85,14 +85,14 @@ compound_key_value_storage!(
 
 /// ERC-3009 implementation for Casper, allowing gasless token transfers via off-chain signatures.
 #[odra::module(events = [AuthorizationUsed, AuthorizationCanceled], errors = Error)]
-pub struct ERC3009 {
-    used_nonces: SubModule<ERC3009UsedNoncesStorage>,
-    chain_name: SubModule<ERC3009ChainNameStorage>,
+pub struct CEP3009 {
+    used_nonces: SubModule<CEP3009UsedNoncesStorage>,
+    chain_name: SubModule<CEP3009ChainNameStorage>,
     token: SubModule<Cep18>
 }
 
 #[odra::module]
-impl ERC3009 {
+impl CEP3009 {
     /// Initializes the module with the given chain name (used in EIP-712 domain) and the address of the CEP-18 token contract.
     pub fn init(&mut self, chain_name: String) {
         self.chain_name.set(chain_name);
@@ -189,7 +189,7 @@ impl ERC3009 {
     }
 }
 
-impl ERC3009 {
+impl CEP3009 {
     fn raw_transfer_with_authorization(
         &mut self,
         typehash: [u8; 32],
@@ -312,15 +312,15 @@ impl ERC3009 {
 
 /// Wrapper contract that combines ERC-3009 functionality with a CEP-18 token for testing purposes.
 #[odra::module]
-pub struct ERC3009Wrapper {
-    erc3009: SubModule<ERC3009>,
+pub struct CEP3009Wrapper {
+    cep3009: SubModule<CEP3009>,
     token: SubModule<Cep18>
 }
 
 /// Wrapper contract that combines ERC-3009 functionality with a CEP-18 token for testing purposes.
 /// In a real deployment, the ERC-3009 module would likely be separate and interact with an existing token contract.
 #[odra::module]
-impl ERC3009Wrapper {
+impl CEP3009Wrapper {
     /// Initializes the wrapper by deploying the ERC-3009 module and the CEP-18 token, and setting up the EIP-712 domain.
     pub fn init(
         &mut self,
@@ -330,12 +330,12 @@ impl ERC3009Wrapper {
         decimals: u8,
         initial_supply: U256
     ) {
-        self.erc3009.init(chain_name);
+        self.cep3009.init(chain_name);
         self.token.init(symbol, name, decimals, initial_supply);
     }
 
     delegate! {
-        to self.erc3009 {
+        to self.cep3009 {
             fn authorization_state(&self, authorizer: Address, nonce: Bytes) -> bool;
             fn transfer_with_authorization(
                 &mut self,
@@ -387,7 +387,7 @@ mod tests {
 
     struct Setup {
         env: HostEnv,
-        wrapper: ERC3009WrapperHostRef,
+        wrapper: CEP3009WrapperHostRef,
         alice: Address,
         bob: Address,
         charlie: Address,
@@ -403,9 +403,9 @@ mod tests {
         let charlie = env.get_account(2);
         let alice_pubkey = env.public_key(&alice);
 
-        let wrapper = ERC3009Wrapper::deploy(
+        let wrapper = CEP3009Wrapper::deploy(
             &env,
-            ERC3009WrapperInitArgs {
+            CEP3009WrapperInitArgs {
                 chain_name: CHAIN_NAME.to_string(),
                 symbol: TOKEN_SYMBOL.to_string(),
                 name: TOKEN_NAME.to_string(),

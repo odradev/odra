@@ -36,24 +36,24 @@ const PERMIT_NONCES_KEY: &str = "permit_nonces";
 const DOMAIN_VERSION: &str = "1";
 
 single_value_storage!(
-    ERC2612ChainNameStorage,
+    CEP2612ChainNameStorage,
     String,
     CHAIN_NAME_KEY,
     ExecutionError::KeyNotFound
 );
 
-base64_encoded_key_value_storage!(ERC2612PermitNoncesStorage, PERMIT_NONCES_KEY, Address, U256);
+base64_encoded_key_value_storage!(CEP2612PermitNoncesStorage, PERMIT_NONCES_KEY, Address, U256);
 
 /// A module implementing EIP-2612 permit functionality for a CEP-18 token.
 #[odra::module]
-pub struct ERC2612 {
-    permit_nonces: SubModule<ERC2612PermitNoncesStorage>,
-    chain_name: SubModule<ERC2612ChainNameStorage>,
+pub struct CEP2612 {
+    permit_nonces: SubModule<CEP2612PermitNoncesStorage>,
+    chain_name: SubModule<CEP2612ChainNameStorage>,
     token: SubModule<Cep18>
 }
 
 #[odra::module]
-impl ERC2612 {
+impl CEP2612 {
     /// Initializes the module with the given chain name (e.g., "Casper Mainnet").
     pub fn init(&mut self, chain_name: String) {
         self.chain_name.set(chain_name);
@@ -128,15 +128,15 @@ impl ERC2612 {
 
 /// Wrapper contract that combines ERC-2612 functionality with a CEP-18 token for testing purposes.
 #[odra::module]
-pub struct ERC2612Wrapper {
-    erc2612: SubModule<ERC2612>,
+pub struct CEP2612Wrapper {
+    cep2612: SubModule<CEP2612>,
     token: SubModule<Cep18>
 }
 
 /// Wrapper contract that combines ERC-2612 functionality with a CEP-18 token for testing purposes.
 /// In a real deployment, the ERC-2612 module would likely be separate and interact with an existing token contract.
 #[odra::module]
-impl ERC2612Wrapper {
+impl CEP2612Wrapper {
     /// Initializes the wrapper by deploying the ERC-2612 module and the CEP-18 token, and setting up the EIP-712 domain.
     pub fn init(
         &mut self,
@@ -146,12 +146,12 @@ impl ERC2612Wrapper {
         decimals: u8,
         initial_supply: U256
     ) {
-        self.erc2612.init(chain_name);
+        self.cep2612.init(chain_name);
         self.token.init(symbol, name, decimals, initial_supply);
     }
 
     delegate! {
-        to self.erc2612 {
+        to self.cep2612 {
             fn permit(
                 &mut self,
                 owner: Address,
@@ -183,7 +183,7 @@ mod tests {
 
     struct Setup {
         env: HostEnv,
-        wrapper: ERC2612WrapperHostRef,
+        wrapper: CEP2612WrapperHostRef,
         alice: Address,
         bob: Address,
         charlie: Address,
@@ -197,9 +197,9 @@ mod tests {
         let charlie = env.get_account(2);
         let alice_pubkey = env.public_key(&alice);
 
-        let wrapper = ERC2612Wrapper::deploy(
+        let wrapper = CEP2612Wrapper::deploy(
             &env,
-            ERC2612WrapperInitArgs {
+            CEP2612WrapperInitArgs {
                 chain_name: CHAIN_NAME.to_string(),
                 symbol: TOKEN_SYMBOL.to_string(),
                 name: TOKEN_NAME.to_string(),

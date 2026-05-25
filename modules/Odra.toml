@@ -44,7 +44,7 @@ fqn = "cep18_token::utils::Cep18Example"
 fqn = "cep18::cep18_client_contract::Cep18ClientContract"
 
 [[contracts]]
-fqn = "erc3009::ERC3009Wrapper"
+fqn = "cep3009::CEP3009Wrapper"
 
 [[contracts]]
-fqn = "erc2612::ERC2612Wrapper"
+fqn = "cep2612::CEP2612Wrapper"
