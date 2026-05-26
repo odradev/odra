@@ -1,6 +1,55 @@
 #![allow(clippy::too_many_arguments)]
 #![allow(missing_docs)]
-//! ERC-3009 implementation for Casper, allowing gasless token transfers via off-chain signatures.
+//! CEP-3009 — an adaptation of [ERC-3009] for the Casper Network.
+//!
+//! ERC-3009 ("Transfer With Authorization") lets a token holder authorize a
+//! transfer of their tokens via an off-chain EIP-712 signature. A third party
+//! (a relayer, or the recipient themselves) submits the authorization
+//! on-chain, so the token holder never has to spend gas to move their tokens.
+//! Unlike ERC-2612, no allowance is granted: each authorization is a direct,
+//! single-use mandate to move a specific `amount` to a specific `to` address.
+//!
+//! The module exposes three entry points:
+//!
+//! * [`CEP3009::transfer_with_authorization`] — anyone may relay; the funds
+//!   move from `from` to `to` once the signature checks out.
+//! * [`CEP3009::receive_with_authorization`] — only `to` may submit. On
+//!   Ethereum this exists to prevent front-running of a relayed
+//!   `to == contract` authorization; Casper has no public mempool, so
+//!   front-running isn't a concern. The variant is still useful because it
+//!   guarantees `caller == to`, which lets a receiving contract atomically
+//!   accept the transfer and act on the deposit in the same call.
+//! * [`CEP3009::cancel_authorization`] — the authorizer (or anyone relaying
+//!   the authorizer's signed cancel message) can burn an unused nonce so a
+//!   leaked authorization can never be redeemed.
+//!
+//! # Differences from EVM ERC-3009
+//!
+//! The EIP-712 typed-data digest construction (domain separator + the
+//! `TransferWithAuthorization`, `ReceiveWithAuthorization`, and
+//! `CancelAuthorization` struct hashes) follows the EVM specification exactly,
+//! so signatures produced by standard EIP-712 tooling remain compatible. The
+//! verification path differs because Casper does not provide `ecrecover`:
+//!
+//! * The caller must pass the signer's [`PublicKey`] explicitly alongside the
+//!   signature. The contract checks that `Address::from(public_key) == from`
+//!   (or `authorizer`, for cancellations) before verifying the signature, so
+//!   a valid signature from a different keypair cannot be used to move
+//!   someone else's tokens or burn someone else's nonce.
+//! * Signature verification uses the host's [`verify_signature`] facility,
+//!   which supports Casper's Ed25519 and Secp256k1 account keys.
+//! * The EIP-712 `chainId` field (a `uint256` on Ethereum) is replaced by a
+//!   `chain_name` string supplied at construction time, matching Casper's
+//!   chain identification model.
+//!
+//! Replay protection follows ERC-3009: each authorization carries a 32-byte
+//! `nonce` chosen by the signer (not a monotonic counter as in ERC-2612), and
+//! the contract records `(authorizer, nonce) -> used` so the same nonce can
+//! never be redeemed twice. Cancellation marks a nonce used without moving
+//! funds.
+//!
+//! [ERC-3009]: https://eips.ethereum.org/EIPS/eip-3009
+//! [`verify_signature`]: odra::ContractEnv::verify_signature
 
 use crate::{cep18_token::Cep18, eip712};
 use casper_eip_712::DomainSeparator;
@@ -28,50 +77,64 @@ const CANCEL_AUTHORIZATION_TYPEHASH: [u8; 32] = [
     0xf2, 0xf5, 0x0b, 0xa8, 0x07, 0x39, 0x6f, 0x6d, 0x12, 0x84, 0x28, 0x33, 0xa1, 0x59, 0x74, 0x29
 ];
 
-/// Emitted when an authorization is used via `transfer_with_authorization` or `receive_with_authorization`.
+/// Emitted when an authorization is consumed by
+/// [`CEP3009::transfer_with_authorization`] or
+/// [`CEP3009::receive_with_authorization`]. The `(authorizer, nonce)` pair
+/// is now marked used and cannot be redeemed again.
 #[odra::event]
 pub struct AuthorizationUsed {
     authorizer: Address,
     nonce: Bytes
 }
 
-/// Emitted when an authorization is canceled via `cancel_authorization`.
+/// Emitted when an authorization nonce is burned by
+/// [`CEP3009::cancel_authorization`] before being used. The `(authorizer,
+/// nonce)` pair is marked used without any funds moving.
 #[odra::event]
 pub struct AuthorizationCanceled {
     authorizer: Address,
     nonce: Bytes
 }
 
-/// Errors for ERC-3009 operations.
+/// Errors raised by CEP-3009 authorization operations.
 #[odra::odra_error]
 pub enum Error {
-    /// The provided nonce has already been used or canceled.
+    /// The `(from, nonce)` pair has already been consumed by a transfer or
+    /// burned by a cancel. Authorizations are single-use.
     NonceAlreadyUsed = 37_000,
-    /// The current block time is past the `valid_before` timestamp.
+    /// The current block time is past `valid_before` — the authorization has
+    /// expired.
     AuthorizationExpired = 37_001,
-    /// The current block time is before the `valid_after` timestamp.
+    /// The current block time is at or before `valid_after` — the
+    /// authorization is not yet in its validity window.
     AuthorizationNotYetValid = 37_002,
-    /// The provided signature is invalid.
+    /// Signature verification against the supplied public key failed, or the
+    /// recomputed digest does not match what the signer signed (e.g. wrong
+    /// `amount`, `to`, or `nonce`).
     InvalidSignature = 37_003,
-    /// The provided public key is invalid.
+    /// The supplied `public_key` does not hash to the declared `from` /
+    /// `authorizer` address. Guards against using a valid signature from a
+    /// different keypair to move someone else's tokens or burn their nonce.
     InvalidPublicKey = 37_004,
-    /// The caller of `receive_with_authorization` is not the `to` address.
+    /// `receive_with_authorization` was submitted by an account other than
+    /// `to`. See the module-level docs for why this restriction exists.
     InvalidCaller = 37_005,
-    /// The authorization has already been used (for cancellation).
+    /// Attempted to cancel an authorization whose `(authorizer, nonce)` pair
+    /// has already been consumed.
     AuthorizationUsed = 37_006
 }
 
 /// Storage defined as named keys.
-const CHAIN_NAME_KEY: &str = "chain_name";
+const CHAIN_ID_KEY: &str = "chain_id";
 const USED_NONCES_KEY: &str = "used_nonces";
 
 /// Domain separator version.
 const DOMAIN_VERSION: &str = "1";
 
 single_value_storage!(
-    CEP3009ChainNameStorage,
+    CEP3009ChainIdStorage,
     String,
-    CHAIN_NAME_KEY,
+    CHAIN_ID_KEY,
     ExecutionError::KeyNotFound
 );
 
@@ -83,28 +146,47 @@ compound_key_value_storage!(
     bool
 );
 
-/// ERC-3009 implementation for Casper, allowing gasless token transfers via off-chain signatures.
+/// CEP-3009 authorization module — adds off-chain signed transfers to a
+/// CEP-18 token.
+///
+/// The module is meant to be composed with a [`Cep18`] sub-module (see
+/// [`CEP3009Wrapper`] for a deployable composition used in tests).
 #[odra::module(events = [AuthorizationUsed, AuthorizationCanceled], errors = Error)]
 pub struct CEP3009 {
+    /// Per-(authorizer, nonce) flag recording whether that authorization has
+    /// been consumed or cancelled. Provides single-use semantics.
     used_nonces: SubModule<CEP3009UsedNoncesStorage>,
-    chain_name: SubModule<CEP3009ChainNameStorage>,
+    /// CAIP-2 Chain ID used as the EIP-712 domain's `chainId` substitute.
+    chain_id: SubModule<CEP3009ChainIdStorage>,
+    /// The CEP-18 token whose balances are mutated by authorized transfers.
     token: SubModule<Cep18>
 }
 
 #[odra::module]
 impl CEP3009 {
-    /// Initializes the module with the given chain name (used in EIP-712 domain) and the address of the CEP-18 token contract.
-    pub fn init(&mut self, chain_name: String) {
-        self.chain_name.set(chain_name);
+    /// Initializes the module by storing the EIP-712 chain ID and the
+    /// used-nonces storage.
+    pub fn init(&mut self, chain_id: String) {
+        self.chain_id.set(chain_id);
         self.used_nonces.init();
     }
 
-    /// Check the authorization state for a given authorizer and nonce.
+    /// Returns `true` if `(authorizer, nonce)` has been consumed by a
+    /// previous transfer or burned by [`Self::cancel_authorization`]. Useful
+    /// for off-chain clients to check before submitting a relayed transfer.
     pub fn authorization_state(&self, authorizer: Address, nonce: Bytes) -> bool {
         self.used_nonces.get_or_default(&authorizer, &nonce)
     }
 
-    /// Authorizes a transfer from `from` to `to` if the signature is valid and the authorization is not expired or used.
+    /// Consumes a signed `TransferWithAuthorization` and moves `amount`
+    /// tokens from `from` to `to`. Any account may submit this call — the
+    /// signature, not the caller, is what authorizes the transfer.
+    ///
+    /// Reverts with [`Error::NonceAlreadyUsed`], [`Error::AuthorizationNotYetValid`],
+    /// [`Error::AuthorizationExpired`], [`Error::InvalidPublicKey`], or
+    /// [`Error::InvalidSignature`] if the corresponding precondition fails.
+    /// On success, marks the nonce used, emits [`AuthorizationUsed`], and
+    /// performs the transfer via [`Cep18::raw_transfer`].
     pub fn transfer_with_authorization(
         &mut self,
         from: Address,
@@ -129,7 +211,14 @@ impl CEP3009 {
         );
     }
 
-    /// Allows a spender to transfer tokens on behalf of the token holder, given an authorization signed by the token holder.
+    /// Like [`Self::transfer_with_authorization`], but requires
+    /// `caller == to`. This lets a receiving contract atomically accept a
+    /// pre-signed transfer and act on it within the same call (e.g. a
+    /// "deposit then mint LP token" flow), while preventing any other
+    /// account from triggering the transfer at a moment of their choosing.
+    ///
+    /// Reverts with [`Error::InvalidCaller`] if `caller != to`. All other
+    /// checks and effects mirror `transfer_with_authorization`.
     pub fn receive_with_authorization(
         &mut self,
         from: Address,
@@ -159,7 +248,18 @@ impl CEP3009 {
         );
     }
 
-    /// Cancels an authorization if it has not been used yet.
+    /// Burns an unused authorization nonce by consuming a signed
+    /// `CancelAuthorization` message. Once a nonce is cancelled, any
+    /// previously distributed signature for the same `(authorizer, nonce)`
+    /// pair becomes unredeemable — the canonical way for an authorizer to
+    /// revoke a leaked or otherwise unwanted authorization.
+    ///
+    /// Reverts with [`Error::AuthorizationUsed`] if the nonce has already
+    /// been consumed (a cancelled nonce cannot be re-cancelled either), with
+    /// [`Error::InvalidPublicKey`] if `public_key` does not hash to
+    /// `authorizer`, or with [`Error::InvalidSignature`] if signature
+    /// verification fails. On success, marks the nonce used and emits
+    /// [`AuthorizationCanceled`].
     pub fn cancel_authorization(
         &mut self,
         authorizer: Address,
@@ -190,6 +290,10 @@ impl CEP3009 {
 }
 
 impl CEP3009 {
+    /// Shared body of [`Self::transfer_with_authorization`] and
+    /// [`Self::receive_with_authorization`]. They differ only in the EIP-712
+    /// typehash used to compute the digest (and in the caller restriction
+    /// applied by the receive variant before calling this).
     fn raw_transfer_with_authorization(
         &mut self,
         typehash: [u8; 32],
@@ -257,7 +361,9 @@ impl CEP3009 {
         self.token.raw_transfer(&from, &to, &amount);
     }
 
-    /// Build the EIP-712 hash for a transfer authorization.
+    /// Builds the EIP-712 digest for a transfer authorization. `amount` is
+    /// big-endian encoded to match the EVM `uint256` layout, and `nonce` is
+    /// right-padded to 32 bytes to match the EIP-712 `bytes32` layout.
     fn build_authorization_message(
         &self,
         typehash: [u8; 32],
@@ -287,6 +393,7 @@ impl CEP3009 {
         Bytes::from(crate::eip712::hash_typed_data(domain, typehash, encoded_data).to_vec())
     }
 
+    /// Builds the EIP-712 digest for a `CancelAuthorization` message.
     fn build_cancel_message(&self, authorizer: Address, nonce: &[u8]) -> Bytes {
         let mut nonce_padded = [0u8; 32];
         let len = nonce.len().min(32);
@@ -302,10 +409,13 @@ impl CEP3009 {
         )
     }
 
+    /// Builds the EIP-712 domain separator. Bound to the token `name`, the
+    /// fixed `DOMAIN_VERSION`, the configured `chain_id`, and the
+    /// deployed contract's own address (the EIP-712 `verifyingContract`).
     fn domain_separator(&self) -> DomainSeparator {
         let self_address = self.env().self_address();
         let name = self.token.name();
-        let chain_id = self.chain_name.get();
+        let chain_id = self.chain_id.get();
         eip712::domain_separator(&name, DOMAIN_VERSION, chain_id, self_address)
     }
 }
@@ -317,20 +427,19 @@ pub struct CEP3009Wrapper {
     token: SubModule<Cep18>
 }
 
-/// Wrapper contract that combines ERC-3009 functionality with a CEP-18 token for testing purposes.
-/// In a real deployment, the ERC-3009 module would likely be separate and interact with an existing token contract.
 #[odra::module]
 impl CEP3009Wrapper {
-    /// Initializes the wrapper by deploying the ERC-3009 module and the CEP-18 token, and setting up the EIP-712 domain.
+    /// Initializes both the authorization module (storing the EIP-712 chain
+    /// id) and the underlying CEP-18 token (symbol, name, decimals, supply).
     pub fn init(
         &mut self,
-        chain_name: String,
+        chain_id: String,
         symbol: String,
         name: String,
         decimals: u8,
         initial_supply: U256
     ) {
-        self.cep3009.init(chain_name);
+        self.cep3009.init(chain_id);
         self.token.init(symbol, name, decimals, initial_supply);
     }
 
@@ -383,7 +492,7 @@ mod tests {
     const TOKEN_SYMBOL: &str = "TEST";
     const TOKEN_DECIMALS: u8 = 8;
     const INITIAL_SUPPLY: u64 = 1_000_000;
-    const CHAIN_NAME: &str = "casper-test";
+    const CHAIN_ID: &str = "casper:casper";
 
     struct Setup {
         env: HostEnv,
@@ -406,7 +515,7 @@ mod tests {
         let wrapper = CEP3009Wrapper::deploy(
             &env,
             CEP3009WrapperInitArgs {
-                chain_name: CHAIN_NAME.to_string(),
+                chain_id: CHAIN_ID.to_string(),
                 symbol: TOKEN_SYMBOL.to_string(),
                 name: TOKEN_NAME.to_string(),
                 decimals: TOKEN_DECIMALS,
@@ -1000,7 +1109,7 @@ mod tests {
         let domain = crate::eip712::domain_separator(
             TOKEN_NAME,
             DOMAIN_VERSION,
-            CHAIN_NAME.to_string(),
+            CHAIN_ID.to_string(),
             contract_address
         );
         let message_hash = crate::eip712::hash_typed_data(domain, typehash, encoded_data);
@@ -1027,7 +1136,7 @@ mod tests {
         let domain = crate::eip712::domain_separator(
             TOKEN_NAME,
             DOMAIN_VERSION,
-            CHAIN_NAME.to_string(),
+            CHAIN_ID.to_string(),
             contract_address
         );
         let message_hash =

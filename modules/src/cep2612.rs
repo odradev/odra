@@ -1,7 +1,37 @@
 #![allow(missing_docs)]
 
-//! ERC-2612 implementation for Casper, allowing token approvals via off-chain signatures.
+//! CEP-2612 — an adaptation of [ERC-2612] for the Casper Network.
 //!
+//! ERC-2612 extends ERC-20 with a `permit` entry point that lets a token holder
+//! grant an allowance via an off-chain signature instead of an on-chain
+//! `approve` transaction. A third party (a relayer) can then submit the signed
+//! permit on-chain, which makes the approval gas-less from the holder's
+//! perspective and removes the classic "approve + transferFrom" two-transaction
+//! pattern.
+//!
+//! # Differences from EVM ERC-2612
+//!
+//! The EIP-712 typed-data digest construction (domain separator + `Permit`
+//! struct hash) follows the EVM specification exactly so signatures produced
+//! by standard EIP-712 tooling remain compatible. The verification path
+//! differs because Casper does not provide `ecrecover`:
+//!
+//! * The caller must pass the signer's [`PublicKey`] explicitly alongside the
+//!   signature. The contract checks that `Address::from(public_key) == owner`
+//!   before verifying the signature, so a valid signature from a different
+//!   keypair cannot be used to approve on someone else's behalf.
+//! * Signature verification uses the host's [`verify_signature`] facility,
+//!   which supports Casper's Ed25519 and Secp256k1 account keys.
+//! * The EIP-712 `chainId` field (a `uint256` on Ethereum) is replaced by a
+//!   `chain_id` string (e.g. `"casper:casper"`) supplied at construction
+//!   time, matching Casper's chain identification model.
+//!
+//! Replay protection follows the ERC-2612 pattern: each `owner` has a
+//! monotonically increasing `nonce` that is mixed into the signed digest and
+//! incremented on every successful `permit` call.
+//!
+//! [ERC-2612]: https://eips.ethereum.org/EIPS/eip-2612
+//! [`verify_signature`]: odra::ContractEnv::verify_signature
 use casper_eip_712::DomainSeparator;
 use odra::{
     casper_types::{bytesrepr::Bytes, PublicKey, U256},
@@ -17,50 +47,79 @@ const PERMIT_TYPEHASH: [u8; 32] = [
     0x5f, 0xa2, 0xfa, 0xae, 0x01, 0x26, 0x11, 0x4a, 0x16, 0x9c, 0x64, 0x84, 0x5d, 0x61, 0x26, 0xc9
 ];
 
-/// Errors for ERC-2612 permit operations.
+/// Errors raised by CEP-2612 permit operations.
 #[odra::odra_error]
 pub enum Error {
-    /// The provided signature is invalid.
+    /// Signature verification against the supplied public key failed, or the
+    /// recomputed digest does not match what the signer signed (e.g. wrong
+    /// `value`, `nonce`, `spender`, or `deadline`).
     InvalidSignature = 36_000,
-    /// The current block time is past the `deadline` timestamp.
+    /// The current block time is past the `deadline` timestamp. Permits with
+    /// `deadline == u64::MAX` skip this check and never expire.
     PermitExpired = 36_001,
-    /// The provided public key does not correspond to the `owner` address.
+    /// The supplied `public_key` does not hash to the declared `owner`
+    /// address. Guards against using a valid signature from a different
+    /// keypair to approve on someone else's behalf.
     InvalidPublicKey = 36_002
 }
 
 /// Storage defined as named keys.
-const CHAIN_NAME_KEY: &str = "chain_name";
+const CHAIN_ID_KEY: &str = "chain_id";
 const PERMIT_NONCES_KEY: &str = "permit_nonces";
 
 /// Domain separator version.
 const DOMAIN_VERSION: &str = "1";
 
 single_value_storage!(
-    CEP2612ChainNameStorage,
+    CEP2612ChainIdStorage,
     String,
-    CHAIN_NAME_KEY,
+    CHAIN_ID_KEY,
     ExecutionError::KeyNotFound
 );
 
 base64_encoded_key_value_storage!(CEP2612PermitNoncesStorage, PERMIT_NONCES_KEY, Address, U256);
 
-/// A module implementing EIP-2612 permit functionality for a CEP-18 token.
+/// CEP-2612 permit module — adds off-chain signed approvals to a CEP-18 token.
+///
+/// The module is meant to be composed with a [`Cep18`] sub-module (see
+/// [`CEP2612Wrapper`] for a deployable composition used in tests).
 #[odra::module]
 pub struct CEP2612 {
+    /// Per-owner monotonic nonce mixed into the signed digest to prevent
+    /// replay of a previously consumed permit.
     permit_nonces: SubModule<CEP2612PermitNoncesStorage>,
-    chain_name: SubModule<CEP2612ChainNameStorage>,
+    /// CAIP-2 chain ID used as the EIP-712 domain's `chainId` substitute.
+    chain_id: SubModule<CEP2612ChainIdStorage>,
+    /// The CEP-18 token whose allowances are mutated by `permit`.
     token: SubModule<Cep18>
 }
 
 #[odra::module]
 impl CEP2612 {
-    /// Initializes the module with the given chain name (e.g., "Casper Mainnet").
-    pub fn init(&mut self, chain_name: String) {
-        self.chain_name.set(chain_name);
+    /// Initializes the module by storing the EIP-712 domain's CAIP-2 chain id
+    /// (e.g. `"casper:casper"`) and the nonce storage.
+    pub fn init(&mut self, chain_id: String) {
+        self.chain_id.set(chain_id);
         self.permit_nonces.init();
     }
 
-    /// Returns the current nonce for a given owner address, which should be included in the permit signature.
+    /// Consumes an off-chain permit signature and sets `spender`'s allowance
+    /// over `owner`'s tokens to `value`.
+    ///
+    /// The caller (typically a relayer, not `owner`) supplies the signed
+    /// `Permit(owner, spender, value, nonce, deadline)` typed-data digest.
+    /// The contract:
+    ///
+    /// 1. Rejects the call if `deadline != u64::MAX` and the current block
+    ///    time is past `deadline` (`PermitExpired`).
+    /// 2. Rejects the call if `Address::from(public_key) != owner`
+    ///    (`InvalidPublicKey`).
+    /// 3. Recomputes the EIP-712 digest using the on-chain nonce for `owner`
+    ///    and verifies `signature` against `public_key`. A mismatch — wrong
+    ///    field value or a replayed signature whose nonce has already been
+    ///    consumed — yields `InvalidSignature`.
+    /// 4. Increments the owner's nonce and overwrites the allowance via
+    ///    [`Cep18::raw_approve`] (it does not add to the existing allowance).
     pub fn permit(
         &mut self,
         owner: Address,
@@ -94,13 +153,19 @@ impl CEP2612 {
         self.token.raw_approve(&owner, &spender, &value);
     }
 
+    /// Builds the EIP-712 domain separator. Bound to the token `name`, the
+    /// fixed `DOMAIN_VERSION`, the configured `chain_id`, and the
+    /// deployed contract's own address (the EIP-712 `verifyingContract`).
     fn domain_separator(&self) -> DomainSeparator {
         let self_address = self.env().self_address();
         let name = self.token.name();
-        let chain_id = self.chain_name.get();
+        let chain_id = self.chain_id.get();
         crate::eip712::domain_separator(&name, DOMAIN_VERSION, chain_id, self_address)
     }
 
+    /// Computes the EIP-712 digest the signer must produce — the keccak256 of
+    /// the encoded `Permit` struct combined with the domain separator. `value`
+    /// and `nonce` are big-endian encoded to match the EVM `uint256` layout.
     fn message_hash(
         &self,
         owner: Address,
@@ -140,13 +205,13 @@ impl CEP2612Wrapper {
     /// Initializes the wrapper by deploying the ERC-2612 module and the CEP-18 token, and setting up the EIP-712 domain.
     pub fn init(
         &mut self,
-        chain_name: String,
+        chain_id: String,
         symbol: String,
         name: String,
         decimals: u8,
         initial_supply: U256
     ) {
-        self.cep2612.init(chain_name);
+        self.cep2612.init(chain_id);
         self.token.init(symbol, name, decimals, initial_supply);
     }
 
@@ -200,7 +265,7 @@ mod tests {
         let wrapper = CEP2612Wrapper::deploy(
             &env,
             CEP2612WrapperInitArgs {
-                chain_name: CHAIN_NAME.to_string(),
+                chain_id: CHAIN_NAME.to_string(),
                 symbol: TOKEN_SYMBOL.to_string(),
                 name: TOKEN_NAME.to_string(),
                 decimals: TOKEN_DECIMALS,
