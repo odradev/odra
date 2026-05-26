@@ -4,11 +4,12 @@ Changelog for `odra`.
 
 ## [2.7.0] - 2026-05-12
 ### Added
-- `ERC-2612` module in `odra-modules` implementing the EIP-2612 `permit` flow for CEP-18 tokens.
-- `ERC-3009` module in `odra-modules` implementing gasless token transfers (`transfer_with_authorization`, `receive_with_authorization`, `cancel_authorization`).
-- `eip712` helpers in `odra-modules` (domain separator, struct encoding, hashing) shared by the new ERC-2612 and ERC-3009 modules.
+- `CEP-2612` module in `odra-modules` — a Casper adaptation of EIP-2612 implementing the `permit` flow for CEP-18 tokens.
+- `CEP-3009` module in `odra-modules` — a Casper adaptation of EIP-3009 implementing gasless token transfers (`transfer_with_authorization`, `receive_with_authorization`, `cancel_authorization`).
+- `eip712` helpers in `odra-modules` (domain separator, struct encoding, hashing) shared by the new CEP-2612 and CEP-3009 modules.
+- Named-key based storage for `CEP-2612` and `CEP-3009` (chain id, permit nonces, used authorization nonces).
 - `raw_approve` method on `CEP-18` to allow trusted submodules to set allowances on behalf of an owner.
-- `GaslessCep18` example contract combining `CEP-18`, `ERC-2612`, and `ERC-3009`, along with a `gassless_payment` livenet example binary.
+- `GaslessCep18` example contract combining `CEP-18`, `CEP-2612`, and `CEP-3009`, along with a `gassless_payment` livenet example binary.
 
 ### Changed
 - `cargo-odra` branch bumped to `release/0.1.7`.
