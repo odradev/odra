@@ -51,7 +51,7 @@
 //! [ERC-3009]: https://eips.ethereum.org/EIPS/eip-3009
 //! [`verify_signature`]: odra::ContractEnv::verify_signature
 
-use crate::{cep18_token::Cep18, eip712};
+use crate::{cep18::events::Transfer, cep18_token::Cep18, eip712};
 use casper_eip_712::DomainSeparator;
 use odra::{
     casper_types::{bytesrepr::Bytes, PublicKey, U256},
@@ -151,7 +151,7 @@ compound_key_value_storage!(
 ///
 /// The module is meant to be composed with a [`Cep18`] sub-module (see
 /// [`CEP3009Wrapper`] for a deployable composition used in tests).
-#[odra::module(events = [AuthorizationUsed, AuthorizationCanceled], errors = Error)]
+#[odra::module(events = [AuthorizationUsed, AuthorizationCanceled, Transfer], errors = Error)]
 pub struct CEP3009 {
     /// Per-(authorizer, nonce) flag recording whether that authorization has
     /// been consumed or cancelled. Provides single-use semantics.
@@ -359,6 +359,13 @@ impl CEP3009 {
 
         // 9. Execute transfer (raw_transfer takes refs)
         self.token.raw_transfer(&from, &to, &amount);
+
+        // 10. Emit event.
+        self.env().emit_event(Transfer {
+            sender: from,
+            recipient: to,
+            amount
+        });
     }
 
     /// Builds the EIP-712 digest for a transfer authorization. `amount` is
