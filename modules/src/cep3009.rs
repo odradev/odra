@@ -125,16 +125,16 @@ pub enum Error {
 }
 
 /// Storage defined as named keys.
-const CHAIN_ID_KEY: &str = "chain_id";
+const CHAIN_NAME_KEY: &str = "chain_name";
 const USED_NONCES_KEY: &str = "used_nonces";
 
 /// Domain separator version.
 const DOMAIN_VERSION: &str = "1";
 
 single_value_storage!(
-    CEP3009ChainIdStorage,
+    CEP3009ChainNameStorage,
     String,
-    CHAIN_ID_KEY,
+    CHAIN_NAME_KEY,
     ExecutionError::KeyNotFound
 );
 
@@ -156,8 +156,8 @@ pub struct CEP3009 {
     /// Per-(authorizer, nonce) flag recording whether that authorization has
     /// been consumed or cancelled. Provides single-use semantics.
     used_nonces: SubModule<CEP3009UsedNoncesStorage>,
-    /// CAIP-2 Chain ID used as the EIP-712 domain's `chainId` substitute.
-    chain_id: SubModule<CEP3009ChainIdStorage>,
+    /// CAIP-2 Chain name used as the EIP-712 domain's `chainId` substitute.
+    chain_name: SubModule<CEP3009ChainNameStorage>,
     /// The CEP-18 token whose balances are mutated by authorized transfers.
     token: SubModule<Cep18>
 }
@@ -166,8 +166,8 @@ pub struct CEP3009 {
 impl CEP3009 {
     /// Initializes the module by storing the EIP-712 chain ID and the
     /// used-nonces storage.
-    pub fn init(&mut self, chain_id: String) {
-        self.chain_id.set(chain_id);
+    pub fn init(&mut self, chain_name: String) {
+        self.chain_name.set(chain_name);
         self.used_nonces.init();
     }
 
@@ -417,13 +417,13 @@ impl CEP3009 {
     }
 
     /// Builds the EIP-712 domain separator. Bound to the token `name`, the
-    /// fixed `DOMAIN_VERSION`, the configured `chain_id`, and the
+    /// fixed `DOMAIN_VERSION`, the configured `chain_name`, and the
     /// deployed contract's own address (the EIP-712 `verifyingContract`).
     fn domain_separator(&self) -> DomainSeparator {
         let self_address = self.env().self_address();
         let name = self.token.name();
-        let chain_id = self.chain_id.get();
-        eip712::domain_separator(&name, DOMAIN_VERSION, chain_id, self_address)
+        let chain_name = self.chain_name.get();
+        eip712::domain_separator(&name, DOMAIN_VERSION, chain_name, self_address)
     }
 }
 
@@ -440,13 +440,13 @@ impl CEP3009Wrapper {
     /// id) and the underlying CEP-18 token (symbol, name, decimals, supply).
     pub fn init(
         &mut self,
-        chain_id: String,
+        chain_name: String,
         symbol: String,
         name: String,
         decimals: u8,
         initial_supply: U256
     ) {
-        self.cep3009.init(chain_id);
+        self.cep3009.init(chain_name);
         self.token.init(symbol, name, decimals, initial_supply);
     }
 
@@ -499,7 +499,7 @@ mod tests {
     const TOKEN_SYMBOL: &str = "TEST";
     const TOKEN_DECIMALS: u8 = 8;
     const INITIAL_SUPPLY: u64 = 1_000_000;
-    const CHAIN_ID: &str = "casper:casper";
+    const CHAIN_NAME: &str = "casper:casper";
 
     struct Setup {
         env: HostEnv,
@@ -522,7 +522,7 @@ mod tests {
         let wrapper = CEP3009Wrapper::deploy(
             &env,
             CEP3009WrapperInitArgs {
-                chain_id: CHAIN_ID.to_string(),
+                chain_name: CHAIN_NAME.to_string(),
                 symbol: TOKEN_SYMBOL.to_string(),
                 name: TOKEN_NAME.to_string(),
                 decimals: TOKEN_DECIMALS,
@@ -1116,7 +1116,7 @@ mod tests {
         let domain = crate::eip712::domain_separator(
             TOKEN_NAME,
             DOMAIN_VERSION,
-            CHAIN_ID.to_string(),
+            CHAIN_NAME.to_string(),
             contract_address
         );
         let message_hash = crate::eip712::hash_typed_data(domain, typehash, encoded_data);
@@ -1143,7 +1143,7 @@ mod tests {
         let domain = crate::eip712::domain_separator(
             TOKEN_NAME,
             DOMAIN_VERSION,
-            CHAIN_ID.to_string(),
+            CHAIN_NAME.to_string(),
             contract_address
         );
         let message_hash =

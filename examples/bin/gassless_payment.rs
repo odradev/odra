@@ -11,13 +11,13 @@ fn main() {
     let env: HostEnv = odra_casper_livenet_env::env();
     env.set_gas(500_000_000_000u64);
 
-    let chain_id = std::env::var("ODRA_CASPER_LIVENET_CHAIN_NAME")
+    let chain_name = std::env::var("ODRA_CASPER_LIVENET_CHAIN_NAME")
         .unwrap_or_else(|_| "casper-test".to_string());
 
     let mut contract = GaslessCep18::deploy(
         &env,
         GaslessCep18InitArgs {
-            chain_name: chain_id.clone()
+            chain_name: chain_name.clone()
         }
     );
     let contract_address = contract.address();
@@ -25,7 +25,7 @@ fn main() {
     let alice = env.get_account(0);
     let bob = env.get_account(1);
     let charlie = env.get_account(2);
-    let signed_message = sign_transfer_auth(&env, &chain_id, &contract_address, &alice, &bob);
+    let signed_message = sign_transfer_auth(&env, &chain_name, &contract_address, &alice, &bob);
 
     let sig_hex: String = signed_message
         .iter()
@@ -61,7 +61,7 @@ fn main() {
 
 fn sign_transfer_auth(
     env: &HostEnv,
-    chain_id: &str,
+    chain_name: &str,
     contract_address: &Address,
     signer: &Address,
     recipient: &Address
@@ -77,8 +77,8 @@ fn sign_transfer_auth(
     let domain = casper_eip_712::DomainBuilder::new()
         .name("USDC")
         .custom_field(
-            "chain_id",
-            casper_eip_712::DomainFieldValue::String(chain_id.to_string())
+            "chain_name",
+            casper_eip_712::DomainFieldValue::String(chain_name.to_string())
         )
         .custom_field(
             "contract_package_hash",

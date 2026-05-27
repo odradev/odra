@@ -3,15 +3,15 @@ use odra::prelude::*;
 pub(crate) fn domain_separator(
     name: &str,
     version: &str,
-    chain_id: String,
+    chain_name: String,
     contract_address: Address
 ) -> casper_eip_712::DomainSeparator {
     casper_eip_712::DomainBuilder::new()
         .name(name)
         .version(version)
         .custom_field(
-            "chain_id",
-            casper_eip_712::DomainFieldValue::String(chain_id)
+            "chain_name",
+            casper_eip_712::DomainFieldValue::String(chain_name)
         )
         .custom_field(
             "contract_package_hash",

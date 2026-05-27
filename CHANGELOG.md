@@ -2,6 +2,10 @@
 
 Changelog for `odra`.
 
+## [2.7.1] - 2026-05-27
+### Changed
+- Renamed the EIP-712 domain field from `chain_id` to `chain_name` in `CEP-2612`, `CEP-3009`, and the `eip712` helpers for compatibility with `casper-eip-712`.
+
 ## [2.7.0] - 2026-05-12
 ### Added
 - `CEP-2612` module in `odra-modules` — a Casper adaptation of EIP-2612 implementing the `permit` flow for CEP-18 tokens.

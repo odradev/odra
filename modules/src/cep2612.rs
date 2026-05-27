@@ -23,7 +23,7 @@
 //! * Signature verification uses the host's [`verify_signature`] facility,
 //!   which supports Casper's Ed25519 and Secp256k1 account keys.
 //! * The EIP-712 `chainId` field (a `uint256` on Ethereum) is replaced by a
-//!   `chain_id` string (e.g. `"casper:casper"`) supplied at construction
+//!   `chain_name` string (e.g. `"casper:casper"`) supplied at construction
 //!   time, matching Casper's chain identification model.
 //!
 //! Replay protection follows the ERC-2612 pattern: each `owner` has a
@@ -64,16 +64,16 @@ pub enum Error {
 }
 
 /// Storage defined as named keys.
-const CHAIN_ID_KEY: &str = "chain_id";
+const CHAIN_NAME_KEY: &str = "chain_name";
 const PERMIT_NONCES_KEY: &str = "permit_nonces";
 
 /// Domain separator version.
 const DOMAIN_VERSION: &str = "1";
 
 single_value_storage!(
-    CEP2612ChainIdStorage,
+    CEP2612ChainNameStorage,
     String,
-    CHAIN_ID_KEY,
+    CHAIN_NAME_KEY,
     ExecutionError::KeyNotFound
 );
 
@@ -88,18 +88,18 @@ pub struct CEP2612 {
     /// Per-owner monotonic nonce mixed into the signed digest to prevent
     /// replay of a previously consumed permit.
     permit_nonces: SubModule<CEP2612PermitNoncesStorage>,
-    /// CAIP-2 chain ID used as the EIP-712 domain's `chainId` substitute.
-    chain_id: SubModule<CEP2612ChainIdStorage>,
+    /// CAIP-2 chain name used as the EIP-712 domain's `chainId` substitute.
+    chain_name: SubModule<CEP2612ChainNameStorage>,
     /// The CEP-18 token whose allowances are mutated by `permit`.
     token: SubModule<Cep18>
 }
 
 #[odra::module]
 impl CEP2612 {
-    /// Initializes the module by storing the EIP-712 domain's CAIP-2 chain id
+    /// Initializes the module by storing the EIP-712 domain's CAIP-2 chain name
     /// (e.g. `"casper:casper"`) and the nonce storage.
-    pub fn init(&mut self, chain_id: String) {
-        self.chain_id.set(chain_id);
+    pub fn init(&mut self, chain_name: String) {
+        self.chain_name.set(chain_name);
         self.permit_nonces.init();
     }
 
@@ -154,13 +154,13 @@ impl CEP2612 {
     }
 
     /// Builds the EIP-712 domain separator. Bound to the token `name`, the
-    /// fixed `DOMAIN_VERSION`, the configured `chain_id`, and the
+    /// fixed `DOMAIN_VERSION`, the configured `chain_name`, and the
     /// deployed contract's own address (the EIP-712 `verifyingContract`).
     fn domain_separator(&self) -> DomainSeparator {
         let self_address = self.env().self_address();
         let name = self.token.name();
-        let chain_id = self.chain_id.get();
-        crate::eip712::domain_separator(&name, DOMAIN_VERSION, chain_id, self_address)
+        let chain_name = self.chain_name.get();
+        crate::eip712::domain_separator(&name, DOMAIN_VERSION, chain_name, self_address)
     }
 
     /// Computes the EIP-712 digest the signer must produce — the keccak256 of
@@ -205,13 +205,13 @@ impl CEP2612Wrapper {
     /// Initializes the wrapper by deploying the ERC-2612 module and the CEP-18 token, and setting up the EIP-712 domain.
     pub fn init(
         &mut self,
-        chain_id: String,
+        chain_name: String,
         symbol: String,
         name: String,
         decimals: u8,
         initial_supply: U256
     ) {
-        self.cep2612.init(chain_id);
+        self.cep2612.init(chain_name);
         self.token.init(symbol, name, decimals, initial_supply);
     }
 
@@ -265,7 +265,7 @@ mod tests {
         let wrapper = CEP2612Wrapper::deploy(
             &env,
             CEP2612WrapperInitArgs {
-                chain_id: CHAIN_NAME.to_string(),
+                chain_name: CHAIN_NAME.to_string(),
                 symbol: TOKEN_SYMBOL.to_string(),
                 name: TOKEN_NAME.to_string(),
                 decimals: TOKEN_DECIMALS,
