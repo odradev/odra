@@ -6,10 +6,8 @@
 #![cfg_attr(all(target_arch = "wasm32", not(test)), feature(core_intrinsics))]
 
 extern crate alloc;
-
 #[cfg(target_arch = "wasm32")]
-#[allow(unused_imports)]
-use ink_allocator;
+extern crate ink_allocator;
 
 #[cfg(target_arch = "wasm32")]
 #[panic_handler]
