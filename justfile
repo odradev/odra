@@ -44,12 +44,16 @@ build-proxy-callers:
     cd odra-casper/proxy-caller && cargo build --release --target wasm32-unknown-unknown --target-dir ../../target
     wasm-strip target/wasm32-unknown-unknown/release/proxy_caller.wasm
     wasm-strip target/wasm32-unknown-unknown/release/proxy_caller_with_return.wasm
-    wasm-opt --enable-bulk-memory --signext-lowering --llvm-memory-copy-fill-lowering target/wasm32-unknown-unknown/release/proxy_caller.wasm  -o target/wasm32-unknown-unknown/release/proxy_caller.wasm
-    wasm-opt --enable-bulk-memory --signext-lowering --llvm-memory-copy-fill-lowering target/wasm32-unknown-unknown/release/proxy_caller_with_return.wasm  -o target/wasm32-unknown-unknown/release/proxy_caller_with_return.wasm
+    wasm-opt -O3 --enable-bulk-memory --signext-lowering --llvm-memory-copy-fill-lowering target/wasm32-unknown-unknown/release/proxy_caller.wasm -o target/wasm32-unknown-unknown/release/proxy_caller.wasm
+    wasm-opt -O3 --enable-bulk-memory --signext-lowering --llvm-memory-copy-fill-lowering target/wasm32-unknown-unknown/release/proxy_caller_with_return.wasm -o target/wasm32-unknown-unknown/release/proxy_caller_with_return.wasm
     cp target/wasm32-unknown-unknown/release/proxy_caller.wasm \
         resources/proxy_caller.wasm
     cp target/wasm32-unknown-unknown/release/proxy_caller_with_return.wasm \
         resources/proxy_caller_with_return.wasm
+    cp target/wasm32-unknown-unknown/release/proxy_caller.wasm \
+        odra-wasm-client/resources/proxy_caller.wasm
+    cp target/wasm32-unknown-unknown/release/proxy_caller_with_return.wasm \
+        odra-wasm-client/resources/proxy_caller_with_return.wasm
 
 test-odra:
     cargo test

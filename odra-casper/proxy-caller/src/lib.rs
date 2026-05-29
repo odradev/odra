@@ -2,11 +2,24 @@
 #![doc = "It allows calling other contracts and saving the return values to the named key"]
 #![doc = "of the Proxy Caller."]
 #![no_std]
+#![allow(internal_features)]
+#![cfg_attr(all(target_arch = "wasm32", not(test)), feature(core_intrinsics))]
+
 extern crate alloc;
+
+#[cfg(target_arch = "wasm32")]
+#[allow(unused_imports)]
+use ink_allocator;
+
+#[cfg(target_arch = "wasm32")]
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    core::intrinsics::abort();
+}
 
 use core::mem::MaybeUninit;
 
-use odra_casper_wasm_env::casper_contract::{
+use casper_contract::{
     contract_api::{
         self, account,
         runtime::{self, get_named_arg, revert},
