@@ -54,7 +54,8 @@ pub enum Error {
     /// recomputed digest does not match what the signer signed (e.g. wrong
     /// `value`, `nonce`, `spender`, or `deadline`).
     InvalidSignature = 36_000,
-    /// The current block time is past the `deadline` timestamp. Permits with
+    /// The current block time is past the `deadline` timestamp (a Unix
+    /// timestamp in seconds, per the ERC-2612 convention). Permits with
     /// `deadline == u64::MAX` skip this check and never expire.
     PermitExpired = 36_001,
     /// The supplied `public_key` does not hash to the declared `owner`
@@ -111,7 +112,8 @@ impl CEP2612 {
     /// The contract:
     ///
     /// 1. Rejects the call if `deadline != u64::MAX` and the current block
-    ///    time is past `deadline` (`PermitExpired`).
+    ///    time (in seconds) is past `deadline`, a Unix timestamp in seconds
+    ///    (`PermitExpired`).
     /// 2. Rejects the call if `Address::from(public_key) != owner`
     ///    (`InvalidPublicKey`).
     /// 3. Recomputes the EIP-712 digest using the on-chain nonce for `owner`
@@ -129,7 +131,7 @@ impl CEP2612 {
         public_key: PublicKey,
         signature: Bytes
     ) {
-        if deadline != u64::MAX && self.env().get_block_time() > deadline {
+        if deadline != u64::MAX && self.env().get_block_time_secs() > deadline {
             self.revert(Error::PermitExpired);
         }
 
@@ -440,12 +442,13 @@ mod tests {
             alice_pubkey
         } = setup();
 
-        // Move block time past the chosen deadline.
-        env.advance_block_time(60_000);
-
+        // `deadline` is a Unix timestamp in seconds (ERC-2612 convention).
         let value: U256 = 500u64.into();
-        let deadline: u64 = 1_000;
+        let deadline: u64 = 1_700_000_000;
         let nonce: U256 = U256::zero();
+
+        // Advance block time (milliseconds) to just past the deadline.
+        env.advance_block_time((deadline + 1) * 1_000);
 
         let signature = sign_permit(
             &env,
