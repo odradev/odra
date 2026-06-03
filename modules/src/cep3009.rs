@@ -121,7 +121,13 @@ pub enum Error {
     InvalidCaller = 37_005,
     /// Attempted to cancel an authorization whose `(authorizer, nonce)` pair
     /// has already been consumed.
-    AuthorizationUsed = 37_006
+    AuthorizationUsed = 37_006,
+    /// The supplied `nonce` is not exactly 32 bytes. ERC-3009 nonces are
+    /// `bytes32`; the EIP-712 digest only covers 32 bytes, so accepting a
+    /// shorter or longer nonce would let an attacker craft length aliases
+    /// that share a digest (and thus a signature) while occupying distinct
+    /// replay-protection storage keys.
+    InvalidNonceLength = 37_007
 }
 
 /// Storage defined as named keys.
@@ -182,9 +188,10 @@ impl CEP3009 {
     /// tokens from `from` to `to`. Any account may submit this call — the
     /// signature, not the caller, is what authorizes the transfer.
     ///
-    /// Reverts with [`Error::NonceAlreadyUsed`], [`Error::AuthorizationNotYetValid`],
-    /// [`Error::AuthorizationExpired`], [`Error::InvalidPublicKey`], or
-    /// [`Error::InvalidSignature`] if the corresponding precondition fails.
+    /// Reverts with [`Error::InvalidNonceLength`], [`Error::NonceAlreadyUsed`],
+    /// [`Error::AuthorizationNotYetValid`], [`Error::AuthorizationExpired`],
+    /// [`Error::InvalidPublicKey`], or [`Error::InvalidSignature`] if the
+    /// corresponding precondition fails.
     /// On success, marks the nonce used, emits [`AuthorizationUsed`], and
     /// performs the transfer via [`Cep18::raw_transfer`].
     pub fn transfer_with_authorization(
@@ -254,8 +261,9 @@ impl CEP3009 {
     /// pair becomes unredeemable — the canonical way for an authorizer to
     /// revoke a leaked or otherwise unwanted authorization.
     ///
-    /// Reverts with [`Error::AuthorizationUsed`] if the nonce has already
-    /// been consumed (a cancelled nonce cannot be re-cancelled either), with
+    /// Reverts with [`Error::InvalidNonceLength`] if `nonce` is not 32 bytes,
+    /// with [`Error::AuthorizationUsed`] if the nonce has already been consumed
+    /// (a cancelled nonce cannot be re-cancelled either), with
     /// [`Error::InvalidPublicKey`] if `public_key` does not hash to
     /// `authorizer`, or with [`Error::InvalidSignature`] if signature
     /// verification fails. On success, marks the nonce used and emits
@@ -267,6 +275,10 @@ impl CEP3009 {
         public_key: PublicKey,
         signature: Bytes
     ) {
+        let Ok(nonce_bytes) = <[u8; 32]>::try_from(nonce.as_slice()) else {
+            self.env().revert(Error::InvalidNonceLength)
+        };
+
         if self.authorization_state(authorizer, nonce.clone()) {
             self.env().revert(Error::AuthorizationUsed);
         }
@@ -275,7 +287,7 @@ impl CEP3009 {
             self.env().revert(Error::InvalidPublicKey);
         }
 
-        let message = self.build_cancel_message(authorizer, &nonce);
+        let message = self.build_cancel_message(authorizer, nonce_bytes);
         if !self
             .env()
             .verify_signature(&message, &signature, &public_key)
@@ -306,31 +318,37 @@ impl CEP3009 {
         public_key: PublicKey,
         signature: Bytes
     ) {
-        // 1. Replay protection
+        // 1. Enforce a 32-byte nonce so the replay-protection key and the
+        // signed digest cover the exact same bytes (no length aliasing).
+        let Ok(nonce_bytes) = <[u8; 32]>::try_from(nonce.as_slice()) else {
+            self.env().revert(Error::InvalidNonceLength)
+        };
+
+        // 2. Replay protection
         if self.used_nonces.get_or_default(&from, &nonce) {
             self.env().revert(Error::NonceAlreadyUsed);
         }
 
-        // 2. block_time
+        // 3. block_time
         let now_secs = self.env().get_block_time_secs();
 
-        // 3. Check valid_after
+        // 4. Check valid_after
         if now_secs <= valid_after {
             self.env().revert(Error::AuthorizationNotYetValid);
         }
 
-        // 4. Check valid_before
+        // 5. Check valid_before
         if now_secs >= valid_before {
             self.env().revert(Error::AuthorizationExpired);
         }
 
-        // 5. Verify that public_key matches the `from` address
+        // 6. Verify that public_key matches the `from` address
         let derived_address = Address::from(public_key.clone());
         if derived_address != from {
             self.env().revert(Error::InvalidPublicKey);
         }
 
-        // 6. Build message and verify signature
+        // 7. Build message and verify signature
         let message = self.build_authorization_message(
             typehash,
             from,
@@ -338,7 +356,7 @@ impl CEP3009 {
             &amount,
             valid_after,
             valid_before,
-            &nonce
+            nonce_bytes
         );
 
         if !self
@@ -348,19 +366,19 @@ impl CEP3009 {
             self.env().revert(Error::InvalidSignature);
         }
 
-        // 7. Mark nonce as used
+        // 8. Mark nonce as used
         self.used_nonces.set(&from, &nonce, true);
 
-        // 8. Emit event
+        // 9. Emit event
         self.env().emit_event(AuthorizationUsed {
             authorizer: from,
             nonce
         });
 
-        // 9. Execute transfer (raw_transfer takes refs)
+        // 10. Execute transfer (raw_transfer takes refs)
         self.token.raw_transfer(&from, &to, &amount);
 
-        // 10. Emit event.
+        // 11. Emit event.
         self.env().emit_event(Transfer {
             sender: from,
             recipient: to,
@@ -369,8 +387,8 @@ impl CEP3009 {
     }
 
     /// Builds the EIP-712 digest for a transfer authorization. `amount` is
-    /// big-endian encoded to match the EVM `uint256` layout, and `nonce` is
-    /// right-padded to 32 bytes to match the EIP-712 `bytes32` layout.
+    /// big-endian encoded to match the EVM `uint256` layout, and `nonce` is the
+    /// 32-byte `bytes32` value (enforced at every entry point).
     fn build_authorization_message(
         &self,
         typehash: [u8; 32],
@@ -379,14 +397,10 @@ impl CEP3009 {
         amount: &U256,
         valid_after: u64,
         valid_before: u64,
-        nonce: &[u8]
+        nonce: [u8; 32]
     ) -> Bytes {
         let mut value_bytes = [0u8; 32];
         amount.to_big_endian(&mut value_bytes);
-
-        let mut nonce_padded = [0u8; 32];
-        let len = nonce.len().min(32);
-        nonce_padded[..len].copy_from_slice(&nonce[..len]);
 
         let mut encoded_data = Vec::with_capacity(6 * 32);
         encoded_data.extend(eip712::encode_address(from));
@@ -394,21 +408,18 @@ impl CEP3009 {
         encoded_data.extend(casper_eip_712::encode_uint256(value_bytes));
         encoded_data.extend(casper_eip_712::encode_uint64(valid_after));
         encoded_data.extend(casper_eip_712::encode_uint64(valid_before));
-        encoded_data.extend(casper_eip_712::encode_bytes32(nonce_padded));
+        encoded_data.extend(casper_eip_712::encode_bytes32(nonce));
         let domain = self.domain_separator();
 
         Bytes::from(crate::eip712::hash_typed_data(domain, typehash, encoded_data).to_vec())
     }
 
-    /// Builds the EIP-712 digest for a `CancelAuthorization` message.
-    fn build_cancel_message(&self, authorizer: Address, nonce: &[u8]) -> Bytes {
-        let mut nonce_padded = [0u8; 32];
-        let len = nonce.len().min(32);
-        nonce_padded[..len].copy_from_slice(&nonce[..len]);
-
+    /// Builds the EIP-712 digest for a `CancelAuthorization` message. `nonce` is
+    /// the 32-byte `bytes32` value (enforced at every entry point).
+    fn build_cancel_message(&self, authorizer: Address, nonce: [u8; 32]) -> Bytes {
         let mut encoded_data = Vec::with_capacity(64);
         encoded_data.extend(eip712::encode_address(authorizer));
-        encoded_data.extend(casper_eip_712::encode_bytes32(nonce_padded));
+        encoded_data.extend(casper_eip_712::encode_bytes32(nonce));
         let domain = self.domain_separator();
 
         Bytes::from(
@@ -1083,6 +1094,146 @@ mod tests {
         );
 
         // The nonce must remain unused so alice's pending authorization is not bricked.
+        assert!(!wrapper.authorization_state(alice, nonce));
+    }
+
+    #[test]
+    fn transfer_with_authorization_rejects_appended_byte_nonce_alias() {
+        let Setup {
+            env,
+            mut wrapper,
+            alice,
+            bob,
+            charlie,
+            alice_pubkey
+        } = setup();
+
+        let amount: U256 = 100u64.into();
+        let valid_after: u64 = 0;
+        let valid_before: u64 = u64::MAX;
+        let nonce = fresh_nonce(20);
+
+        let signature = sign_transfer_authorization(
+            &env,
+            &alice,
+            wrapper.address(),
+            TRANSFER_WITH_AUTHORIZATION_TYPEHASH,
+            alice,
+            bob,
+            amount,
+            valid_after,
+            valid_before,
+            &nonce
+        );
+
+        // First redemption with the canonical 32-byte nonce succeeds.
+        env.set_caller(charlie);
+        wrapper.transfer_with_authorization(
+            alice,
+            bob,
+            amount,
+            valid_after,
+            valid_before,
+            nonce.clone(),
+            alice_pubkey.clone(),
+            signature.clone()
+        );
+
+        // The same signature with a byte appended to the nonce hashes to the
+        // same 32-byte digest (the digest only covers 32 bytes) but produces a
+        // distinct replay-protection storage key. It must be rejected outright
+        // rather than allowing a second redemption.
+        let mut aliased = nonce.to_vec();
+        aliased.push(0);
+        let aliased_nonce = Bytes::from(aliased);
+
+        assert_eq!(
+            wrapper.try_transfer_with_authorization(
+                alice,
+                bob,
+                amount,
+                valid_after,
+                valid_before,
+                aliased_nonce,
+                alice_pubkey,
+                signature
+            ),
+            Err(Error::InvalidNonceLength.into())
+        );
+
+        // The funds moved exactly once.
+        assert_eq!(wrapper.balance_of(&bob), amount);
+    }
+
+    #[test]
+    fn transfer_with_authorization_rejects_short_nonce() {
+        let Setup {
+            env,
+            mut wrapper,
+            alice,
+            bob,
+            charlie,
+            alice_pubkey
+        } = setup();
+
+        let amount: U256 = 100u64.into();
+        let valid_after: u64 = 0;
+        let valid_before: u64 = u64::MAX;
+        // A 31-byte nonce that the digest would right-pad to 32 bytes.
+        let nonce = Bytes::from(vec![21u8; 31]);
+
+        let signature = sign_transfer_authorization(
+            &env,
+            &alice,
+            wrapper.address(),
+            TRANSFER_WITH_AUTHORIZATION_TYPEHASH,
+            alice,
+            bob,
+            amount,
+            valid_after,
+            valid_before,
+            &nonce
+        );
+
+        env.set_caller(charlie);
+        assert_eq!(
+            wrapper.try_transfer_with_authorization(
+                alice,
+                bob,
+                amount,
+                valid_after,
+                valid_before,
+                nonce,
+                alice_pubkey,
+                signature
+            ),
+            Err(Error::InvalidNonceLength.into())
+        );
+    }
+
+    #[test]
+    fn cancel_authorization_rejects_nonstandard_nonce() {
+        let Setup {
+            env,
+            mut wrapper,
+            alice,
+            charlie,
+            alice_pubkey,
+            ..
+        } = setup();
+
+        // An oversized (33-byte) nonce aliases a 32-byte cancel digest.
+        let nonce = Bytes::from(vec![22u8; 33]);
+        let cancel_signature =
+            sign_cancel_authorization(&env, &alice, wrapper.address(), alice, &nonce);
+
+        env.set_caller(charlie);
+        assert_eq!(
+            wrapper.try_cancel_authorization(alice, nonce.clone(), alice_pubkey, cancel_signature),
+            Err(Error::InvalidNonceLength.into())
+        );
+
+        // The aliased nonce must not be recorded as used.
         assert!(!wrapper.authorization_state(alice, nonce));
     }
 
