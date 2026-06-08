@@ -143,6 +143,10 @@ impl ContractContext for OdraVmContractEnv {
         rand::rng().fill(&mut bytes[..]);
         bytes
     }
+
+    fn verify_signature(&self,message: &[u8],signature: &casper_types::Signature,public_key: &PublicKey) -> bool {
+        casper_types::crypto::verify(message, signature, public_key).is_ok()
+    }
 }
 
 impl OdraVmContractEnv {

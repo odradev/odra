@@ -329,7 +329,8 @@ impl ContractEnv {
     ) -> bool {
         let (signature, _) = casper_types::crypto::Signature::from_bytes(signature.as_slice())
             .unwrap_or_else(|_| self.revert(ExecutionError::CouldNotDeserializeSignature));
-        casper_types::crypto::verify(message.as_slice(), &signature, public_key).is_ok()
+        self.backend.borrow().verify_signature(message, &signature, public_key)
+        // casper_types::crypto::verify(message.as_slice(), &signature, public_key).is_ok()
     }
 
     /// Hashes the specified value.

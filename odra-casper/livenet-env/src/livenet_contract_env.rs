@@ -4,7 +4,7 @@ use blake2::Blake2bVar;
 use odra_casper_rpc_client::casper_client::CasperClient;
 use odra_core::callstack::{Callstack, CallstackElement};
 use odra_core::casper_types::bytesrepr::Bytes;
-use odra_core::casper_types::{CLValue, PublicKey, U512};
+use odra_core::casper_types::{self, CLValue, PublicKey, U512};
 use odra_core::prelude::*;
 use odra_core::validator::ValidatorInfo;
 use odra_core::{CallDef, ContractContext, ContractRegister};
@@ -208,6 +208,10 @@ impl ContractContext for LivenetContractEnv {
             "pseudorandom_bytes is not supported for LivenetContractEnv, it should be run\
         in the context of a deploy to get consistent results"
         )
+    }
+
+    fn verify_signature(&self,message: &[u8],signature: &odra_core::casper_types::Signature,public_key: &PublicKey) -> bool {
+        casper_types::crypto::verify(message, signature, public_key).is_ok()
     }
 }
 

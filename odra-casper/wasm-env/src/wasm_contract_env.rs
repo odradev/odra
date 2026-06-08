@@ -129,6 +129,10 @@ impl ContractContext for WasmContractEnv {
     fn pseudorandom_bytes(&self) -> [u8; RANDOM_BYTES_COUNT] {
         host_functions::pseudorandom_bytes()
     }
+
+    fn verify_signature(&self,message: &[u8],signature: &casper_types::Signature,public_key: &PublicKey) -> bool {
+        host_functions::verify_signature(message, signature, public_key).is_ok()
+    }
 }
 
 impl WasmContractEnv {
