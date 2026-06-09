@@ -270,6 +270,13 @@ impl OdraWasmClient {
         .result
         .execution_result;
 
+        if let Some(ref error) = result.error {
+            return Err(JsError::new(&format!(
+                "Speculative execution failed for '{}': {}",
+                entry_point, error
+            )));
+        }
+
         let cl_value = find_result(&result.effects)?;
         let (result, _) = T::from_bytes(&cl_value.inner_bytes()[4..])?;
         Ok(result.to_wasm_value())
