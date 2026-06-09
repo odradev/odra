@@ -543,8 +543,6 @@ pub fn verify_signature(
 /// Transfers native token from the contract caller to the given address.
 pub fn transfer_tokens(to: &Address, amount: &U512) {
     let main_purse = get_or_create_main_purse();
-    // runtime::ver
-    // casper_verify_signature(message_ptr, message_size, signature_ptr, signature_size, public_key_ptr, public_key_size)
     match to {
         Address::Account(account) => {
             transfer_from_purse_to_account(main_purse, *account, *amount, None).unwrap_or_revert();
