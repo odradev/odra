@@ -4,7 +4,7 @@ use blake2::{Blake2b, Blake2b512, Blake2bVar, Blake2s256, Digest};
 use odra_core::casper_types::system::auction::ValidatorBid;
 use odra_core::casper_types::{
     bytesrepr::{Bytes, ToBytes},
-    CLValue, PublicKey, U512
+    CLValue, PublicKey, Signature, U512
 };
 use odra_core::consts::RANDOM_BYTES_COUNT;
 use odra_core::prelude::*;
@@ -144,7 +144,12 @@ impl ContractContext for OdraVmContractEnv {
         bytes
     }
 
-    fn verify_signature(&self,message: &[u8],signature: &casper_types::Signature,public_key: &PublicKey) -> bool {
+    fn verify_signature(
+        &self,
+        message: &[u8],
+        signature: &Signature,
+        public_key: &PublicKey
+    ) -> bool {
         casper_types::crypto::verify(message, signature, public_key).is_ok()
     }
 }

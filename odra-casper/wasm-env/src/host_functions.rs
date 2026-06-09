@@ -12,7 +12,9 @@ use crate::consts::{CONSTRUCTOR_GROUP_NAME, NATIVE_EVENT_TOPIC, UPGRADER_GROUP_N
 use casper_contract::contract_api::runtime::{emit_message, get_immediate_caller};
 use casper_contract::contract_api::storage;
 use casper_contract::contract_api::system;
-use casper_contract::ext_ffi::{casper_emit_message, casper_remove_contract_user_group_urefs, casper_verify_signature};
+use casper_contract::ext_ffi::{
+    casper_emit_message, casper_remove_contract_user_group_urefs, casper_verify_signature
+};
 use casper_contract::unwrap_or_revert::UnwrapOrRevert;
 use casper_contract::{
     contract_api::{

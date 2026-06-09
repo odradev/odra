@@ -226,5 +226,10 @@ pub trait ContractContext {
     /// # Returns
     ///
     /// `true` if the signature is valid, `false` otherwise.
-    fn verify_signature(&self, message: &[u8], signature: &Signature, public_key: &PublicKey) -> bool;
+    fn verify_signature(
+        &self,
+        message: &[u8],
+        signature: &Signature,
+        public_key: &PublicKey
+    ) -> bool;
 }
