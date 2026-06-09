@@ -5,6 +5,8 @@ target
 *.env
 !/.gitignore
 !/.codecov.yml
+!odra-casper/proxy-caller/.cargo/
+!odra-casper/proxy-caller/.cargo/config.toml
 Cargo.lock
 .vscode/
 .idea/

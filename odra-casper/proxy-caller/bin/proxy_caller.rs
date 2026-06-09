@@ -9,7 +9,7 @@ extern crate alloc;
 
 use odra_casper_proxy_caller::{ensure_cargo_purse_is_empty, ProxyCall};
 
-use odra_casper_wasm_env::casper_contract::contract_api::runtime;
+use casper_contract::contract_api::runtime;
 use odra_core::casper_types::contracts::ContractPackageHash;
 
 #[no_mangle]

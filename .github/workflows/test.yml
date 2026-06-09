@@ -51,7 +51,7 @@ jobs:
         with:
           toolchain: nightly-2026-01-01
           target: wasm32-unknown-unknown
-          components: rustfmt, clippy, llvm-tools-preview
+          components: rustfmt, clippy, llvm-tools-preview, rust-src
       - name: Run lints
         run: just check-lint
       - name: Prepare test environment

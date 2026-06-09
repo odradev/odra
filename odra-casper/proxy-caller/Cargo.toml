@@ -15,8 +15,14 @@ repository = "https://github.com/odradev/odra"
 version = "2.7.2"
 
 [dependencies]
-odra-casper-wasm-env = { path = "../wasm-env" }
 odra-core = { path = "../../core" }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+casper-contract = { version = "5.1", default-features = false }
+ink_allocator = { version = "5.0.0", default-features = false }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+casper-contract = { version = "5.1", default-features = false, features = ["test-support"] }
 
 [[bin]]
 bench = false
@@ -34,3 +40,10 @@ test = false
 
 [lints.rust]
 missing_docs = "warn"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+panic = "abort"
+strip = true
