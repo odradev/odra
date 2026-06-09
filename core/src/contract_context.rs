@@ -4,7 +4,7 @@ use crate::casper_types::U512;
 use crate::consts::RANDOM_BYTES_COUNT;
 use crate::prelude::*;
 use crate::validator::ValidatorInfo;
-use casper_types::{CLValue, PublicKey};
+use casper_types::{CLValue, PublicKey, Signature};
 
 /// Trait representing the context of a smart contract.
 #[cfg_attr(test, allow(unreachable_code))]
@@ -214,4 +214,22 @@ pub trait ContractContext {
     /// Returns a vector of pseudorandom bytes of the specified size.
     /// There is no guarantee that the returned bytes are in any way cryptographically secure.
     fn pseudorandom_bytes(&self) -> [u8; RANDOM_BYTES_COUNT];
+
+    /// Verifies the signature of the given message against the given public key.
+    ///
+    /// # Arguments
+    ///
+    /// * `message` - The message to verify the signature for.
+    /// * `signature` - The signature to verify.
+    /// * `public_key` - The public key to verify the signature against.
+    ///
+    /// # Returns
+    ///
+    /// `true` if the signature is valid, `false` otherwise.
+    fn verify_signature(
+        &self,
+        message: &[u8],
+        signature: &Signature,
+        public_key: &PublicKey
+    ) -> bool;
 }

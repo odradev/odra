@@ -5,7 +5,7 @@ use casper_types::U512;
 use odra_core::casper_types;
 use odra_core::casper_types::bytesrepr::Bytes;
 use odra_core::casper_types::system::auction::ValidatorBid;
-use odra_core::casper_types::{CLType, CLValue, PublicKey, BLAKE2B_DIGEST_LENGTH};
+use odra_core::casper_types::{CLType, CLValue, PublicKey, Signature, BLAKE2B_DIGEST_LENGTH};
 use odra_core::consts::RANDOM_BYTES_COUNT;
 use odra_core::prelude::*;
 use odra_core::validator::ValidatorInfo;
@@ -128,6 +128,15 @@ impl ContractContext for WasmContractEnv {
 
     fn pseudorandom_bytes(&self) -> [u8; RANDOM_BYTES_COUNT] {
         host_functions::pseudorandom_bytes()
+    }
+
+    fn verify_signature(
+        &self,
+        message: &[u8],
+        signature: &Signature,
+        public_key: &PublicKey
+    ) -> bool {
+        host_functions::verify_signature(message, signature, public_key).is_ok()
     }
 }
 

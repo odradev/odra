@@ -12,7 +12,9 @@ use crate::consts::{CONSTRUCTOR_GROUP_NAME, NATIVE_EVENT_TOPIC, UPGRADER_GROUP_N
 use casper_contract::contract_api::runtime::{emit_message, get_immediate_caller};
 use casper_contract::contract_api::storage;
 use casper_contract::contract_api::system;
-use casper_contract::ext_ffi::{casper_emit_message, casper_remove_contract_user_group_urefs};
+use casper_contract::ext_ffi::{
+    casper_emit_message, casper_remove_contract_user_group_urefs, casper_verify_signature
+};
 use casper_contract::unwrap_or_revert::UnwrapOrRevert;
 use casper_contract::{
     contract_api::{
@@ -35,7 +37,7 @@ use odra_core::casper_types::system::auction::{self, BidAddr, BidKind, Validator
 use odra_core::casper_types::system::{Caller, CallerInfo};
 use odra_core::casper_types::ApiError::User;
 use odra_core::casper_types::Key::SmartContract;
-use odra_core::casper_types::{self, HashAddr, StoredValue};
+use odra_core::casper_types::{self, HashAddr, Signature, StoredValue};
 use odra_core::casper_types::{
     api_error, bytesrepr,
     bytesrepr::{Bytes, FromBytes, ToBytes},
@@ -529,10 +531,18 @@ fn get_dictionary(name: &str) -> URef {
     dictionary_uref
 }
 
+/// Verifies the signature of the given message against the given public key.
+pub fn verify_signature(
+    message: &[u8],
+    signature: &Signature,
+    public_key: &PublicKey
+) -> Result<(), ApiError> {
+    casper_contract::contract_api::cryptography::verify_signature(message, signature, public_key)
+}
+
 /// Transfers native token from the contract caller to the given address.
 pub fn transfer_tokens(to: &Address, amount: &U512) {
     let main_purse = get_or_create_main_purse();
-
     match to {
         Address::Account(account) => {
             transfer_from_purse_to_account(main_purse, *account, *amount, None).unwrap_or_revert();
