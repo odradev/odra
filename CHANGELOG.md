@@ -2,6 +2,10 @@
 
 Changelog for `odra`.
 
+## [2.8.1] - 2026-06-11
+### Fixed
+- Fix security vulnerability in `cep95`.
+
 ## [2.8.0] - 2026-06-10
 ### Changed
 - The wasm environment verifies signatures on the host side instead of the contract side, which allows for more efficient signature verification.

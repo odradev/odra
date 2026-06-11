@@ -338,25 +338,22 @@ impl CEP95Interface for Cep95 {
         self.assert_exists(&token_id);
 
         let caller = self.env().caller();
-        let previous_owner = self.raw_transfer(to, token_id);
+        let owner = self.owner_of(token_id).unwrap_or_revert_with(self, Error::InvalidTokenId);
 
         // `from` must be the current owner.
-        if previous_owner != from {
+        if owner != from {
             self.env().revert(Error::NotAnOwnerOrApproved);
         }
 
-        // Check if the caller is authorized to transfer the token.
-        // It can be either:
-        // - the owner,
-        // - an operator approved for all of the owner's tokens,
-        // - the approved spender for this specific token.
-        let is_authorized = previous_owner == caller
+        // Authorize the caller BEFORE any state mutation.
+        let is_authorized = owner == caller
             || self.is_approved_for_all(from, caller)
             || self.is_spender(token_id, caller);
-
         if !is_authorized {
             self.env().revert(Error::NotAnOwnerOrApproved);
         }
+
+        self.raw_transfer(to, token_id); // clears approval + moves token
     }
 
     fn approve(&mut self, spender: Address, token_id: U256) {
@@ -516,6 +513,7 @@ impl Cep95 {
     /// Transfers an NFT from one address to another without checking the recipient contract.
     /// SECURITY: Do not expose this function publicly without proper access control.
     pub fn raw_transfer(&mut self, to: Address, token_id: U256) -> Address {
+        self.clear_approval(&token_id);
         let from = self
             .owner_of(token_id)
             .unwrap_or_revert_with(self, Error::InvalidTokenId);
@@ -1122,6 +1120,37 @@ mod tests {
         env.set_caller(non_owner);
         let result = cep95.try_revoke_approval(token_id);
         assert_eq!(result, Err(Error::NotAnOwnerOrApproved.into()));
+    }
+
+    #[test]
+    fn test_approval_cleared_after_transfer() {
+        // SECURITY regression: a per-token approval must not survive a change of
+        // ownership. Otherwise the previously-approved spender could move the
+        // token away from its new owner.
+        let (env, mut cep95) = setup();
+        let owner = env.get_account(0);
+        let spender = env.get_account(11);
+        let recipient = env.get_account(10);
+        let attacker_dest = env.get_account(12);
+
+        let token_id = U256::from(1);
+        let metadata = vec![("key".to_string(), "value".to_string())];
+        cep95.mint(owner, token_id, metadata);
+
+        // Owner approves spender, then sells/transfers the token to recipient.
+        cep95.approve(spender, token_id);
+        cep95.transfer_from(owner, recipient, token_id);
+
+        // The stale approval must be gone now that ownership changed.
+        assert_eq!(cep95.approved_for(token_id), None);
+
+        // And the old spender must not be able to steal the token from recipient.
+        env.set_caller(spender);
+        let result = cep95.try_transfer_from(recipient, attacker_dest, token_id);
+        assert_eq!(result, Err(Error::NotAnOwnerOrApproved.into()));
+        assert_eq!(cep95.owner_of(token_id), Some(recipient));
+        assert_eq!(cep95.balance_of(recipient), U256::from(1));
+        assert_eq!(cep95.balance_of(attacker_dest), U256::from(0));
     }
 
     #[test]
