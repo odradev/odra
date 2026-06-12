@@ -397,11 +397,7 @@ impl super::CasperClient {
         let transaction_v1 = transaction_builder
             .with_ttl(self.configuration.ttl())
             .with_chain_name(self.configuration.chain_name())
-            .with_pricing_mode(PricingMode::PaymentLimited {
-                payment_amount: call_def.amount().as_u64() + self.gas.as_u64(),
-                gas_price_tolerance: 5,
-                standard_payment: true
-            })
+            .with_pricing_mode(self.pricing_mode())
             .with_secret_key(self.secret_key())
             .with_timestamp(timestamp)
             .with_runtime_args(call_def.args().clone())
