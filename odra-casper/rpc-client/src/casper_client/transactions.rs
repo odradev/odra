@@ -24,6 +24,7 @@ use std::time::Duration;
 /// Transaction-related constants
 const TRANSACTION_WAIT_TIME: u64 = 10;
 const TRANSACTION_MAX_RETRIES: u64 = 12;
+const NATIVE_TRANSFER_GAS: u64 = 100_000_000u64;
 
 /// Transaction methods implementation for CasperClient.
 impl super::CasperClient {
@@ -364,7 +365,7 @@ impl super::CasperClient {
                 .with_ttl(self.configuration.ttl())
                 .with_chain_name(self.configuration.chain_name())
                 .with_pricing_mode(PricingMode::PaymentLimited {
-                    payment_amount: amount.as_u64(),
+                    payment_amount: NATIVE_TRANSFER_GAS,
                     gas_price_tolerance: 5,
                     standard_payment: true
                 })
