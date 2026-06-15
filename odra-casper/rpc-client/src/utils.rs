@@ -4,16 +4,20 @@ use casper_types::{CLTyped, StoredValue};
 use odra_core::prelude::{ExecutionError, OdraError, OdraResult};
 use std::path::{self, PathBuf};
 
+use crate::error::LivenetError;
+
 /// Search for the wasm file in the current directory and in the parent directory.
 pub fn find_wasm_file_path(wasm_file_name: &str) -> OdraResult<PathBuf> {
     let contract_path = PathBuf::from("wasm")
         .join(wasm_file_name)
         .with_extension("wasm");
 
-    let project_root = project_root::get_project_root()
-        .map_err(|e| OdraError::ExecutionError(ExecutionError::ContractDeploymentError(e.to_string())))?;
-    let mut current_dir = path::absolute(".")
-        .map_err(|e| OdraError::ExecutionError(ExecutionError::ContractDeploymentError(e.to_string())))?;
+    let project_root = project_root::get_project_root().map_err(|e| {
+        OdraError::ExecutionError(ExecutionError::ContractDeploymentError(e.to_string()))
+    })?;
+    let mut current_dir = path::absolute(".").map_err(|e| {
+        OdraError::ExecutionError(ExecutionError::ContractDeploymentError(e.to_string()))
+    })?;
 
     let mut checked_paths = vec![];
     while current_dir != project_root {
@@ -26,7 +30,9 @@ pub fn find_wasm_file_path(wasm_file_name: &str) -> OdraResult<PathBuf> {
             current_dir = current_dir
                 .parent()
                 .ok_or(OdraError::ExecutionError(
-                    ExecutionError::ContractDeploymentError("Failed to get parent directory".to_string())
+                    ExecutionError::ContractDeploymentError(
+                        "Failed to get parent directory".to_string()
+                    )
                 ))?
                 .to_path_buf();
         }
@@ -45,14 +51,8 @@ pub fn find_wasm_file_path(wasm_file_name: &str) -> OdraResult<PathBuf> {
 }
 
 /// Gets an env variable
-pub fn get_env_variable(name: &str) -> String {
-    std::env::var(name).unwrap_or_else(|err| {
-        crate::log::error(format!(
-            "{} must be set. Have you setup your .env file?",
-            name
-        ));
-        panic!("{}", err)
-    })
+pub fn get_env_variable(name: &str) -> Result<String, LivenetError> {
+    std::env::var(name).map_err(|_err| LivenetError::EnvVariableNotSet(name.to_string()))
 }
 
 /// Gets an optional env variable

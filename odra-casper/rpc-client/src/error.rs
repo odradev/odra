@@ -1,3 +1,4 @@
+use odra_core::prelude::Address;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -17,7 +18,15 @@ pub enum LivenetError {
     #[error("Couldn't query dictionary")]
     DictQueryError,
     #[error("Gas not set")]
-    GasNotSet
+    GasNotSet,
+    #[error("Invalid target address for transfer: {0:?}")]
+    InvalidTransferTarget(Address),
+    #[error("Invalid transaction")]
+    InvalidTransaction,
+    #[error("Environment variable {0} must be set. Have you setup your .env file?")]
+    EnvVariableNotSet(String),
+    #[error(transparent)]
+    SecrectKeyLoadError(#[from] odra_core::casper_types::crypto::ErrorExt)
 }
 
 impl LivenetError {
@@ -25,12 +34,7 @@ impl LivenetError {
         match self {
             LivenetError::RpcCommunicationFailure => "Livenet communication error".to_string(),
             LivenetError::ExecutionError(error_message) => error_message.to_string(),
-            LivenetError::RpcRequestError(_, _) => self.to_string(),
-            LivenetError::SerializationError => self.to_string(),
-            LivenetError::BlockTimeError => self.to_string(),
-            LivenetError::ClientError(_) => self.to_string(),
-            LivenetError::DictQueryError => self.to_string(),
-            LivenetError::GasNotSet => self.to_string()
+            _ => self.to_string()
         }
     }
 }

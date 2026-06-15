@@ -12,6 +12,7 @@ use odra::{
     schema::{SchemaCustomTypes, SchemaEntrypoints, SchemaEvents},
     OdraContract
 };
+use odra_casper_livenet_env::LivenetError;
 
 use crate::{
     cmd::{
@@ -48,6 +49,22 @@ impl Default for OdraCli {
 impl OdraCli {
     /// Creates a new empty instance of the Odra CLI.
     pub fn new() -> Self {
+        let host_env = match odra_casper_livenet_env::env_safe() {
+            Ok(e) => e,
+            Err(LivenetError::EnvVariableNotSet(e)) => {
+                prettycli::error(&format!(
+                    "Livenet env misconfigured! {} env var is missing.",
+                    e
+                ));
+                prettycli::info("Visit offical docs to read more:");
+                prettycli::link("https://odra.dev/docs/backends/livenet#setup");
+                std::process::exit(1)
+            }
+            Err(e) => {
+                prettycli::error(&format!("Livent misconfigured: {e:#}"));
+                std::process::exit(1)
+            }
+        };
         Self {
             main_cmd: MainCmd::default(),
             deploy_cmd: None,
@@ -55,7 +72,7 @@ impl OdraCli {
             print_events_cmd: PrintEventsCmd::default(),
             scenarios_cmd: ScenariosCmd::default(),
             whoami_cmd: WhoamiCmd::new(),
-            host_env: odra_casper_livenet_env::env(),
+            host_env,
             custom_types: CustomTypes::default(),
             callers: HashMap::default(),
             default_contract_path: None
@@ -194,9 +211,9 @@ impl OdraCli {
             _ => unreachable!()
         };
 
-        match result {
-            Ok(_) => {}
-            Err(err) => prettycli::error(&format!("{err}"))
+        if let Err(err) = result {
+            prettycli::error(&format!("{err:#}"));
+            std::process::exit(1);
         }
     }
 

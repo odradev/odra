@@ -4,6 +4,6 @@
 extern crate core;
 
 pub mod casper_client;
-mod error;
+pub mod error;
 pub mod log;
 pub mod utils;

@@ -2,7 +2,9 @@
 
 use crate::error;
 use crate::livenet_contract_env::LivenetContractEnv;
+use odra_casper_rpc_client::casper_client::configuration::CasperClientConfiguration;
 use odra_casper_rpc_client::casper_client::CasperClient;
+use odra_casper_rpc_client::error::LivenetError;
 use odra_casper_rpc_client::log::info;
 use odra_casper_rpc_client::utils::find_wasm_file_path;
 use odra_core::callstack::{Callstack, CallstackElement};
@@ -31,11 +33,18 @@ pub struct LivenetHost {
 impl LivenetHost {
     /// Creates a new instance of LivenetHost.
     pub fn new() -> Rc<Self> {
-        Rc::new(Self::new_instance())
+        Rc::new(Self::new_instance().unwrap())
     }
 
-    fn new_instance() -> Self {
-        let casper_client: Rc<RefCell<CasperClient>> = Default::default();
+    pub fn new_safe() -> Result<Rc<Self>, LivenetError> {
+        let instance = Self::new_instance()?;
+        Ok(Rc::new(instance))
+    }
+
+    fn new_instance() -> Result<Self, LivenetError> {
+        let configuration = CasperClientConfiguration::from_env()?;
+        let casper_client: Rc<RefCell<CasperClient>> =
+            Rc::new(RefCell::new(CasperClient::new(configuration)));
         let callstack: Rc<RefCell<Callstack>> = Default::default();
         let contract_register = Rc::new(RwLock::new(Default::default()));
         let livenet_contract_env = LivenetContractEnv::new(
@@ -44,12 +53,12 @@ impl LivenetHost {
             contract_register.clone()
         );
         let contract_env = Rc::new(ContractEnv::new(livenet_contract_env));
-        Self {
+        Ok(Self {
             casper_client,
             contract_register,
             contract_env,
             callstack
-        }
+        })
     }
 }
 

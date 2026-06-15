@@ -48,9 +48,3 @@ impl CasperClient {
         }
     }
 }
-
-impl Default for CasperClient {
-    fn default() -> Self {
-        Self::new(CasperClientConfiguration::from_env())
-    }
-}

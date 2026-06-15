@@ -2,8 +2,7 @@
 
 use crate::casper_client::transaction_watcher::{TransactionWatch, TransactionWatcher};
 use crate::casper_client::Result;
-use crate::error::LivenetError::{self, ExecutionError};
-use crate::error::LivenetError::RpcRequestError;
+use crate::error::LivenetError;
 use crate::log;
 use casper_client::cli::TransactionV1Builder;
 use casper_client::put_transaction;
@@ -35,7 +34,7 @@ impl super::CasperClient {
         amount: U512,
         timestamp: Timestamp
     ) -> Result<TransactionHash> {
-        let transaction = self.new_transfer_transaction(to, amount, timestamp);
+        let transaction = self.new_transfer_transaction(to, amount, timestamp)?;
         self.put_transaction(transaction).await
     }
 
@@ -52,7 +51,7 @@ impl super::CasperClient {
         let package_hash_key_name: String = args
             .get(PACKAGE_HASH_KEY_NAME_ARG)
             .ok_or_else(|| {
-                ExecutionError(format!(
+                LivenetError::ExecutionError(format!(
                     "Missing required argument: {}",
                     PACKAGE_HASH_KEY_NAME_ARG
                 ))
@@ -60,7 +59,7 @@ impl super::CasperClient {
             .clone()
             .into_t()
             .map_err(|e| {
-                ExecutionError(format!(
+                LivenetError::ExecutionError(format!(
                     "Failed to parse {} argument: {:?}",
                     PACKAGE_HASH_KEY_NAME_ARG, e
                 ))
@@ -71,7 +70,7 @@ impl super::CasperClient {
         }
 
         let transaction =
-            self.new_wasm_deploy_transaction(Bytes::from(wasm_bytes), args, timestamp);
+            self.new_wasm_deploy_transaction(Bytes::from(wasm_bytes), args, timestamp)?;
         self.put_transaction(transaction).await?;
 
         let address = self.get_contract_address(&package_hash_key_name).await?;
@@ -99,7 +98,7 @@ impl super::CasperClient {
         ));
 
         let hash = address.as_contract_package_hash().ok_or_else(|| {
-            ExecutionError(format!(
+            LivenetError::ExecutionError(format!(
                 "Address {:?} is not a contract package hash. Expected contract address.",
                 address.to_formatted_string()
             ))
@@ -121,7 +120,7 @@ impl super::CasperClient {
             .to_vec()
             .into();
 
-        let transaction = self.new_wasm_deploy_transaction(module_bytes, args, timestamp);
+        let transaction = self.new_wasm_deploy_transaction(module_bytes, args, timestamp)?;
         let watch = self.start_event_watcher().await?;
 
         let response = put_transaction(
@@ -134,13 +133,13 @@ impl super::CasperClient {
         .map_err(|e| match e {
             casper_client::Error::ResponseIsRpcError {
                 rpc_method, error, ..
-            } => RpcRequestError(
+            } => LivenetError::RpcRequestError(
                 rpc_method.to_string(),
                 error
                     .data
                     .map_or_else(|| "No data".to_string(), |d| d.to_string())
             ),
-            _ => ExecutionError(format!("Failed to put transaction: {}", e))
+            _ => LivenetError::ExecutionError(format!("Failed to put transaction: {}", e))
         })?;
         let deploy_hash = response.result.transaction_hash;
         let result = self.wait_for_transaction(deploy_hash, watch).await?;
@@ -177,13 +176,13 @@ impl super::CasperClient {
                 return match e {
                     casper_client::Error::ResponseIsRpcError {
                         rpc_method, error, ..
-                    } => Err(RpcRequestError(
+                    } => Err(LivenetError::RpcRequestError(
                         rpc_method.to_string(),
                         error
                             .data
                             .map_or_else(|| "No data".to_string(), |d| d.to_string())
                     )),
-                    _ => Err(ExecutionError(e.to_string()))
+                    _ => Err(LivenetError::ExecutionError(e.to_string()))
                 }
             }
         };
@@ -206,7 +205,7 @@ impl super::CasperClient {
             .await?;
 
         if !found {
-            return Err(ExecutionError(String::from(
+            return Err(LivenetError::ExecutionError(String::from(
                 "Events stream ended before transaction was processed."
             )));
         }
@@ -237,7 +236,7 @@ impl super::CasperClient {
             }
         }
 
-        Err(ExecutionError(String::from(
+        Err(LivenetError::ExecutionError(String::from(
             "Transaction processed but execution result not available."
         )))
     }
@@ -263,13 +262,13 @@ impl super::CasperClient {
         .map_err(|e| match e {
             casper_client::Error::ResponseIsRpcError {
                 rpc_method, error, ..
-            } => RpcRequestError(
+            } => LivenetError::RpcRequestError(
                 rpc_method.to_string(),
                 error
                     .data
                     .map_or_else(|| "No data".to_string(), |d| d.to_string())
             ),
-            _ => ExecutionError(format!("Failed to put transaction: {}", e))
+            _ => LivenetError::ExecutionError(format!("Failed to put transaction: {}", e))
         })?;
         let deploy_hash = response.result.transaction_hash;
         log::debug(format!(
@@ -294,7 +293,7 @@ impl super::CasperClient {
                         "Deploy V1 {:?} failed with error: {:?}.",
                         deploy_hash_str, error_message
                     ));
-                    Err(ExecutionError(error_message.to_string()))
+                    Err(LivenetError::ExecutionError(error_message.to_string()))
                 }
                 Success { .. } => {
                     log::info(format!(
@@ -323,7 +322,7 @@ impl super::CasperClient {
                     if let Some(url) = self.configuration.transaction_url(&deploy_hash_str) {
                         log::link(url);
                     }
-                    Err(ExecutionError(error_message.to_string()))
+                    Err(LivenetError::ExecutionError(error_message.to_string()))
                 }
             }
         }
@@ -334,13 +333,13 @@ impl super::CasperClient {
         transaction_bytes: Bytes,
         args: RuntimeArgs,
         timestamp: Timestamp
-    ) -> Transaction {
+    ) -> Result<Transaction> {
         let transaction_builder = TransactionV1Builder::new_session(
             true,
             transaction_bytes,
             TransactionRuntimeParams::VmCasperV1
         );
-        Transaction::V1(
+        Ok(Transaction::V1(
             transaction_builder
                 .with_runtime_args(args)
                 .with_ttl(self.configuration.ttl())
@@ -349,8 +348,8 @@ impl super::CasperClient {
                 .with_secret_key(self.secret_key())
                 .with_timestamp(timestamp)
                 .build()
-                .unwrap_or_else(|e| panic!("Failed to build transaction: {:?}", e))
-        )
+                .map_err(|_| LivenetError::InvalidTransaction)?
+        ))
     }
 
     fn new_transfer_transaction(
@@ -358,13 +357,14 @@ impl super::CasperClient {
         to: Address,
         amount: U512,
         timestamp: Timestamp
-    ) -> Transaction {
-        let transaction_builder = TransactionV1Builder::new_transfer(amount, None, TransferTarget::AccountHash(*to.as_account_hash().unwrap_or_else(
-            || panic!("Couldn't get account hash from address: {:?}. You can transfer only to accounts.", to)
-        )) , None).unwrap_or_else(
-            |e| panic!("Failed to build transfer transaction: {:?}", e)
+    ) -> Result<Transaction> {
+        let target = TransferTarget::AccountHash(
+            *to.as_account_hash()
+                .ok_or(LivenetError::InvalidTransferTarget(to))?
         );
-        Transaction::V1(
+        let transaction_builder = TransactionV1Builder::new_transfer(amount, None, target, None)
+            .map_err(|_| LivenetError::SerializationError)?;
+        Ok(Transaction::V1(
             transaction_builder
                 .with_ttl(self.configuration.ttl())
                 .with_chain_name(self.configuration.chain_name())
@@ -376,8 +376,8 @@ impl super::CasperClient {
                 .with_secret_key(self.secret_key())
                 .with_timestamp(timestamp)
                 .build()
-                .unwrap_or_else(|e| panic!("Failed to build transfer transaction: {:?}", e))
-        )
+                .map_err(|_| LivenetError::InvalidTransaction)?
+        ))
     }
 
     fn new_call_transaction(
@@ -386,12 +386,9 @@ impl super::CasperClient {
         call_def: CallDef,
         timestamp: Timestamp
     ) -> Result<Transaction> {
-        let package_hash = to.as_package_hash().ok_or_else(|| {
-            ExecutionError(format!(
-                "Address {:?} is not a package hash. Expected contract address.",
-                to.to_formatted_string()
-            ))
-        })?;
+        let package_hash = to
+            .as_package_hash()
+            .ok_or(LivenetError::InvalidTransferTarget(to))?;
         let transaction_builder = TransactionV1Builder::new_targeting_package(
             package_hash,
             None,
@@ -406,7 +403,7 @@ impl super::CasperClient {
             .with_timestamp(timestamp)
             .with_runtime_args(call_def.args().clone())
             .build()
-            .map_err(|e| ExecutionError(format!("Failed to build call transaction: {:?}", e)))?;
+            .map_err(|_| LivenetError::InvalidTransaction)?;
         Ok(Transaction::V1(transaction_v1))
     }
 
