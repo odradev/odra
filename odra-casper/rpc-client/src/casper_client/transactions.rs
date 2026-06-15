@@ -2,7 +2,7 @@
 
 use crate::casper_client::transaction_watcher::{TransactionWatch, TransactionWatcher};
 use crate::casper_client::Result;
-use crate::error::LivenetError::ExecutionError;
+use crate::error::LivenetError::{self, ExecutionError};
 use crate::error::LivenetError::RpcRequestError;
 use crate::log;
 use casper_client::cli::TransactionV1Builder;
@@ -65,6 +65,10 @@ impl super::CasperClient {
                     PACKAGE_HASH_KEY_NAME_ARG, e
                 ))
             })?;
+
+        if self.gas.is_zero() {
+            return Err(LivenetError::GasNotSet);
+        }
 
         let transaction =
             self.new_wasm_deploy_transaction(Bytes::from(wasm_bytes), args, timestamp);

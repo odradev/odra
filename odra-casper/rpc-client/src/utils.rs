@@ -11,9 +11,9 @@ pub fn find_wasm_file_path(wasm_file_name: &str) -> OdraResult<PathBuf> {
         .with_extension("wasm");
 
     let project_root = project_root::get_project_root()
-        .map_err(|_| OdraError::ExecutionError(ExecutionError::ContractDeploymentError))?;
+        .map_err(|e| OdraError::ExecutionError(ExecutionError::ContractDeploymentError(e.to_string())))?;
     let mut current_dir = path::absolute(".")
-        .map_err(|_| OdraError::ExecutionError(ExecutionError::ContractDeploymentError))?;
+        .map_err(|e| OdraError::ExecutionError(ExecutionError::ContractDeploymentError(e.to_string())))?;
 
     let mut checked_paths = vec![];
     while current_dir != project_root {
@@ -26,7 +26,7 @@ pub fn find_wasm_file_path(wasm_file_name: &str) -> OdraResult<PathBuf> {
             current_dir = current_dir
                 .parent()
                 .ok_or(OdraError::ExecutionError(
-                    ExecutionError::ContractDeploymentError
+                    ExecutionError::ContractDeploymentError("Failed to get parent directory".to_string())
                 ))?
                 .to_path_buf();
         }
@@ -40,7 +40,7 @@ pub fn find_wasm_file_path(wasm_file_name: &str) -> OdraResult<PathBuf> {
 
     crate::log::error(format!("Could not find wasm under {:?}.", checked_paths));
     Err(OdraError::ExecutionError(
-        ExecutionError::ContractDeploymentError
+        ExecutionError::ContractDeploymentError("Failed to find wasm file".to_string())
     ))
 }
 

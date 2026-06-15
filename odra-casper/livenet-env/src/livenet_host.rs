@@ -229,7 +229,7 @@ impl HostContext for LivenetHost {
                 Ok(addr) => addr,
                 Err(e) => {
                     log::error!("Error deploying contract: {}", e);
-                    return Err(ExecutionError::ContractDeploymentError.into());
+                    return Err(ExecutionError::ContractDeploymentError(e.to_string()).into());
                 }
             }
         };
@@ -257,7 +257,7 @@ impl HostContext for LivenetHost {
             Ok(_) => {}
             Err(e) => {
                 log::error!("Error deploying contract: {}", e);
-                return Err(ExecutionError::ContractDeploymentError.into());
+                return Err(ExecutionError::ContractDeploymentError(e.to_string()).into());
             }
         }
         self.register_contract(contract_to_upgrade, name.to_string(), entry_points_caller);
