@@ -157,7 +157,7 @@ impl<'a> ScenarioArgs<'a> {
 
         arg.clone()
             .into_t::<T>()
-            .map_err(|_| ScenarioError::ArgError(ArgError::Deserialization))
+            .map_err(|_| ScenarioError::ArgError(ArgError::Deserialization(name.to_string())))
     }
 
     pub fn get_many<T: NamedCLTyped + FromBytes + CLTyped>(
@@ -172,15 +172,15 @@ impl<'a> ScenarioArgs<'a> {
             .into_iter()
             .map(|value| value.clone().into_t::<T>())
             .collect::<Result<Vec<T>, _>>()
-            .map_err(|_| ScenarioError::ArgError(ArgError::Deserialization))
+            .map_err(|_| ScenarioError::ArgError(ArgError::Deserialization(name.to_string())))
     }
 }
 
 /// ArgError is an enum representing the different errors that can occur when parsing scenario arguments.
 #[derive(Debug, Error, PartialEq)]
 pub enum ArgError {
-    #[error("Arg deserialization failed")]
-    Deserialization,
+    #[error("Arg `{0}` deserialization failed")]
+    Deserialization(String),
     #[error("Multiple values expected")]
     ManyExpected,
     #[error("Single value expected")]

@@ -31,8 +31,10 @@ impl TypedValueParser for CLTypedParser {
         let value = value
             .to_str()
             .ok_or_else(|| Error::new(ErrorKind::InvalidUtf8).with_cmd(cmd))?;
-        let bytes = types::into_bytes(&self.ty, value)
-            .map_err(|err| make_parse_error(cmd, arg, value, &self.ty, err))?;
+        let bytes = types::into_bytes(&self.ty, value).map_err(|e| match e {
+            types::Error::Other(msg) => Error::raw(ErrorKind::InvalidValue, msg).with_cmd(cmd),
+            _ => make_parse_error(cmd, arg, value, &self.ty)
+        })?;
         let cl_type = types::named_cl_type_to_cl_type(&self.ty);
         Ok(CLValue::from_components(cl_type, bytes))
     }
@@ -135,19 +137,12 @@ fn get_arg_long(arg: Option<&Arg>) -> &str {
     arg.and_then(|a| a.get_long()).unwrap_or("unknown")
 }
 
-fn make_parse_error(
-    cmd: &Command,
-    arg: Option<&Arg>,
-    value: &str,
-    ty: &NamedCLType,
-    err: impl std::fmt::Display
-) -> Error {
+fn make_parse_error(cmd: &Command, arg: Option<&Arg>, value: &str, ty: &NamedCLType) -> Error {
     let message = format!(
-        "Failed to parse --{}\n  Value:    '{}'\n  Expected: {}\n  Cause:    {}\n",
+        "Failed to parse --{}\n  Value:    '{}'\n  Expected: {}\n",
         get_arg_long(arg),
         value,
         types::format_type_hint(ty),
-        err
     );
     Error::raw(ErrorKind::InvalidValue, message).with_cmd(cmd)
 }

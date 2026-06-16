@@ -158,7 +158,7 @@ fn arg_attached_value() -> clap::Arg {
         .help("The amount of CSPRs attached to the call")
         .long(ARG_ATTACHED_VALUE)
         .required(false)
-        .value_name("CSPR")
+        .value_name("AMOUNT (motes, or 'X.Y cspr')")
         .value_parser(CsprTokenAmountParser)
         .action(ArgAction::Set)
 }
@@ -168,7 +168,7 @@ fn arg_gas() -> clap::Arg {
         .help("The amount of gas to attach to the call")
         .long(ARG_GAS)
         .required(true)
-        .value_name("CSPR")
+        .value_name("AMOUNT (motes, or 'X.Y cspr')")
         .value_parser(GasParser)
         .action(ArgAction::Set)
 }

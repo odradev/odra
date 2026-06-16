@@ -302,7 +302,7 @@ pub(crate) fn into_bytes(ty: &NamedCLType, input: &str) -> TypeResult<Vec<u8>> {
                 Err(e) => Err(e)
             }
         }
-        NamedCLType::Custom(_) => unreachable!("should not be here")
+        NamedCLType::Custom(ty) => Err(Error::Other(format!("Unsupported type: {ty}")))
     }
 }
 
