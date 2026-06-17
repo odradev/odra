@@ -51,7 +51,12 @@ impl Scenario for DogCheckScenario {
         let test_name = args.get_single::<String>("name")?;
 
         let actual_name = dog_contract.try_name()?;
-        assert_eq!(test_name, actual_name, "Dog name mismatch");
+        if test_name != actual_name {
+            odra_cli::log(format!("Dog name mismatch: expected {actual_name}"));
+            return Err(Error::OdraError {
+                message: "Error".to_string()
+            });
+        }
 
         Ok(())
     }

@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use rustyline::error::ReadlineError;
 use rustyline::DefaultEditor;
 
-use crate::cmd::DEPLOY_SUBCOMMAND;
+use crate::cmd::{DEPLOY_SUBCOMMAND, REPL_SUBCOMMAND};
 use crate::{DeployedContractsContainer, OdraCli};
 
 const HISTORY_FILE: &str = ".odra_cli_history";
@@ -18,11 +18,9 @@ const DEFAULT_PROMPT: &str = "odra> ";
 /// Runs the interactive REPL until the user exits (`exit`/`quit`/Ctrl-D).
 ///
 /// Note: the per-command `--contracts-toml` flag is meaningless mid-session — the container is fixed
-/// for the lifetime of the REPL (chosen when `run_repl` set it up), so the flag is parsed but ignored.
-pub(super) fn run(
-    cli: &OdraCli,
-    container: &mut DeployedContractsContainer
-) -> anyhow::Result<()> {
+/// for the lifetime of the REPL (chosen when the `repl` subcommand set it up), so the flag is parsed
+/// but ignored.
+pub(super) fn run(cli: &OdraCli, container: &mut DeployedContractsContainer) -> anyhow::Result<()> {
     let mut editor = DefaultEditor::new()?;
     let history_path = history_path();
     // A missing history file just means we have nothing to load yet.
@@ -43,7 +41,8 @@ pub(super) fn run(
                 match line {
                     "exit" | "quit" => break,
                     "help" => {
-                        let mut help_cmd: clap::Command = (&cli.main_cmd).into();
+                        // Exclude `repl` — it isn't a valid command from within a session.
+                        let mut help_cmd = cli.main_cmd.to_command(&[REPL_SUBCOMMAND]);
                         let _ = help_cmd.print_help();
                         println!();
                         continue;
@@ -63,7 +62,11 @@ pub(super) fn run(
                 let mut argv = vec!["odra-cli".to_string()];
                 argv.extend(tokens);
 
-                match cli.main_cmd.try_get_matches_from(argv) {
+                // Exclude `repl` so it can't be invoked recursively from inside a session.
+                match cli
+                    .main_cmd
+                    .try_get_matches_from_excluding(argv, &[REPL_SUBCOMMAND])
+                {
                     Ok((cmd, args, _path)) => {
                         if let Err(err) = cli.dispatch(&cmd, &args, container) {
                             prettycli::error(&format!("{err:#}"));

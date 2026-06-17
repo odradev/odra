@@ -18,7 +18,8 @@ use crate::{
     cmd::{
         ContractsCmd, DeployCmd, DeployScript, MainCmd, MutableCommand, OdraCommand,
         PrintEventsCmd, Scenario, ScenarioMetadata, ScenariosCmd, WhoamiCmd, CONTRACTS_SUBCOMMAND,
-        DEPLOY_SUBCOMMAND, PRINT_EVENTS_SUBCOMMAND, SCENARIOS_SUBCOMMAND, WHOAMI_SUBCOMMAND
+        DEPLOY_SUBCOMMAND, PRINT_EVENTS_SUBCOMMAND, REPL_SUBCOMMAND, SCENARIOS_SUBCOMMAND,
+        WHOAMI_SUBCOMMAND
     },
     container::FileContractStorage,
     custom_types::CustomTypes,
@@ -158,6 +159,10 @@ impl OdraCli {
         self.main_cmd = self.main_cmd.subcommand(&self.scenarios_cmd);
         self.main_cmd = self.main_cmd.subcommand(&self.print_events_cmd);
         self.main_cmd = self.main_cmd.subcommand(&self.whoami_cmd);
+        self.main_cmd = self.main_cmd.subcommand(
+            clap::Command::new(REPL_SUBCOMMAND)
+                .about("Starts an interactive REPL session, keeping the host environment warm across commands.")
+        );
         self
     }
 
@@ -170,10 +175,12 @@ impl OdraCli {
         };
 
         // Init contracts container with the provided path or default to the resources directory.
-        let mut container = self.load_container(contracts_path.clone()).unwrap_or_else(|e| {
-            prettycli::error(&format!("{e:#}"));
-            std::process::exit(1);
-        });
+        let mut container = self
+            .load_container(contracts_path.clone())
+            .unwrap_or_else(|e| {
+                prettycli::error(&format!("{e:#}"));
+                std::process::exit(1);
+            });
 
         // Register the contracts from the container in the host environment.
         if let Err(err) = self.register_deployed_contracts(&container, &contracts_path) {
@@ -182,31 +189,6 @@ impl OdraCli {
         }
 
         if let Err(err) = self.dispatch(&cmd, &args, &mut container) {
-            prettycli::error(&format!("{err:#}"));
-            std::process::exit(1);
-        }
-    }
-
-    /// Runs the CLI in interactive REPL mode.
-    ///
-    /// Builds the host environment and the deployed-contracts container once, then loops reading
-    /// commands from the user, keeping the `HostEnv` and the registry warm across calls. A parse
-    /// error or a failing command reports the problem and returns to the prompt instead of exiting.
-    pub fn run_repl(self) {
-        let contracts_path = self.default_contract_path.clone();
-
-        let mut container = self.load_container(contracts_path.clone()).unwrap_or_else(|e| {
-            prettycli::error(&format!("{e:#}"));
-            std::process::exit(1);
-        });
-
-        // A missing caller is a configuration error: report and exit, same as `run`.
-        if let Err(err) = self.register_deployed_contracts(&container, &contracts_path) {
-            prettycli::error(&format!("{err:#}"));
-            std::process::exit(1);
-        }
-
-        if let Err(err) = repl::run(&self, &mut container) {
             prettycli::error(&format!("{err:#}"));
             std::process::exit(1);
         }
@@ -278,6 +260,7 @@ impl OdraCli {
             PRINT_EVENTS_SUBCOMMAND => self.run_command(&self.print_events_cmd, args, container),
             SCENARIOS_SUBCOMMAND => self.run_command(&self.scenarios_cmd, args, container),
             WHOAMI_SUBCOMMAND => self.run_command(&self.whoami_cmd, args, container),
+            REPL_SUBCOMMAND => repl::run(self, container),
             _ => Err(anyhow::anyhow!("Unknown command: {cmd}"))
         }
     }

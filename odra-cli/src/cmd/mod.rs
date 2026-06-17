@@ -26,6 +26,7 @@ pub(crate) const SCENARIOS_SUBCOMMAND: &str = "scenario";
 pub(crate) const DEPLOY_SUBCOMMAND: &str = "deploy";
 pub(crate) const PRINT_EVENTS_SUBCOMMAND: &str = "print-events";
 pub(crate) const WHOAMI_SUBCOMMAND: &str = "whoami";
+pub(crate) const REPL_SUBCOMMAND: &str = "repl";
 
 /// OdraCommand is a trait that represents a command that can be run in the Odra CLI.
 pub(crate) trait OdraCommand {

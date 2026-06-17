@@ -11,15 +11,7 @@ pub(crate) struct MainCmd {
 
 impl From<&MainCmd> for Command {
     fn from(value: &MainCmd) -> Self {
-        let mut cmd = Command::new("Odra CLI")
-            .subcommand_required(true)
-            .arg_required_else_help(true)
-            .arg(Arg::Contracts)
-            .subcommands(&value.sub_cmds);
-        if let Some(about) = value.about {
-            cmd = cmd.about(about);
-        }
-        cmd
+        value.to_command(&[])
     }
 }
 
@@ -33,6 +25,27 @@ impl MainCmd {
     pub fn subcommand<T: Into<Command>>(mut self, command: T) -> Self {
         self.sub_cmds.push(command.into());
         self
+    }
+
+    /// Builds the clap command, omitting any subcommand whose name appears in `exclude`.
+    ///
+    /// The REPL uses this to hide the `repl` subcommand from itself — both from help output and
+    /// from parsing — so it can't be invoked recursively from inside an interactive session.
+    pub fn to_command(&self, exclude: &[&str]) -> Command {
+        let mut cmd = Command::new("Odra CLI")
+            .subcommand_required(true)
+            .arg_required_else_help(true)
+            .arg(Arg::Contracts)
+            .subcommands(
+                self.sub_cmds
+                    .iter()
+                    .filter(|c| !exclude.contains(&c.get_name()))
+                    .cloned()
+            );
+        if let Some(about) = self.about {
+            cmd = cmd.about(about);
+        }
+        cmd
     }
 
     /// Runs the CLI and parses the input from `std::env::args()`.
@@ -55,7 +68,18 @@ impl MainCmd {
         &self,
         argv: Vec<String>
     ) -> Result<(String, ArgMatches, Option<PathBuf>), clap::Error> {
-        let clap_cmd: Command = self.into();
+        self.try_get_matches_from_excluding(argv, &[])
+    }
+
+    /// Like [`try_get_matches_from`](Self::try_get_matches_from), but omits the named subcommands.
+    ///
+    /// Used by the REPL to parse input against a command tree that excludes `repl` itself.
+    pub fn try_get_matches_from_excluding(
+        &self,
+        argv: Vec<String>,
+        exclude: &[&str]
+    ) -> Result<(String, ArgMatches, Option<PathBuf>), clap::Error> {
+        let clap_cmd = self.to_command(exclude);
         let matches = clap_cmd.try_get_matches_from(argv)?;
 
         // Check if the user provided a custom contracts path.
