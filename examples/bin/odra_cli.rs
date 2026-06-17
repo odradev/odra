@@ -1,7 +1,7 @@
 //! This example demonstrates how to use the `odra-cli` tool to deploy and interact with a smart contract.
 use odra::host::HostEnv;
 use odra::schema::casper_contract_schema::NamedCLType;
-use odra_cli::DeployerExt;
+use odra_cli::{cspr, DeployerExt};
 use odra_cli::{
     deploy::DeployScript,
     scenario::{Args, Error, Scenario, ScenarioMetadata},
@@ -26,7 +26,7 @@ impl DeployScript for DeployDogScript {
                 name: "Mantus".to_string()
             },
             container,
-            350_000_000_000
+            cspr!(350)
         )?;
 
         Ok(())
@@ -50,9 +50,7 @@ impl Scenario for DogCheckScenario {
         let dog_contract = container.contract_ref::<DogContract>(env)?;
         let test_name = args.get_single::<String>("name")?;
 
-        env.set_gas(50_000_000);
         let actual_name = dog_contract.try_name()?;
-
         assert_eq!(test_name, actual_name, "Dog name mismatch");
 
         Ok(())
