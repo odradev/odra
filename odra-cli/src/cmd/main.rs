@@ -35,30 +35,38 @@ impl MainCmd {
         self
     }
 
-    /// Runs the CLI and parses the input.
+    /// Runs the CLI and parses the input from `std::env::args()`.
+    ///
+    /// Exits the process on any parse error or help/version request, mirroring clap's
+    /// default behavior. Use this for the one-shot `run` path.
     pub fn get_matches(&self) -> (String, ArgMatches, Option<PathBuf>) {
+        match self.try_get_matches_from(std::env::args().collect()) {
+            Ok(result) => result,
+            Err(err) => err.exit()
+        }
+    }
+
+    /// Parses an explicit argv vector without exiting the process.
+    ///
+    /// Returns the `clap::Error` instead of calling `err.exit()`, so the caller (e.g. the REPL
+    /// loop) can render errors and help without killing the session. The error covers both real
+    /// parse failures and help/version requests (which arrive as `DisplayHelp*` kinds).
+    pub fn try_get_matches_from(
+        &self,
+        argv: Vec<String>
+    ) -> Result<(String, ArgMatches, Option<PathBuf>), clap::Error> {
         let clap_cmd: Command = self.into();
-        let matches = match clap_cmd.try_get_matches() {
-            Ok(matches) => matches,
-            Err(err) => {
-                err.exit();
-            }
-        };
+        let matches = clap_cmd.try_get_matches_from(argv)?;
 
         // Check if the user provided a custom contracts path.
         let contracts_path = read_arg(&matches, Arg::Contracts);
 
-        let result = matches.subcommand();
+        // `subcommand_required(true)` guarantees a subcommand is present on success.
+        let (subcommand, args) = matches
+            .subcommand()
+            .expect("subcommand is required and validated by clap");
 
-        let (subcommand, args) = match result {
-            Some((subcommand, args)) => (subcommand, args),
-            None => {
-                prettycli::error("No subcommand provided. Use --help to see available commands.");
-                std::process::exit(1);
-            }
-        };
-
-        (subcommand.to_string(), args.clone(), contracts_path)
+        Ok((subcommand.to_string(), args.clone(), contracts_path))
     }
 }
 
@@ -100,5 +108,36 @@ mod tests {
         ]);
         let contracts_path = read_arg(&matches, Arg::Contracts);
         assert_eq!(contracts_path, Some(PathBuf::from("path/to/contracts")));
+    }
+
+    #[test]
+    fn try_get_matches_from_returns_ok_for_valid_subcommand() {
+        let main = MainCmd::default().subcommand(command!("whoami"));
+
+        let (cmd, _args, path) = main
+            .try_get_matches_from(vec!["odra-cli".to_string(), "whoami".to_string()])
+            .expect("valid subcommand should parse");
+        assert_eq!(cmd, "whoami");
+        assert_eq!(path, None);
+    }
+
+    #[test]
+    fn try_get_matches_from_returns_err_for_unknown_subcommand() {
+        let main = MainCmd::default().subcommand(command!("whoami"));
+
+        let err = main
+            .try_get_matches_from(vec!["odra-cli".to_string(), "bogus".to_string()])
+            .expect_err("unknown subcommand should return an error, not exit");
+        assert_eq!(err.kind(), ErrorKind::InvalidSubcommand);
+    }
+
+    #[test]
+    fn try_get_matches_from_returns_err_for_help() {
+        let main = MainCmd::default().subcommand(command!("whoami"));
+
+        let err = main
+            .try_get_matches_from(vec!["odra-cli".to_string(), "--help".to_string()])
+            .expect_err("--help should return an error, not exit");
+        assert_eq!(err.kind(), ErrorKind::DisplayHelp);
     }
 }
