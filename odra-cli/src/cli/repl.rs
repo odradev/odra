@@ -7,8 +7,10 @@
 use std::path::PathBuf;
 
 use rustyline::error::ReadlineError;
-use rustyline::DefaultEditor;
+use rustyline::history::FileHistory;
+use rustyline::Editor;
 
+use super::completer::ReplHelper;
 use crate::cmd::{DEPLOY_SUBCOMMAND, REPL_SUBCOMMAND};
 use crate::{DeployedContractsContainer, OdraCli};
 
@@ -21,7 +23,15 @@ const DEFAULT_PROMPT: &str = "odra> ";
 /// for the lifetime of the REPL (chosen when the `repl` subcommand set it up), so the flag is parsed
 /// but ignored.
 pub(super) fn run(cli: &OdraCli, container: &mut DeployedContractsContainer) -> anyhow::Result<()> {
-    let mut editor = DefaultEditor::new()?;
+    // Complete against the same command tree the REPL parses against, with `repl` excluded so it
+    // can't be suggested mid-session. The built-ins are handled by this loop, not by clap.
+    let mut editor: Editor<ReplHelper, FileHistory> = Editor::new()?;
+    let helper = ReplHelper::new(
+        cli.main_cmd.to_command(&[REPL_SUBCOMMAND]),
+        &["help", "exit", "quit"]
+    );
+    editor.set_helper(Some(helper));
+
     let history_path = history_path();
     // A missing history file just means we have nothing to load yet.
     let _ = editor.load_history(&history_path);

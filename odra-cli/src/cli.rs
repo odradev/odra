@@ -28,6 +28,7 @@ use crate::{
     ContractProvider, DeployedContractsContainer
 };
 
+mod completer;
 mod env_setup;
 mod repl;
 
