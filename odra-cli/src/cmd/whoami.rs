@@ -1,4 +1,7 @@
-use crate::{cmd::WHOAMI_SUBCOMMAND, custom_types::CustomTypeSet, DeployedContractsContainer};
+use crate::{
+    cmd::WHOAMI_SUBCOMMAND, custom_types::CustomTypeSet, parser::motes_to_cspr,
+    DeployedContractsContainer
+};
 use anyhow::Result;
 use clap::{ArgMatches, Command};
 use odra::host::HostEnv;
@@ -27,6 +30,11 @@ impl OdraCommand for WhoamiCmd {
         prettycli::info(&format!("Address: {}", caller.to_string()));
         let pk = env.public_key(&caller);
         prettycli::info(&format!("Public key: {pk}"));
+        let balance_motes = env.balance_of(&caller);
+        prettycli::info(&format!(
+            "Balance: {} CSPR ({balance_motes} motes)",
+            motes_to_cspr(balance_motes)
+        ));
         Ok(())
     }
 }

@@ -12,13 +12,14 @@ use odra::{
     schema::{SchemaCustomTypes, SchemaEntrypoints, SchemaEvents},
     OdraContract
 };
-use odra_casper_livenet_env::LivenetError;
 
 use crate::{
     cmd::{
-        ContractsCmd, DeployCmd, DeployScript, MainCmd, MutableCommand, OdraCommand,
-        PrintEventsCmd, Scenario, ScenarioMetadata, ScenariosCmd, WhoamiCmd, CONTRACTS_SUBCOMMAND,
-        DEPLOY_SUBCOMMAND, PRINT_EVENTS_SUBCOMMAND, REPL_SUBCOMMAND, SCENARIOS_SUBCOMMAND,
+        CompletionsCmd, ConfigCmd, ContractsCmd, DeployCmd, DeployScript, InspectCmd, MainCmd,
+        MutableCommand, OdraCommand, PrintEventsCmd, Scenario, ScenarioMetadata, ScenariosCmd,
+        StatusCmd, TransferCmd, WhoamiCmd, COMPLETIONS_SUBCOMMAND, CONFIG_SUBCOMMAND,
+        CONTRACTS_SUBCOMMAND, DEPLOY_SUBCOMMAND, INSPECT_SUBCOMMAND, PRINT_EVENTS_SUBCOMMAND,
+        REPL_SUBCOMMAND, SCENARIOS_SUBCOMMAND, STATUS_SUBCOMMAND, TRANSFER_SUBCOMMAND,
         WHOAMI_SUBCOMMAND
     },
     container::FileContractStorage,
@@ -27,6 +28,7 @@ use crate::{
     ContractProvider, DeployedContractsContainer
 };
 
+mod env_setup;
 mod repl;
 
 /// Command line interface for Odra smart contracts.
@@ -37,6 +39,11 @@ pub struct OdraCli {
     print_events_cmd: PrintEventsCmd,
     scenarios_cmd: ScenariosCmd,
     whoami_cmd: WhoamiCmd,
+    status_cmd: StatusCmd,
+    inspect_cmd: InspectCmd,
+    config_cmd: ConfigCmd,
+    transfer_cmd: TransferCmd,
+    completions_cmd: CompletionsCmd,
     custom_types: CustomTypes,
     host_env: HostEnv,
     callers: HashMap<(String, String), EntryPointsCaller>,
@@ -52,22 +59,7 @@ impl Default for OdraCli {
 impl OdraCli {
     /// Creates a new empty instance of the Odra CLI.
     pub fn new() -> Self {
-        let host_env = match odra_casper_livenet_env::env_safe() {
-            Ok(e) => e,
-            Err(LivenetError::EnvVariableNotSet(e)) => {
-                prettycli::error(&format!(
-                    "Livenet env misconfigured! {} env var is missing.",
-                    e
-                ));
-                prettycli::info("Visit offical docs to read more:");
-                prettycli::link("https://odra.dev/docs/backends/livenet#setup");
-                std::process::exit(1)
-            }
-            Err(e) => {
-                prettycli::error(&format!("Livent misconfigured: {e:#}"));
-                std::process::exit(1)
-            }
-        };
+        let host_env = env_setup::create_host_env();
         Self {
             main_cmd: MainCmd::default(),
             deploy_cmd: None,
@@ -75,6 +67,11 @@ impl OdraCli {
             print_events_cmd: PrintEventsCmd::default(),
             scenarios_cmd: ScenariosCmd::default(),
             whoami_cmd: WhoamiCmd::new(),
+            status_cmd: StatusCmd::default(),
+            inspect_cmd: InspectCmd::default(),
+            config_cmd: ConfigCmd,
+            transfer_cmd: TransferCmd,
+            completions_cmd: CompletionsCmd,
             host_env,
             custom_types: CustomTypes::default(),
             callers: HashMap::default(),
@@ -110,6 +107,8 @@ impl OdraCli {
         self.custom_types.register::<T>();
         self.contracts_cmd.add_contract::<T>();
         self.print_events_cmd.add_contract::<T>();
+        self.status_cmd.add_contract::<T>();
+        self.inspect_cmd.add_contract::<T>();
         self
     }
 
@@ -129,7 +128,9 @@ impl OdraCli {
         );
         self.custom_types.register::<T>();
         self.contracts_cmd.add_contract_named::<T>(name.clone());
-        self.print_events_cmd.add_contract_named::<T>(name);
+        self.print_events_cmd.add_contract_named::<T>(name.clone());
+        self.status_cmd.add_contract_named::<T>(name.clone());
+        self.inspect_cmd.add_contract_named::<T>(name);
         self
     }
 
@@ -159,6 +160,11 @@ impl OdraCli {
         self.main_cmd = self.main_cmd.subcommand(&self.scenarios_cmd);
         self.main_cmd = self.main_cmd.subcommand(&self.print_events_cmd);
         self.main_cmd = self.main_cmd.subcommand(&self.whoami_cmd);
+        self.main_cmd = self.main_cmd.subcommand(&self.status_cmd);
+        self.main_cmd = self.main_cmd.subcommand(&self.inspect_cmd);
+        self.main_cmd = self.main_cmd.subcommand(&self.config_cmd);
+        self.main_cmd = self.main_cmd.subcommand(&self.transfer_cmd);
+        self.main_cmd = self.main_cmd.subcommand(&self.completions_cmd);
         self.main_cmd = self.main_cmd.subcommand(
             clap::Command::new(REPL_SUBCOMMAND)
                 .about("Starts an interactive REPL session, keeping the host environment warm across commands.")
@@ -260,6 +266,13 @@ impl OdraCli {
             PRINT_EVENTS_SUBCOMMAND => self.run_command(&self.print_events_cmd, args, container),
             SCENARIOS_SUBCOMMAND => self.run_command(&self.scenarios_cmd, args, container),
             WHOAMI_SUBCOMMAND => self.run_command(&self.whoami_cmd, args, container),
+            STATUS_SUBCOMMAND => self.run_command(&self.status_cmd, args, container),
+            INSPECT_SUBCOMMAND => self.run_command(&self.inspect_cmd, args, container),
+            CONFIG_SUBCOMMAND => self.run_command(&self.config_cmd, args, container),
+            TRANSFER_SUBCOMMAND => self.run_command(&self.transfer_cmd, args, container),
+            COMPLETIONS_SUBCOMMAND => self
+                .completions_cmd
+                .generate(args, self.main_cmd.to_command(&[])),
             REPL_SUBCOMMAND => repl::run(self, container),
             _ => Err(anyhow::anyhow!("Unknown command: {cmd}"))
         }

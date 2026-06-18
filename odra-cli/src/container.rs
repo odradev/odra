@@ -195,6 +195,11 @@ impl DeployedContractsContainer {
     pub fn add_contract<T: HostRef + HasIdent>(&self, contract: &T) -> Result<(), ContractError> {
         self.add_contract_named(contract, None)
     }
+
+    /// Returns the timestamp of the last write to the contracts file (RFC 3339).
+    pub fn last_updated(&self) -> String {
+        self.data.borrow().last_updated.clone()
+    }
 }
 
 impl ContractProvider for DeployedContractsContainer {
