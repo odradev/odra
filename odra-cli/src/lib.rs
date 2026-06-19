@@ -9,6 +9,7 @@ mod cmd;
 mod container;
 mod custom_types;
 mod entry_point;
+mod output;
 mod parser;
 #[cfg(test)]
 mod test_utils;

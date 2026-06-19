@@ -41,6 +41,23 @@ pub enum CallError {
     InvalidGasValue(String)
 }
 
+/// The outcome of a contract call: the decoded return value plus any events captured when
+/// `--print-events` was set on a mutable call. Building this instead of printing inline keeps
+/// `--json` output clean — rendering is left entirely to the command layer.
+pub(crate) struct CallOutcome {
+    /// The decoded return value, or an empty string when the entry point returns nothing.
+    pub result: String,
+    /// Events captured during the call, grouped by contract. Empty unless `--print-events` was set.
+    pub events: Vec<ContractEvents>
+}
+
+/// Events emitted by a single contract during a `--print-events` mutable call.
+#[derive(serde_derive::Serialize)]
+pub(crate) struct ContractEvents {
+    pub contract: String,
+    pub events: Vec<String>
+}
+
 pub fn call<T: ContractProvider>(
     env: &HostEnv,
     contract_name: &str,
@@ -48,7 +65,7 @@ pub fn call<T: ContractProvider>(
     args: &ArgMatches,
     types: &CustomTypeSet,
     contract_provider: &T
-) -> Result<String, CallError> {
+) -> Result<CallOutcome, CallError> {
     let amount = read_arg::<U512>(args, Arg::AttachedValue).unwrap_or_default();
 
     let runtime_args = runtime_args::compose(entry_point, args, types)?;
@@ -70,9 +87,6 @@ pub fn call<T: ContractProvider>(
     }
 
     let print_events = is_mut && args.get_flag(ARG_PRINT_EVENTS);
-    if print_events {
-        prettycli::info("Syncing events for the call...");
-    }
     env.set_captures_events(print_events);
     let bytes = env
         .raw_call_contract(contract_address, call_def, use_proxy)
@@ -85,39 +99,42 @@ pub fn call<T: ContractProvider>(
             }
         })?;
 
-    if print_events {
-        log_events(env, contract_provider, types, contract_address)?;
-    }
+    let events = if print_events {
+        collect_events(env, contract_provider, types, contract_address)?
+    } else {
+        Vec::new()
+    };
 
     let result = types::decode(bytes.inner_bytes(), ty, types)?;
-    Ok(result.0)
+    Ok(CallOutcome {
+        result: result.0,
+        events
+    })
 }
 
-fn log_events<T: ContractProvider>(
+/// Collects and decodes the events captured during the last call, grouped by contract.
+fn collect_events<T: ContractProvider>(
     env: &HostEnv,
     contract_provider: &T,
     types: &CustomTypeSet,
     contract_address: Address
-) -> Result<(), CallError> {
+) -> Result<Vec<ContractEvents>, CallError> {
     let call_result = env.last_call_result(contract_address).raw_call_result();
 
+    let mut grouped = Vec::new();
     for deployed_contract in contract_provider.all_contracts() {
         let events = call_result.contract_events(&deployed_contract.address());
         if events.is_empty() {
             continue;
         }
-        prettycli::info(&format!(
-            "Captured {} events for contract '{}'",
-            events.len(),
-            deployed_contract.key_name()
-        ));
-        for (i, event) in events.iter().enumerate() {
-            prettycli::info(&format!(
-                "Event {}: {}",
-                i + 1,
-                types::decode_event(event, types)?
-            ));
-        }
+        let decoded = events
+            .iter()
+            .map(|event| types::decode_event(event, types))
+            .collect::<Result<Vec<_>, _>>()?;
+        grouped.push(ContractEvents {
+            contract: deployed_contract.key_name(),
+            events: decoded
+        });
     }
-    Ok(())
+    Ok(grouped)
 }

@@ -1,10 +1,14 @@
 use crate::{
-    cmd::WHOAMI_SUBCOMMAND, custom_types::CustomTypeSet, parser::motes_to_cspr,
+    cmd::{CmdOutput, WHOAMI_SUBCOMMAND},
+    custom_types::CustomTypeSet,
+    log,
+    parser::motes_to_cspr,
     DeployedContractsContainer
 };
-use anyhow::Result;
+use anyhow::{Ok, Result};
 use clap::{ArgMatches, Command};
 use odra::host::HostEnv;
+use serde_derive::Serialize;
 
 use super::OdraCommand;
 
@@ -18,24 +22,46 @@ impl WhoamiCmd {
     }
 }
 
+/// The caller identity and balance. U512 amounts are serialized as strings to stay precise for
+/// JSON consumers (the values can exceed JSON's safe integer range).
+#[derive(Serialize)]
+pub(crate) struct WhoamiReport {
+    address: String,
+    public_key: String,
+    balance_motes: String,
+    balance_cspr: String
+}
+
+impl CmdOutput for WhoamiReport {
+    fn pretty_print(&self) {
+        log(format!("Address: {}", self.address));
+        log(format!("Public key: {}", self.public_key));
+        log(format!(
+            "Balance: {} CSPR ({} motes)",
+            self.balance_cspr, self.balance_motes
+        ));
+    }
+}
+
 impl OdraCommand for WhoamiCmd {
-    fn run(
+    type Output = WhoamiReport;
+
+    fn exec(
         &self,
         env: &HostEnv,
         _args: &ArgMatches,
         _types: &CustomTypeSet,
         _container: &DeployedContractsContainer
-    ) -> Result<()> {
+    ) -> Result<WhoamiReport> {
         let caller = env.caller();
-        prettycli::info(&format!("Address: {}", caller.to_string()));
-        let pk = env.public_key(&caller);
-        prettycli::info(&format!("Public key: {pk}"));
         let balance_motes = env.balance_of(&caller);
-        prettycli::info(&format!(
-            "Balance: {} CSPR ({balance_motes} motes)",
-            motes_to_cspr(balance_motes)
-        ));
-        Ok(())
+
+        Ok(WhoamiReport {
+            address: caller.to_string(),
+            public_key: env.public_key(&caller).to_hex_string(),
+            balance_cspr: motes_to_cspr(balance_motes),
+            balance_motes: balance_motes.to_string()
+        })
     }
 }
 

@@ -4,11 +4,13 @@ use odra::{
     casper_types::U512, host::HostEnv, prelude::Address,
     schema::casper_contract_schema::NamedCLType
 };
+use serde::Serialize;
 
 use crate::{
-    cmd::TRANSFER_SUBCOMMAND,
+    cmd::{CmdOutput, TRANSFER_SUBCOMMAND},
     custom_types::CustomTypeSet,
-    parser::{CLTypedParser, CsprTokenAmountParser},
+    log,
+    parser::{self, CLTypedParser, CsprTokenAmountParser},
     scenario::Args,
     DeployedContractsContainer
 };
@@ -18,17 +20,39 @@ use super::OdraCommand;
 const ARG_TO: &str = "to";
 const ARG_AMOUNT: &str = "amount";
 
+#[derive(Serialize)]
+pub(crate) struct TransferReport {
+    from: Address,
+    to: Address,
+    amount_motes: String,
+    amount_cspr: String
+}
+
+impl CmdOutput for TransferReport {
+    fn pretty_print(&self) {
+        log(format!(
+            "Transfer completed successfully.\n {} motes ({} cspr) from\n{} -> {}",
+            self.amount_motes,
+            self.amount_cspr,
+            self.from.to_string(),
+            self.to.to_string()
+        ));
+    }
+}
+
 /// Transfers native CSPR from the configured caller to an account or contract address.
 pub(crate) struct TransferCmd;
 
 impl OdraCommand for TransferCmd {
-    fn run(
+    type Output = TransferReport;
+
+    fn exec(
         &self,
         env: &HostEnv,
         args: &ArgMatches,
         _types: &CustomTypeSet,
         _container: &DeployedContractsContainer
-    ) -> Result<()> {
+    ) -> Result<Self::Output> {
         let amount = args
             .get_one::<U512>(ARG_AMOUNT)
             .map(ToOwned::to_owned)
@@ -36,18 +60,15 @@ impl OdraCommand for TransferCmd {
 
         let args = Args::new(args);
         let to = args.get_single::<Address>(ARG_TO)?;
-        // let amount = args.get_single::<U512>(ARG_AMOUNT)?;
-        // let amount = read_arg::<U512>(args, Arg::AttachedValue).unwrap_or_default();
-
-        prettycli::info(&format!(
-            "Transferring {amount} motes from\n{} -> {}",
-            env.caller().to_string(),
-            to.to_string()
-        ));
         env.transfer(to, amount)
             .map_err(|e| anyhow::anyhow!("Transfer failed: {e:?}"))?;
-        prettycli::info("Transfer completed successfully.");
-        Ok(())
+
+        Ok(TransferReport {
+            from: env.caller(),
+            to,
+            amount_cspr: parser::motes_to_cspr(amount),
+            amount_motes: amount.to_string()
+        })
     }
 }
 
