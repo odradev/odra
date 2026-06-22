@@ -338,7 +338,9 @@ impl CEP95Interface for Cep95 {
         self.assert_exists(&token_id);
 
         let caller = self.env().caller();
-        let owner = self.owner_of(token_id).unwrap_or_revert_with(self, Error::InvalidTokenId);
+        let owner = self
+            .owner_of(token_id)
+            .unwrap_or_revert_with(self, Error::InvalidTokenId);
 
         // `from` must be the current owner.
         if owner != from {
