@@ -16,7 +16,7 @@ use odra::{
 
 use crate::{
     cmd::args::CommandArg,
-    container::{ContractError, ContractStorage, ContractsData},
+    container::{ContractError, ContractStorage, ContractStorageSource, ContractsData},
     custom_types::CustomTypeSet,
     DeployedContractsContainer
 };
@@ -358,6 +358,10 @@ impl ContractStorage for MockContractStorage {
 
     fn backup(&self) -> Result<(), ContractError> {
         Ok(())
+    }
+
+    fn source(&self) -> ContractStorageSource {
+        ContractStorageSource::Memory
     }
 }
 

@@ -5,11 +5,9 @@ use serde_derive::Serialize;
 
 use crate::{
     cmd::{CmdOutput, STATUS_SUBCOMMAND},
-    container::ContractProvider,
+    container::{ContractProvider, ContractStorageSource},
     custom_types::CustomTypeSet,
-    log,
-    utils::get_default_contracts_file,
-    DeployedContractsContainer
+    log, DeployedContractsContainer
 };
 
 use super::OdraCommand;
@@ -48,6 +46,10 @@ impl StatusCmd {
 #[derive(Serialize)]
 pub(crate) struct StatusReport {
     contracts_file: String,
+    /// Whether the contracts file exists on disk (always `false` for a memory-backed container).
+    file_exists: bool,
+    /// Number of contract entries recorded in the file.
+    entry_count: usize,
     last_updated: String,
     /// Contracts added to the builder, each flagged with whether it's deployed.
     registered: Vec<ContractStatus>,
@@ -58,6 +60,19 @@ pub(crate) struct StatusReport {
 impl CmdOutput for StatusReport {
     fn pretty_print(&self) {
         log(format!("Contracts file: {}", self.contracts_file));
+        if self.file_exists {
+            let noun = if self.entry_count == 1 {
+                "entry"
+            } else {
+                "entries"
+            };
+            log(format!(
+                "File status:    exists ({} {})",
+                self.entry_count, noun
+            ));
+        } else {
+            log("File status:    not found");
+        }
         log(format!("Last updated:   {}", self.last_updated));
 
         if self.registered.is_empty() && self.unregistered.is_empty() {
@@ -106,6 +121,12 @@ impl StatusCmd {
     fn report(&self, container: &DeployedContractsContainer) -> StatusReport {
         let deployed = container.all_contracts();
 
+        let source = container.source();
+        let file_exists = match &source {
+            ContractStorageSource::File { path } => path.exists(),
+            ContractStorageSource::Memory => false
+        };
+
         let registered = self
             .registered
             .iter()
@@ -136,7 +157,9 @@ impl StatusCmd {
             .collect();
 
         StatusReport {
-            contracts_file: get_default_contracts_file(),
+            contracts_file: source.to_string(),
+            file_exists,
+            entry_count: deployed.len(),
             last_updated: container.last_updated(),
             registered,
             unregistered
@@ -196,6 +219,15 @@ mod tests {
         assert!(!report.registered[0].deployed);
         assert!(report.registered[0].address.is_none());
         assert!(report.unregistered.is_empty());
+    }
+
+    #[test]
+    fn report_includes_file_metadata() {
+        let cmd = StatusCmd::default();
+        let report = cmd.report(&test_utils::mock_contracts_container());
+        // The mock container is memory-backed and empty: no file, no entries.
+        assert!(!report.file_exists);
+        assert_eq!(report.entry_count, 0);
     }
 
     #[test]
