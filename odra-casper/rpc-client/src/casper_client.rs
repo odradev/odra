@@ -52,7 +52,7 @@ pub struct CasperClient {
     watcher: TransactionWatcher,
     active_account: usize,
     gas: U512,
-    runtime: Rc<Runtime>,
+    runtime: Rc<Runtime>
 }
 
 impl CasperClient {
