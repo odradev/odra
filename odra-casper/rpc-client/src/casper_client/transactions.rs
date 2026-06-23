@@ -1,6 +1,5 @@
 //! Transaction building and deployment methods.
 
-use crate::casper_client::transaction_watcher::{TransactionWatch, TransactionWatcher};
 use crate::casper_client::Result;
 use crate::error::LivenetError;
 use crate::log;
@@ -18,17 +17,25 @@ use odra_core::consts::{
 };
 use odra_core::prelude::*;
 use odra_core::CallDef;
-use std::time::Duration;
 
-/// Transaction-related constants
-const TRANSACTION_WAIT_TIME: u64 = 10;
-const TRANSACTION_MAX_RETRIES: u64 = 12;
+/// Gas amount used for native transfers.
 const NATIVE_TRANSFER_GAS: u64 = 100_000_000u64;
 
 /// Transaction methods implementation for CasperClient.
 impl super::CasperClient {
     /// Transfers the specified number of tokens to the given address.
-    pub async fn transfer(
+    pub fn transfer(
+        &self,
+        to: Address,
+        amount: U512,
+        timestamp: Timestamp
+    ) -> Result<TransactionHash> {
+        let rt = self.runtime();
+        rt.block_on(self.transfer_async(to, amount, timestamp))
+    }
+
+    /// Transfers the specified number of tokens to the given address.
+    async fn transfer_async(
         &self,
         to: Address,
         amount: U512,
@@ -39,7 +46,19 @@ impl super::CasperClient {
     }
 
     /// Deploy the contract.
-    pub async fn deploy_wasm(
+    pub fn deploy_wasm(
+        &mut self,
+        contract_name: &str,
+        args: RuntimeArgs,
+        timestamp: Timestamp,
+        wasm_bytes: Vec<u8>
+    ) -> Result<Address> {
+        let rt = self.runtime();
+        rt.block_on(self.deploy_wasm_async(contract_name, args, timestamp, wasm_bytes))
+    }
+
+    /// Deploy the contract.
+    async fn deploy_wasm_async(
         &mut self,
         contract_name: &str,
         args: RuntimeArgs,
@@ -85,7 +104,20 @@ impl super::CasperClient {
     /// Deploy the entrypoint call using getter_proxy.
     /// It runs the getter_proxy contract in an account context and stores the return value of the call
     /// in under the key RESULT_KEY.
-    pub async fn deploy_entrypoint_call_with_proxy(
+    pub fn deploy_entrypoint_call_with_proxy(
+        &self,
+        address: Address,
+        call_def: CallDef,
+        timestamp: Timestamp
+    ) -> Result<Bytes> {
+        let rt = self.runtime();
+        rt.block_on(self.deploy_entrypoint_call_with_proxy_async(address, call_def, timestamp))
+    }
+
+    /// Deploy the entrypoint call using getter_proxy.
+    /// It runs the getter_proxy contract in an account context and stores the return value of the call
+    /// in under the key RESULT_KEY.
+    async fn deploy_entrypoint_call_with_proxy_async(
         &self,
         address: Address,
         call_def: CallDef,
@@ -121,7 +153,7 @@ impl super::CasperClient {
             .into();
 
         let transaction = self.new_wasm_deploy_transaction(module_bytes, args, timestamp)?;
-        let watch = self.start_event_watcher().await?;
+        let watch = self.watcher.start_watching().await?;
 
         let response = put_transaction(
             self.rpc_id_typed(),
@@ -141,14 +173,25 @@ impl super::CasperClient {
             ),
             _ => LivenetError::ExecutionError(format!("Failed to put transaction: {}", e))
         })?;
-        let deploy_hash = response.result.transaction_hash;
-        let result = self.wait_for_transaction(deploy_hash, watch).await?;
-        self.process_transaction(result, deploy_hash)?;
+        let transaction_hash = response.result.transaction_hash;
+        let result = watch.wait_for_transaction_hash(&transaction_hash).await?;
+        self.process_transaction(result, transaction_hash)?;
         Ok(self.get_proxy_result().await)
     }
 
     /// Deploy the entrypoint call.
-    pub async fn deploy_entrypoint_call(
+    pub fn deploy_entrypoint_call(
+        &self,
+        addr: Address,
+        call_def: CallDef,
+        timestamp: Timestamp
+    ) -> Result<Bytes> {
+        let rt = self.runtime();
+        rt.block_on(self.deploy_entrypoint_call_async(addr, call_def, timestamp))
+    }
+
+    /// Deploy the entrypoint call.
+    async fn deploy_entrypoint_call_async(
         &self,
         addr: Address,
         call_def: CallDef,
@@ -161,7 +204,7 @@ impl super::CasperClient {
         ));
 
         let transaction = self.new_call_transaction(addr, call_def, timestamp)?;
-        let watch = self.start_event_watcher().await?;
+        let watch = self.watcher.start_watching().await?;
 
         let response = put_transaction(
             self.rpc_id_typed(),
@@ -170,7 +213,7 @@ impl super::CasperClient {
             transaction
         )
         .await;
-        let deploy_hash = match response {
+        let transaction_hash = match response {
             Ok(r) => r.result.transaction_hash,
             Err(e) => {
                 return match e {
@@ -186,70 +229,17 @@ impl super::CasperClient {
                 }
             }
         };
-        let result = self.wait_for_transaction(deploy_hash, watch).await?;
-        self.process_transaction(result, deploy_hash).map(|_| {
+        let result = watch.wait_for_transaction_hash(&transaction_hash).await?;
+        self.process_transaction(result, transaction_hash).map(|_| {
             ().to_bytes()
                 .expect("Couldn't serialize (). This shouldn't happen.")
                 .into()
         })
     }
 
-    async fn wait_for_transaction(
-        &self,
-        transaction_hash: TransactionHash,
-        watch: TransactionWatch
-    ) -> Result<ExecutionResult> {
-        let transaction_hash_str = transaction_hash.to_hex_string();
-        let found = watch
-            .wait_for_transaction_hash(&transaction_hash_str)
-            .await?;
-
-        if !found {
-            return Err(LivenetError::ExecutionError(String::from(
-                "Events stream ended before transaction was processed."
-            )));
-        }
-
-        self.fetch_execution_result(transaction_hash).await
-    }
-
-    /// Fetches the execution result for a transaction, with retry logic.
-    async fn fetch_execution_result(
-        &self,
-        transaction_hash: TransactionHash
-    ) -> Result<ExecutionResult> {
-        let transaction_info = self.get_transaction(transaction_hash).await?;
-
-        if let Some(deploy_info) = transaction_info.execution_info {
-            if let Some(execution_result) = deploy_info.execution_result {
-                return Ok(execution_result);
-            }
-        }
-
-        // If execution_info is not available yet, wait a bit and retry
-        tokio::time::sleep(Duration::from_millis(500)).await;
-        let transaction_info = self.get_transaction(transaction_hash).await?;
-
-        if let Some(deploy_info) = transaction_info.execution_info {
-            if let Some(execution_result) = deploy_info.execution_result {
-                return Ok(execution_result);
-            }
-        }
-
-        Err(LivenetError::ExecutionError(String::from(
-            "Transaction processed but execution result not available."
-        )))
-    }
-
-    async fn start_event_watcher(&self) -> Result<TransactionWatch> {
-        let timeout = Duration::from_secs(TRANSACTION_WAIT_TIME * TRANSACTION_MAX_RETRIES);
-        let watcher = TransactionWatcher::new(self.configuration.events_url.clone(), timeout);
-        watcher.start_watching().await
-    }
-
     async fn put_transaction(&self, transaction: Transaction) -> Result<TransactionHash> {
         log::debug("[TX] Starting event watcher before sending transaction...");
-        let watch = self.start_event_watcher().await?;
+        let watch = self.watcher.start_watching().await?;
         log::debug("[TX] Event watcher ready, now sending transaction...");
 
         let response = put_transaction(
@@ -270,22 +260,22 @@ impl super::CasperClient {
             ),
             _ => LivenetError::ExecutionError(format!("Failed to put transaction: {}", e))
         })?;
-        let deploy_hash = response.result.transaction_hash;
+        let transaction_hash = response.result.transaction_hash;
         log::debug(format!(
             "[TX] Transaction sent with hash: {}",
-            deploy_hash.to_hex_string()
+            transaction_hash.to_hex_string()
         ));
-        let result = self.wait_for_transaction(deploy_hash, watch).await?;
-        self.process_transaction(result, deploy_hash)?;
-        Ok(deploy_hash)
+        let result = watch.wait_for_transaction_hash(&transaction_hash).await?;
+        self.process_transaction(result, transaction_hash)?;
+        Ok(transaction_hash)
     }
 
     fn process_transaction(
         &self,
         result: ExecutionResult,
-        deploy_hash: TransactionHash
+        transaction_hash: TransactionHash
     ) -> Result<()> {
-        let deploy_hash_str = deploy_hash.to_hex_string();
+        let deploy_hash_str = transaction_hash.to_hex_string();
         match result {
             ExecutionResult::V1(r) => match r {
                 Failure { error_message, .. } => {

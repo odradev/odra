@@ -11,7 +11,13 @@ use toml::Value;
 /// Node-related methods implementation for CasperClient.
 impl super::CasperClient {
     /// Returns the current block_time
-    pub async fn get_block_time(&self) -> Result<u64> {
+    pub fn get_block_time(&self) -> Result<u64> {
+        let rt = self.runtime();
+        rt.block_on(self.get_block_time_async())
+    }
+
+    /// Returns the current block_time
+    async fn get_block_time_async(&self) -> Result<u64> {
         let block_time = get_node_status(
             &self.rpc_id(),
             self.configuration.node_address(),

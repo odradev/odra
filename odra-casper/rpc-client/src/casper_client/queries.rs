@@ -20,12 +20,25 @@ use odra_core::prelude::*;
 /// Query methods implementation for CasperClient.
 impl super::CasperClient {
     /// Gets a value from the Odra storage (`state` dictionary)
-    pub async fn get_value(&self, address: &Address, key: &[u8]) -> Option<Bytes> {
-        self.get_dictionary_value(address, STATE_KEY, key).await
+    pub fn get_value(&self, address: &Address, key: &[u8]) -> Option<Bytes> {
+        let rt = self.runtime();
+        rt.block_on(self.get_value_async(address, key))
+    }
+
+    /// Gets a value from the Odra storage (`state` dictionary)
+    async fn get_value_async(&self, address: &Address, key: &[u8]) -> Option<Bytes> {
+        self.get_dictionary_value_async(address, STATE_KEY, key)
+            .await
     }
 
     /// Gets a value from a named key of an account or a contract
-    pub async fn get_named_value(&self, address: &Address, name: &str) -> Option<Bytes> {
+    pub fn get_named_value(&self, address: &Address, name: &str) -> Option<Bytes> {
+        let rt = self.runtime();
+        rt.block_on(self.get_named_value_async(address, name))
+    }
+
+    /// Gets a value from a named key of an account or a contract
+    async fn get_named_value_async(&self, address: &Address, name: &str) -> Option<Bytes> {
         let entity_hash = self.query_global_state_for_entity_addr(address).await;
         let stored_value = self
             .query_global_state_maybe(Key::Hash(entity_hash.value()), Some(name.to_string()))
@@ -67,7 +80,18 @@ impl super::CasperClient {
     }
 
     /// Gets a value from a named dictionary
-    pub async fn get_dictionary_value(
+    pub fn get_dictionary_value(
+        &self,
+        address: &Address,
+        dictionary_name: &str,
+        key: &[u8]
+    ) -> Option<Bytes> {
+        let rt = self.runtime();
+        rt.block_on(self.get_dictionary_value_async(address, dictionary_name, key))
+    }
+
+    /// Gets a value from a named dictionary
+    async fn get_dictionary_value_async(
         &self,
         address: &Address,
         dictionary_name: &str,
@@ -84,7 +108,13 @@ impl super::CasperClient {
     }
 
     /// Returns the balance of the account.
-    pub async fn get_balance(&self, address: &Address) -> Result<U512> {
+    pub fn get_balance(&self, address: &Address) -> Result<U512> {
+        let rt = self.runtime();
+        rt.block_on(self.get_balance_async(address))
+    }
+
+    /// Returns the balance of the account.
+    async fn get_balance_async(&self, address: &Address) -> Result<U512> {
         let main_purse = self.get_main_purse(address).await?;
         let response = get_balance(
             self.rpc_id_typed(),
@@ -175,14 +205,26 @@ impl super::CasperClient {
     }
 
     /// Get the event bytes from storage
-    pub async fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes> {
+    pub fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes> {
+        let rt = self.runtime();
+        rt.block_on(self.get_event_async(contract_address, index))
+    }
+
+    /// Get the event bytes from storage
+    async fn get_event_async(&self, contract_address: &Address, index: u32) -> Result<Bytes> {
         self.query_dict(contract_address, EVENTS.to_string(), index.to_string())
             .await
     }
 
     /// Get the events count from storage
-    pub async fn events_count(&self, contract_address: &Address) -> Option<u32> {
-        self.get_named_value(contract_address, EVENTS_LENGTH)
+    pub fn events_count(&self, contract_address: &Address) -> Option<u32> {
+        let rt = self.runtime();
+        rt.block_on(self.events_count_async(contract_address))
+    }
+
+    /// Get the events count from storage
+    async fn events_count_async(&self, contract_address: &Address) -> Option<u32> {
+        self.get_named_value_async(contract_address, EVENTS_LENGTH)
             .await
             .map(|bytes| {
                 deserialize_from_slice(&bytes).unwrap_or_else(|_| {
