@@ -11,8 +11,8 @@ repository = { workspace = true }
 version = { workspace = true }
 
 [dependencies]
-odra = { path = "../odra", version = "2.8.1", default-features = false }
-odra-casper-livenet-env = { path = "../odra-casper/livenet-env", version = "2.8.1" }
+odra = { path = "../odra", version = "2.8.2", default-features = false }
+odra-casper-livenet-env = { path = "../odra-casper/livenet-env", version = "2.8.2" }
 
 anyhow = { workspace = true }
 chrono = { workspace = true, features = ["serde"] }
@@ -28,4 +28,4 @@ thiserror = { workspace = true }
 toml = { workspace = true }
 
 [build-dependencies]
-odra-build = { path = "../odra-build", version = "2.8.1", default-features = false }
+odra-build = { path = "../odra-build", version = "2.8.2", default-features = false }
