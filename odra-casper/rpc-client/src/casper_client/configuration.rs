@@ -10,7 +10,7 @@ use odra_core::casper_types::SecretKey;
 use std::path::PathBuf;
 
 pub const DEFAULT_TTL: u32 = 5 * 60; // Seconds.
-pub const DEFAULT_GAS_TOLERANCE: u8 = 5;
+pub const DEFAULT_GAS_TOLERANCE: u8 = 1;
 
 #[derive(Debug)]
 pub struct CasperClientConfiguration {
