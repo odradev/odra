@@ -1,6 +1,6 @@
 use crate::casper_client::{
     ENV_ACCOUNT_PREFIX, ENV_CHAIN_NAME, ENV_CSPR_CLOUD_AUTH_TOKEN, ENV_EVENTS_ADDRESS,
-    ENV_GAS_PRICE_TOLERACE, ENV_LIVENET_ENV_FILE, ENV_NODE_ADDRESS, ENV_SECRET_KEY, ENV_TTL
+    ENV_GAS_PRICE_TOLERANCE, ENV_LIVENET_ENV_FILE, ENV_NODE_ADDRESS, ENV_SECRET_KEY, ENV_TTL
 };
 use crate::log;
 use crate::utils::{get_env_variable, get_optional_env_variable};
@@ -46,7 +46,7 @@ impl CasperClientConfiguration {
         let ttl = get_optional_env_variable(ENV_TTL)
             .and_then(|ttl| ttl.parse::<u32>().ok())
             .unwrap_or(DEFAULT_TTL);
-        let gas_price_tolerance = get_optional_env_variable(ENV_GAS_PRICE_TOLERACE)
+        let gas_price_tolerance = get_optional_env_variable(ENV_GAS_PRICE_TOLERANCE)
             .and_then(|ttl| ttl.parse::<u8>().ok())
             .unwrap_or(DEFAULT_GAS_TOLERANCE);
 

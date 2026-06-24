@@ -4,7 +4,7 @@ Changelog for `odra`.
 
 ## [2.8.2] - 2026-06-24
 ### Added
-- `ODRA_CASPER_LIVENET_GAS_PRICE_TOLERACE` environment variable to configure the gas price tolerance for livenet transactions.
+- `ODRA_CASPER_LIVENET_GAS_PRICE_TOLERANCE` environment variable to configure the gas price tolerance for livenet transactions.
 
 ### Changed
 - Default gas price tolerance for livenet transactions lowered from `5` to `1`.
