@@ -163,7 +163,11 @@ pub enum ExecutionError {
     /// Conversion error
     ConversionError = 126,
     /// Couldn't deploy the contract
+    #[cfg(target_arch = "wasm32")]
     ContractDeploymentError = 127,
+    /// Couldn't deploy the contract
+    #[cfg(not(target_arch = "wasm32"))]
+    ContractDeploymentError(String) = 127,
     /// Couldn't extract caller info
     CannotExtractCallerInfo = 128,
     /// Upgrading a contract that is not installed.

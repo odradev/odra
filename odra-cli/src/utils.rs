@@ -48,6 +48,8 @@ pub trait DeployerExt: Sized {
         } else {
             env.set_gas(gas);
             let contract = Self::Contract::try_deploy(env, args)?;
+            // Set back to 0 to avoid unintedend sending huge amount of gas in consequtive calls
+            env.set_gas(0);
             container.add_contract(&contract)?;
             Ok(contract)
         }
@@ -75,6 +77,8 @@ pub trait DeployerExt: Sized {
         } else {
             env.set_gas(gas);
             let contract = Self::Contract::try_deploy_with_cfg(env, args, cfg)?;
+            // Set back to 0 to avoid unintedend sending huge amount of gas in consequtive calls
+            env.set_gas(0);
             container.add_contract_named(&contract, package_name)?;
             Ok(contract)
         }
