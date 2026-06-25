@@ -12,19 +12,25 @@ use odra::{
     schema::{SchemaCustomTypes, SchemaEntrypoints, SchemaEvents},
     OdraContract
 };
-use odra_casper_livenet_env::LivenetError;
 
 use crate::{
     cmd::{
-        ContractsCmd, DeployCmd, DeployScript, MainCmd, MutableCommand, OdraCommand,
-        PrintEventsCmd, Scenario, ScenarioMetadata, ScenariosCmd, WhoamiCmd, CONTRACTS_SUBCOMMAND,
-        DEPLOY_SUBCOMMAND, PRINT_EVENTS_SUBCOMMAND, SCENARIOS_SUBCOMMAND, WHOAMI_SUBCOMMAND
+        CompletionsCmd, ConfigCmd, ContractsCmd, DeployCmd, DeployScript, InspectCmd, MainCmd,
+        MutableCommand, OdraCommand, PrintEventsCmd, Scenario, ScenarioMetadata, ScenariosCmd,
+        StatusCmd, TransferCmd, WhoamiCmd, COMPLETIONS_SUBCOMMAND, CONFIG_SUBCOMMAND,
+        CONTRACTS_SUBCOMMAND, DEPLOY_SUBCOMMAND, INSPECT_SUBCOMMAND, PRINT_EVENTS_SUBCOMMAND,
+        REPL_SUBCOMMAND, SCENARIOS_SUBCOMMAND, STATUS_SUBCOMMAND, TRANSFER_SUBCOMMAND,
+        WHOAMI_SUBCOMMAND
     },
     container::FileContractStorage,
     custom_types::CustomTypes,
     utils::get_default_contracts_file,
     ContractProvider, DeployedContractsContainer
 };
+
+mod completer;
+mod env_setup;
+mod repl;
 
 /// Command line interface for Odra smart contracts.
 pub struct OdraCli {
@@ -34,6 +40,11 @@ pub struct OdraCli {
     print_events_cmd: PrintEventsCmd,
     scenarios_cmd: ScenariosCmd,
     whoami_cmd: WhoamiCmd,
+    status_cmd: StatusCmd,
+    inspect_cmd: InspectCmd,
+    config_cmd: ConfigCmd,
+    transfer_cmd: TransferCmd,
+    completions_cmd: CompletionsCmd,
     custom_types: CustomTypes,
     host_env: HostEnv,
     callers: HashMap<(String, String), EntryPointsCaller>,
@@ -49,22 +60,7 @@ impl Default for OdraCli {
 impl OdraCli {
     /// Creates a new empty instance of the Odra CLI.
     pub fn new() -> Self {
-        let host_env = match odra_casper_livenet_env::env_safe() {
-            Ok(e) => e,
-            Err(LivenetError::EnvVariableNotSet(e)) => {
-                prettycli::error(&format!(
-                    "Livenet env misconfigured! {} env var is missing.",
-                    e
-                ));
-                prettycli::info("Visit offical docs to read more:");
-                prettycli::link("https://odra.dev/docs/backends/livenet#setup");
-                std::process::exit(1)
-            }
-            Err(e) => {
-                prettycli::error(&format!("Livent misconfigured: {e:#}"));
-                std::process::exit(1)
-            }
-        };
+        let host_env = env_setup::create_host_env();
         Self {
             main_cmd: MainCmd::default(),
             deploy_cmd: None,
@@ -72,6 +68,11 @@ impl OdraCli {
             print_events_cmd: PrintEventsCmd::default(),
             scenarios_cmd: ScenariosCmd::default(),
             whoami_cmd: WhoamiCmd::new(),
+            status_cmd: StatusCmd::default(),
+            inspect_cmd: InspectCmd::default(),
+            config_cmd: ConfigCmd,
+            transfer_cmd: TransferCmd,
+            completions_cmd: CompletionsCmd,
             host_env,
             custom_types: CustomTypes::default(),
             callers: HashMap::default(),
@@ -107,6 +108,8 @@ impl OdraCli {
         self.custom_types.register::<T>();
         self.contracts_cmd.add_contract::<T>();
         self.print_events_cmd.add_contract::<T>();
+        self.status_cmd.add_contract::<T>();
+        self.inspect_cmd.add_contract::<T>();
         self
     }
 
@@ -126,7 +129,9 @@ impl OdraCli {
         );
         self.custom_types.register::<T>();
         self.contracts_cmd.add_contract_named::<T>(name.clone());
-        self.print_events_cmd.add_contract_named::<T>(name);
+        self.print_events_cmd.add_contract_named::<T>(name.clone());
+        self.status_cmd.add_contract_named::<T>(name.clone());
+        self.inspect_cmd.add_contract_named::<T>(name);
         self
     }
 
@@ -156,10 +161,19 @@ impl OdraCli {
         self.main_cmd = self.main_cmd.subcommand(&self.scenarios_cmd);
         self.main_cmd = self.main_cmd.subcommand(&self.print_events_cmd);
         self.main_cmd = self.main_cmd.subcommand(&self.whoami_cmd);
+        self.main_cmd = self.main_cmd.subcommand(&self.status_cmd);
+        self.main_cmd = self.main_cmd.subcommand(&self.inspect_cmd);
+        self.main_cmd = self.main_cmd.subcommand(&self.config_cmd);
+        self.main_cmd = self.main_cmd.subcommand(&self.transfer_cmd);
+        self.main_cmd = self.main_cmd.subcommand(&self.completions_cmd);
+        self.main_cmd = self.main_cmd.subcommand(
+            clap::Command::new(REPL_SUBCOMMAND)
+                .about("Starts an interactive REPL session, keeping the host environment warm across commands.")
+        );
         self
     }
 
-    /// Runs the CLI and parses the input.
+    /// Runs the CLI once, parsing the input from the process arguments and exiting on error.
     pub fn run(self) {
         let (cmd, args, contracts_path) = self.main_cmd.get_matches();
         let contracts_path = match contracts_path {
@@ -167,62 +181,110 @@ impl OdraCli {
             None => self.default_contract_path.clone()
         };
 
-        let storage = FileContractStorage::new(contracts_path.clone()).unwrap_or_else(|e| {
-            prettycli::error(&format!("Failed to create contract storage: {e}"));
-            std::process::exit(1);
-        });
         // Init contracts container with the provided path or default to the resources directory.
-        let mut container = DeployedContractsContainer::instance(storage);
+        let mut container = self
+            .load_container(contracts_path.clone())
+            .unwrap_or_else(|e| {
+                prettycli::error(&format!("{e:#}"));
+                std::process::exit(1);
+            });
 
         // Register the contracts from the container in the host environment.
-        // Only register contracts that have callers (were added via .contract::<T>() in the builder).
+        if let Err(err) = self.register_deployed_contracts(&container, &contracts_path) {
+            prettycli::error(&format!("{err:#}"));
+            std::process::exit(1);
+        }
+
+        if let Err(err) = self.dispatch(&cmd, &args, &mut container) {
+            prettycli::error(&format!("{err:#}"));
+            std::process::exit(1);
+        }
+    }
+
+    /// Builds the deployed-contracts container from the given path (or the default location).
+    fn load_container(
+        &self,
+        contracts_path: Option<PathBuf>
+    ) -> Result<DeployedContractsContainer> {
+        let storage = FileContractStorage::new(contracts_path)
+            .map_err(|e| anyhow::anyhow!("Failed to create contract storage: {e}"))?;
+        Ok(DeployedContractsContainer::instance(storage))
+    }
+
+    /// Registers every deployed contract from the container in the host environment.
+    ///
+    /// Only contracts that have a matching caller (added via `.contract::<T>()` in the builder) can
+    /// be registered. Returns an error naming the missing caller instead of exiting, so the REPL can
+    /// report it without killing the session.
+    fn register_deployed_contracts(
+        &self,
+        container: &DeployedContractsContainer,
+        contracts_path: &Option<PathBuf>
+    ) -> Result<()> {
         for deployed_contract in container.all_contracts() {
-            let caller = self.callers.get(&(deployed_contract.name(), deployed_contract.key_name())).unwrap_or_else(|| {
-                let path = match &contracts_path {
-                    Some(path) => path.to_str().map(|s| s.to_string()).unwrap_or_default(),
-                    None => get_default_contracts_file()
-                };
-                prettycli::error(&format!(
-                    "Caller for `{}` not found. The contract is registered in '{}' file, but not in the CLI builder. Make sure you have added it to the builder using `.contract::<{}>()`.",
-                    &deployed_contract.key_name(), path, &deployed_contract.name()
-                ));
-                std::process::exit(1);
-            }).clone();
+            let caller = self
+                .callers
+                .get(&(deployed_contract.name(), deployed_contract.key_name()))
+                .ok_or_else(|| {
+                    let path = match contracts_path {
+                        Some(path) => path.to_str().map(|s| s.to_string()).unwrap_or_default(),
+                        None => get_default_contracts_file()
+                    };
+                    anyhow::anyhow!(
+                        "Caller for `{}` not found. The contract is registered in '{}' file, but not in the CLI builder. Make sure you have added it to the builder using `.contract::<{}>()`.",
+                        deployed_contract.key_name(), path, deployed_contract.name()
+                    )
+                })?
+                .clone();
             self.host_env.register_contract(
                 deployed_contract.address(),
                 deployed_contract.key_name(),
                 caller
             );
         }
+        Ok(())
+    }
 
-        let result = match cmd.as_str() {
+    /// Dispatches a parsed subcommand to its handler.
+    ///
+    /// `deploy` mutates the container; the other subcommands are read-only. An unknown verb returns
+    /// an error (recoverable in the REPL) rather than panicking.
+    fn dispatch(
+        &self,
+        cmd: &str,
+        args: &ArgMatches,
+        container: &mut DeployedContractsContainer
+    ) -> Result<()> {
+        match cmd {
             DEPLOY_SUBCOMMAND => self
                 .deploy_cmd
                 .as_ref()
-                .unwrap_or_else(|| {
-                    prettycli::error("Deploy command not found. Did you forget to add it?");
-                    std::process::exit(1);
-                })
-                .run(&self.host_env, &args, &self.custom_types, &mut container),
-            CONTRACTS_SUBCOMMAND => self.run_command(&self.contracts_cmd, args, &container),
-            PRINT_EVENTS_SUBCOMMAND => self.run_command(&self.print_events_cmd, args, &container),
-            SCENARIOS_SUBCOMMAND => self.run_command(&self.scenarios_cmd, args, &container),
-            WHOAMI_SUBCOMMAND => self.run_command(&self.whoami_cmd, args, &container),
-            _ => unreachable!()
-        };
-
-        if let Err(err) = result {
-            prettycli::error(&format!("{err:#}"));
-            std::process::exit(1);
+                .ok_or_else(|| {
+                    anyhow::anyhow!("Deploy command not found. Did you forget to add it?")
+                })?
+                .run(&self.host_env, args, &self.custom_types, container),
+            CONTRACTS_SUBCOMMAND => self.run_command(&self.contracts_cmd, args, container),
+            PRINT_EVENTS_SUBCOMMAND => self.run_command(&self.print_events_cmd, args, container),
+            SCENARIOS_SUBCOMMAND => self.run_command(&self.scenarios_cmd, args, container),
+            WHOAMI_SUBCOMMAND => self.run_command(&self.whoami_cmd, args, container),
+            STATUS_SUBCOMMAND => self.run_command(&self.status_cmd, args, container),
+            INSPECT_SUBCOMMAND => self.run_command(&self.inspect_cmd, args, container),
+            CONFIG_SUBCOMMAND => self.run_command(&self.config_cmd, args, container),
+            TRANSFER_SUBCOMMAND => self.run_command(&self.transfer_cmd, args, container),
+            COMPLETIONS_SUBCOMMAND => self
+                .completions_cmd
+                .generate(args, self.main_cmd.to_command(&[])),
+            REPL_SUBCOMMAND => repl::run(self, container),
+            _ => Err(anyhow::anyhow!("Unknown command: {cmd}"))
         }
     }
 
     fn run_command<T: OdraCommand>(
         &self,
         cmd: &T,
-        args: ArgMatches,
+        args: &ArgMatches,
         container: &DeployedContractsContainer
     ) -> Result<()> {
-        cmd.run(&self.host_env, &args, &self.custom_types, container)
+        cmd.run(&self.host_env, args, &self.custom_types, container)
     }
 }

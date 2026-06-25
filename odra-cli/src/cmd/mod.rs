@@ -3,20 +3,30 @@ use clap::ArgMatches;
 use odra::host::HostEnv;
 
 pub mod args;
+mod completions;
+mod config;
 mod contract;
 mod deploy;
 mod events;
+mod inspect;
 mod main;
 mod scenario;
+mod status;
+mod transfer;
 mod whoami;
 
+pub(crate) use completions::CompletionsCmd;
+pub(crate) use config::ConfigCmd;
 pub(crate) use contract::ContractsCmd;
 pub(crate) use deploy::DeployCmd;
 pub use deploy::{DeployError, DeployScript};
 pub(crate) use events::PrintEventsCmd;
+pub(crate) use inspect::InspectCmd;
 pub(crate) use main::MainCmd;
 pub(crate) use scenario::ScenariosCmd;
 pub use scenario::{Scenario, ScenarioArgs, ScenarioError, ScenarioMetadata};
+pub(crate) use status::StatusCmd;
+pub(crate) use transfer::TransferCmd;
 pub(crate) use whoami::WhoamiCmd;
 
 use crate::{custom_types::CustomTypeSet, DeployedContractsContainer};
@@ -26,6 +36,12 @@ pub(crate) const SCENARIOS_SUBCOMMAND: &str = "scenario";
 pub(crate) const DEPLOY_SUBCOMMAND: &str = "deploy";
 pub(crate) const PRINT_EVENTS_SUBCOMMAND: &str = "print-events";
 pub(crate) const WHOAMI_SUBCOMMAND: &str = "whoami";
+pub(crate) const REPL_SUBCOMMAND: &str = "repl";
+pub(crate) const STATUS_SUBCOMMAND: &str = "status";
+pub(crate) const INSPECT_SUBCOMMAND: &str = "inspect";
+pub(crate) const CONFIG_SUBCOMMAND: &str = "config";
+pub(crate) const TRANSFER_SUBCOMMAND: &str = "transfer";
+pub(crate) const COMPLETIONS_SUBCOMMAND: &str = "completions";
 
 /// OdraCommand is a trait that represents a command that can be run in the Odra CLI.
 pub(crate) trait OdraCommand {

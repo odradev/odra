@@ -1,10 +1,11 @@
 //! Deploys an [odra_examples::contracts::tlw::TimeLockWallet] contract, then deposits and withdraw some CSPRs.
 use odra::casper_types::U512;
 use odra::host::{Deployer, HostRef};
+use odra_cli::cspr;
 use odra_examples::contracts::tlw::{TimeLockWallet, TimeLockWalletInitArgs};
 
-const DEPOSIT: u64 = 100;
-const WITHDRAWAL: u64 = 99;
+const DEPOSIT: u64 = 100_000_000_000u64;
+const WITHDRAWAL: u64 = 99_000_000_000u64;
 const GAS: u64 = 20u64.pow(9);
 
 fn main() {
@@ -21,6 +22,7 @@ fn main() {
         }
     );
 
+    env.set_gas(cspr!(4));
     contract.with_tokens(U512::from(DEPOSIT)).deposit();
 
     println!("Owner's balance: {:?}", contract.get_balance(&caller));

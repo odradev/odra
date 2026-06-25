@@ -185,11 +185,41 @@ fn parse_cspr_token_amount(value: &str) -> Result<U512, &'static str> {
     Ok(integer_part + fractional_part)
 }
 
+/// Converts an amount in motes to a human-readable CSPR string.
+///
+/// The integer part is the number of whole CSPR; any remainder is rendered as a
+/// fractional part with trailing zeros stripped. E.g. `2_600_000_000` motes
+/// becomes `"2.6"` and `1_000_000_000` becomes `"1"`.
+pub(crate) fn motes_to_cspr(motes: U512) -> String {
+    let divisor = U512::from(1_000_000_000u64);
+    let integer_part = motes / divisor;
+    let fractional_part = (motes % divisor).as_u64();
+
+    if fractional_part == 0 {
+        return integer_part.to_string();
+    }
+
+    let fractional_str = format!("{fractional_part:09}");
+    let fractional_str = fractional_str.trim_end_matches('0');
+    format!("{integer_part}.{fractional_str}")
+}
+
 #[cfg(test)]
 mod tests {
     use odra::casper_types::U512;
 
-    use super::parse_cspr_token_amount;
+    use super::{motes_to_cspr, parse_cspr_token_amount};
+
+    #[test]
+    fn test_motes_to_cspr() {
+        assert_eq!(motes_to_cspr(U512::zero()), "0");
+        assert_eq!(motes_to_cspr(U512::from(1_000_000_000u64)), "1");
+        assert_eq!(motes_to_cspr(U512::from(2_600_000_000u64)), "2.6");
+        assert_eq!(motes_to_cspr(U512::from(123_456_789u64)), "0.123456789");
+        assert_eq!(motes_to_cspr(U512::from(123_000_000u64)), "0.123");
+        assert_eq!(motes_to_cspr(U512::from(1u64)), "0.000000001");
+        assert_eq!(motes_to_cspr(U512::from(1_000_000_000_000u64)), "1000");
+    }
 
     #[test]
     fn test_parse_cspr_token_amount() {

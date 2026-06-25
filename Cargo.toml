@@ -92,11 +92,13 @@ quote = "1.0"
 rand = { version = "0.9", default-features = false }
 rand_chacha = { version = "0.9", default-features = false }
 reqwest = { version = "0.12" }
+rustyline = "14"
 serde = { version = "1.0", default-features = false }
 serde_derive = {  version = "1.0" }
 serde-json-wasm = { version = "1.0", default-features = false }
 serde_json = { version = "1.0", default-features = false }
 sha3 = { version = "0.10", default-features = false }
+shlex = "1"
 syn = "2.0"
 syn_derive = "0.2"
 thiserror = "1.0"
