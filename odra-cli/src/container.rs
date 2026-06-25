@@ -32,6 +32,24 @@ pub enum ContractError {
     ContractExists(String)
 }
 
+#[derive(Debug)]
+pub(crate) enum ContractStorageSource {
+    #[cfg_attr(not(test), allow(dead_code))]
+    Memory,
+    File {
+        path: PathBuf
+    }
+}
+
+impl std::fmt::Display for ContractStorageSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Memory => f.write_str("Memory"),
+            Self::File { path } => f.write_str(&path.to_string_lossy())
+        }
+    }
+}
+
 /// Represents storage for deployed contracts.
 /// This trait defines the methods for reading and writing contract data.
 pub(crate) trait ContractStorage {
@@ -41,6 +59,7 @@ pub(crate) trait ContractStorage {
     fn write(&mut self, data: &ContractsData) -> Result<(), ContractError>;
     /// Creates a backup copy of the contract data.
     fn backup(&self) -> Result<(), ContractError>;
+    fn source(&self) -> ContractStorageSource;
 }
 
 /// Represents the data structure for storing deployed contracts in a TOML file.
@@ -50,7 +69,7 @@ pub(crate) struct FileContractStorage {
 
 impl FileContractStorage {
     pub fn new(custom_path: Option<PathBuf>) -> Result<Self, ContractError> {
-        let mut path = project_root::get_project_root().map_err(ContractError::Io)?;
+        let mut path = project_root::get_project_root().unwrap_or_default();
         match &custom_path {
             Some(path_str) if !path_str.to_str().unwrap_or_default().is_empty() => {
                 path.push(path_str);
@@ -67,7 +86,7 @@ impl FileContractStorage {
                     "Parent directory not found"
                 ))
             })?;
-            std::fs::create_dir_all(parent_path).map_err(ContractError::Io)?;
+            std::fs::create_dir_all(parent_path)?;
         }
 
         Ok(Self { file_path: path })
@@ -95,6 +114,12 @@ impl ContractStorage for FileContractStorage {
         }
         std::fs::copy(&self.file_path, new_path).map_err(ContractError::Io)?;
         Ok(())
+    }
+
+    fn source(&self) -> ContractStorageSource {
+        ContractStorageSource::File {
+            path: self.file_path.clone()
+        }
     }
 }
 
@@ -199,6 +224,10 @@ impl DeployedContractsContainer {
     /// Returns the timestamp of the last write to the contracts file (RFC 3339).
     pub fn last_updated(&self) -> String {
         self.data.borrow().last_updated.clone()
+    }
+
+    pub(crate) fn source(&self) -> ContractStorageSource {
+        self.storage.borrow().source()
     }
 }
 

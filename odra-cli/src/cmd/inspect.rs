@@ -5,7 +5,10 @@ use clap::{ArgMatches, Command};
 use odra::schema::casper_contract_schema::{CustomType, Entrypoint};
 use odra::schema::{SchemaCustomTypes, SchemaEntrypoints, SchemaEvents};
 use odra::{contract_def::HasIdent, host::HostEnv, OdraContract};
+use serde_derive::Serialize;
 
+use crate::cmd::CmdOutput;
+use crate::log;
 use crate::{
     cmd::INSPECT_SUBCOMMAND, custom_types::CustomTypeSet, types, DeployedContractsContainer
 };
@@ -46,15 +49,17 @@ impl InspectCmd {
 }
 
 impl OdraCommand for InspectCmd {
-    fn run(
+    type Output = ContractsSchemaReport;
+
+    fn exec(
         &self,
         _env: &HostEnv,
         args: &ArgMatches,
         _types: &CustomTypeSet,
         _container: &DeployedContractsContainer
-    ) -> Result<()> {
+    ) -> Result<Self::Output> {
         match args.subcommand() {
-            // `inspect <Contract>` — show a single contract.
+            // `inspect <Contract>` — show a single contract (a JSON object).
             Some((name, _)) => {
                 let contract = self
                     .contracts
@@ -66,19 +71,14 @@ impl OdraCommand for InspectCmd {
                             self.available()
                         )
                     })?;
-                contract.render();
+                Ok(Self::Output {
+                    contracts: vec![contract.report()]
+                })
             }
-            // `inspect` — show every registered contract.
-            None => {
-                if self.contracts.is_empty() {
-                    prettycli::info("No contracts registered in the CLI builder.");
-                }
-                for contract in &self.contracts {
-                    contract.render();
-                }
-            }
+            None => Ok(Self::Output {
+                contracts: self.contracts.iter().map(|c| c.report()).collect()
+            })
         }
-        Ok(())
     }
 }
 
@@ -120,32 +120,105 @@ impl ContractSchema {
         }
     }
 
-    fn render(&self) {
-        prettycli::info(&format!("Contract: {} ({})", self.key_name, self.ident));
+    /// Builds the serializable view of this contract's schema, reusing the same type formatting as
+    /// the human renderer so both outputs stay in sync.
+    fn report(&self) -> ContractSchemaReport {
+        let entry_points = self
+            .entry_points
+            .iter()
+            .map(|ep| EntryPointReport {
+                name: ep.name.clone(),
+                mutability: if ep.is_mutable { "mutable" } else { "view" },
+                arguments: ep
+                    .arguments
+                    .iter()
+                    .map(|a| ArgReport {
+                        name: a.name.clone(),
+                        ty: types::format_type_hint(&a.ty.0)
+                    })
+                    .collect(),
+                return_type: types::format_type_hint(&ep.return_ty.0),
+                description: ep.description.clone().filter(|d| !d.is_empty())
+            })
+            .collect();
 
-        prettycli::info("Entry points:");
-        for ep in &self.entry_points {
-            let kind = if ep.is_mutable { "mut " } else { "view" };
-            let args = ep
-                .arguments
+        ContractSchemaReport {
+            key_name: self.key_name.clone(),
+            ident: self.ident.clone(),
+            entry_points,
+            types: self
+                .custom_types
                 .iter()
-                .map(|a| format!("{}: {}", a.name, types::format_type_hint(&a.ty.0)))
-                .collect::<Vec<_>>()
-                .join(", ");
-            let ret = types::format_type_hint(&ep.return_ty.0);
-            prettycli::info(&format!("  [{kind}] {}({args}) -> {ret}", ep.name));
-            if let Some(desc) = ep.description.as_deref().filter(|d| !d.is_empty()) {
-                prettycli::info(&format!("           {desc}"));
-            }
+                .map(|ct| ct.name().to_string())
+                .collect()
+        }
+    }
+}
+
+/// Serializable view of a contract's schema for `--json` output.
+#[derive(Serialize)]
+struct ContractSchemaReport {
+    key_name: String,
+    ident: String,
+    entry_points: Vec<EntryPointReport>,
+    types: Vec<String>
+}
+
+#[derive(Serialize)]
+pub(crate) struct ContractsSchemaReport {
+    contracts: Vec<ContractSchemaReport>
+}
+
+impl CmdOutput for ContractsSchemaReport {
+    fn pretty_print(&self) {
+        if self.contracts.is_empty() {
+            log("No contracts registered in the CLI builder.");
+            return;
         }
 
-        if !self.custom_types.is_empty() {
-            prettycli::info("Types & events:");
-            for ct in &self.custom_types {
-                prettycli::info(&format!("  {}", ct.name()));
+        for c in &self.contracts {
+            log(format!("Contract: {} ({})", c.key_name, c.ident));
+
+            log("Entry points:");
+            for ep in &c.entry_points {
+                let kind = ep.mutability;
+                let args = ep
+                    .arguments
+                    .iter()
+                    .map(|a| format!("{}: {}", a.name, a.ty))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                let ret = &ep.return_type;
+                log(format!("  [{kind}] {}({args}) -> {ret}", ep.name));
+                if let Some(desc) = ep.description.as_deref().filter(|d| !d.is_empty()) {
+                    log(format!("           {desc}"));
+                }
+            }
+
+            if !c.types.is_empty() {
+                log("Types & events:");
+                for ct in &c.types {
+                    log(format!("  {}", ct));
+                }
             }
         }
     }
+}
+
+#[derive(Serialize)]
+struct EntryPointReport {
+    name: String,
+    mutability: &'static str,
+    arguments: Vec<ArgReport>,
+    return_type: String,
+    description: Option<String>
+}
+
+#[derive(Serialize)]
+struct ArgReport {
+    name: String,
+    #[serde(rename = "type")]
+    ty: String
 }
 
 #[cfg(test)]
@@ -163,6 +236,20 @@ mod tests {
         assert!(clap_cmd
             .get_subcommands()
             .any(|c| c.get_name() == "TestContract"));
+    }
+
+    #[test]
+    fn report_describes_entry_points() {
+        let mut cmd = InspectCmd::default();
+        cmd.add_contract::<TestContract>();
+
+        let report = cmd.contracts[0].report();
+        assert_eq!(report.key_name, "TestContract");
+        assert!(!report.entry_points.is_empty());
+        assert!(report
+            .entry_points
+            .iter()
+            .all(|e| e.mutability == "mutable" || e.mutability == "view"));
     }
 
     #[test]

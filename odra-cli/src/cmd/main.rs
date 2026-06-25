@@ -36,6 +36,7 @@ impl MainCmd {
             .subcommand_required(true)
             .arg_required_else_help(true)
             .arg(Arg::Contracts)
+            .arg(Arg::Json)
             .subcommands(
                 self.sub_cmds
                     .iter()

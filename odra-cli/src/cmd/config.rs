@@ -1,9 +1,13 @@
 use anyhow::Result;
 use clap::{ArgMatches, Command};
 use odra::host::HostEnv;
+use serde_derive::Serialize;
 
 use crate::{
-    cmd::CONFIG_SUBCOMMAND, custom_types::CustomTypeSet, utils::get_default_contracts_file,
+    cmd::{CmdOutput, CONFIG_SUBCOMMAND},
+    custom_types::CustomTypeSet,
+    log,
+    utils::get_default_contracts_file,
     DeployedContractsContainer
 };
 
@@ -18,33 +22,65 @@ const ENV_SECRET_KEY_PATH: &str = "ODRA_CASPER_LIVENET_SECRET_KEY_PATH";
 /// CLI is bound to before sending anything. Only the secret key *path* is shown, never its content.
 pub(crate) struct ConfigCmd;
 
+/// The resolved livenet configuration. Each `Option` is `None` when the backing env var is unset or
+/// empty. Only the secret key *path* is ever included — never its contents.
+#[derive(Serialize)]
+pub(crate) struct ConfigReport {
+    node_address: Option<String>,
+    chain_name: Option<String>,
+    events_url: Option<String>,
+    secret_key_path: Option<String>,
+    caller_address: String,
+    contracts_file: String
+}
+
+impl CmdOutput for ConfigReport {
+    fn pretty_print(&self) {
+        log("Livenet configuration:");
+        print_var("Node address", &self.node_address, ENV_NODE_ADDRESS);
+        print_var("Chain name", &self.chain_name, ENV_CHAIN_NAME);
+        print_var("Events URL", &self.events_url, ENV_EVENTS_URL);
+        print_var(
+            "Secret key path",
+            &self.secret_key_path,
+            ENV_SECRET_KEY_PATH
+        );
+        log(format!("Caller address:  {}", self.caller_address));
+        log(format!("Contracts file:  {}", self.contracts_file));
+    }
+}
+
 impl OdraCommand for ConfigCmd {
-    fn run(
+    type Output = ConfigReport;
+
+    fn exec(
         &self,
         env: &HostEnv,
         _args: &ArgMatches,
         _types: &CustomTypeSet,
         _container: &DeployedContractsContainer
-    ) -> Result<()> {
-        prettycli::info("Livenet configuration:");
-        print_var("Node address", ENV_NODE_ADDRESS);
-        print_var("Chain name", ENV_CHAIN_NAME);
-        print_var("Events URL", ENV_EVENTS_URL);
-        print_var("Secret key path", ENV_SECRET_KEY_PATH);
-        prettycli::info(&format!("Caller address:  {}", env.caller().to_string()));
-        prettycli::info(&format!(
-            "Contracts file:  {}",
-            get_default_contracts_file()
-        ));
-        Ok(())
+    ) -> Result<Self::Output> {
+        Ok(ConfigReport {
+            node_address: env_var(ENV_NODE_ADDRESS),
+            chain_name: env_var(ENV_CHAIN_NAME),
+            events_url: env_var(ENV_EVENTS_URL),
+            secret_key_path: env_var(ENV_SECRET_KEY_PATH),
+            caller_address: env.caller().to_string(),
+            contracts_file: get_default_contracts_file()
+        })
     }
 }
 
+/// Reads an env var, mapping unset/empty to `None`.
+fn env_var(var: &str) -> Option<String> {
+    std::env::var(var).ok().filter(|v| !v.is_empty())
+}
+
 /// Prints `<label>: <value>`, or a warning when the variable is unset/empty.
-fn print_var(label: &str, var: &str) {
-    match std::env::var(var) {
-        Ok(value) if !value.is_empty() => prettycli::info(&format!("  {label}: {value}")),
-        _ => prettycli::warn(&format!("  {label}: <not set> (${var})"))
+fn print_var(label: &str, value: &Option<String>, var: &str) {
+    match value {
+        Some(value) => prettycli::info(&format!("  {label}: {value}")),
+        None => prettycli::warn(&format!("  {label}: <not set> (${var})"))
     }
 }
 

@@ -7,10 +7,13 @@ use odra::schema::{SchemaCustomTypes, SchemaEntrypoints, SchemaEvents};
 use odra::OdraContract;
 use odra::{contract_def::HasIdent, host::HostEnv};
 
+use serde_derive::Serialize;
+
 use crate::cmd::args::Arg;
-use crate::cmd::CONTRACTS_SUBCOMMAND;
+use crate::cmd::{CmdOutput, CONTRACTS_SUBCOMMAND};
 use crate::custom_types::CustomTypeSet;
-use crate::{entry_point, DeployedContractsContainer};
+use crate::entry_point::{self, ContractEvents};
+use crate::{log, DeployedContractsContainer};
 
 use super::OdraCommand;
 
@@ -38,22 +41,24 @@ impl ContractsCmd {
 }
 
 impl OdraCommand for ContractsCmd {
-    fn run(
+    type Output = CallResultReport;
+
+    fn exec(
         &self,
         env: &HostEnv,
         args: &ArgMatches,
         types: &CustomTypeSet,
         container: &DeployedContractsContainer
-    ) -> Result<()> {
-        args.subcommand()
-            .map(|(contract_name, contract_args)| {
-                self.contracts
-                    .iter()
-                    .find(|cmd| cmd.package_name == contract_name)
-                    .map(|contract| contract.run(env, contract_args, types, container))
-                    .unwrap_or(Err(anyhow::anyhow!("No contract found")))
-            })
-            .unwrap_or(Err(anyhow::anyhow!("No contract found")))
+    ) -> Result<Self::Output> {
+        let (contract_name, contract_args) = args
+            .subcommand()
+            .ok_or_else(|| anyhow::anyhow!("No contract found"))?;
+        let contract = self
+            .contracts
+            .iter()
+            .find(|cmd| cmd.package_name == contract_name)
+            .ok_or_else(|| anyhow::anyhow!("No contract found"))?;
+        contract.exec(env, contract_args, types, container)
     }
 }
 
@@ -100,29 +105,29 @@ impl ContractCmd {
 }
 
 impl OdraCommand for ContractCmd {
-    fn run(
+    type Output = CallResultReport;
+
+    fn exec(
         &self,
         env: &HostEnv,
         args: &ArgMatches,
         types: &CustomTypeSet,
         container: &DeployedContractsContainer
-    ) -> Result<()> {
-        args.subcommand()
-            .map(|(entrypoint_name, entrypoint_args)| {
-                self.entry_points
-                    .iter()
-                    .find(|cmd| cmd.entry_point.name == entrypoint_name)
-                    .map(|entry_point| entry_point.run(env, entrypoint_args, types, container))
-                    .unwrap_or(Err(entry_point::CallError::EntryPointNotFound {
-                        entry_point: entrypoint_name.to_string(),
-                        contract_name: self.contract_name.clone()
-                    }
-                    .into()))
-            })
-            .unwrap_or(Err(entry_point::CallError::NoEntryPointFound {
-                contract_name: self.package_name.clone()
-            }
-            .into()))
+    ) -> Result<Self::Output> {
+        let (entrypoint_name, entrypoint_args) =
+            args.subcommand()
+                .ok_or_else(|| entry_point::CallError::NoEntryPointFound {
+                    contract_name: self.package_name.clone()
+                })?;
+        let entry_point = self
+            .entry_points
+            .iter()
+            .find(|cmd| cmd.entry_point.name == entrypoint_name)
+            .ok_or_else(|| entry_point::CallError::EntryPointNotFound {
+                entry_point: entrypoint_name.to_string(),
+                contract_name: self.contract_name.clone()
+            })?;
+        entry_point.exec(env, entrypoint_args, types, container)
     }
 }
 
@@ -165,34 +170,38 @@ impl CallCmd {
 }
 
 impl OdraCommand for CallCmd {
+    type Output = CallResultReport;
+
     #[cfg(not(test))]
-    fn run(
+    fn exec(
         &self,
         env: &HostEnv,
         args: &ArgMatches,
         types: &CustomTypeSet,
         container: &DeployedContractsContainer
-    ) -> Result<()> {
+    ) -> Result<Self::Output> {
         let entry_point = &self.entry_point;
         let contract_name = &self.package_name;
 
-        let result = entry_point::call(env, contract_name, entry_point, args, types, container)?;
-        if result.is_empty() {
-            prettycli::info("Call executed successfully, but no result was returned.");
-        } else {
-            prettycli::info(&format!("Call result: {result}"));
-        }
-        Ok(())
+        let outcome = entry_point::call(env, contract_name, entry_point, args, types, container)?;
+        Ok(CallResultReport {
+            contract: contract_name.clone(),
+            entry_point: entry_point.name.clone(),
+            result: Some(outcome.result).filter(|r| !r.is_empty()),
+            events: outcome.events
+        })
     }
 
+    // In tests there is no live backend to call, so the entry point is not executed; we only
+    // validate that the required arguments were supplied and return an empty report.
     #[cfg(test)]
-    fn run(
+    fn exec(
         &self,
         _env: &HostEnv,
         args: &ArgMatches,
         _types: &CustomTypeSet,
         _container: &DeployedContractsContainer
-    ) -> Result<()> {
+    ) -> Result<Self::Output> {
         for a in &self.entry_point.arguments {
             if !args.contains_id(&a.name) {
                 return Err(entry_point::CallError::ExecutionError {
@@ -203,7 +212,42 @@ impl OdraCommand for CallCmd {
                 .into());
             }
         }
-        Ok(())
+        Ok(CallResultReport {
+            contract: self.package_name.clone(),
+            entry_point: self.entry_point.name.clone(),
+            result: None,
+            events: Vec::new()
+        })
+    }
+}
+
+/// The result of a contract call: the decoded return value (absent when the entry point returns
+/// nothing) plus any events captured via `--print-events` on a mutable call.
+#[derive(Serialize)]
+pub(crate) struct CallResultReport {
+    contract: String,
+    entry_point: String,
+    result: Option<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    events: Vec<ContractEvents>
+}
+
+impl CmdOutput for CallResultReport {
+    fn pretty_print(&self) {
+        for group in &self.events {
+            log(format!(
+                "Captured {} events for contract '{}'",
+                group.events.len(),
+                group.contract
+            ));
+            for (i, event) in group.events.iter().enumerate() {
+                log(format!("Event {}: {}", i + 1, event));
+            }
+        }
+        match &self.result {
+            Some(result) => log(format!("Call result: {result}")),
+            None => log("Call executed successfully, but no result was returned.")
+        }
     }
 }
 

@@ -1,15 +1,16 @@
 use crate::{
     cmd::{
         args::{read_arg, Arg, ArgsError},
-        OdraCommand, PRINT_EVENTS_SUBCOMMAND
+        CmdOutput, OdraCommand, PRINT_EVENTS_SUBCOMMAND
     },
     container::{self, ContractProvider},
     custom_types::CustomTypeSet,
-    types, DeployedContractsContainer
+    log, types, DeployedContractsContainer
 };
 use anyhow::Result;
 use clap::{ArgMatches, Command};
 use odra::{contract_def::HasIdent, host::HostEnv, OdraContract};
+use serde_derive::Serialize;
 
 #[derive(Debug, thiserror::Error)]
 pub enum EventError {
@@ -43,16 +44,18 @@ impl PrintEventsCmd {
 }
 
 impl OdraCommand for PrintEventsCmd {
-    fn run(
+    type Output = EventsReport;
+
+    fn exec(
         &self,
         env: &HostEnv,
         args: &ArgMatches,
         types: &CustomTypeSet,
         container: &DeployedContractsContainer
-    ) -> Result<()> {
+    ) -> Result<Self::Output> {
         let (subcmd, args) = args.subcommand().ok_or(EventError::ContractNotFound)?;
         if let Some(cmd) = self.subcommands.iter().find(|c| c.contract_name == subcmd) {
-            cmd.run(env, args, types, container)
+            cmd.exec(env, args, types, container)
         } else {
             Err(EventError::ContractNotFound.into())
         }
@@ -81,13 +84,15 @@ impl PrintContractEventsCmd {
 }
 
 impl OdraCommand for PrintContractEventsCmd {
-    fn run(
+    type Output = EventsReport;
+
+    fn exec(
         &self,
         env: &HostEnv,
         args: &ArgMatches,
         types: &CustomTypeSet,
         container: &DeployedContractsContainer
-    ) -> Result<()> {
+    ) -> Result<Self::Output> {
         // Ensure the host environment is set up to capture events.
         env.set_captures_events(true);
         let contract_address = container
@@ -102,28 +107,55 @@ impl OdraCommand for PrintContractEventsCmd {
             .unwrap_or(events_count)
             .min(events_count);
 
-        prettycli::info(&format!(
-            "Printing {} most recent events for contract '{}'",
-            max_events, self.contract_name
-        ));
+        let mut events = Vec::new();
         for i in 0..max_events {
             // Read events in reverse order, starting from the most recent.
             let idx = events_count - i - 1;
-            let ev = env.get_event_bytes(&contract_address, idx).map_err(|_| {
+            let bytes = env.get_event_bytes(&contract_address, idx).map_err(|_| {
                 EventError::EventNotFound {
                     index: i,
                     contract_name: self.contract_name.clone()
                 }
             })?;
-            // Decode and print the event.
-            prettycli::info(&format!(
-                "Event {}: {}",
-                i + 1,
-                types::decode_event(&ev, types)?
-            ));
+            events.push(EventEntry {
+                index: idx,
+                data: types::decode_event(&bytes, types)?
+            });
         }
 
-        Ok(())
+        Ok(EventsReport {
+            contract: self.contract_name.clone(),
+            count: max_events,
+            events
+        })
+    }
+}
+
+/// The most recent events emitted by a contract, newest first.
+#[derive(Serialize)]
+pub(crate) struct EventsReport {
+    contract: String,
+    /// Number of events included (capped at the total emitted).
+    count: u32,
+    events: Vec<EventEntry>
+}
+
+#[derive(Serialize)]
+struct EventEntry {
+    /// The event's index in the contract's on-chain event log.
+    index: u32,
+    data: String
+}
+
+impl CmdOutput for EventsReport {
+    fn pretty_print(&self) {
+        log(format!(
+            "Printing {} most recent events for contract '{}'",
+            self.count, self.contract
+        ));
+        for (i, event) in self.events.iter().enumerate() {
+            log(format!("Event {}: {}", i + 1, event.data));
+        }
     }
 }
 

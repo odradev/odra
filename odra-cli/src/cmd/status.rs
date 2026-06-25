@@ -1,10 +1,13 @@
 use anyhow::Result;
 use clap::{ArgMatches, Command};
 use odra::{contract_def::HasIdent, host::HostEnv, OdraContract};
+use serde_derive::Serialize;
 
 use crate::{
-    cmd::STATUS_SUBCOMMAND, container::ContractProvider, custom_types::CustomTypeSet,
-    utils::get_default_contracts_file, DeployedContractsContainer
+    cmd::{CmdOutput, STATUS_SUBCOMMAND},
+    container::{ContractProvider, ContractStorageSource},
+    custom_types::CustomTypeSet,
+    log, DeployedContractsContainer
 };
 
 use super::OdraCommand;
@@ -39,59 +42,142 @@ impl StatusCmd {
     }
 }
 
+/// The deployment state of the contracts known to the CLI.
+#[derive(Serialize)]
+pub(crate) struct StatusReport {
+    contracts_file: String,
+    /// Whether the contracts file exists on disk (always `false` for a memory-backed container).
+    file_exists: bool,
+    /// Number of contract entries recorded in the file.
+    entry_count: usize,
+    last_updated: String,
+    /// Contracts added to the builder, each flagged with whether it's deployed.
+    registered: Vec<ContractStatus>,
+    /// Contracts in the file that were never added to the builder (a stale-file symptom).
+    unregistered: Vec<UnregisteredContract>
+}
+
+impl CmdOutput for StatusReport {
+    fn pretty_print(&self) {
+        log(format!("Contracts file: {}", self.contracts_file));
+        if self.file_exists {
+            let noun = if self.entry_count == 1 {
+                "entry"
+            } else {
+                "entries"
+            };
+            log(format!(
+                "File status:    exists ({} {})",
+                self.entry_count, noun
+            ));
+        } else {
+            log("File status:    not found");
+        }
+        log(format!("Last updated:   {}", self.last_updated));
+
+        if self.registered.is_empty() && self.unregistered.is_empty() {
+            log("No contracts registered or deployed yet — run `deploy`.");
+            return;
+        }
+
+        log("Registered contracts:");
+        for c in &self.registered {
+            match &c.address {
+                Some(address) => log(format!(
+                    "  [deployed]     {} ({}) -> {}",
+                    c.key_name, c.ident, address
+                )),
+                None => log(format!("  [not deployed] {} ({})", c.key_name, c.ident))
+            }
+        }
+
+        if !self.unregistered.is_empty() {
+            prettycli::warn("Deployed but not registered in the builder:");
+            for d in &self.unregistered {
+                prettycli::warn(&format!("  {} ({}) -> {}", d.key_name, d.name, d.address));
+            }
+        }
+    }
+}
+
+#[derive(Serialize)]
+struct ContractStatus {
+    key_name: String,
+    ident: String,
+    deployed: bool,
+    address: Option<String>
+}
+
+#[derive(Serialize)]
+struct UnregisteredContract {
+    key_name: String,
+    name: String,
+    address: String
+}
+
+impl StatusCmd {
+    /// Builds the deployment-state report by cross-referencing the registered contracts against the
+    /// deployed-contracts container.
+    fn report(&self, container: &DeployedContractsContainer) -> StatusReport {
+        let deployed = container.all_contracts();
+
+        let source = container.source();
+        let file_exists = match &source {
+            ContractStorageSource::File { path } => path.exists(),
+            ContractStorageSource::Memory => false
+        };
+
+        let registered = self
+            .registered
+            .iter()
+            .map(|reg| {
+                let address = deployed
+                    .iter()
+                    .find(|d| d.key_name() == reg.key_name)
+                    .map(|d| d.address().to_string());
+                ContractStatus {
+                    key_name: reg.key_name.clone(),
+                    ident: reg.ident.clone(),
+                    deployed: address.is_some(),
+                    address
+                }
+            })
+            .collect();
+
+        // Recorded in the file but never added to the builder. Such contracts cannot be called and
+        // normally abort startup; surfacing them here helps diagnose a stale contracts file.
+        let unregistered = deployed
+            .iter()
+            .filter(|d| !self.registered.iter().any(|r| r.key_name == d.key_name()))
+            .map(|d| UnregisteredContract {
+                key_name: d.key_name(),
+                name: d.name(),
+                address: d.address().to_string()
+            })
+            .collect();
+
+        StatusReport {
+            contracts_file: source.to_string(),
+            file_exists,
+            entry_count: deployed.len(),
+            last_updated: container.last_updated(),
+            registered,
+            unregistered
+        }
+    }
+}
+
 impl OdraCommand for StatusCmd {
-    fn run(
+    type Output = StatusReport;
+
+    fn exec(
         &self,
         _env: &HostEnv,
         _args: &ArgMatches,
         _types: &CustomTypeSet,
         container: &DeployedContractsContainer
-    ) -> Result<()> {
-        let deployed = container.all_contracts();
-
-        prettycli::info(&format!("Contracts file: {}", get_default_contracts_file()));
-        prettycli::info(&format!("Last updated:   {}", container.last_updated()));
-
-        if self.registered.is_empty() && deployed.is_empty() {
-            prettycli::info("No contracts registered or deployed yet — run `deploy`.");
-            return Ok(());
-        }
-
-        prettycli::info("Registered contracts:");
-        for reg in &self.registered {
-            match deployed.iter().find(|d| d.key_name() == reg.key_name) {
-                Some(d) => prettycli::info(&format!(
-                    "  [deployed]     {} ({}) -> {}",
-                    reg.key_name,
-                    reg.ident,
-                    d.address().to_string()
-                )),
-                None => prettycli::info(&format!(
-                    "  [not deployed] {} ({})",
-                    reg.key_name, reg.ident
-                ))
-            }
-        }
-
-        // Recorded in the file but never added to the builder. Such contracts cannot be called and
-        // normally abort startup; surfacing them here helps diagnose a stale contracts file.
-        let unregistered: Vec<_> = deployed
-            .iter()
-            .filter(|d| !self.registered.iter().any(|r| r.key_name == d.key_name()))
-            .collect();
-        if !unregistered.is_empty() {
-            prettycli::warn("Deployed but not registered in the builder:");
-            for d in unregistered {
-                prettycli::warn(&format!(
-                    "  {} ({}) -> {}",
-                    d.key_name(),
-                    d.name(),
-                    d.address().to_string()
-                ));
-            }
-        }
-
-        Ok(())
+    ) -> Result<Self::Output> {
+        Ok(self.report(container))
     }
 }
 
@@ -121,6 +207,27 @@ mod tests {
         assert_eq!(cmd.registered.len(), 1);
         assert_eq!(cmd.registered[0].key_name, "TestContract");
         assert_eq!(cmd.registered[0].ident, "TestContract");
+    }
+
+    #[test]
+    fn report_marks_registered_contract_not_deployed() {
+        let mut cmd = StatusCmd::default();
+        cmd.add_contract::<TestContract>();
+
+        let report = cmd.report(&test_utils::mock_contracts_container());
+        assert_eq!(report.registered.len(), 1);
+        assert!(!report.registered[0].deployed);
+        assert!(report.registered[0].address.is_none());
+        assert!(report.unregistered.is_empty());
+    }
+
+    #[test]
+    fn report_includes_file_metadata() {
+        let cmd = StatusCmd::default();
+        let report = cmd.report(&test_utils::mock_contracts_container());
+        // The mock container is memory-backed and empty: no file, no entries.
+        assert!(!report.file_exists);
+        assert_eq!(report.entry_count, 0);
     }
 
     #[test]

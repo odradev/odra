@@ -1,8 +1,13 @@
 //! Client for interacting with Casper node.
 
-use crate::casper_client::configuration::CasperClientConfiguration;
+use crate::casper_client::{
+    configuration::CasperClientConfiguration, transaction_watcher::TransactionWatcher
+};
 use crate::error::LivenetError;
 use casper_types::U512;
+use std::rc::Rc;
+use std::time::Duration;
+use tokio::runtime::{Builder, Runtime};
 
 pub mod accounts;
 pub mod configuration;
@@ -33,20 +38,49 @@ pub const ENV_GAS_PRICE_TOLERANCE: &str = "ODRA_CASPER_LIVENET_GAS_PRICE_TOLERAN
 
 pub type Result<T> = core::result::Result<T, LivenetError>;
 
+const TRANSACTION_WAIT_TIME: u64 = 10;
+const TRANSACTION_MAX_RETRIES: u64 = 12;
+
 /// Client for interacting with Casper node.
+///
+/// The client exposes a synchronous public API. Internally each network call is
+/// driven by a single Tokio runtime owned by the client (`runtime`), so callers
+/// don't need to manage an executor themselves. The async methods (`*_async`)
+/// remain the internal engine and must only ever be composed via `.await` from
+/// other async methods — never through the sync wrappers, which would
+/// `block_on` inside `block_on` and panic.
 pub struct CasperClient {
     pub configuration: CasperClientConfiguration,
+    watcher: TransactionWatcher,
     active_account: usize,
-    gas: U512
+    gas: U512,
+    runtime: Rc<Runtime>
 }
 
 impl CasperClient {
     /// Creates new CasperClient.
     pub fn new(configuration: CasperClientConfiguration) -> Self {
+        let runtime = Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("Failed to build Tokio runtime");
+
+        let timeout = Duration::from_secs(TRANSACTION_WAIT_TIME * TRANSACTION_MAX_RETRIES);
+        let watcher = TransactionWatcher::new(&configuration, timeout);
         CasperClient {
             configuration,
+            watcher,
             active_account: 0,
-            gas: U512::zero()
+            gas: U512::zero(),
+            runtime: Rc::new(runtime)
         }
+    }
+
+    /// Returns a handle to the client's Tokio runtime.
+    ///
+    /// Cloning the `Rc` first lets a sync wrapper call `rt.block_on(self.x_async())`
+    /// without borrowing `self` twice.
+    fn runtime(&self) -> Rc<Runtime> {
+        self.runtime.clone()
     }
 }

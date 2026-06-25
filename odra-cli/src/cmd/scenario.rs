@@ -1,7 +1,7 @@
 use std::any::Any;
 
 use crate::cmd::args::CommandArg;
-use crate::cmd::SCENARIOS_SUBCOMMAND;
+use crate::cmd::{CmdOutput, SCENARIOS_SUBCOMMAND};
 use crate::custom_types::CustomTypeSet;
 use crate::{container::ContractError, types, DeployedContractsContainer};
 use anyhow::Result;
@@ -12,6 +12,21 @@ use odra::{casper_types::bytesrepr::FromBytes, host::HostEnv, prelude::OdraError
 use thiserror::Error;
 
 use super::OdraCommand;
+
+#[derive(serde::Serialize)]
+pub(crate) struct ScenarioOutput {
+    success: bool
+}
+
+impl CmdOutput for ScenarioOutput {
+    fn pretty_print(&self) {
+        if self.success {
+            prettycli::info("Scenario executed successfully");
+        } else {
+            prettycli::error("Scenario failed");
+        }
+    }
+}
 
 /// Scenario is a trait that represents a custom scenario.
 ///
@@ -42,19 +57,21 @@ impl ScenariosCmd {
 }
 
 impl OdraCommand for ScenariosCmd {
-    fn run(
+    type Output = ScenarioOutput;
+
+    fn exec(
         &self,
         env: &HostEnv,
         args: &ArgMatches,
         types: &CustomTypeSet,
         container: &DeployedContractsContainer
-    ) -> Result<()> {
+    ) -> Result<Self::Output> {
         args.subcommand()
             .map(|(scenario_name, scenario_args)| {
                 self.scenarios
                     .iter()
                     .find(|cmd| cmd.name == scenario_name)
-                    .map(|scenario| scenario.run(env, scenario_args, types, container))
+                    .map(|scenario| scenario.exec(env, scenario_args, types, container))
                     .unwrap_or(Err(anyhow::anyhow!("No scenario found")))
             })
             .unwrap_or(Err(anyhow::anyhow!("No scenario found")))
@@ -92,17 +109,19 @@ impl ScenarioCmd {
 }
 
 impl OdraCommand for ScenarioCmd {
-    fn run(
+    type Output = ScenarioOutput;
+
+    fn exec(
         &self,
         env: &HostEnv,
         args: &ArgMatches,
         _types: &CustomTypeSet,
         container: &DeployedContractsContainer
-    ) -> Result<()> {
+    ) -> Result<Self::Output> {
         let args = ScenarioArgs::new(args);
         env.set_captures_events(false);
         self.scenario.run(env, container, args)?;
-        Ok(())
+        Ok(ScenarioOutput { success: true })
     }
 }
 
