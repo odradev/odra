@@ -35,6 +35,7 @@ impl super::CasperClient {
         timestamp: Timestamp
     ) -> Result<TransactionHash> {
         let transaction = self.new_transfer_transaction(to, amount, timestamp)?;
+        log::debug(serde_json::to_string_pretty(&transaction).unwrap());
         self.put_transaction(transaction).await
     }
 
@@ -71,6 +72,7 @@ impl super::CasperClient {
 
         let transaction =
             self.new_wasm_deploy_transaction(Bytes::from(wasm_bytes), args, timestamp)?;
+        log::debug(serde_json::to_string_pretty(&transaction).unwrap());
         self.put_transaction(transaction).await?;
 
         let address = self.get_contract_address(&package_hash_key_name).await?;
@@ -121,6 +123,7 @@ impl super::CasperClient {
             .into();
 
         let transaction = self.new_wasm_deploy_transaction(module_bytes, args, timestamp)?;
+        log::debug(serde_json::to_string_pretty(&transaction).unwrap());
         let watch = self.start_event_watcher().await?;
 
         let response = put_transaction(
@@ -161,6 +164,7 @@ impl super::CasperClient {
         ));
 
         let transaction = self.new_call_transaction(addr, call_def, timestamp)?;
+        log::debug(serde_json::to_string_pretty(&transaction).unwrap());
         let watch = self.start_event_watcher().await?;
 
         let response = put_transaction(
@@ -370,7 +374,7 @@ impl super::CasperClient {
                 .with_chain_name(self.configuration.chain_name())
                 .with_pricing_mode(PricingMode::PaymentLimited {
                     payment_amount: NATIVE_TRANSFER_GAS,
-                    gas_price_tolerance: 5,
+                    gas_price_tolerance: self.configuration.gas_price_tolerance(),
                     standard_payment: true
                 })
                 .with_secret_key(self.secret_key())
@@ -398,7 +402,11 @@ impl super::CasperClient {
         let transaction_v1 = transaction_builder
             .with_ttl(self.configuration.ttl())
             .with_chain_name(self.configuration.chain_name())
-            .with_pricing_mode(self.pricing_mode())
+            .with_pricing_mode(PricingMode::PaymentLimited {
+                payment_amount: call_def.amount().as_u64() + self.gas.as_u64(),
+                gas_price_tolerance: self.configuration.gas_price_tolerance(),
+                standard_payment: true
+            })
             .with_secret_key(self.secret_key())
             .with_timestamp(timestamp)
             .with_runtime_args(call_def.args().clone())
