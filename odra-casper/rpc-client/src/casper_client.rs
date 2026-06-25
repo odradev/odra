@@ -33,6 +33,8 @@ pub const ENV_CSPR_CLOUD_AUTH_TOKEN: &str = "CSPR_CLOUD_AUTH_TOKEN";
 pub const ENV_LIVENET_ENV_FILE: &str = "ODRA_CASPER_LIVENET_ENV";
 /// Environment variable holding TTL for transactions.
 pub const ENV_TTL: &str = "ODRA_CASPER_LIVENET_TTL";
+/// Environment variable holding gas price tolerance for transactions.
+pub const ENV_GAS_PRICE_TOLERANCE: &str = "ODRA_CASPER_LIVENET_GAS_PRICE_TOLERANCE";
 
 pub type Result<T> = core::result::Result<T, LivenetError>;
 

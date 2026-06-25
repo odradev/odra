@@ -1,6 +1,6 @@
 use crate::casper_client::{
     ENV_ACCOUNT_PREFIX, ENV_CHAIN_NAME, ENV_CSPR_CLOUD_AUTH_TOKEN, ENV_EVENTS_ADDRESS,
-    ENV_LIVENET_ENV_FILE, ENV_NODE_ADDRESS, ENV_SECRET_KEY, ENV_TTL
+    ENV_GAS_PRICE_TOLERANCE, ENV_LIVENET_ENV_FILE, ENV_NODE_ADDRESS, ENV_SECRET_KEY, ENV_TTL
 };
 use crate::error::LivenetError;
 use crate::log;
@@ -10,8 +10,8 @@ use casper_types::TimeDiff;
 use odra_core::casper_types::SecretKey;
 use std::path::PathBuf;
 
-pub const DEFAULT_TTL: u32 = 5 * 60; // Seconds.
-pub const DEFAULT_GAS_TOLERANCE: u8 = 5;
+const DEFAULT_TTL: u32 = 5 * 60; // Seconds.
+const DEFAULT_GAS_TOLERANCE: u8 = 1;
 
 #[derive(Debug)]
 pub struct CasperClientConfiguration {
@@ -21,6 +21,7 @@ pub struct CasperClientConfiguration {
     pub secret_keys: Vec<SecretKey>,
     pub secret_key_paths: Vec<String>,
     pub cspr_cloud_auth_token: Option<String>,
+    pub gas_price_tolerance: u8,
     pub ttl: u32
 }
 
@@ -46,6 +47,9 @@ impl CasperClientConfiguration {
         let ttl = get_optional_env_variable(ENV_TTL)
             .and_then(|ttl| ttl.parse::<u32>().ok())
             .unwrap_or(DEFAULT_TTL);
+        let gas_price_tolerance = get_optional_env_variable(ENV_GAS_PRICE_TOLERANCE)
+            .and_then(|ttl| ttl.parse::<u8>().ok())
+            .unwrap_or(DEFAULT_GAS_TOLERANCE);
 
         let (secret_keys, secret_key_paths) = Self::secret_keys_from_env()?;
         Ok(CasperClientConfiguration {
@@ -55,6 +59,7 @@ impl CasperClientConfiguration {
             secret_key_paths,
             cspr_cloud_auth_token: get_optional_env_variable(ENV_CSPR_CLOUD_AUTH_TOKEN),
             events_url,
+            gas_price_tolerance,
             ttl
         })
     }
@@ -110,7 +115,7 @@ impl CasperClientConfiguration {
 
     /// Gas price tolerance
     pub fn gas_price_tolerance(&self) -> u8 {
-        DEFAULT_GAS_TOLERANCE
+        self.gas_price_tolerance
     }
 
     pub fn transaction_url(&self, transaction_id: &str) -> Option<String> {
