@@ -1,60 +1,62 @@
 //! Transaction event matcher.
 //! Handles matching transaction hashes in Casper network events.
 
-use crate::error::LivenetError;
-use crate::error::LivenetError::ClientError;
-use serde_json::Value as JsonValue;
+use crate::{error::LivenetError, log};
+use casper_types::execution::ExecutionResult;
 
-/// Checks if a transaction hash matches a TransactionProcessed event.
-pub struct EventMatcher;
+/// Finds [ExecutionResult] of the transaction with the specified transaction hash.
+///
+/// # Arguments
+///
+/// * `event_json` - The JSON string of the SSE event
+/// * `expected_hash` - The transaction hash we're looking for
+pub fn find_result(
+    event_json: &str,
+    expected_hash: &str
+) -> Result<Option<ExecutionResult>, LivenetError> {
+    let event: serde_json::Value = serde_json::from_str(event_json.trim())
+        .map_err(|e| LivenetError::ClientError(format!("Failed to parse event JSON: {}", e)))?;
 
-impl EventMatcher {
-    /// Checks if the event contains the specified transaction hash.
-    ///
-    /// # Arguments
-    ///
-    /// * `event_json` - The JSON string of the SSE event
-    /// * `expected_hash` - The transaction hash we're looking for
-    ///
-    /// # Returns
-    ///
-    /// `Ok(true)` if the event matches, `Ok(false)` otherwise, or an error if parsing fails.
-    pub fn matches_transaction_hash(
-        event_json: &str,
-        expected_hash: &str
-    ) -> Result<bool, LivenetError> {
-        let event: JsonValue = serde_json::from_str(event_json.trim())
-            .map_err(|e| ClientError(format!("Failed to parse event JSON: {}", e)))?;
-
-        let transaction_hash = Self::extract_transaction_hash(&event)?;
-
-        Ok(transaction_hash
-            .map(|hash| hash == expected_hash)
-            .unwrap_or(false))
+    // The exact struct: https://docs.casper.network/developers/monitor-and-consume-events#transactionprocessed
+    match event.get("TransactionProcessed") {
+        Some(tx) => {
+            if match_hash(tx, expected_hash) {
+                let execution_result = tx
+                    .get("execution_result")
+                    .ok_or(LivenetError::ClientError(
+                        "Invalid event format".to_string()
+                    ))?
+                    .clone();
+                let result =
+                    serde_json::from_value::<ExecutionResult>(execution_result).map_err(|e| {
+                        LivenetError::ClientError(format!(
+                            "Failed to parse `execution_result`: {}",
+                            e
+                        ))
+                    })?;
+                log::debug(serde_json::to_string_pretty(&result).unwrap());
+                Ok(Some(result))
+            } else {
+                Ok(None)
+            }
+        }
+        None => Ok(None)
     }
+}
 
-    /// Extracts the transaction hash from a Casper event.
-    ///
-    /// The hash can be in two formats:
-    /// - `Version1`: Standard transaction hash
-    /// - `Deploy`: Deploy transaction hash
-    fn extract_transaction_hash(event: &JsonValue) -> Result<Option<String>, LivenetError> {
-        let transaction_processed = match event.get("TransactionProcessed") {
-            Some(tp) => tp,
-            None => return Ok(None)
-        };
+/// The hash can be in two formats:
+/// - `Version1`: Standard transaction hash
+/// - `Deploy`: Deploy transaction hash
+fn match_hash(event: &serde_json::Value, expected_hash: &str) -> bool {
+    let hash_obj = match event.get("transaction_hash") {
+        Some(ho) => ho,
+        None => return false
+    };
 
-        let hash_obj = match transaction_processed.get("transaction_hash") {
-            Some(ho) => ho,
-            None => return Ok(None)
-        };
-
-        let hash_str = hash_obj
-            .get("Version1")
-            .or_else(|| hash_obj.get("Deploy"))
-            .and_then(|v| v.as_str())
-            .map(|s| s.to_string());
-
-        Ok(hash_str)
-    }
+    hash_obj
+        .get("Version1")
+        .or_else(|| hash_obj.get("Deploy"))
+        .and_then(|v| v.as_str())
+        .map(|s| s == expected_hash)
+        .unwrap_or_default()
 }

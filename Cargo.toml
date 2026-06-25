@@ -92,6 +92,7 @@ quote = "1.0"
 rand = { version = "0.9", default-features = false }
 rand_chacha = { version = "0.9", default-features = false }
 reqwest = { version = "0.12" }
+reqwest-eventsource = { version = "0.6" }
 rustyline = "14"
 serde = { version = "1.0", default-features = false }
 serde_derive = {  version = "1.0" }

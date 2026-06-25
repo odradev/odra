@@ -20,7 +20,6 @@ blake2 = { workspace = true }
 log = { workspace = true }
 project-root = { workspace = true }
 serde_json = { workspace = true }
-tokio = { workspace = true, features = ["rt-multi-thread"] }
 
 [lints.rust]
 missing_docs = "warn"

@@ -8,7 +8,12 @@ use odra_core::prelude::*;
 
 /// Validator-related methods implementation for CasperClient.
 impl super::CasperClient {
-    pub async fn get_validator(&self, index: usize) -> PublicKey {
+    pub fn get_validator(&self, index: usize) -> PublicKey {
+        let rt = self.runtime();
+        rt.block_on(self.get_validator_async(index))
+    }
+
+    async fn get_validator_async(&self, index: usize) -> PublicKey {
         let auction_info = get_auction_info(
             self.rpc_id_typed(),
             self.configuration.node_address(),
@@ -36,7 +41,12 @@ impl super::CasperClient {
         validator.clone()
     }
 
-    pub async fn delegated_amount(&self, delegator: Address, validator: PublicKey) -> U512 {
+    pub fn delegated_amount(&self, delegator: Address, validator: PublicKey) -> U512 {
+        let rt = self.runtime();
+        rt.block_on(self.delegated_amount_async(delegator, validator))
+    }
+
+    async fn delegated_amount_async(&self, delegator: Address, validator: PublicKey) -> U512 {
         let purse_uref = match self.get_main_purse(&delegator).await {
             Ok(uref) => uref,
             Err(_) => return U512::zero()
@@ -66,7 +76,12 @@ impl super::CasperClient {
         todo!("Implement get_validator_info")
     }
 
-    pub async fn auction_delay(&self) -> u64 {
+    pub fn auction_delay(&self) -> u64 {
+        let rt = self.runtime();
+        rt.block_on(self.auction_delay_async())
+    }
+
+    async fn auction_delay_async(&self) -> u64 {
         let chainspec = self.chainspec().await;
 
         let auction_delay = chainspec
@@ -89,7 +104,12 @@ impl super::CasperClient {
         era_duration * auction_delay_int as u64
     }
 
-    pub async fn unbonding_delay(&self) -> u64 {
+    pub fn unbonding_delay(&self) -> u64 {
+        let rt = self.runtime();
+        rt.block_on(self.unbonding_delay_async())
+    }
+
+    async fn unbonding_delay_async(&self) -> u64 {
         let chainspec = self.chainspec().await;
 
         let unbonding_delay = chainspec

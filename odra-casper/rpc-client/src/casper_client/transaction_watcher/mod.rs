@@ -1,21 +1,15 @@
 //! Transaction watcher for monitoring Casper network events.
 
 mod event_matcher;
-mod sse_parser;
 
+use crate::casper_client::configuration::CasperClientConfiguration;
 use crate::error::LivenetError;
-use crate::error::LivenetError::{ClientError, ExecutionError};
 use crate::log;
-use event_matcher::EventMatcher;
+use casper_types::execution::ExecutionResult;
+use casper_types::TransactionHash;
 use futures_util::StreamExt;
-use reqwest::Client;
-use sse_parser::SseParser;
-use std::pin::Pin;
+use reqwest_eventsource::{Error as EventSourceError, Event, EventSource};
 use std::time::Duration;
-
-/// Type alias for the boxed byte stream from the SSE connection.
-type ByteStream =
-    Pin<Box<dyn futures_util::Stream<Item = Result<bytes::Bytes, reqwest::Error>> + Send>>;
 
 /// Monitors the Casper network event stream for transaction processing events.
 pub struct TransactionWatcher {
@@ -24,80 +18,32 @@ pub struct TransactionWatcher {
 }
 
 impl TransactionWatcher {
-    pub fn new(events_url: String, timeout: Duration) -> Self {
+    pub fn new(cfg: &CasperClientConfiguration, timeout: Duration) -> Self {
         Self {
-            events_url,
+            events_url: cfg.events_url.clone(),
             timeout
         }
     }
 
     /// Starts watching the event stream and returns an active watch handle.
-    /// Waits for the first bytes to ensure the connection is fully established.
+    /// Waits for the connection to open so a transaction submitted right after
+    /// this returns can't have its event missed.
     pub async fn start_watching(&self) -> Result<TransactionWatch, LivenetError> {
         log::debug(format!(
             "[WATCHER] Connecting to events stream: {}",
             self.events_url
         ));
-        let stream = self.connect_to_event_stream().await?;
-        log::debug("[WATCHER] HTTP connection established, waiting for first bytes...");
-
-        // Wait for the first bytes to ensure stream is ready
-        let (stream, initial_bytes) = Self::wait_for_first_bytes(stream).await?;
-
-        let bytes_len = initial_bytes.as_ref().map(|b| b.len()).unwrap_or(0);
-        log::debug(format!(
-            "[WATCHER] Received first {} bytes, stream ready!",
-            bytes_len
-        ));
-
+        let es = EventSource::get(&self.events_url);
         Ok(TransactionWatch {
-            stream,
-            initial_bytes,
+            es,
             timeout: self.timeout
         })
-    }
-
-    async fn connect_to_event_stream(&self) -> Result<ByteStream, LivenetError> {
-        let client = Client::new();
-        let response = client
-            .get(&self.events_url)
-            .send()
-            .await
-            .map_err(|e| ClientError(format!("Failed to connect to events stream: {}", e)))?;
-
-        if !response.status().is_success() {
-            return Err(ClientError(format!(
-                "Events stream returned status: {}",
-                response.status()
-            )));
-        }
-
-        Ok(Box::pin(response.bytes_stream()))
-    }
-
-    /// Waits for the first bytes from the stream to confirm the connection is ready.
-    async fn wait_for_first_bytes(
-        mut stream: ByteStream
-    ) -> Result<(ByteStream, Option<bytes::Bytes>), LivenetError> {
-        let first_chunk = stream.next().await;
-
-        match first_chunk {
-            Some(Ok(bytes)) => Ok((stream, Some(bytes))),
-            Some(Err(e)) => Err(ClientError(format!(
-                "Error reading first bytes from stream: {}",
-                e
-            ))),
-            None => Err(ClientError(
-                "Events stream closed before receiving any data".to_string()
-            ))
-        }
     }
 }
 
 /// An active watch handle connected to the Casper event stream.
 pub struct TransactionWatch {
-    stream: ByteStream,
-    initial_bytes: Option<bytes::Bytes>,
+    es: EventSource,
     timeout: Duration
 }
 
@@ -105,74 +51,56 @@ impl TransactionWatch {
     /// Waits for a transaction to be processed in the connected event stream.
     pub async fn wait_for_transaction_hash(
         self,
-        transaction_hash: &str
-    ) -> Result<bool, LivenetError> {
+        transaction_hash: &TransactionHash
+    ) -> Result<ExecutionResult, LivenetError> {
         log::debug(format!(
             "[WATCHER] Starting to monitor for transaction: {}",
             transaction_hash
         ));
+        let transaction_hash_str = transaction_hash.to_hex_string();
 
         tokio::time::timeout(
             self.timeout,
-            Self::monitor_events_until_found(self.stream, self.initial_bytes, transaction_hash)
+            Self::monitor_events_until_found(self.es, &transaction_hash_str)
         )
         .await
         .map_err(|_| {
-            ExecutionError(String::from(
+            LivenetError::ExecutionError(String::from(
                 "Timeout waiting for transaction to be processed."
             ))
         })?
     }
 
     async fn monitor_events_until_found(
-        mut stream: ByteStream,
-        initial_bytes: Option<bytes::Bytes>,
+        mut es: EventSource,
         transaction_hash: &str
-    ) -> Result<bool, LivenetError> {
-        let mut parser = SseParser::new();
-        let mut event_count = 0;
-
-        // Process initial bytes first (received while confirming connection)
-        if let Some(bytes) = initial_bytes {
-            log::debug(format!(
-                "[WATCHER] Processing {} initial buffered bytes",
-                bytes.len()
-            ));
-            let events = parser.process_chunk(Ok(bytes)).await?;
-            for event in events {
-                event_count += 1;
-                log::debug(format!(
-                    "[WATCHER] Event #{}: checking if matches...",
-                    event_count
-                ));
-                if EventMatcher::matches_transaction_hash(&event.data, transaction_hash)? {
-                    log::debug(format!(
-                        "[WATCHER] FOUND transaction in event #{}!",
-                        event_count
-                    ));
-                    return Ok(true);
-                }
-            }
-        }
-
+    ) -> Result<ExecutionResult, LivenetError> {
         log::debug("[WATCHER] Monitoring stream for events...");
 
-        while let Some(chunk) = stream.next().await {
-            let events = parser.process_chunk(chunk).await?;
-            for event in events {
-                event_count += 1;
-                if event_count <= 5 || event_count % 10 == 0 {
-                    log::debug(format!(
-                        "[WATCHER] Event #{}: received, checking...",
-                        event_count
-                    ));
+        let mut event_count = 0;
+        while let Some(event) = es.next().await {
+            match event {
+                // (Re)connection notice — nothing to match.
+                Ok(Event::Open) => {}
+                Ok(Event::Message(msg)) => {
+                    event_count += 1;
+                    if let Some(result) = event_matcher::find_result(&msg.data, transaction_hash)? {
+                        log::debug(format!(
+                            "[WATCHER] FOUND transaction in event #{}!",
+                            event_count
+                        ));
+                        es.close();
+                        return Ok(result);
+                    }
                 }
-                if EventMatcher::matches_transaction_hash(&event.data, transaction_hash)? {
-                    log::debug(format!(
-                        "[WATCHER] FOUND transaction in event #{}!",
-                        event_count
-                    ));
-                    return Ok(true);
+                // The stream closed without reconnecting — mirror the old
+                // "stream ended, transaction not found" behaviour.
+                Err(EventSourceError::StreamEnded) => break,
+                Err(e) => {
+                    return Err(LivenetError::ClientError(format!(
+                        "Error reading event stream: {}",
+                        e
+                    )));
                 }
             }
         }
@@ -182,10 +110,8 @@ impl TransactionWatch {
             event_count
         ));
 
-        if let Some(event) = parser.finalize() {
-            return EventMatcher::matches_transaction_hash(&event.data, transaction_hash);
-        }
-
-        Ok(false)
+        Err(LivenetError::ClientError(
+            "Stream ended, transaction not found.".to_string()
+        ))
     }
 }

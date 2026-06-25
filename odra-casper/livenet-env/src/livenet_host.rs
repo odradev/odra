@@ -20,7 +20,6 @@ use odra_core::{ContractContainer, ContractRegister};
 use std::fs;
 use std::sync::RwLock;
 use std::thread::sleep;
-use tokio::runtime::Runtime;
 
 /// LivenetHost struct.
 pub struct LivenetHost {
@@ -80,9 +79,8 @@ impl HostContext for LivenetHost {
     }
 
     fn get_validator(&self, index: usize) -> PublicKey {
-        let rt = Runtime::new().unwrap();
         let client = self.casper_client.borrow_mut();
-        rt.block_on(async { client.get_validator(index).await })
+        client.get_validator(index)
     }
 
     fn remove_validator(&self, _index: usize) {
@@ -90,16 +88,14 @@ impl HostContext for LivenetHost {
     }
 
     fn balance_of(&self, address: &Address) -> U512 {
-        let rt = Runtime::new().unwrap();
         let client = self.casper_client.borrow();
-        rt.block_on(async { client.get_balance(address).await })
-            .unwrap_or_else(|e| {
-                panic!(
-                    "Failed to get balance for address {:?}: {}",
-                    address,
-                    e.error_message()
-                )
-            })
+        client.get_balance(address).unwrap_or_else(|e| {
+            panic!(
+                "Failed to get balance for address {:?}: {}",
+                address,
+                e.error_message()
+            )
+        })
     }
 
     fn advance_block_time(&self, time_diff: u64) {
@@ -116,33 +112,29 @@ impl HostContext for LivenetHost {
     }
 
     fn auction_delay(&self) -> u64 {
-        let rt = Runtime::new().unwrap();
         let client = self.casper_client.borrow_mut();
-        rt.block_on(async { client.auction_delay().await })
+        client.auction_delay()
     }
 
     fn unbonding_delay(&self) -> u64 {
-        let rt = Runtime::new().unwrap();
         let client = self.casper_client.borrow_mut();
-        rt.block_on(async { client.unbonding_delay().await })
+        client.unbonding_delay()
     }
 
     fn delegated_amount(&self, delegator: Address, validator: PublicKey) -> U512 {
-        let rt = Runtime::new().unwrap();
         let client = self.casper_client.borrow_mut();
-        rt.block_on(async { client.delegated_amount(delegator, validator).await })
+        client.delegated_amount(delegator, validator)
     }
 
     fn block_time(&self) -> u64 {
-        let rt = Runtime::new().unwrap();
         let client = self.casper_client.borrow();
-        rt.block_on(async { client.get_block_time().await.unwrap() })
+        client.get_block_time().unwrap()
     }
 
     fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, EventError> {
-        let rt = Runtime::new().unwrap();
         let client = self.casper_client.borrow();
-        rt.block_on(async { client.get_event(contract_address, index).await })
+        client
+            .get_event(contract_address, index)
             .map_err(|_| EventError::CouldntExtractEventData)
     }
 
@@ -156,9 +148,9 @@ impl HostContext for LivenetHost {
     }
 
     fn get_events_count(&self, contract_address: &Address) -> Result<u32, EventError> {
-        let rt = Runtime::new().unwrap();
         let client = self.casper_client.borrow();
-        rt.block_on(async { client.events_count(contract_address).await })
+        client
+            .events_count(contract_address)
             .ok_or(EventError::CouldntExtractEventData)
     }
 
@@ -198,23 +190,16 @@ impl HostContext for LivenetHost {
             return result;
         }
         let timestamp = Timestamp::now();
-        let rt = Runtime::new().unwrap();
         let client = self.casper_client.borrow_mut();
         match use_proxy {
-            true => rt.block_on(async {
-                client
-                    .deploy_entrypoint_call_with_proxy(*address, call_def, timestamp)
-                    .await
-                    .map_err(|e| e.error_message())
-                    .map_err(Self::error_msg_to_odra_error)
-            }),
-            false => rt.block_on(async {
-                client
-                    .deploy_entrypoint_call(*address, call_def, timestamp)
-                    .await
-                    .map_err(|e| e.error_message())
-                    .map_err(Self::error_msg_to_odra_error)
-            })
+            true => client
+                .deploy_entrypoint_call_with_proxy(*address, call_def, timestamp)
+                .map_err(|e| e.error_message())
+                .map_err(Self::error_msg_to_odra_error),
+            false => client
+                .deploy_entrypoint_call(*address, call_def, timestamp)
+                .map_err(|e| e.error_message())
+                .map_err(Self::error_msg_to_odra_error)
         }
     }
 
@@ -229,12 +214,7 @@ impl HostContext for LivenetHost {
         let wasm_bytes = fs::read(wasm_path).unwrap();
         let address = {
             let mut client = self.casper_client.borrow_mut();
-            let rt = Runtime::new().unwrap();
-            match rt.block_on(async {
-                client
-                    .deploy_wasm(name, init_args, timestamp, wasm_bytes)
-                    .await
-            }) {
+            match client.deploy_wasm(name, init_args, timestamp, wasm_bytes) {
                 Ok(addr) => addr,
                 Err(e) => {
                     log::error!("Error deploying contract: {}", e);
@@ -257,12 +237,7 @@ impl HostContext for LivenetHost {
         let wasm_path = find_wasm_file_path(name)?;
         let wasm_bytes = fs::read(wasm_path).unwrap();
         let mut client = self.casper_client.borrow_mut();
-        let rt = Runtime::new().unwrap();
-        match rt.block_on(async {
-            client
-                .deploy_wasm(name, upgrade_args, timestamp, wasm_bytes)
-                .await
-        }) {
+        match client.deploy_wasm(name, upgrade_args, timestamp, wasm_bytes) {
             Ok(_) => {}
             Err(e) => {
                 log::error!("Error deploying contract: {}", e);
@@ -314,10 +289,10 @@ impl HostContext for LivenetHost {
     }
 
     fn transfer(&self, to: Address, amount: U512) -> OdraResult<()> {
-        let rt = Runtime::new().unwrap();
         let timestamp = Timestamp::now();
         let client = self.casper_client.borrow_mut();
-        rt.block_on(async { client.transfer(to, amount, timestamp).await })
+        client
+            .transfer(to, amount, timestamp)
             .map(|_| ())
             .map_err(|e| e.error_message())
             .map_err(Self::error_msg_to_odra_error)
