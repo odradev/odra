@@ -32,7 +32,7 @@ const ARG_AMOUNT: &str = "amount";
 
 const DEFAULT_GAS: u64 = 2_500_000_000;
 const DEFAULT_TTL: u32 = 5 * 60;
-const DEFAULT_GAS_TOLERANCE: u8 = 5;
+const DEFAULT_GAS_TOLERANCE: u8 = 1;
 const CHAIN_TESTNET: &str = "casper-test";
 const SECRET_KEY_PEM: &str = env!("WASM_CLIENT_SK");
 
