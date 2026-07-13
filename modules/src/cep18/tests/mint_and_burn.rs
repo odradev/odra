@@ -6,6 +6,7 @@ mod mint_and_burn_tests {
     use odra::host::HostRef;
 
     use crate::cep18::errors::Error;
+    use crate::cep18::events::{Burn, Mint};
     use crate::cep18_token::tests::{
         setup, TOKEN_OWNER_AMOUNT_1, TOKEN_OWNER_AMOUNT_2, TRANSFER_AMOUNT_1
     };
@@ -23,6 +24,14 @@ mod mint_and_burn_tests {
 
         cep18_token.mint(&alice, &amount);
         assert_eq!(cep18_token.total_supply(), initial_supply + amount);
+        // and a Mint event is emitted
+        assert!(cep18_token.env().emitted_event(
+            &cep18_token,
+            Mint {
+                recipient: alice,
+                amount
+            }
+        ));
 
         cep18_token.mint(&bob, &amount);
         assert_eq!(cep18_token.total_supply(), initial_supply + amount + amount);
@@ -38,6 +47,10 @@ mod mint_and_burn_tests {
             cep18_token.balance_of(&owner),
             initial_supply.saturating_sub(amount)
         );
+        // and a Burn event is emitted
+        assert!(cep18_token
+            .env()
+            .emitted_event(&cep18_token, Burn { owner, amount }));
     }
 
     #[test]
@@ -77,6 +90,24 @@ mod mint_and_burn_tests {
         cep18_token.env().set_caller(alice);
         let result = cep18_token.try_burn(&alice, &U256::from(TOKEN_OWNER_AMOUNT_1 + 1));
         assert_eq!(result.err().unwrap(), Error::InsufficientBalance.into());
+    }
+
+    #[test]
+    fn should_not_burn_others_tokens() {
+        let mut cep18_token = setup();
+        let alice = cep18_token.env().get_account(1);
+        let bob = cep18_token.env().get_account(2);
+        let amount = TRANSFER_AMOUNT_1.into();
+
+        cep18_token.mint(&alice, &amount);
+
+        // bob cannot burn alice's tokens
+        cep18_token.env().set_caller(bob);
+        let result = cep18_token.try_burn(&alice, &amount);
+        assert_eq!(result.err().unwrap(), MockErrors::CantBurn.into());
+
+        // alice's balance remains unchanged
+        assert_eq!(cep18_token.balance_of(&alice), amount);
     }
 
     #[test]

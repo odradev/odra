@@ -7,7 +7,8 @@ mod allowance_tests {
     use odra::prelude::*;
 
     use crate::cep18::cep18_client_contract::Cep18ClientContract;
-    use crate::cep18::errors::Error::InsufficientAllowance;
+    use crate::cep18::errors::Error::{CannotTargetSelfUser, InsufficientAllowance};
+    use crate::cep18::events::{DecreaseAllowance, IncreaseAllowance, SetAllowance};
     use crate::cep18_token::tests::{
         invert_address, setup, ALLOWANCE_AMOUNT_1, ALLOWANCE_AMOUNT_2, TRANSFER_AMOUNT_1
     };
@@ -30,6 +31,16 @@ mod allowance_tests {
 
         // then the allowance is set
         assert_eq!(cep18_token.allowance(&owner, &spender), amount);
+
+        // then a SetAllowance event is emitted
+        assert!(cep18_token.env().emitted_event(
+            cep18_token,
+            SetAllowance {
+                owner,
+                spender,
+                allowance: amount
+            }
+        ));
 
         // when new allowance is set
         cep18_token.approve(&spender, &(amount.add(U256::one())));
@@ -107,6 +118,23 @@ mod allowance_tests {
     }
 
     #[test]
+    fn should_not_approve_self() {
+        // given a token
+        let mut cep18_token = setup();
+        let owner = cep18_token.env().get_account(0);
+        let amount = ALLOWANCE_AMOUNT_1.into();
+
+        // when the owner tries to approve themselves as a spender
+        let result = cep18_token.try_approve(&owner, &amount);
+
+        // then it fails
+        assert_eq!(result.err().unwrap(), CannotTargetSelfUser.into());
+
+        // and no allowance is recorded
+        assert_eq!(cep18_token.allowance(&owner, &owner), U256::zero());
+    }
+
+    #[test]
     fn should_not_transfer_from_without_enough_allowance() {
         // given a token
         let mut cep18_token = setup();
@@ -152,18 +180,60 @@ mod allowance_tests {
         cep18_token.decrease_allowance(&alice, &ALLOWANCE_AMOUNT_2.into());
 
         // then the allowance is decreased
+        let allowance_after_decrease: U256 = (ALLOWANCE_AMOUNT_1 - ALLOWANCE_AMOUNT_2).into();
         assert_eq!(
             cep18_token.allowance(&owner, &alice),
-            (ALLOWANCE_AMOUNT_1 - ALLOWANCE_AMOUNT_2).into()
+            allowance_after_decrease
         );
+
+        // and a DecreaseAllowance event is emitted, carrying the allowance that was
+        // in effect right before the decrease was applied.
+        assert!(cep18_token.env().emitted_event(
+            &cep18_token,
+            DecreaseAllowance {
+                owner,
+                spender: alice,
+                allowance: ALLOWANCE_AMOUNT_1.into(),
+                decr_by: ALLOWANCE_AMOUNT_2.into()
+            }
+        ));
 
         // when the allowance is increased
         cep18_token.increase_allowance(&alice, &ALLOWANCE_AMOUNT_1.into());
 
         // then the allowance is increased
+        let allowance_after_increase: U256 = ((ALLOWANCE_AMOUNT_1 * 2) - ALLOWANCE_AMOUNT_2).into();
         assert_eq!(
             cep18_token.allowance(&owner, &alice),
-            ((ALLOWANCE_AMOUNT_1 * 2) - ALLOWANCE_AMOUNT_2).into()
+            allowance_after_increase
         );
+
+        // and an IncreaseAllowance event is emitted, carrying the allowance that was
+        // in effect right before the increase was applied.
+        assert!(cep18_token.env().emitted_event(
+            &cep18_token,
+            IncreaseAllowance {
+                owner,
+                spender: alice,
+                allowance: allowance_after_decrease,
+                inc_by: ALLOWANCE_AMOUNT_1.into()
+            }
+        ));
+    }
+
+    #[test]
+    fn should_saturate_allowance_at_zero_when_decreasing_below_available() {
+        // given a token with an approved spender
+        let mut cep18_token = setup();
+        let owner = cep18_token.env().get_account(0);
+        let alice = cep18_token.env().get_account(1);
+        cep18_token.approve(&alice, &ALLOWANCE_AMOUNT_2.into());
+
+        // when the owner decreases the allowance by more than is currently available
+        cep18_token.decrease_allowance(&alice, &(ALLOWANCE_AMOUNT_2 + 1).into());
+
+        // then the call succeeds and the allowance saturates at zero, rather than
+        // underflowing or reverting.
+        assert_eq!(cep18_token.allowance(&owner, &alice), U256::zero());
     }
 }

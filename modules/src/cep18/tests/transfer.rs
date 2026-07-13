@@ -6,6 +6,7 @@ mod transfer_tests {
 
     use crate::cep18::cep18_client_contract::Cep18ClientContract;
     use crate::cep18::errors::Error::{CannotTargetSelfUser, InsufficientBalance};
+    use crate::cep18::events::{Transfer, TransferFrom};
     use crate::cep18_token::tests::{
         setup, ALLOWANCE_AMOUNT_1, TOKEN_TOTAL_SUPPLY, TRANSFER_AMOUNT_1
     };
@@ -27,6 +28,16 @@ mod transfer_tests {
         // and alice has the full amount
         assert_eq!(cep18_token.balance_of(&alice), amount);
         assert_eq!(cep18_token.total_supply(), amount);
+
+        // and a Transfer event is emitted
+        assert!(cep18_token.env().emitted_event(
+            &cep18_token,
+            Transfer {
+                sender: owner,
+                recipient: alice,
+                amount
+            }
+        ));
     }
 
     #[test]
@@ -82,6 +93,50 @@ mod transfer_tests {
             cep18_token.allowance(&owner, &alice),
             allowance_amount - transfer_amount
         );
+
+        // and a TransferFrom event is emitted
+        assert!(cep18_token.env().emitted_event(
+            &cep18_token,
+            TransferFrom {
+                spender: alice,
+                owner,
+                recipient: alice,
+                amount: transfer_amount
+            }
+        ));
+    }
+
+    #[test]
+    fn should_only_change_allowance_between_owner_and_spender_on_transfer_from() {
+        // given a token with three distinct parties: an owner, a spender and a
+        // third-party recipient
+        let mut cep18_token = setup();
+        let owner = cep18_token.env().get_account(0);
+        let spender = cep18_token.env().get_account(1);
+        let recipient = cep18_token.env().get_account(2);
+        let allowance_amount = ALLOWANCE_AMOUNT_1.into();
+        let transfer_amount = TRANSFER_AMOUNT_1.into();
+
+        // when the owner approves the spender to spend tokens on their behalf
+        cep18_token.approve(&spender, &allowance_amount);
+
+        // when the spender transfers tokens from the owner to the recipient
+        cep18_token.env().set_caller(spender);
+        cep18_token.transfer_from(&owner, &recipient, &transfer_amount);
+
+        // then only the owner-spender allowance is decreased by the transferred amount
+        assert_eq!(
+            cep18_token.allowance(&owner, &spender),
+            allowance_amount - transfer_amount
+        );
+
+        // and every other allowance pairing among the three parties is untouched,
+        // in particular the recipient never gains an allowance of their own
+        assert_eq!(cep18_token.allowance(&owner, &recipient), U256::zero());
+        assert_eq!(cep18_token.allowance(&spender, &owner), U256::zero());
+        assert_eq!(cep18_token.allowance(&spender, &recipient), U256::zero());
+        assert_eq!(cep18_token.allowance(&recipient, &owner), U256::zero());
+        assert_eq!(cep18_token.allowance(&recipient, &spender), U256::zero());
     }
 
     #[test]
@@ -142,16 +197,10 @@ mod transfer_tests {
         let owner = cep18_token.env().get_account(0);
         let amount = TOKEN_TOTAL_SUPPLY.into();
 
-        // when the owner tries to approbve themselves
-        let result = cep18_token.try_approve(&owner, &amount);
-
-        // it fails
-        assert_eq!(result.err().unwrap(), CannotTargetSelfUser.into());
-
-        // when the owner tries to transfer from themselves
+        // when the owner tries to transfer from themselves to themselves
         let result = cep18_token.try_transfer_from(&owner, &owner, &amount);
 
-        // then the transfer fails
+        // then the transfer fails, even though no allowance was ever granted
         assert_eq!(result.err().unwrap(), CannotTargetSelfUser.into());
 
         // and the balances remain unchanged

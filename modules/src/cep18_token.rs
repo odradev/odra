@@ -161,7 +161,7 @@ impl Cep18 {
 
         self.allowances.set(
             owner,
-            recipient,
+            &spender,
             allowance
                 .checked_sub(*amount)
                 .unwrap_or_revert_with(self, Error::InsufficientAllowance)
