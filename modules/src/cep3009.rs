@@ -7,7 +7,7 @@
 //! (a relayer, or the recipient themselves) submits the authorization
 //! on-chain, so the token holder never has to spend gas to move their tokens.
 //! Unlike ERC-2612, no allowance is granted: each authorization is a direct,
-//! single-use mandate to move a specific `amount` to a specific `to` address.
+//! single-use mandate to move a specific `value` to a specific `to` address.
 //!
 //! The module exposes three entry points:
 //!
@@ -110,7 +110,7 @@ pub enum Error {
     AuthorizationNotYetValid = 37_002,
     /// Signature verification against the supplied public key failed, or the
     /// recomputed digest does not match what the signer signed (e.g. wrong
-    /// `amount`, `to`, or `nonce`).
+    /// `value`, `to`, or `nonce`).
     InvalidSignature = 37_003,
     /// The supplied `public_key` does not hash to the declared `from` /
     /// `authorizer` address. Guards against using a valid signature from a
@@ -184,7 +184,7 @@ impl CEP3009 {
         self.used_nonces.get_or_default(&authorizer, &nonce)
     }
 
-    /// Consumes a signed `TransferWithAuthorization` and moves `amount`
+    /// Consumes a signed `TransferWithAuthorization` and moves `value`
     /// tokens from `from` to `to`. Any account may submit this call — the
     /// signature, not the caller, is what authorizes the transfer.
     ///
@@ -198,7 +198,7 @@ impl CEP3009 {
         &mut self,
         from: Address,
         to: Address,
-        amount: U256,
+        value: U256,
         valid_after: u64,
         valid_before: u64,
         nonce: Bytes,
@@ -209,7 +209,7 @@ impl CEP3009 {
             TRANSFER_WITH_AUTHORIZATION_TYPEHASH,
             from,
             to,
-            amount,
+            value,
             valid_after,
             valid_before,
             nonce,
@@ -230,7 +230,7 @@ impl CEP3009 {
         &mut self,
         from: Address,
         to: Address,
-        amount: U256,
+        value: U256,
         valid_after: u64,
         valid_before: u64,
         nonce: Bytes,
@@ -246,7 +246,7 @@ impl CEP3009 {
             RECEIVE_WITH_AUTHORIZATION_TYPEHASH,
             from,
             to,
-            amount,
+            value,
             valid_after,
             valid_before,
             nonce,
@@ -311,7 +311,7 @@ impl CEP3009 {
         typehash: [u8; 32],
         from: Address,
         to: Address,
-        amount: U256,
+        value: U256,
         valid_after: u64,
         valid_before: u64,
         nonce: Bytes,
@@ -353,7 +353,7 @@ impl CEP3009 {
             typehash,
             from,
             to,
-            &amount,
+            &value,
             valid_after,
             valid_before,
             nonce_bytes
@@ -376,17 +376,17 @@ impl CEP3009 {
         });
 
         // 10. Execute transfer (raw_transfer takes refs)
-        self.token.raw_transfer(&from, &to, &amount);
+        self.token.raw_transfer(&from, &to, &value);
 
         // 11. Emit event.
         self.env().emit_event(Transfer {
             sender: from,
             recipient: to,
-            amount
+            amount: value
         });
     }
 
-    /// Builds the EIP-712 digest for a transfer authorization. `amount` is
+    /// Builds the EIP-712 digest for a transfer authorization. `value` is
     /// big-endian encoded to match the EVM `uint256` layout, and `nonce` is the
     /// 32-byte `bytes32` value (enforced at every entry point).
     fn build_authorization_message(
@@ -394,13 +394,13 @@ impl CEP3009 {
         typehash: [u8; 32],
         from: Address,
         to: Address,
-        amount: &U256,
+        value: &U256,
         valid_after: u64,
         valid_before: u64,
         nonce: [u8; 32]
     ) -> Bytes {
         let mut value_bytes = [0u8; 32];
-        amount.to_big_endian(&mut value_bytes);
+        value.to_big_endian(&mut value_bytes);
 
         let mut encoded_data = Vec::with_capacity(6 * 32);
         encoded_data.extend(eip712::encode_address(from));
@@ -468,7 +468,7 @@ impl CEP3009Wrapper {
                 &mut self,
                 from: Address,
                 to: Address,
-                amount: U256,
+                value: U256,
                 valid_after: u64,
                 valid_before: u64,
                 nonce: Bytes,
@@ -479,7 +479,7 @@ impl CEP3009Wrapper {
                 &mut self,
                 from: Address,
                 to: Address,
-                amount: U256,
+                value: U256,
                 valid_after: u64,
                 valid_before: u64,
                 nonce: Bytes,
@@ -571,7 +571,7 @@ mod tests {
         assert_eq!(wrapper.balance_of(&alice), INITIAL_SUPPLY.into());
         assert_eq!(wrapper.balance_of(&bob), U256::zero());
 
-        let amount: U256 = 100u64.into();
+        let value: U256 = 100u64.into();
         let valid_after: u64 = 0;
         let valid_before: u64 = u64::MAX;
         let nonce = fresh_nonce(1);
@@ -583,7 +583,7 @@ mod tests {
             TRANSFER_WITH_AUTHORIZATION_TYPEHASH,
             alice,
             bob,
-            amount,
+            value,
             valid_after,
             valid_before,
             &nonce
@@ -594,7 +594,7 @@ mod tests {
         wrapper.transfer_with_authorization(
             alice,
             bob,
-            amount,
+            value,
             valid_after,
             valid_before,
             nonce.clone(),
@@ -604,9 +604,9 @@ mod tests {
 
         assert_eq!(
             wrapper.balance_of(&alice),
-            U256::from(INITIAL_SUPPLY) - amount
+            U256::from(INITIAL_SUPPLY) - value
         );
-        assert_eq!(wrapper.balance_of(&bob), amount);
+        assert_eq!(wrapper.balance_of(&bob), value);
         assert!(wrapper.authorization_state(alice, nonce.clone()));
         assert!(env.emitted_event(
             &wrapper,
@@ -628,7 +628,7 @@ mod tests {
             alice_pubkey
         } = setup();
 
-        let amount: U256 = 100u64.into();
+        let value: U256 = 100u64.into();
         let valid_after: u64 = 0;
         let valid_before: u64 = u64::MAX;
         let nonce = fresh_nonce(2);
@@ -640,7 +640,7 @@ mod tests {
             TRANSFER_WITH_AUTHORIZATION_TYPEHASH,
             alice,
             bob,
-            amount,
+            value,
             valid_after,
             valid_before,
             &nonce
@@ -650,7 +650,7 @@ mod tests {
         wrapper.transfer_with_authorization(
             alice,
             bob,
-            amount,
+            value,
             valid_after,
             valid_before,
             nonce.clone(),
@@ -663,7 +663,7 @@ mod tests {
             wrapper.try_transfer_with_authorization(
                 alice,
                 bob,
-                amount,
+                value,
                 valid_after,
                 valid_before,
                 nonce,
@@ -688,7 +688,7 @@ mod tests {
         // Block time is at 1 second; require it to be in the future.
         let valid_after: u64 = 60;
         let valid_before: u64 = u64::MAX;
-        let amount: U256 = 100u64.into();
+        let value: U256 = 100u64.into();
         let nonce = fresh_nonce(3);
 
         let signature = sign_transfer_authorization(
@@ -698,7 +698,7 @@ mod tests {
             TRANSFER_WITH_AUTHORIZATION_TYPEHASH,
             alice,
             bob,
-            amount,
+            value,
             valid_after,
             valid_before,
             &nonce
@@ -709,7 +709,7 @@ mod tests {
             wrapper.try_transfer_with_authorization(
                 alice,
                 bob,
-                amount,
+                value,
                 valid_after,
                 valid_before,
                 nonce,
@@ -736,7 +736,7 @@ mod tests {
 
         let valid_after: u64 = 0;
         let valid_before: u64 = 10;
-        let amount: U256 = 100u64.into();
+        let value: U256 = 100u64.into();
         let nonce = fresh_nonce(4);
 
         let signature = sign_transfer_authorization(
@@ -746,7 +746,7 @@ mod tests {
             TRANSFER_WITH_AUTHORIZATION_TYPEHASH,
             alice,
             bob,
-            amount,
+            value,
             valid_after,
             valid_before,
             &nonce
@@ -757,7 +757,7 @@ mod tests {
             wrapper.try_transfer_with_authorization(
                 alice,
                 bob,
-                amount,
+                value,
                 valid_after,
                 valid_before,
                 nonce,
@@ -783,7 +783,7 @@ mod tests {
         let valid_before: u64 = u64::MAX;
         let nonce = fresh_nonce(5);
 
-        // Alice signs for an amount of 100 ...
+        // Alice signs for a value of 100 ...
         let signature = sign_transfer_authorization(
             &env,
             &alice,
@@ -797,7 +797,7 @@ mod tests {
             &nonce
         );
 
-        // ... but charlie submits with a different amount, so the digest the
+        // ... but charlie submits with a different value, so the digest the
         // contract recomputes won't match the signature.
         env.set_caller(charlie);
         assert_eq!(
@@ -828,7 +828,7 @@ mod tests {
 
         let valid_after: u64 = 0;
         let valid_before: u64 = u64::MAX;
-        let amount: U256 = 100u64.into();
+        let value: U256 = 100u64.into();
         let nonce = fresh_nonce(6);
 
         // Sign with bob's key while declaring alice as `from`.
@@ -840,7 +840,7 @@ mod tests {
             TRANSFER_WITH_AUTHORIZATION_TYPEHASH,
             alice,
             bob,
-            amount,
+            value,
             valid_after,
             valid_before,
             &nonce
@@ -851,7 +851,7 @@ mod tests {
             wrapper.try_transfer_with_authorization(
                 alice,
                 bob,
-                amount,
+                value,
                 valid_after,
                 valid_before,
                 nonce,
@@ -873,7 +873,7 @@ mod tests {
             ..
         } = setup();
 
-        let amount: U256 = 250u64.into();
+        let value: U256 = 250u64.into();
         let valid_after: u64 = 0;
         let valid_before: u64 = u64::MAX;
         let nonce = fresh_nonce(7);
@@ -885,7 +885,7 @@ mod tests {
             RECEIVE_WITH_AUTHORIZATION_TYPEHASH,
             alice,
             bob,
-            amount,
+            value,
             valid_after,
             valid_before,
             &nonce
@@ -896,7 +896,7 @@ mod tests {
         wrapper.receive_with_authorization(
             alice,
             bob,
-            amount,
+            value,
             valid_after,
             valid_before,
             nonce.clone(),
@@ -906,9 +906,9 @@ mod tests {
 
         assert_eq!(
             wrapper.balance_of(&alice),
-            U256::from(INITIAL_SUPPLY) - amount
+            U256::from(INITIAL_SUPPLY) - value
         );
-        assert_eq!(wrapper.balance_of(&bob), amount);
+        assert_eq!(wrapper.balance_of(&bob), value);
         assert!(wrapper.authorization_state(alice, nonce));
     }
 
@@ -923,7 +923,7 @@ mod tests {
             alice_pubkey
         } = setup();
 
-        let amount: U256 = 250u64.into();
+        let value: U256 = 250u64.into();
         let valid_after: u64 = 0;
         let valid_before: u64 = u64::MAX;
         let nonce = fresh_nonce(8);
@@ -935,7 +935,7 @@ mod tests {
             RECEIVE_WITH_AUTHORIZATION_TYPEHASH,
             alice,
             bob,
-            amount,
+            value,
             valid_after,
             valid_before,
             &nonce
@@ -947,7 +947,7 @@ mod tests {
             wrapper.try_receive_with_authorization(
                 alice,
                 bob,
-                amount,
+                value,
                 valid_after,
                 valid_before,
                 nonce,
@@ -986,7 +986,7 @@ mod tests {
         ));
 
         // A subsequent transfer reusing the cancelled nonce is rejected.
-        let amount: U256 = 1u64.into();
+        let value: U256 = 1u64.into();
         let valid_after: u64 = 0;
         let valid_before: u64 = u64::MAX;
         let transfer_signature = sign_transfer_authorization(
@@ -996,7 +996,7 @@ mod tests {
             TRANSFER_WITH_AUTHORIZATION_TYPEHASH,
             alice,
             bob,
-            amount,
+            value,
             valid_after,
             valid_before,
             &nonce
@@ -1005,7 +1005,7 @@ mod tests {
             wrapper.try_transfer_with_authorization(
                 alice,
                 bob,
-                amount,
+                value,
                 valid_after,
                 valid_before,
                 nonce,
@@ -1027,7 +1027,7 @@ mod tests {
             alice_pubkey
         } = setup();
 
-        let amount: U256 = 100u64.into();
+        let value: U256 = 100u64.into();
         let valid_after: u64 = 0;
         let valid_before: u64 = u64::MAX;
         let nonce = fresh_nonce(10);
@@ -1040,7 +1040,7 @@ mod tests {
             TRANSFER_WITH_AUTHORIZATION_TYPEHASH,
             alice,
             bob,
-            amount,
+            value,
             valid_after,
             valid_before,
             &nonce
@@ -1049,7 +1049,7 @@ mod tests {
         wrapper.transfer_with_authorization(
             alice,
             bob,
-            amount,
+            value,
             valid_after,
             valid_before,
             nonce.clone(),
@@ -1108,7 +1108,7 @@ mod tests {
             alice_pubkey
         } = setup();
 
-        let amount: U256 = 100u64.into();
+        let value: U256 = 100u64.into();
         let valid_after: u64 = 0;
         let valid_before: u64 = u64::MAX;
         let nonce = fresh_nonce(20);
@@ -1120,7 +1120,7 @@ mod tests {
             TRANSFER_WITH_AUTHORIZATION_TYPEHASH,
             alice,
             bob,
-            amount,
+            value,
             valid_after,
             valid_before,
             &nonce
@@ -1131,7 +1131,7 @@ mod tests {
         wrapper.transfer_with_authorization(
             alice,
             bob,
-            amount,
+            value,
             valid_after,
             valid_before,
             nonce.clone(),
@@ -1151,7 +1151,7 @@ mod tests {
             wrapper.try_transfer_with_authorization(
                 alice,
                 bob,
-                amount,
+                value,
                 valid_after,
                 valid_before,
                 aliased_nonce,
@@ -1162,7 +1162,7 @@ mod tests {
         );
 
         // The funds moved exactly once.
-        assert_eq!(wrapper.balance_of(&bob), amount);
+        assert_eq!(wrapper.balance_of(&bob), value);
     }
 
     #[test]
@@ -1176,7 +1176,7 @@ mod tests {
             alice_pubkey
         } = setup();
 
-        let amount: U256 = 100u64.into();
+        let value: U256 = 100u64.into();
         let valid_after: u64 = 0;
         let valid_before: u64 = u64::MAX;
         // A 31-byte nonce that the digest would right-pad to 32 bytes.
@@ -1189,7 +1189,7 @@ mod tests {
             TRANSFER_WITH_AUTHORIZATION_TYPEHASH,
             alice,
             bob,
-            amount,
+            value,
             valid_after,
             valid_before,
             &nonce
@@ -1200,7 +1200,7 @@ mod tests {
             wrapper.try_transfer_with_authorization(
                 alice,
                 bob,
-                amount,
+                value,
                 valid_after,
                 valid_before,
                 nonce,
@@ -1244,13 +1244,13 @@ mod tests {
         typehash: [u8; 32],
         from: Address,
         to: Address,
-        amount: U256,
+        value: U256,
         valid_after: u64,
         valid_before: u64,
         nonce: &Bytes
     ) -> Bytes {
         let mut value_bytes = [0u8; 32];
-        amount.to_big_endian(&mut value_bytes);
+        value.to_big_endian(&mut value_bytes);
 
         let mut nonce_padded = [0u8; 32];
         let len = nonce.len().min(32);
