@@ -2,6 +2,13 @@
 
 Changelog for `odra`.
 
+## [2.9.0] - 2026-07-13
+### Changed
+- In CEP3009, renamed entrypoints's parameter's from `amount` to `value`.
+
+## Fixed
+- In CEP18, fixed `transfer_from` to correctly update the `allowance`.
+
 ## [2.8.2] - 2026-06-24
 ### Added
 - `ODRA_CASPER_LIVENET_GAS_PRICE_TOLERANCE` environment variable to configure the gas price tolerance for livenet transactions.
