@@ -49,9 +49,9 @@ impl Scenario for FlippingScenario {
         args: Args
     ) -> Result<(), Error> {
         let mut contract = container.contract_ref::<Flipper>(env)?;
-        let n = args.get_single::<u64>("name")?;
+        let n = args.get_single::<u64>("number")?;
 
-        env.set_gas(50_000_000);
+        env.set_gas(5_000_000_000); // Adjust gas limit as needed
         for _ in 0..n {
             contract.try_flip()?;
         }
