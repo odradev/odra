@@ -6,6 +6,7 @@
         <a href="https://odra.dev/docs/getting-started/installation">Installation</a> |
         <a href="https://odra.dev/docs/category/tutorials">Tutorials</a> |
         <a href="https://github.com/odradev/cargo-odra">Cargo Odra</a> |
+        <a href="https://github.com/odradev/odradev-plugins">Claude Code Plugin</a> |
         <a href="https://discord.com/invite/Mm5ABc9P8k">Discord</a> |
         <a href="https://odra.dev/blog">Blog</a>
     </p>
@@ -27,11 +28,49 @@
 </div>
 
 ## Table of Contents
+- [Project Setup](#project-setup)
 - [Usage](#usage)
 - [Example](#example)
 - [Tests](#tests)
 - [Links](#links)
 - [Contact](#contact)
+
+## Project Setup
+
+This repository is the framework crate itself. You do **not** clone it to write contracts —
+you scaffold a project with [Cargo Odra](https://github.com/odradev/cargo-odra) and depend on
+`odra` from crates.io.
+
+```bash
+# 1. Rust toolchain with the wasm target (see https://rustup.rs)
+rustup target add wasm32-unknown-unknown
+
+# 2. The project generator / build tool
+cargo install cargo-odra --locked
+
+# 3. A new project
+cargo odra new --name my_project && cd my_project
+cargo odra test
+```
+
+Full instructions, including the `wasm-strip` and `wasm-opt` prerequisites, are in the
+[Installation guide](https://odra.dev/docs/getting-started/installation). On Ubuntu or WSL, use
+[Ubuntu / WSL setup](https://odra.dev/docs/getting-started/ubuntu-wsl-setup) — the same steps with
+exact commands, including the `binaryen` version apt is too old to give you.
+
+### Working with an AI agent
+
+If you use Claude Code, install the [Odra plugin](https://github.com/odradev/odradev-plugins).
+It teaches the agent Odra's APIs, project layout and tooling, so it scaffolds, writes, tests and
+deploys contracts the way this framework expects instead of guessing:
+
+```
+/plugin marketplace add odradev/odradev-plugins
+/plugin install odra-plugin@odradev-plugins
+```
+
+Agents without the plugin should read [https://odra.dev/llms.txt](https://odra.dev/llms.txt)
+first — it is an index of the whole documentation set.
 
 ## Usage
 
@@ -105,9 +144,11 @@ $ just test
 
 ## Links
 
-* [Odra Book - Docs and Tutorials](https://odra.dev/docs)
+* [Odra Book - Docs and Tutorials](https://odra.dev/docs) — source: [odradev/odradev.github.io](https://github.com/odradev/odradev.github.io)
 * [API Documentation](https://docs.rs/odra/latest/odra/)
-* [Cargo Odra](https://github.com/odradev/cargo-odra)
+* [Cargo Odra](https://github.com/odradev/cargo-odra) — the `cargo odra` project generator and build tool
+* [Odra Claude Code Plugin](https://github.com/odradev/odradev-plugins) — skills for agentic Odra development
+* [llms.txt](https://odra.dev/llms.txt) — documentation index for LLM agents
 * [Example Contracts](https://github.com/odradev/odra/tree/HEAD/examples)
 
 ## Contact
