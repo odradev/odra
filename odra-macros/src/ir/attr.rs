@@ -73,6 +73,12 @@ impl OdraAttribute {
             .iter()
             .any(|attr_kind| matches!(attr_kind, &AttrType::NonReentrant))
     }
+
+    /// Names of the arguments this attribute carries, as written by the user,
+    /// eg. `["payable"]` for `#[odra(payable)]`.
+    pub fn arg_names(&self) -> Vec<&'static str> {
+        self.types.iter().map(AttrType::name).collect()
+    }
 }
 
 impl TryFrom<syn::Attribute> for OdraAttribute {
@@ -95,6 +101,15 @@ impl TryFrom<syn::Attribute> for OdraAttribute {
 enum AttrType {
     Payable,
     NonReentrant
+}
+
+impl AttrType {
+    fn name(&self) -> &'static str {
+        match self {
+            AttrType::Payable => "payable",
+            AttrType::NonReentrant => "non_reentrant"
+        }
+    }
 }
 
 impl TryFrom<&'_ syn::Meta> for AttrType {

@@ -585,12 +585,48 @@ fn validate_fn_arg<T: ToTokens>(name: &str, ctx: T) -> syn::Result<()> {
     Ok(())
 }
 
+/// Functions whose wasm entry point is built by a dedicated codegen path
+/// (see `AddEntryPointStmtItem`) that does not read the `#[odra(..)]` flags.
+/// An attribute here would be dropped without a trace, so it is rejected instead.
+const NO_ODRA_ATTRIBUTE_FUNCTIONS: [&str; 2] = [CONSTRUCTOR_NAME, UPGRADER_NAME];
+
+fn validate_fn_attrs(fn_name: &str, attrs: &[syn::Attribute]) -> syn::Result<()> {
+    if !NO_ODRA_ATTRIBUTE_FUNCTIONS.contains(&fn_name) {
+        return Ok(());
+    }
+
+    for attr in attrs.iter().filter(|attr| attr.path().is_ident("odra")) {
+        let odra_attr = OdraAttribute::try_from(attr.clone())?;
+        if let Some(arg) = odra_attr.arg_names().first() {
+            let reason = match *arg {
+                "payable" => format!(
+                    "`{}` cannot receive attached tokens - there is no way to attach \
+                     CSPR to it. Use a separate payable entrypoint instead",
+                    fn_name
+                ),
+                _ => format!(
+                    "it is not applied when generating the `{}` entrypoint",
+                    fn_name
+                )
+            };
+            return Err(syn::Error::new_spanned(
+                attr,
+                format!(
+                    "`#[odra({})]` is not allowed on `{}`: {}",
+                    arg, fn_name, reason
+                )
+            ));
+        }
+    }
+    Ok(())
+}
+
 impl TryFrom<syn::TraitItemFn> for FnIR {
     type Error = syn::Error;
 
     fn try_from(code: syn::TraitItemFn) -> Result<Self, Self::Error> {
         let fn_name = utils::syn::function_name(&code.sig);
-        validate_fn_ir(&fn_name, &code.sig)?;
+        validate_fn_ir(&fn_name, &code.sig, &code.attrs)?;
         Ok(Self::Def(FnTraitIR::new(code)))
     }
 }
@@ -600,16 +636,21 @@ impl TryFrom<syn::ImplItemFn> for FnIR {
 
     fn try_from(code: syn::ImplItemFn) -> Result<Self, Self::Error> {
         let fn_name = utils::syn::function_name(&code.sig);
-        validate_fn_ir(&fn_name, &code.sig)?;
+        validate_fn_ir(&fn_name, &code.sig, &code.attrs)?;
         Ok(Self::Impl(FnImplIR::new(code)))
     }
 }
 
-fn validate_fn_ir(fn_name: &str, sig: &syn::Signature) -> syn::Result<()> {
+fn validate_fn_ir(
+    fn_name: &str,
+    sig: &syn::Signature,
+    attrs: &[syn::Attribute]
+) -> syn::Result<()> {
     validate_fn_name(fn_name, sig)?;
     utils::syn::function_arg_names(sig)
         .iter()
         .try_for_each(|arg_ident| validate_fn_arg(&arg_ident.to_string(), arg_ident))?;
+    validate_fn_attrs(fn_name, attrs)?;
     Ok(())
 }
 
@@ -924,5 +965,61 @@ mod test {
             result.err().unwrap().to_string(),
             "Argument name `attached_value` is reserved"
         );
+    }
+
+    #[test]
+    fn test_payable_constructor_is_rejected() {
+        let code: syn::ImplItemFn = syn::parse_quote!(
+            #[odra(payable)]
+            pub fn init(&mut self) {}
+        );
+        let result = FnIR::try_from(code);
+        assert_eq!(
+            result.err().unwrap().to_string(),
+            "`#[odra(payable)]` is not allowed on `init`: `init` cannot receive attached \
+             tokens - there is no way to attach CSPR to it. Use a separate payable \
+             entrypoint instead"
+        );
+    }
+
+    #[test]
+    fn test_payable_upgrader_is_rejected() {
+        let code: syn::ImplItemFn = syn::parse_quote!(
+            #[odra(payable)]
+            pub fn upgrade(&mut self) {}
+        );
+        assert!(FnIR::try_from(code).is_err());
+    }
+
+    #[test]
+    fn test_non_reentrant_constructor_is_rejected() {
+        let code: syn::ImplItemFn = syn::parse_quote!(
+            #[odra(non_reentrant)]
+            pub fn init(&mut self) {}
+        );
+        assert_eq!(
+            FnIR::try_from(code).err().unwrap().to_string(),
+            "`#[odra(non_reentrant)]` is not allowed on `init`: it is not applied when \
+             generating the `init` entrypoint"
+        );
+    }
+
+    #[test]
+    fn test_payable_regular_fn_is_allowed() {
+        let code: syn::ImplItemFn = syn::parse_quote!(
+            #[odra(payable)]
+            pub fn deposit(&mut self) {}
+        );
+        assert!(FnIR::try_from(code).is_ok());
+    }
+
+    #[test]
+    fn test_non_odra_attribute_on_constructor_is_allowed() {
+        let code: syn::ImplItemFn = syn::parse_quote!(
+            /// Initializes the contract.
+            #[allow(dead_code)]
+            pub fn init(&mut self) {}
+        );
+        assert!(FnIR::try_from(code).is_ok());
     }
 }

@@ -40,17 +40,17 @@ homepage = "https://odra.dev/docs"
 license = "MIT"
 readme = "README.md"
 repository = "https://github.com/odradev/odra"
-version = "2.9.0"
+version = "2.9.1"
 
 [workspace.dependencies]
-odra-casper-rpc-client = { path = "odra-casper/rpc-client", version = "2.9.0" }
-odra-casper-test-vm = { path = "odra-casper/test-vm", version = "2.9.0" }
-odra-casper-wasm-env = { path = "odra-casper/wasm-env", version = "2.9.0" }
-odra-core = { path = "core", version = "2.9.0" }
-odra-macros = { path = "odra-macros", version = "2.9.0" }
-odra-schema = { path = "odra-schema", version = "2.9.0" }
-odra-vm = { path = "odra-vm", version = "2.9.0" }
-odra-wasm-client = { path = "odra-wasm-client", version = "2.9.0" }
+odra-casper-rpc-client = { path = "odra-casper/rpc-client", version = "2.9.1" }
+odra-casper-test-vm = { path = "odra-casper/test-vm", version = "2.9.1" }
+odra-casper-wasm-env = { path = "odra-casper/wasm-env", version = "2.9.1" }
+odra-core = { path = "core", version = "2.9.1" }
+odra-macros = { path = "odra-macros", version = "2.9.1" }
+odra-schema = { path = "odra-schema", version = "2.9.1" }
+odra-vm = { path = "odra-vm", version = "2.9.1" }
+odra-wasm-client = { path = "odra-wasm-client", version = "2.9.1" }
 
 casper-client = { version = "=5.0.0", default-features = false }
 casper-contract = { version = "5.1", default-features = false }
