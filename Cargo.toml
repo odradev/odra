@@ -99,6 +99,7 @@ serde_derive = {  version = "1.0" }
 serde-json-wasm = { version = "1.0", default-features = false }
 serde_json = { version = "1.0", default-features = false }
 sha3 = { version = "0.10", default-features = false }
+tempfile = "3"
 shlex = "1"
 syn = "2.0"
 syn_derive = "0.2"

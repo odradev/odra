@@ -151,4 +151,47 @@ mod test {
         )
         .unwrap();
     }
+
+    /// A contract installed before the addressable-entity switch must be
+    /// upgradable after it: the upgrade triggers the lazy migration of the
+    /// legacy package and then adds (and disables) versions on the migrated
+    /// package. State written pre-switch must be preserved. Runs only on the
+    /// casper backend booted with `ODRA_CASPER_LEGACY_GENESIS=1`.
+    #[test]
+    fn upgrade_across_ae_switch() {
+        let test_env = odra_test::env();
+        let mut counter = CounterV1::deploy_with_cfg(
+            &test_env,
+            NoArgs,
+            InstallConfig::new::<CounterV1>(true, true)
+        );
+        counter.increment();
+        counter.increment();
+        assert_eq!(counter.get(), 2);
+
+        if !test_env.enable_addressable_entity() {
+            return;
+        }
+
+        let mut counter2 = CounterV2::try_upgrade(
+            &test_env,
+            counter.address(),
+            CounterV2UpgradeArgs { new_start: None }
+        )
+        .unwrap();
+
+        // Pre-switch state is preserved by the upgrade.
+        assert_eq!(counter2.get(), U256::from(2));
+        assert_eq!(counter2.get_old(), 2);
+
+        // The new version works and emits readable events.
+        counter2.increment();
+        assert_eq!(counter2.get(), U256::from(3));
+        assert!(counter2.env().emitted_event(
+            &counter2,
+            IncrementEventV2 {
+                value: U256::from(3)
+            }
+        ));
+    }
 }

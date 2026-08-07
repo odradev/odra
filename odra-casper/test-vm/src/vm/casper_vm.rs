@@ -17,7 +17,7 @@ use std::path::PathBuf;
 
 use casper_engine_test_support::{
     ChainspecConfig, DeployItemBuilder, EntityWithNamedKeys, ExecuteRequestBuilder,
-    CHAINSPEC_SYMLINK,
+    TransferRequestBuilder, UpgradeRequestBuilder, CHAINSPEC_SYMLINK,
     LmdbWasmTestBuilder, WasmTestBuilder, ARG_AMOUNT, DEFAULT_ACCOUNTS, DEFAULT_AUCTION_DELAY,
     DEFAULT_CHAINSPEC_REGISTRY, DEFAULT_EXEC_CONFIG, DEFAULT_GENESIS_CONFIG_HASH,
     DEFAULT_GENESIS_TIMESTAMP_MILLIS, DEFAULT_LOCKED_FUNDS_PERIOD_MILLIS, DEFAULT_PAYMENT,
@@ -26,7 +26,9 @@ use casper_engine_test_support::{
 };
 use casper_event_standard::try_full_name_from_bytes;
 use casper_execution_engine::{engine_state, execution};
-use casper_storage::data_access_layer::{DataAccessLayer, GenesisRequest, RewardItem, StepRequest};
+use casper_storage::data_access_layer::{
+    DataAccessLayer, GenesisRequest, RewardItem, StepRequest, StepResult
+};
 use odra_core::{casper_event_standard, DeployReport, GasReport};
 use std::rc::Rc;
 
@@ -39,7 +41,8 @@ use odra_core::casper_types::{
     bytesrepr::FromBytes, CLTyped, GenesisAccount, PublicKey, RuntimeArgs, U512
 };
 use odra_core::casper_types::{
-    runtime_args, ApiError, BlockTime, Contract, Key, Motes, SecretKey, StoredValue, URef
+    runtime_args, ApiError, BlockTime, Contract, HoldBalanceHandling, Key, Motes, SecretKey,
+    StoredValue, URef
 };
 use odra_core::consts;
 use odra_core::consts::*;
@@ -63,6 +66,9 @@ pub struct CasperVm {
     messages: BTreeMap<EntityAddr, Vec<MessagePayload>>,
     active_account: Address,
     context: LmdbWasmTestBuilder,
+    data_dir: Rc<tempfile::TempDir>,
+    chainspec: ChainspecConfig,
+    protocol_version: ProtocolVersion,
     block_time: u64,
     calls_counter: u32,
     error: Option<OdraError>,
@@ -124,7 +130,10 @@ impl CasperVm {
 
         // Run auctions and distribute rewards one at a time
         for _ in 0..num_auctions {
-            let mut step_request_builder = self.context.step_request_builder();
+            let mut step_request_builder = self
+                .context
+                .step_request_builder()
+                .with_protocol_version(self.protocol_version);
             // distribute rewards to all validators
             let mut rewards = BTreeMap::new();
             for validator in &self.validators {
@@ -138,15 +147,32 @@ impl CasperVm {
 
             let step_request = step_request_builder.build();
             self.context.step(step_request);
-            self.context.advance_era();
+            self.advance_era();
             self.advance_block_time(time_between_auctions);
             self.context
-                .distribute(None, DEFAULT_PROTOCOL_VERSION, rewards, self.block_time);
+                .distribute(None, self.protocol_version, rewards, self.block_time);
         }
 
         // Run remaining auctions with the leftover time
         let remaining_time = time_diff_millis % time_between_auctions;
         self.advance_block_time(remaining_time);
+    }
+
+    /// Advances the chain by a single era, running the auction.
+    /// Unlike [LmdbWasmTestBuilder::advance_era] it carries the VM's current
+    /// protocol version, which changes after [CasperVm::enable_addressable_entity].
+    fn advance_era(&mut self) {
+        let step_request = self
+            .context
+            .step_request_builder()
+            .with_protocol_version(self.protocol_version)
+            .with_run_auction(true)
+            .with_next_era_id(self.context.get_era().successor())
+            .build();
+        match self.context.step(step_request) {
+            StepResult::Success { .. } => {}
+            result => panic!("Failed to advance era: {:?}", result)
+        }
     }
 
     /// Gets the time between auctions.
@@ -205,6 +231,7 @@ impl CasperVm {
                 ARG_AMOUNT => amount,
             }
         )
+        .with_protocol_version(self.protocol_version)
         .build();
 
         self.context
@@ -215,13 +242,66 @@ impl CasperVm {
         self.removed_validators.push(validator.clone());
     }
 
+    /// Switches the VM from legacy mode to addressable-entity mode, replaying the
+    /// production migration path: the global state is reopened with an
+    /// entity-enabled chainspec and a protocol upgrade migrates the system
+    /// contracts. User accounts and user contracts stay in their legacy form and
+    /// are migrated lazily on first use, just like on a real network.
+    ///
+    /// Returns `false` (and changes nothing) if the VM already runs in
+    /// addressable-entity mode. Boot the VM with `ODRA_CASPER_LEGACY_GENESIS=1`
+    /// to start in legacy mode.
+    pub fn enable_addressable_entity(&mut self) -> bool {
+        if self.chainspec.core_config.enable_addressable_entity {
+            return false;
+        }
+
+        let post_state_hash = self.context.get_post_state_hash();
+        self.context.flush_environment();
+        // The addressable-entity flag is baked into the builder's data access
+        // layer at construction time, so the only way to change it is to reopen
+        // the global state with a new configuration. LMDB must not be opened
+        // twice within one process - drop the old builder first.
+        let old_builder = std::mem::replace(&mut self.context, LmdbWasmTestBuilder::default());
+        drop(old_builder);
+
+        let chainspec = self.chainspec.clone().with_enable_addressable_entity(true);
+        let mut builder = LmdbWasmTestBuilder::open(
+            self.data_dir.path(),
+            chainspec.clone(),
+            self.protocol_version,
+            post_state_hash
+        );
+
+        let next_protocol_version =
+            ProtocolVersion::from_parts(self.protocol_version.value().major + 1, 0, 0);
+        let mut upgrade_request = UpgradeRequestBuilder::new()
+            .with_current_protocol_version(self.protocol_version)
+            .with_new_protocol_version(next_protocol_version)
+            .with_activation_point(builder.get_era().successor())
+            .with_new_gas_hold_handling(HoldBalanceHandling::Accrued)
+            .with_new_gas_hold_interval(24 * 60 * 60 * 60)
+            .with_enable_addressable_entity(true)
+            .build();
+        builder
+            .with_block_time(BlockTime::new(self.block_time))
+            .upgrade_using_scratch(&mut upgrade_request)
+            .expect_upgrade_success();
+
+        self.context = builder;
+        self.chainspec = chainspec;
+        self.protocol_version = next_protocol_version;
+        true
+    }
+
     fn get_main_purse(&self, address: Address) -> URef {
         match address {
             Address::Account(account) => {
-                let account = self.context.get_account(account).unwrap_or_else(|| {
+                // Works in both legacy and addressable-entity mode.
+                let entity = self.context.get_entity_by_account_hash(account).unwrap_or_else(|| {
                     panic!("Account not found while getting entity addr: {:?}", account)
                 });
-                account.main_purse()
+                entity.main_purse()
             }
             Address::Contract(contract) => self
                 .get_contract_main_purse(PackageHash::new(contract.value()))
@@ -356,6 +436,7 @@ impl CasperVm {
 
         let execute_request = ExecuteRequestBuilder::from_deploy_item(&deploy_item)
             .with_block_time(self.block_time)
+            .with_protocol_version(self.protocol_version)
             .build();
         self.context.exec(execute_request).commit();
         self.collect_gas();
@@ -399,8 +480,7 @@ impl CasperVm {
             }
             Address::Contract(contract) => {
                 let package = self
-                    .context
-                    .get_package(PackageHash::new(contract.value()))
+                    .query_package(PackageHash::new(contract.value()))
                     .unwrap_or_else(|| {
                         panic!(
                             "Contract package not found while getting entity addr: {:?}",
@@ -504,21 +584,14 @@ impl CasperVm {
     ///
     /// Results an OdraError if the transfer fails.
     pub fn transfer(&mut self, to: Address, amount: U512) -> OdraResult<()> {
-        let deploy_item = DeployItemBuilder::new()
-            .with_transfer_args(runtime_args! {
-                "amount" => amount,
-                "target" => to,
-                "id" => Some(0u64),
-            })
-            .with_authorization_keys(&[self.active_account_hash()])
-            .with_address(self.active_account_hash())
-            .with_deploy_hash(self.next_hash())
-            .build();
-
-        let execute_request = ExecuteRequestBuilder::from_deploy_item(&deploy_item)
-            .with_block_time(self.block_time)
-            .build();
-        self.context.exec(execute_request).commit();
+        let transfer_request = match to {
+            Address::Account(account_hash) => TransferRequestBuilder::new(amount, account_hash),
+            Address::Contract(_) => TransferRequestBuilder::new(amount, self.get_main_purse(to))
+        }
+        .with_initiator(self.active_account_hash())
+        .with_transfer_id(0u64)
+        .build();
+        self.context.transfer_and_commit(transfer_request);
 
         if let Some(error) = self.context.get_error() {
             let odra_error = parse_error(error);
@@ -700,18 +773,29 @@ impl CasperVm {
     }
 
     fn new_instance() -> Self {
+        // Addressable entity is on by default; set ODRA_CASPER_LEGACY_GENESIS=1
+        // to boot in legacy mode, e.g. to test contracts across the
+        // `enable_addressable_entity` switch (see [CasperVm::enable_addressable_entity]).
+        let legacy_genesis = env::var("ODRA_CASPER_LEGACY_GENESIS")
+            .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+            .unwrap_or(false);
+        Self::new_instance_with_mode(legacy_genesis)
+    }
+
+    fn new_instance_with_mode(legacy_genesis: bool) -> Self {
         let key_pairs = generate_key_pairs(ACCOUNTS_NUMBER);
         let (genesis_accounts, validators) = Self::genesis_accounts(&key_pairs);
         let accounts: Vec<Address> = key_pairs.keys().copied().collect();
 
         let chainspec = ChainspecConfig::from_chainspec_path(&*CHAINSPEC_SYMLINK)
             .unwrap()
-            .with_enable_addressable_entity(true);
+            .with_enable_addressable_entity(!legacy_genesis);
         let genesis_request = chainspec
             .create_genesis_request(genesis_accounts.clone(), ProtocolVersion::V2_0_0)
             .unwrap();
 
-        let mut builder = LmdbWasmTestBuilder::new_temporary_with_config(chainspec);
+        let data_dir = Rc::new(tempfile::tempdir().expect("should create data dir"));
+        let mut builder = LmdbWasmTestBuilder::new_with_config(data_dir.path(), chainspec.clone());
         builder.run_genesis(genesis_request).commit();
         let unbonding_delay = builder.get_unbonding_delay();
         let auction_delay = builder.get_auction_delay();
@@ -737,6 +821,9 @@ impl CasperVm {
         Self {
             active_account: accounts[0],
             context: builder,
+            data_dir,
+            chainspec,
+            protocol_version: ProtocolVersion::V2_0_0,
             accounts,
             block_time: 0u64,
             calls_counter: 0,
@@ -751,7 +838,9 @@ impl CasperVm {
         }
     }
 
-    fn deploy_wasm(&mut self, wasm_path: &str, args: &RuntimeArgs) -> Option<engine_state::Error> {
+    /// Deploys a session wasm from the given path with the given args,
+    /// signed by the active account. Returns the execution error, if any.
+    pub fn deploy_wasm(&mut self, wasm_path: &str, args: &RuntimeArgs) -> Option<engine_state::Error> {
         self.error = None;
         let session_code = PathBuf::from(wasm_path);
         let deploy_item = DeployItemBuilder::new()
@@ -764,6 +853,7 @@ impl CasperVm {
 
         let execute_request = ExecuteRequestBuilder::from_deploy_item(&deploy_item)
             .with_block_time(self.block_time)
+            .with_protocol_version(self.protocol_version)
             .build();
         let result = self.context.exec(execute_request).commit();
         self.collect_gas();
@@ -777,26 +867,50 @@ impl CasperVm {
 
 impl CasperVm {
     fn get_package(&self, package_hash: PackageHash) -> Package {
-        self.context.get_package(package_hash).unwrap()
+        self.query_package(package_hash)
+            .unwrap_or_else(|| panic!("Package not found: {:?}", package_hash))
+    }
+
+    /// Reads a package from the global state, regardless of its storage form.
+    /// After [CasperVm::enable_addressable_entity] a package installed in legacy
+    /// mode remains under [Key::Hash] until its first call migrates it, so both
+    /// locations must be checked.
+    fn query_package(&self, package_hash: PackageHash) -> Option<Package> {
+        let keys = [
+            Key::SmartContract(package_hash.value()),
+            Key::Hash(package_hash.value())
+        ];
+        for key in keys {
+            match self.context.query(None, key, &[]) {
+                Ok(StoredValue::SmartContract(package)) => return Some(package),
+                Ok(StoredValue::ContractPackage(contract_package)) => {
+                    return Some(contract_package.into())
+                }
+                _ => {}
+            }
+        }
+        None
     }
 
     /// Gets current contract from contract package and
     /// returns it's named keys.
     fn package_named_keys(&self, package_hash: PackageHash) -> NamedKeys {
-        // TODO: fix unwraps
-        let a = self
-            .context
+        let current_entity_hash = self
             .get_package(package_hash)
-            .unwrap()
             .current_entity_hash()
-            .unwrap();
-        let addressable_entity_hash = AddressableEntityHash::new(a.value());
-        let named_keys = self
+            .unwrap_or_else(|| panic!("Package has no current version: {:?}", package_hash));
+        let addressable_entity_hash = AddressableEntityHash::new(current_entity_hash.value());
+        if let Some(entity) = self
             .context
             .get_entity_with_named_keys_by_entity_hash(addressable_entity_hash)
-            .unwrap();
-        let keys = named_keys.named_keys();
-        keys.clone()
+        {
+            return entity.named_keys().clone();
+        }
+        // A legacy contract not yet migrated to an entity.
+        match self.context.query(None, Key::Hash(addressable_entity_hash.value()), &[]) {
+            Ok(StoredValue::Contract(contract)) => contract.take_named_keys(),
+            other => panic!("Contract not found: {:?}", other)
+        }
     }
 
     fn package_named_key(&self, package_hash: PackageHash, name: &str) -> Option<Key> {
@@ -941,5 +1055,212 @@ fn parse_error(err: engine_state::Error) -> OdraError {
         }
     } else {
         OdraError::VmError(VmError::Other(format!("Casper EngineStateError: {}", err)))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// After the addressable-entity switch, a lazily migrated account must keep
+    /// its identity: the entity address carries the original account hash bytes
+    /// and the main purse (thus the CSPR balance) is preserved.
+    #[test]
+    fn account_entity_keeps_account_hash_across_ae_switch() {
+        let mut vm = CasperVm::new_instance_with_mode(true);
+
+        let sender = vm.accounts[0];
+        let recipient = vm.accounts[1];
+        let sender_hash = vm.active_account_hash();
+        let pre_purse = vm.get_main_purse(sender);
+        let pre_balance = vm.balance_of(&recipient);
+
+        // Pre-flip the account is a legacy record.
+        let stored = vm.context.query(None, Key::Account(sender_hash), &[]).unwrap();
+        assert!(matches!(stored, StoredValue::Account(_)));
+
+        assert!(vm.enable_addressable_entity());
+        assert!(!vm.enable_addressable_entity(), "second switch must be a no-op");
+
+        // First use after the switch migrates the account lazily.
+        let amount = U512::from(1_000_000_000_000u64);
+        vm.transfer(recipient, amount).unwrap();
+        assert_eq!(vm.balance_of(&recipient), pre_balance + amount);
+
+        // Key::Account now points at an entity that carries the account hash bytes.
+        let stored = vm.context.query(None, Key::Account(sender_hash), &[]).unwrap();
+        let entity_key = match stored {
+            StoredValue::CLValue(cl_value) => cl_value.into_t::<Key>().unwrap(),
+            other => panic!("expected CLValue indirection, got {:?}", other)
+        };
+        let entity_addr = match entity_key {
+            Key::AddressableEntity(entity_addr) => entity_addr,
+            other => panic!("expected Key::AddressableEntity, got {:?}", other)
+        };
+        assert_eq!(entity_addr, EntityAddr::Account(sender_hash.value()));
+
+        // The main purse is carried over.
+        assert_eq!(vm.get_main_purse(sender), pre_purse);
+    }
+
+    /// Replays the compatibility concern raised for the upstream
+    /// casper-ecosystem/cep18 reference implementation (v2.0.0): tokens held by
+    /// a *contract* are keyed by its `get_immediate_caller()` result, which
+    /// under legacy rules resolves to `Key::Hash(<contract package>)` but under
+    /// addressable-entity mode resolves to
+    /// `Key::AddressableEntity(<contract entity>)` - a different key. Funds a
+    /// contract deposited before the switch therefore become inaccessible to it
+    /// after the switch, while account-held balances keep working.
+    ///
+    /// If a fixed cep18 release changes this behavior, update the vendored
+    /// wasm files (see resources/README.md) and the final assertions.
+    #[test]
+    fn upstream_cep18_across_ae_switch() {
+        use odra_core::casper_types::U256;
+
+        const TOKEN_NAME: &str = "TestCoin";
+        let resources = concat!(env!("CARGO_MANIFEST_DIR"), "/resources");
+
+        let mut vm = CasperVm::new_instance_with_mode(true);
+        let deployer = vm.active_account_hash();
+        let alice = vm.accounts[1];
+        let alice_key = Key::Account(*alice.as_account_hash().unwrap());
+
+        // Install the upstream token and its test (client) contract.
+        let error = vm.deploy_wasm(
+            &format!("{}/cep18.wasm", resources),
+            &runtime_args! {
+                "name" => TOKEN_NAME,
+                "symbol" => "TC",
+                "decimals" => 8u8,
+                "total_supply" => U256::from(1_000_000u64),
+            }
+        );
+        assert!(error.is_none(), "cep18 install failed: {:?}", error);
+        let error = vm.deploy_wasm(
+            &format!("{}/cep18_test_contract.wasm", resources),
+            &RuntimeArgs::new()
+        );
+        assert!(error.is_none(), "test contract install failed: {:?}", error);
+
+        let named_keys = vm.context.get_named_keys_by_account_hash(deployer);
+        let get_hash = |name: &str| -> HashAddr {
+            named_keys
+                .get(name)
+                .unwrap_or_else(|| panic!("missing named key {}", name))
+                .into_hash_addr()
+                .unwrap_or_else(|| panic!("named key {} is not a hash", name))
+        };
+        let token_contract = get_hash(&format!("cep18_contract_hash_{}", TOKEN_NAME));
+        let token_contract_key = Key::Hash(token_contract);
+        let client_package = get_hash("cep18_test_contract_package_hash");
+        let client_package_key = Key::Hash(client_package);
+
+        let mut call = |vm: &mut CasperVm, contract: HashAddr, entry_point: &str, args: RuntimeArgs| {
+            let request = ExecuteRequestBuilder::contract_call_by_hash(
+                deployer,
+                AddressableEntityHash::new(contract),
+                entry_point,
+                args
+            )
+            .with_protocol_version(vm.protocol_version)
+            .build();
+            vm.context.exec(request).commit();
+            vm.context.get_error()
+        };
+        let client_contract = get_hash("cep18_test_contract_hash");
+        let read_result = |vm: &CasperVm| -> U256 {
+            let key = vm
+                .package_named_key(PackageHash::new(client_package), "result")
+                .expect("result key");
+            vm.get_value(key)
+        };
+        let check_balance = |vm: &mut CasperVm,
+                             call: &mut dyn FnMut(
+            &mut CasperVm,
+            HashAddr,
+            &str,
+            RuntimeArgs
+        ) -> Option<engine_state::Error>,
+                             address: Key|
+         -> U256 {
+            let error = call(
+                vm,
+                client_contract,
+                "check_balance_of",
+                runtime_args! { "token_contract" => token_contract_key, "address" => address }
+            );
+            assert!(error.is_none(), "check_balance_of failed: {:?}", error);
+            read_result(vm)
+        };
+
+        // Pre-switch: fund the client contract and let it spend as a contract.
+        let error = call(
+            &mut vm,
+            token_contract,
+            "transfer",
+            runtime_args! { "recipient" => client_package_key, "amount" => U256::from(1_000u64) }
+        );
+        assert!(error.is_none(), "account transfer failed: {:?}", error);
+        let error = call(
+            &mut vm,
+            client_contract,
+            "transfer_as_stored_contract",
+            runtime_args! {
+                "token_contract" => token_contract_key,
+                "recipient" => alice_key,
+                "amount" => U256::from(400u64)
+            }
+        );
+        assert!(error.is_none(), "contract transfer failed: {:?}", error);
+        assert_eq!(
+            check_balance(&mut vm, &mut call, client_package_key),
+            U256::from(600u64)
+        );
+        assert_eq!(check_balance(&mut vm, &mut call, alice_key), U256::from(400u64));
+
+        assert!(vm.enable_addressable_entity());
+
+        // Account-held balances keep working across the switch.
+        assert_eq!(check_balance(&mut vm, &mut call, alice_key), U256::from(400u64));
+        let error = call(
+            &mut vm,
+            token_contract,
+            "transfer",
+            runtime_args! { "recipient" => alice_key, "amount" => U256::from(100u64) }
+        );
+        assert!(error.is_none(), "post-switch account transfer failed: {:?}", error);
+        assert_eq!(check_balance(&mut vm, &mut call, alice_key), U256::from(500u64));
+
+        // The contract's pre-switch balance is still recorded under its legacy key...
+        assert_eq!(
+            check_balance(&mut vm, &mut call, client_package_key),
+            U256::from(600u64)
+        );
+
+        // ...but the contract can no longer spend it: its caller identity now
+        // resolves to `Key::AddressableEntity(<entity>)`, whose balance is zero,
+        // so the transfer fails with Cep18Error::InsufficientBalance (60001).
+        let error = call(
+            &mut vm,
+            client_contract,
+            "transfer_as_stored_contract",
+            runtime_args! {
+                "token_contract" => token_contract_key,
+                "recipient" => alice_key,
+                "amount" => U256::from(100u64)
+            }
+        );
+        assert!(
+            error.is_some(),
+            "expected the upstream cep18 contract-caller transfer to fail after \
+             the addressable-entity switch; it succeeded - the upstream bug may \
+             have been fixed, update the vendored wasm and these assertions"
+        );
+        // The contract's funds remain locked under the legacy key.
+        assert_eq!(
+            check_balance(&mut vm, &mut call, client_package_key),
+            U256::from(600u64)
+        );
     }
 }
