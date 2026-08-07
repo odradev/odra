@@ -52,14 +52,14 @@ odra-schema = { path = "odra-schema", version = "2.9.1" }
 odra-vm = { path = "odra-vm", version = "2.9.1" }
 odra-wasm-client = { path = "odra-wasm-client", version = "2.9.1" }
 
-casper-client = { version = "=5.0.0", default-features = false }
+casper-client = { git = "https://github.com/casper-ecosystem/casper-client-rs", branch = "update-casper-types-to-7", default-features = false }
 casper-contract = { version = "5.1", default-features = false }
 casper-contract-schema = { version = "0.6.0" }
-casper-engine-test-support = "8.1"
+casper-engine-test-support = "9.0"
 casper-event-standard = "0.7"
-casper-execution-engine = "8.1"
-casper-storage = "2.1"
-casper-types = "6.1"
+casper-execution-engine = "9.0"
+casper-storage = "5.0"
+casper-types = "7.0"
 
 anyhow = { version = "1.0", default-features = false }
 backtrace = { version = "0.3" }
@@ -116,3 +116,18 @@ lto = true
 
 [profile.dev.package."*"]
 opt-level = 3
+
+# Casper 2.x addressable-entity stack: published crates (casper-storage 2.1.1 /
+# EE 8.1.1) cannot run with enable_addressable_entity - genesis ignores the flag
+# and lazy migration mis-files system contract named keys. The stack below
+# (types 7.0.0 / storage 5.0.0 / EE 9.0.0) fixes this; casper-engine-test-support
+# 9.0.0 is unpublished, hence the local casper-node checkout. The vendored
+# crates are registry copies with their casper-types requirement bumped to 7.
+[patch.crates-io]
+casper-types = { path = "../casper-node/types" }
+casper-storage = { path = "../casper-node/storage" }
+casper-execution-engine = { path = "../casper-node/execution_engine" }
+casper-engine-test-support = { path = "../casper-node/execution_engine_testing/test_support" }
+casper-contract = { path = "../casper-node/smart_contracts/contract" }
+casper-event-standard = { path = "../vendor/casper-event-standard" }
+casper-contract-schema = { path = "../vendor/casper-contract-schema" }

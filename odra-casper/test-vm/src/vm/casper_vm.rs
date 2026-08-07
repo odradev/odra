@@ -17,6 +17,7 @@ use std::path::PathBuf;
 
 use casper_engine_test_support::{
     ChainspecConfig, DeployItemBuilder, EntityWithNamedKeys, ExecuteRequestBuilder,
+    CHAINSPEC_SYMLINK,
     LmdbWasmTestBuilder, WasmTestBuilder, ARG_AMOUNT, DEFAULT_ACCOUNTS, DEFAULT_AUCTION_DELAY,
     DEFAULT_CHAINSPEC_REGISTRY, DEFAULT_EXEC_CONFIG, DEFAULT_GENESIS_CONFIG_HASH,
     DEFAULT_GENESIS_TIMESTAMP_MILLIS, DEFAULT_LOCKED_FUNDS_PERIOD_MILLIS, DEFAULT_PAYMENT,
@@ -179,23 +180,22 @@ impl CasperVm {
         }
     }
 
-    fn total_delegated_amount(&mut self, validator: PublicKey) -> U512 {
-        let bids = self
-            .context
+    fn validator_staked_amount(&mut self, validator: PublicKey) -> U512 {
+        self.context
             .get_bids()
             .into_iter()
-            .filter(|bid| bid.validator_public_key() == validator)
-            .collect::<Vec<_>>();
-
-        bids.iter().fold(U512::zero(), |acc, bid| {
-            acc + bid.staked_amount().unwrap_or_default()
-        })
+            .filter(|bid| bid.validator_public_key() == validator && !bid.is_delegator())
+            .fold(U512::zero(), |acc, bid| {
+                acc + bid.staked_amount().unwrap_or_default()
+            })
     }
 
     /// Disables the validator.
     /// Undelegates the validator's stakes.
     pub fn remove_validator(&mut self, validator: PublicKey) {
-        let amount = self.total_delegated_amount(validator.clone());
+        // Since casper 2.1 withdrawing more than the validator's own stake is an error
+        // (`UnbondTooLarge`); zeroing the validator bid undelegates its delegators.
+        let amount = self.validator_staked_amount(validator.clone());
         let withdraw_request = ExecuteRequestBuilder::contract_call_by_hash(
             validator.to_account_hash(),
             self.context.get_auction_contract_hash(),
@@ -704,13 +704,15 @@ impl CasperVm {
         let (genesis_accounts, validators) = Self::genesis_accounts(&key_pairs);
         let accounts: Vec<Address> = key_pairs.keys().copied().collect();
 
-        let mut builder = LmdbWasmTestBuilder::default();
-        let chainspec = ChainspecConfig::create_genesis_request_from_local_chainspec(
-            genesis_accounts.clone(),
-            ProtocolVersion::V2_0_0
-        );
+        let chainspec = ChainspecConfig::from_chainspec_path(&*CHAINSPEC_SYMLINK)
+            .unwrap()
+            .with_enable_addressable_entity(true);
+        let genesis_request = chainspec
+            .create_genesis_request(genesis_accounts.clone(), ProtocolVersion::V2_0_0)
+            .unwrap();
 
-        builder.run_genesis(chainspec.unwrap()).commit();
+        let mut builder = LmdbWasmTestBuilder::new_temporary_with_config(chainspec);
+        builder.run_genesis(genesis_request).commit();
         let unbonding_delay = builder.get_unbonding_delay();
         let auction_delay = builder.get_auction_delay();
         builder.advance_eras_by(unbonding_delay + auction_delay);
