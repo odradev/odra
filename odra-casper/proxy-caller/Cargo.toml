@@ -47,3 +47,12 @@ lto = true
 opt-level = 3
 panic = "abort"
 strip = true
+
+# This package is excluded from the root workspace, so it needs its own copy of
+# the root Cargo.toml [patch.crates-io] section (kept in sync manually, limited
+# to the crates in this package's graph) - see the comment there for why the
+# casper stack is patched.
+[patch.crates-io]
+casper-types = { git = "https://github.com/casper-network/casper-node", rev = "6e6621ca4fcb77ab69c0a6f7e52d2dd7f1c41cea" }
+casper-contract = { git = "https://github.com/casper-network/casper-node", rev = "6e6621ca4fcb77ab69c0a6f7e52d2dd7f1c41cea" }
+casper-event-standard = { git = "https://github.com/odradev/casper-event-standard", branch = "feature/casper-types-7" }

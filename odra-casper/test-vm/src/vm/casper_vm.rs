@@ -17,8 +17,8 @@ use std::path::PathBuf;
 
 use casper_engine_test_support::{
     ChainspecConfig, DeployItemBuilder, EntityWithNamedKeys, ExecuteRequestBuilder,
-    TransferRequestBuilder, UpgradeRequestBuilder, CHAINSPEC_SYMLINK,
-    LmdbWasmTestBuilder, WasmTestBuilder, ARG_AMOUNT, DEFAULT_ACCOUNTS, DEFAULT_AUCTION_DELAY,
+    LmdbWasmTestBuilder, TransferRequestBuilder, UpgradeRequestBuilder, WasmTestBuilder,
+    ARG_AMOUNT, CHAINSPEC_SYMLINK, DEFAULT_ACCOUNTS, DEFAULT_AUCTION_DELAY,
     DEFAULT_CHAINSPEC_REGISTRY, DEFAULT_EXEC_CONFIG, DEFAULT_GENESIS_CONFIG_HASH,
     DEFAULT_GENESIS_TIMESTAMP_MILLIS, DEFAULT_LOCKED_FUNDS_PERIOD_MILLIS, DEFAULT_PAYMENT,
     DEFAULT_PROTOCOL_VERSION, DEFAULT_ROUND_SEIGNIORAGE_RATE, DEFAULT_SYSTEM_CONFIG,
@@ -262,7 +262,7 @@ impl CasperVm {
         // layer at construction time, so the only way to change it is to reopen
         // the global state with a new configuration. LMDB must not be opened
         // twice within one process - drop the old builder first.
-        let old_builder = std::mem::replace(&mut self.context, LmdbWasmTestBuilder::default());
+        let old_builder = std::mem::take(&mut self.context);
         drop(old_builder);
 
         let chainspec = self.chainspec.clone().with_enable_addressable_entity(true);
@@ -298,9 +298,12 @@ impl CasperVm {
         match address {
             Address::Account(account) => {
                 // Works in both legacy and addressable-entity mode.
-                let entity = self.context.get_entity_by_account_hash(account).unwrap_or_else(|| {
-                    panic!("Account not found while getting entity addr: {:?}", account)
-                });
+                let entity = self
+                    .context
+                    .get_entity_by_account_hash(account)
+                    .unwrap_or_else(|| {
+                        panic!("Account not found while getting entity addr: {:?}", account)
+                    });
                 entity.main_purse()
             }
             Address::Contract(contract) => self
@@ -840,7 +843,11 @@ impl CasperVm {
 
     /// Deploys a session wasm from the given path with the given args,
     /// signed by the active account. Returns the execution error, if any.
-    pub fn deploy_wasm(&mut self, wasm_path: &str, args: &RuntimeArgs) -> Option<engine_state::Error> {
+    pub fn deploy_wasm(
+        &mut self,
+        wasm_path: &str,
+        args: &RuntimeArgs
+    ) -> Option<engine_state::Error> {
         self.error = None;
         let session_code = PathBuf::from(wasm_path);
         let deploy_item = DeployItemBuilder::new()
@@ -907,7 +914,10 @@ impl CasperVm {
             return entity.named_keys().clone();
         }
         // A legacy contract not yet migrated to an entity.
-        match self.context.query(None, Key::Hash(addressable_entity_hash.value()), &[]) {
+        match self
+            .context
+            .query(None, Key::Hash(addressable_entity_hash.value()), &[])
+        {
             Ok(StoredValue::Contract(contract)) => contract.take_named_keys(),
             other => panic!("Contract not found: {:?}", other)
         }
@@ -1076,11 +1086,17 @@ mod tests {
         let pre_balance = vm.balance_of(&recipient);
 
         // Pre-flip the account is a legacy record.
-        let stored = vm.context.query(None, Key::Account(sender_hash), &[]).unwrap();
+        let stored = vm
+            .context
+            .query(None, Key::Account(sender_hash), &[])
+            .unwrap();
         assert!(matches!(stored, StoredValue::Account(_)));
 
         assert!(vm.enable_addressable_entity());
-        assert!(!vm.enable_addressable_entity(), "second switch must be a no-op");
+        assert!(
+            !vm.enable_addressable_entity(),
+            "second switch must be a no-op"
+        );
 
         // First use after the switch migrates the account lazily.
         let amount = U512::from(1_000_000_000_000u64);
@@ -1088,7 +1104,10 @@ mod tests {
         assert_eq!(vm.balance_of(&recipient), pre_balance + amount);
 
         // Key::Account now points at an entity that carries the account hash bytes.
-        let stored = vm.context.query(None, Key::Account(sender_hash), &[]).unwrap();
+        let stored = vm
+            .context
+            .query(None, Key::Account(sender_hash), &[])
+            .unwrap();
         let entity_key = match stored {
             StoredValue::CLValue(cl_value) => cl_value.into_t::<Key>().unwrap(),
             other => panic!("expected CLValue indirection, got {:?}", other)
@@ -1156,18 +1175,19 @@ mod tests {
         let client_package = get_hash("cep18_test_contract_package_hash");
         let client_package_key = Key::Hash(client_package);
 
-        let mut call = |vm: &mut CasperVm, contract: HashAddr, entry_point: &str, args: RuntimeArgs| {
-            let request = ExecuteRequestBuilder::contract_call_by_hash(
-                deployer,
-                AddressableEntityHash::new(contract),
-                entry_point,
-                args
-            )
-            .with_protocol_version(vm.protocol_version)
-            .build();
-            vm.context.exec(request).commit();
-            vm.context.get_error()
-        };
+        let mut call =
+            |vm: &mut CasperVm, contract: HashAddr, entry_point: &str, args: RuntimeArgs| {
+                let request = ExecuteRequestBuilder::contract_call_by_hash(
+                    deployer,
+                    AddressableEntityHash::new(contract),
+                    entry_point,
+                    args
+                )
+                .with_protocol_version(vm.protocol_version)
+                .build();
+                vm.context.exec(request).commit();
+                vm.context.get_error()
+            };
         let client_contract = get_hash("cep18_test_contract_hash");
         let read_result = |vm: &CasperVm| -> U256 {
             let key = vm
@@ -1217,20 +1237,33 @@ mod tests {
             check_balance(&mut vm, &mut call, client_package_key),
             U256::from(600u64)
         );
-        assert_eq!(check_balance(&mut vm, &mut call, alice_key), U256::from(400u64));
+        assert_eq!(
+            check_balance(&mut vm, &mut call, alice_key),
+            U256::from(400u64)
+        );
 
         assert!(vm.enable_addressable_entity());
 
         // Account-held balances keep working across the switch.
-        assert_eq!(check_balance(&mut vm, &mut call, alice_key), U256::from(400u64));
+        assert_eq!(
+            check_balance(&mut vm, &mut call, alice_key),
+            U256::from(400u64)
+        );
         let error = call(
             &mut vm,
             token_contract,
             "transfer",
             runtime_args! { "recipient" => alice_key, "amount" => U256::from(100u64) }
         );
-        assert!(error.is_none(), "post-switch account transfer failed: {:?}", error);
-        assert_eq!(check_balance(&mut vm, &mut call, alice_key), U256::from(500u64));
+        assert!(
+            error.is_none(),
+            "post-switch account transfer failed: {:?}",
+            error
+        );
+        assert_eq!(
+            check_balance(&mut vm, &mut call, alice_key),
+            U256::from(500u64)
+        );
 
         // The contract's pre-switch balance is still recorded under its legacy key...
         assert_eq!(

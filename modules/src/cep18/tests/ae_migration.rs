@@ -131,10 +131,7 @@ mod ae_migration_tests {
             alice,
             TRANSFER_AMOUNT_1.into()
         );
-        assert_eq!(
-            cep18_token.balance_of(&client_contract.address()),
-            0.into()
-        );
+        assert_eq!(cep18_token.balance_of(&client_contract.address()), 0.into());
         assert_eq!(
             cep18_token.balance_of(&alice),
             (2 * TRANSFER_AMOUNT_1).into()
