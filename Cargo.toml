@@ -122,13 +122,14 @@ opt-level = 3
 # EE 8.1.1) cannot run with enable_addressable_entity - genesis ignores the flag
 # and lazy migration mis-files system contract named keys. The stack below
 # (types 7.0.0 / storage 5.0.0 / EE 9.0.0) fixes this; casper-engine-test-support
-# 9.0.0 is unpublished, hence the local casper-node checkout. The vendored
-# crates are registry copies with their casper-types requirement bumped to 7.
+# 9.0.0 is unpublished on crates.io, hence the pinned casper-node git revision
+# (dev branch). casper-event-standard and casper-contract-schema come from their
+# feature/casper-types-7 branches (casper-types requirement bumped from 6 to 7).
 [patch.crates-io]
-casper-types = { path = "../casper-node/types" }
-casper-storage = { path = "../casper-node/storage" }
-casper-execution-engine = { path = "../casper-node/execution_engine" }
-casper-engine-test-support = { path = "../casper-node/execution_engine_testing/test_support" }
-casper-contract = { path = "../casper-node/smart_contracts/contract" }
-casper-event-standard = { path = "../vendor/casper-event-standard" }
-casper-contract-schema = { path = "../vendor/casper-contract-schema" }
+casper-types = { git = "https://github.com/casper-network/casper-node", rev = "6e6621ca4fcb77ab69c0a6f7e52d2dd7f1c41cea" }
+casper-storage = { git = "https://github.com/casper-network/casper-node", rev = "6e6621ca4fcb77ab69c0a6f7e52d2dd7f1c41cea" }
+casper-execution-engine = { git = "https://github.com/casper-network/casper-node", rev = "6e6621ca4fcb77ab69c0a6f7e52d2dd7f1c41cea" }
+casper-engine-test-support = { git = "https://github.com/casper-network/casper-node", rev = "6e6621ca4fcb77ab69c0a6f7e52d2dd7f1c41cea" }
+casper-contract = { git = "https://github.com/casper-network/casper-node", rev = "6e6621ca4fcb77ab69c0a6f7e52d2dd7f1c41cea" }
+casper-event-standard = { git = "https://github.com/odradev/casper-event-standard", branch = "feature/casper-types-7" }
+casper-contract-schema = { git = "https://github.com/odradev/casper-contract-schema", branch = "feature/casper-types-7" }
