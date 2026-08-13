@@ -9,7 +9,7 @@ use crate::{
 };
 use casper_client::{
     cli::{DeployBuilder, TransactionV1Builder},
-    rpcs::GlobalStateIdentifier,
+    rpcs::common::GlobalStateIdentifier,
     JsonRpcId
 };
 use casper_types::{
@@ -334,7 +334,7 @@ impl OdraWasmClient {
             self.rpc_id(),
             self.node_address(),
             self.verbosity().into(),
-            GlobalStateIdentifier::StateRootHash(digest),
+            Some(GlobalStateIdentifier::StateRootHash(digest)),
             key,
             path
         )

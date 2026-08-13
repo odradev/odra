@@ -110,6 +110,8 @@ pub fn install_new_contract(
         revert(ExecutionError::CannotOverrideKeys);
     }
     let is_upgradable: bool = runtime::get_named_arg(IS_UPGRADABLE_ARG);
+    let mut entry_points = entry_points;
+    entry_points.add_entry_point(odra_noop_entry_point());
     let has_init = entry_points
         .get("init")
         .map(|ep| *ep.access() != EntryPointAccess::Template)
@@ -125,14 +127,14 @@ pub fn install_new_contract(
 
     // Create new contract.
     let access_uref_key = format!("{}_access_token", package_hash_key_name);
-    if is_upgradable {
+    let (version_hash, _) = if is_upgradable {
         storage::new_contract(
             entry_points,
             Some(named_keys),
             Some(package_hash_key_name.clone()),
             Some(access_uref_key.clone()),
             Some(message_topics)
-        );
+        )
     } else {
         storage::new_locked_contract(
             entry_points,
@@ -140,7 +142,7 @@ pub fn install_new_contract(
             Some(package_hash_key_name.clone()),
             Some(access_uref_key.clone()),
             Some(message_topics)
-        );
+        )
     };
     // Read package hash from the storage.
     let contract_hash: PackageHash = runtime::get_key(&package_hash_key_name)
@@ -149,6 +151,13 @@ pub fn install_new_contract(
         .unwrap_or_revert_with(ApiError::BufferTooSmall);
 
     let contract_package_hash = ContractPackageHash::new(contract_hash.value());
+    // Track the current version hash so an upgrade can disable it. Under
+    // addressable-entity mode the package record cannot be read from wasm,
+    // so the package query in `upgrade_contract` needs this fallback.
+    runtime::put_key(
+        &latest_version_key_name(&contract_package_hash),
+        Key::Hash(version_hash.value())
+    );
     if has_init {
         let init_access = create_contract_user_group(contract_package_hash, CONSTRUCTOR_GROUP_NAME);
         let _: () = runtime::call_versioned_contract(
@@ -197,6 +206,7 @@ pub fn upgrade_contract(
 ) -> ContractPackageHash {
     // Add `migrate_events` entry point to the contract. It is run during the every upgrade.
     let mut entry_points = entry_points;
+    entry_points.add_entry_point(odra_noop_entry_point());
     entry_points.add_entry_point(EntityEntryPoint::new(
         "migrate_events",
         Parameters::from([Parameter::new("schemas", CLType::Any)]),
@@ -248,14 +258,27 @@ pub fn upgrade_contract(
     let named_keys = initial_named_keys(events.clone());
 
     let contract_package_hash = ContractPackageHash::new(package_hash_to_upgrade);
-    let previous_contract_hash = get_latest_contract_hash(contract_package_hash);
+    force_package_migration_if_needed(contract_package_hash);
+    let previous_contract_hash = read_latest_contract_hash(contract_package_hash)
+        // Addressable-entity mode: the package record cannot be read from wasm,
+        // use the version hash tracked in the account's named keys instead.
+        .or_else(|| {
+            runtime::get_key(&latest_version_key_name(&contract_package_hash))
+                .and_then(|key| key.into_hash_addr())
+                .map(ContractHash::new)
+        })
+        .unwrap_or_revert_with(ApiError::ContractNotFound);
 
     // Upgrade!
-    storage::add_contract_version(
+    let (new_version_hash, _) = storage::add_contract_version(
         contract_package_hash,
         entry_points,
         named_keys,
         BTreeMap::new()
+    );
+    runtime::put_key(
+        &latest_version_key_name(&contract_package_hash),
+        Key::Hash(new_version_hash.value())
     );
 
     // Store the new contract package hash under the provided key. We do it in case of user provided a new key.
@@ -1034,13 +1057,65 @@ pub fn get_validator_info(validator: PublicKey) -> Option<ValidatorInfo> {
 
 /// Retrieves latest contract version from the storage
 pub fn get_latest_contract_hash(contract_package_hash: ContractPackageHash) -> ContractHash {
-    let key = Key::from(contract_package_hash);
+    read_latest_contract_hash(contract_package_hash)
+        .unwrap_or_revert_with(ApiError::ContractNotFound)
+}
 
-    storage::read_from_key::<ContractPackage>(key)
+/// Reads the latest contract version from the legacy package record, if readable.
+fn read_latest_contract_hash(contract_package_hash: ContractPackageHash) -> Option<ContractHash> {
+    storage::read_from_key::<ContractPackage>(Key::from(contract_package_hash))
         .ok()
         .and_then(|opt_contract_package| opt_contract_package)
         .and_then(|contract_package| contract_package.current_contract_hash())
-        .unwrap_or_revert_with(ApiError::ContractNotFound)
+}
+
+/// The no-op entry point registered on every Odra contract; its wasm export
+/// lives in this crate's `lib.rs` and is linked into every contract binary.
+fn odra_noop_entry_point() -> EntityEntryPoint {
+    EntityEntryPoint::new(
+        "odra_noop",
+        Parameters::new(),
+        CLType::Unit,
+        EntryPointAccess::Public,
+        EntryPointType::Called,
+        EntryPointPayment::Caller
+    )
+}
+
+/// Under addressable-entity mode a package installed before the switch keeps its
+/// legacy record until a contract call migrates it. `add_contract_version` on
+/// such a package is broken in the execution engine: it reads the legacy record
+/// but writes the updated package to the entity-mode location, so calls keep
+/// resolving the stale legacy record and the subsequent lazy migration discards
+/// the added version. A successful contract call performed *before*
+/// `add_contract_version` triggers the migration; the `odra_noop` entry point
+/// exists on every Odra contract precisely for this. Contracts installed with
+/// Odra versions predating `odra_noop` cannot be upgraded across the
+/// addressable-entity switch this way.
+fn force_package_migration_if_needed(contract_package_hash: ContractPackageHash) {
+    if !runtime::get_addressable_entity() {
+        return;
+    }
+    let legacy_package =
+        storage::read_from_key::<ContractPackage>(Key::from(contract_package_hash))
+            .ok()
+            .and_then(|opt_contract_package| opt_contract_package);
+    if legacy_package.is_none() {
+        // Already migrated or installed in entity mode.
+        return;
+    }
+
+    let _: () = runtime::call_versioned_contract(
+        contract_package_hash,
+        None,
+        "odra_noop",
+        RuntimeArgs::new()
+    );
+}
+
+/// The name of the account named key tracking a package's current version hash.
+fn latest_version_key_name(contract_package_hash: &ContractPackageHash) -> String {
+    format!("odra_latest_version_{}", contract_package_hash)
 }
 
 /// Retrieves latest contract version number from the storage

@@ -52,14 +52,14 @@ odra-schema = { path = "odra-schema", version = "2.9.1" }
 odra-vm = { path = "odra-vm", version = "2.9.1" }
 odra-wasm-client = { path = "odra-wasm-client", version = "2.9.1" }
 
-casper-client = { version = "=5.0.0", default-features = false }
+casper-client = { git = "https://github.com/casper-ecosystem/casper-client-rs", branch = "update-casper-types-to-7", default-features = false }
 casper-contract = { version = "5.1", default-features = false }
 casper-contract-schema = { version = "0.6.0" }
-casper-engine-test-support = "8.1"
+casper-engine-test-support = "9.0"
 casper-event-standard = "0.7"
-casper-execution-engine = "8.1"
-casper-storage = "2.1"
-casper-types = "6.1"
+casper-execution-engine = "9.0"
+casper-storage = "5.0"
+casper-types = "7.0"
 
 anyhow = { version = "1.0", default-features = false }
 backtrace = { version = "0.3" }
@@ -99,6 +99,7 @@ serde_derive = {  version = "1.0" }
 serde-json-wasm = { version = "1.0", default-features = false }
 serde_json = { version = "1.0", default-features = false }
 sha3 = { version = "0.10", default-features = false }
+tempfile = "3"
 shlex = "1"
 syn = "2.0"
 syn_derive = "0.2"
@@ -116,3 +117,35 @@ lto = true
 
 [profile.dev.package."*"]
 opt-level = 3
+
+# Casper 2.x addressable-entity stack. The old published crates (casper-storage
+# 2.1.1 / EE 8.1.1) cannot run with enable_addressable_entity - genesis ignores
+# the flag and lazy migration mis-files system contract named keys. The types 7 /
+# storage 5 / EE 9 stack fixes this.
+#
+# What casper-node still needs to publish (checked 2026-08-13):
+#   published on crates.io: casper-types 7.0.0, casper-storage 5.0.0,
+#     casper-execution-engine 9.0.0 (these compose correctly).
+#   MISSING: casper-engine-test-support >= 9.0.0 (latest release 8.1.1 still
+#     pulls types 6 / storage 2.1.1 / EE 8.1.1), and a casper-contract release
+#     requiring casper-types 7 (published 5.1.1 requires casper-types ^6.0.1).
+#
+# Because casper-engine-test-support must come from git and its manifest uses
+# in-repo path deps on types/storage/EE/contract, those siblings are pulled from
+# the same git rev - and cargo will not unify a crates.io copy with a git copy of
+# the same crate. So ALL five casper-node crates stay patched to the pinned git
+# rev until BOTH missing crates above are published; patching only test-support
+# would duplicate casper-types and fail to compile. Once they ship, delete the
+# five git lines and use plain "7"/"5"/"9"/... version requirements.
+#
+# casper-event-standard and casper-contract-schema come from their
+# feature/casper-types-7 branches (casper-types requirement bumped from 6 to 7),
+# and stay until those changes are released.
+[patch.crates-io]
+casper-types = { git = "https://github.com/casper-network/casper-node", rev = "6e6621ca4fcb77ab69c0a6f7e52d2dd7f1c41cea" }
+casper-storage = { git = "https://github.com/casper-network/casper-node", rev = "6e6621ca4fcb77ab69c0a6f7e52d2dd7f1c41cea" }
+casper-execution-engine = { git = "https://github.com/casper-network/casper-node", rev = "6e6621ca4fcb77ab69c0a6f7e52d2dd7f1c41cea" }
+casper-engine-test-support = { git = "https://github.com/casper-network/casper-node", rev = "6e6621ca4fcb77ab69c0a6f7e52d2dd7f1c41cea" }
+casper-contract = { git = "https://github.com/casper-network/casper-node", rev = "6e6621ca4fcb77ab69c0a6f7e52d2dd7f1c41cea" }
+casper-event-standard = { git = "https://github.com/odradev/casper-event-standard", branch = "feature/casper-types-7" }
+casper-contract-schema = { git = "https://github.com/odradev/casper-contract-schema", branch = "feature/casper-types-7" }

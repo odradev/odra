@@ -5,8 +5,8 @@ use crate::error::LivenetError::{ClientError, DictQueryError};
 use crate::log;
 use crate::utils::extract_stored_value;
 use casper_client::cli::{get_account, get_dictionary_item, DictionaryItemStrParams};
+use casper_client::rpcs::common::GlobalStateIdentifier;
 use casper_client::rpcs::results::{GetDeployResult, GetTransactionResult};
-use casper_client::rpcs::GlobalStateIdentifier;
 use casper_client::{get_balance, get_deploy, get_transaction, query_global_state};
 use casper_types::bytesrepr::{deserialize_from_slice, Bytes};
 use casper_types::StoredValue::CLValue;
@@ -409,7 +409,7 @@ impl super::CasperClient {
             self.rpc_id_typed(),
             self.configuration.node_address(),
             self.configuration.verbosity_typed(),
-            GlobalStateIdentifier::StateRootHash(state_root_hash),
+            Some(GlobalStateIdentifier::StateRootHash(state_root_hash)),
             key,
             path
         )

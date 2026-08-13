@@ -339,6 +339,16 @@ pub trait HostContext {
     /// The validator at the given index will withdraw all funds and be removed from the validator set.
     fn remove_validator(&self, index: usize);
 
+    /// Switches the backend from legacy mode to addressable-entity mode,
+    /// migrating the existing chain state like a real network upgrade would.
+    ///
+    /// Returns `true` if the migration was performed. The default implementation
+    /// returns `false` - backends without such a mode switch (OdraVM, livenet, or
+    /// a CasperVm that already runs in addressable-entity mode) change nothing.
+    fn enable_addressable_entity(&self) -> bool {
+        false
+    }
+
     /// Returns the CSPR balance of the specified address.
     fn balance_of(&self, address: &Address) -> U512;
 
@@ -519,6 +529,17 @@ impl HostEnv {
     pub fn remove_validator(&self, index: usize) {
         let backend = self.backend.as_ref();
         backend.remove_validator(index);
+    }
+
+    /// Switches the backend from legacy mode to addressable-entity mode,
+    /// migrating the existing chain state like a real network upgrade would.
+    ///
+    /// Returns `true` if the migration was performed, `false` if the backend
+    /// does not support the switch or already runs in addressable-entity mode.
+    /// See `CasperVm::enable_addressable_entity` for details.
+    pub fn enable_addressable_entity(&self) -> bool {
+        let backend = self.backend.as_ref();
+        backend.enable_addressable_entity()
     }
 
     /// Returns the current block time in milliseconds.
