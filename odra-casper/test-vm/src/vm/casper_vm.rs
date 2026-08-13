@@ -83,6 +83,48 @@ impl CasperVm {
         Rc::new(RefCell::new(Self::new_instance()))
     }
 
+    /// Creates a new instance with predefined accounts, explicitly choosing the
+    /// genesis mode instead of reading `ODRA_CASPER_LEGACY_GENESIS`.
+    ///
+    /// With `legacy_genesis` set, the chain starts without addressable entity
+    /// and can later be switched with [CasperVm::enable_addressable_entity].
+    pub fn new_with_mode(legacy_genesis: bool) -> Rc<RefCell<Self>> {
+        Rc::new(RefCell::new(Self::new_instance_with_mode(legacy_genesis)))
+    }
+
+    /// Queries the global state at the current state root.
+    pub fn query(&self, key: Key) -> Result<StoredValue, String> {
+        self.context.query(None, key, &[])
+    }
+
+    /// Returns the named keys of the given account.
+    pub fn account_named_keys(&self, account_hash: AccountHash) -> NamedKeys {
+        self.context.get_named_keys_by_account_hash(account_hash)
+    }
+
+    /// Calls an entry point of the current version of the given package as the
+    /// active account, without the Odra calling convention (no proxy, raw args).
+    /// Returns the execution error, if any.
+    pub fn call_package(
+        &mut self,
+        package_hash: PackageHash,
+        entry_point: &str,
+        args: &RuntimeArgs
+    ) -> Option<engine_state::Error> {
+        let request = ExecuteRequestBuilder::versioned_contract_call_by_hash(
+            self.active_account_hash(),
+            package_hash,
+            None,
+            entry_point,
+            args.clone()
+        )
+        .with_block_time(self.block_time)
+        .with_protocol_version(self.protocol_version)
+        .build();
+        self.context.exec(request).commit();
+        self.context.get_error()
+    }
+
     /// Read a PackageHash of a given name, from the active account.
     pub fn package_hash_from_name(&self, name: &str) -> PackageHash {
         let named_keys = self
