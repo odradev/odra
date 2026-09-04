@@ -169,7 +169,8 @@ impl TryFrom<&'_ ModuleImplIR> for CallFnItem {
         let install_or_upgrade_stmt = utils::stmt::install_or_upgrade(
             parse_quote!(#ident_entry_points()),
             parse_quote!(#ident_schemas),
-            parse_quote!(#ident_args)
+            parse_quote!(#ident_args),
+            module.requires_native_event_topic()
         );
 
         Ok(Self {
@@ -406,7 +407,8 @@ mod test {
                     odra::odra_casper_wasm_env::host_functions::install_or_upgrade(
                         entry_points(),
                         schemas,
-                        named_args
+                        named_args,
+                        false
                     );
                 }
 
@@ -519,7 +521,8 @@ mod test {
                     odra::odra_casper_wasm_env::host_functions::install_or_upgrade(
                         entry_points(),
                         schemas,
-                        named_args
+                        named_args,
+                        false
                     );
                 }
 
@@ -626,7 +629,8 @@ mod test {
                     odra::odra_casper_wasm_env::host_functions::install_or_upgrade(
                         entry_points(),
                         schemas,
-                        named_args
+                        named_args,
+                        false
                     );
                 }
 

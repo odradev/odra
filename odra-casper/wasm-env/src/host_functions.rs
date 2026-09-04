@@ -74,16 +74,22 @@ pub(crate) static mut ATTACHED_VALUE: U512 = U512::zero();
 static mut CALLER_OVERRIDE: bool = false;
 
 /// Installs or upgrades a contract based on the provided entry points, events, and initialization arguments.
+///
+/// `register_native_event_topic` should reflect whether the contract's configured
+/// [`EventMode`](odra_core::EventMode) can ever emit a native event: it is only consulted on
+/// install (an upgrade never touches message topics), and a CES-only contract that passes
+/// `false` here does not pay for a topic it will never write to.
 pub fn install_or_upgrade(
     entry_points: EntryPoints,
     events: Schemas,
-    init_args: Option<RuntimeArgs>
+    init_args: Option<RuntimeArgs>,
+    register_native_event_topic: bool
 ) -> ContractPackageHash {
     let is_upgrade = runtime::try_get_named_arg(IS_UPGRADE_ARG).unwrap_or_default();
     if is_upgrade {
         upgrade_contract(entry_points, events, init_args)
     } else {
-        install_new_contract(entry_points, events, init_args).0
+        install_new_contract(entry_points, events, init_args, register_native_event_topic).0
     }
 }
 
@@ -96,10 +102,15 @@ pub fn install_or_upgrade(
 /// argument.
 ///
 /// Along with the contract, named keys with events and state are created.
+///
+/// The native event message topic is registered only when `register_native_event_topic` is
+/// `true`; a contract configured for CES-only events does not get (and does not pay for) a
+/// topic it will never emit to.
 pub fn install_new_contract(
     entry_points: EntryPoints,
     events: Schemas,
-    init_args: Option<RuntimeArgs>
+    init_args: Option<RuntimeArgs>,
+    register_native_event_topic: bool
 ) -> (ContractPackageHash, URef) {
     // Extract named arguments, variables and check if the contract is upgradable.
     // And check if there is an existing contract.
@@ -119,9 +130,12 @@ pub fn install_new_contract(
     // Prepare named keys.
     let named_keys = initial_named_keys(events);
 
-    // Prepare message topic
+    // Prepare message topic. Only registered when the contract's configured event mode can
+    // ever emit a native event, so a CES-only contract does not pay for an unused topic.
     let mut message_topics = BTreeMap::new();
-    message_topics.insert(NATIVE_EVENT_TOPIC.to_string(), MessageTopicOperation::Add);
+    if register_native_event_topic {
+        message_topics.insert(NATIVE_EVENT_TOPIC.to_string(), MessageTopicOperation::Add);
+    }
 
     // Create new contract.
     let access_uref_key = format!("{}_access_token", package_hash_key_name);

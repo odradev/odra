@@ -283,7 +283,8 @@ impl TryFrom<&'_ ModuleImplIR> for AddEntryPointStmtItem<FactoryBatchUpgradeCont
 
 struct CallFnItem {
     module_ident: syn::Ident,
-    new_env_expr: syn::Expr
+    new_env_expr: syn::Expr,
+    register_native_event_topic: bool
 }
 
 impl ToTokens for CallFnItem {
@@ -297,7 +298,8 @@ impl ToTokens for CallFnItem {
         let install_or_upgrade_stmt = utils::stmt::install_or_upgrade(
             parse_quote!(#ident_entry_points()),
             parse_quote!(#ident_schemas),
-            parse_quote!(Option::<#ty_args>::None)
+            parse_quote!(Option::<#ty_args>::None),
+            self.register_native_event_topic
         );
 
         let new_env_expr = &self.new_env_expr;
@@ -323,7 +325,8 @@ impl TryFrom<&'_ ModuleImplIR> for CallFnItem {
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
             module_ident: module.module_ident()?,
-            new_env_expr: utils::expr::new_wasm_contract_env()
+            new_env_expr: utils::expr::new_wasm_contract_env(),
+            register_native_event_topic: module.requires_native_event_topic()
         })
     }
 }
@@ -333,6 +336,7 @@ struct NoMangleFactoryFnItem {
     event_ident: syn::Ident,
     init_fn: Option<FnIR>,
     new_env_expr: syn::Expr,
+    register_native_event_topic: bool
 }
 
 impl TryFrom<&'_ ModuleImplIR> for NoMangleFactoryFnItem {
@@ -347,6 +351,7 @@ impl TryFrom<&'_ ModuleImplIR> for NoMangleFactoryFnItem {
             event_ident,
             init_fn: module.constructor(),
             new_env_expr: utils::expr::new_wasm_contract_env(),
+            register_native_event_topic: module.requires_native_event_topic()
         })
     }
 }
@@ -371,6 +376,7 @@ impl ToTokens for NoMangleFactoryFnItem {
         };
         let event_ident = &self.event_ident;
         let new_env_expr = &self.new_env_expr;
+        let register_native_event_topic = self.register_native_event_topic;
         tokens.append_all(quote::quote! {
             #[no_mangle]
             fn new_contract() {
@@ -383,11 +389,12 @@ impl ToTokens for NoMangleFactoryFnItem {
                 };
                 let mut #ident_args = #new_runtime_args;
                 #(#insert_args)*
-        
+
                 let (contract_package_hash, access_uref) = odra::odra_casper_wasm_env::host_functions::install_new_contract(
                     #ident_entry_points(),
                     #ident_schemas,
-                    Some(#ident_args)
+                    Some(#ident_args),
+                    #register_native_event_topic
                 );
                 let address: #address_ty = contract_package_hash.into();
 
@@ -637,7 +644,8 @@ mod test {
                     odra::odra_casper_wasm_env::host_functions::install_or_upgrade(
                         entry_points(),
                         schemas,
-                        Option::<odra::casper_types::RuntimeArgs>::None
+                        Option::<odra::casper_types::RuntimeArgs>::None,
+                        false
                     );
                 }
 
@@ -663,7 +671,8 @@ mod test {
                     let (contract_package_hash, access_uref) = odra::odra_casper_wasm_env::host_functions::install_new_contract(
                         child_contract_entry_points(),
                         schemas,
-                        Some(named_args)
+                        Some(named_args),
+                        false
                     );
                     let address: odra::prelude::Address = contract_package_hash.into();
 

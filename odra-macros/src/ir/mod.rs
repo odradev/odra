@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use crate::ir::delegate::Delegate;
 use crate::utils;
-use config::ConfigItem;
+use config::{ConfigItem, ModuleEventMode};
 use proc_macro2::Ident;
 use quote::{format_ident, ToTokens};
 use syn::{parse_quote, spanned::Spanned, ImplItem};
@@ -256,6 +256,42 @@ impl ModuleImplIR {
             }
             ModuleImplIR::Trait(_) => false
         }
+    }
+
+    fn event_mode(&self) -> ModuleEventMode {
+        match self {
+            ModuleImplIR::Impl(ir) => {
+                if let ConfigItem::Module(cfg) = &ir.config {
+                    cfg.event_mode
+                } else {
+                    ModuleEventMode::default()
+                }
+            }
+            ModuleImplIR::Trait(_) => ModuleEventMode::default()
+        }
+    }
+
+    /// An expression that, applied via `ContractEnv::with_event_mode`, stamps this module's
+    /// configured [event mode](ModuleEventMode) onto its root `ContractEnv`.
+    ///
+    /// Returns `None` for the default CES-only mode, so generated code for the overwhelming
+    /// majority of modules (which don't set `event_mode`) is unchanged: it stays `Rc::new(env)`
+    /// instead of growing a no-op `.with_event_mode(..)` call.
+    pub fn event_mode_expr(&self) -> Option<syn::Expr> {
+        match self.event_mode() {
+            ModuleEventMode::Ces => None,
+            ModuleEventMode::Native => Some(parse_quote!(odra::EventMode::Native)),
+            ModuleEventMode::Both => Some(parse_quote!(odra::EventMode::Both))
+        }
+    }
+
+    /// Whether this module's configured event mode requires the native event message topic
+    /// to be registered when the contract is installed.
+    pub fn requires_native_event_topic(&self) -> bool {
+        matches!(
+            self.event_mode(),
+            ModuleEventMode::Native | ModuleEventMode::Both
+        )
     }
 
     pub fn impl_trait_ident(&self) -> Option<Ident> {

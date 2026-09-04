@@ -29,6 +29,12 @@ macro_rules! span_error {
 /// 2. Module implementation - an implementation block.
 ///
 /// The macro produces all the required code to use the module as a standalone smart contract.
+///
+/// `self.env().emit_event(..)` is the single API for emitting events. Which mechanism(s) it
+/// uses is controlled by `event_mode`, set on the `impl` block's attribute (the same attribute
+/// that carries `factory = on`): `event_mode = ces` (the default, so existing contracts are
+/// unaffected), `event_mode = native`, or `event_mode = both` (emits the very same event through
+/// both mechanisms). See `odra::EventMode` and `ContractEnv::emit_event`.
 #[proc_macro_attribute]
 pub fn module(attr: TokenStream, item: TokenStream) -> TokenStream {
     let attr: TokenStream2 = attr.into();

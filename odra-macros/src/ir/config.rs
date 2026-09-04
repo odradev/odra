@@ -27,6 +27,7 @@ mod kw {
     syn::custom_keyword!(events);
     syn::custom_keyword!(errors);
     syn::custom_keyword!(factory);
+    syn::custom_keyword!(event_mode);
 }
 
 #[derive(Default, Clone)]
@@ -35,7 +36,8 @@ pub struct ModuleConfiguration {
     pub errors: ModuleErrors,
     pub name: ModuleName,
     pub version: ModuleVersion,
-    pub factory: Factory
+    pub factory: Factory,
+    pub event_mode: ModuleEventMode
 }
 
 impl Parse for ModuleConfiguration {
@@ -45,6 +47,7 @@ impl Parse for ModuleConfiguration {
         let mut events = None;
         let mut errors = None;
         let mut factory = None;
+        let mut event_mode = None;
         while !input.is_empty() {
             if events.is_none() && input.peek(kw::events) {
                 events = Some(input.parse::<ModuleEvents>()?);
@@ -76,6 +79,12 @@ impl Parse for ModuleConfiguration {
                 continue;
             }
 
+            if event_mode.is_none() && input.peek(kw::event_mode) {
+                event_mode = Some(input.parse::<ModuleEventMode>()?);
+                let _ = input.parse::<Token![,]>(); // optional comma
+                continue;
+            }
+
             return Err(input.error("Unexpected token"));
         }
 
@@ -84,7 +93,8 @@ impl Parse for ModuleConfiguration {
             version: version.unwrap_or_default(),
             events: events.unwrap_or_default(),
             errors: errors.unwrap_or_default(),
-            factory: factory.unwrap_or_default()
+            factory: factory.unwrap_or_default(),
+            event_mode: event_mode.unwrap_or_default()
         })
     }
 }
@@ -192,6 +202,43 @@ impl Parse for Factory {
         let value = input.parse::<syn::Ident>()?;
         let value = matches!(value.to_string().as_str(), "on");
         Ok(Factory(value))
+    }
+}
+
+/// Which mechanism(s) a module's `emit_event` calls use, mirroring `core::EventMode`.
+///
+/// Parsed from `event_mode = ces | native | both` on the `impl` block's `#[odra::module(..)]`
+/// attribute (the same attribute that carries `factory = on`), since it is the `impl` block's
+/// [ModuleConfiguration] that reaches the codegen deciding how the module's root
+/// `ContractEnv` is built and whether the native event topic is registered at install.
+#[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ModuleEventMode {
+    /// Emit events only via CES. The default.
+    #[default]
+    Ces,
+    /// Emit events only via the Casper native mechanism.
+    Native,
+    /// Emit every event via both mechanisms.
+    Both
+}
+
+impl Parse for ModuleEventMode {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        if input.is_empty() {
+            return Ok(ModuleEventMode::default());
+        }
+        input.parse::<kw::event_mode>()?;
+        input.parse::<Token![=]>()?;
+        let value = input.parse::<syn::Ident>()?;
+        match value.to_string().as_str() {
+            "ces" => Ok(ModuleEventMode::Ces),
+            "native" => Ok(ModuleEventMode::Native),
+            "both" => Ok(ModuleEventMode::Both),
+            _ => Err(syn::Error::new_spanned(
+                value,
+                "expected `ces`, `native` or `both`"
+            ))
+        }
     }
 }
 

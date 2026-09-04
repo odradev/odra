@@ -36,12 +36,14 @@ pub fn new_mut_module(
 pub fn install_or_upgrade(
     entry_points: syn::Expr,
     schemas: syn::Expr,
-    args: syn::Expr
+    args: syn::Expr,
+    register_native_event_topic: bool
 ) -> syn::Stmt {
     parse_quote!(odra::odra_casper_wasm_env::host_functions::install_or_upgrade(
         #entry_points,
         #schemas,
-        #args
+        #args,
+        #register_native_event_topic
     );)
 }
 
@@ -56,6 +58,26 @@ pub fn new_execution_env(ident: &syn::Ident, env_rc_ident: &syn::Ident) -> syn::
 
 pub fn new_rc(var_ident: &syn::Ident, env_ident: &syn::Ident) -> syn::Stmt {
     parse_quote!(let #var_ident = Rc::new(#env_ident);)
+}
+
+/// Same as [`new_rc`], but if `event_mode` is `Some`, stamps it onto the environment via
+/// `ContractEnv::with_event_mode` before wrapping it in an `Rc`. This is the single point
+/// where a module's configured event mode reaches the `ContractEnv` that every `SubModule`
+/// derives its own environment from, via `ContractEnv::child`.
+///
+/// `event_mode: None` (the default CES-only mode) produces token-for-token the same output
+/// as [`new_rc`].
+pub fn new_rc_with_event_mode(
+    var_ident: &syn::Ident,
+    env_ident: &syn::Ident,
+    event_mode: Option<syn::Expr>
+) -> syn::Stmt {
+    match event_mode {
+        None => new_rc(var_ident, env_ident),
+        Some(mode) => {
+            parse_quote!(let #var_ident = Rc::new(#env_ident.with_event_mode(#mode));)
+        }
+    }
 }
 
 pub fn new_mut_vec_with_capacity<E: AsExpr>(ident: &syn::Ident, capacity_expr: &E) -> syn::Stmt {

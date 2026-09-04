@@ -505,7 +505,8 @@ mod test {
                     odra::odra_casper_wasm_env::host_functions::install_or_upgrade(
                         entry_points(),
                         schemas,
-                        Option::<odra::casper_types::RuntimeArgs>::None
+                        Option::<odra::casper_types::RuntimeArgs>::None,
+                        false
                     );
                 }
 
@@ -531,7 +532,8 @@ mod test {
                     let (contract_package_hash, access_uref) = odra::odra_casper_wasm_env::host_functions::install_new_contract(
                         child_contract_entry_points(),
                         schemas,
-                        Some(named_args)
+                        Some(named_args),
+                        false
                     );
                     let address: odra::prelude::Address = contract_package_hash.into();
 

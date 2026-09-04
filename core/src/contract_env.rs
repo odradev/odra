@@ -19,6 +19,29 @@ pub(crate) type StorageKey = [u8; KEY_LEN];
 /// Maximum nesting depth for module paths.
 pub(crate) const MAX_PATH_LEN: usize = 8;
 
+/// Selects which mechanism(s) [`ContractEnv::emit_event`] uses to publish an event.
+///
+/// This is a property of the contract (set once, at module configuration time via
+/// `#[odra::module(event_mode = ..)]`), not something a call site chooses. It travels with
+/// a [`ContractEnv`] from the moment the entry point builds the root environment, through
+/// every [`ContractEnv::child`] created for nested modules, so every module composed into a
+/// contract emits events the same way the contract was configured to.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub enum EventMode {
+    /// Emit events only through the CES (`casper-event-standard`) mechanism.
+    ///
+    /// This is the default, so contracts written before `EventMode` existed keep emitting
+    /// events exactly as they did before.
+    #[default]
+    CES,
+    /// Emit events only through the Casper native mechanism (a message on the
+    /// `NATIVE_EVENT_TOPIC` topic).
+    Native,
+    /// Emit every event through both mechanisms: the same serialized event is written via
+    /// CES and published as a native message.
+    Both
+}
+
 /// Trait that needs to be implemented by all contract refs.
 pub trait ContractRef {
     /// Creates a new instance of the Contract Ref.
@@ -43,7 +66,8 @@ pub struct ContractEnv {
     path: [u8; MAX_PATH_LEN],
     path_len: u8,
     mapping_data: Vec<u8>,
-    backend: Rc<RefCell<dyn ContractContext>>
+    backend: Rc<RefCell<dyn ContractContext>>,
+    event_mode: EventMode
 }
 
 impl Revertible for ContractEnv {
@@ -59,8 +83,28 @@ impl ContractEnv {
             path: [0u8; MAX_PATH_LEN],
             path_len: 0,
             mapping_data: Vec::new(),
-            backend
+            backend,
+            event_mode: EventMode::CES
         }
+    }
+
+    /// Returns a copy of this environment configured to emit events using the given
+    /// [`EventMode`].
+    ///
+    /// Intended to be called once, by the generated code that builds the root environment
+    /// for a contract's entry point, right after the environment is constructed and before
+    /// any module is instantiated with it. Every [`ContractEnv::child`] derived afterwards
+    /// (i.e. every nested module) inherits the mode, so it only needs to be set once per
+    /// contract, not per module.
+    #[must_use]
+    pub fn with_event_mode(mut self, mode: EventMode) -> Self {
+        self.event_mode = mode;
+        self
+    }
+
+    /// Returns the [`EventMode`] this environment emits events with.
+    pub fn event_mode(&self) -> EventMode {
+        self.event_mode
     }
 
     /// Returns the index bytes for the current path, using the appropriate encoding.
@@ -138,7 +182,8 @@ impl ContractEnv {
             path: new_path,
             path_len: self.path_len + 1,
             mapping_data: self.mapping_data.clone(),
-            backend: self.backend.clone()
+            backend: self.backend.clone(),
+            event_mode: self.event_mode
         }
     }
 
@@ -295,14 +340,34 @@ impl ContractEnv {
     }
 
     /// Emits an event with the specified data.
+    ///
+    /// The mechanism(s) used to publish the event are determined by this environment's
+    /// [`EventMode`] (see [`ContractEnv::with_event_mode`]), which defaults to
+    /// [`EventMode::CES`]. In [`EventMode::Both`], the very same serialized event is
+    /// published through both mechanisms, not two independent events.
     pub fn emit_event<T: ToBytes + EventInstance>(&self, event: T) {
         let backend = self.backend.borrow();
         let result = event.to_bytes().map_err(ExecutionError::from);
-        let bytes = result.unwrap_or_revert(self);
-        backend.emit_event(&bytes.into())
+        let bytes: Bytes = result.unwrap_or_revert(self).into();
+        match self.event_mode {
+            EventMode::CES => backend.emit_event(&bytes),
+            EventMode::Native => backend.emit_native_event(&bytes),
+            EventMode::Both => {
+                backend.emit_event(&bytes);
+                backend.emit_native_event(&bytes);
+            }
+        }
     }
 
-    /// Emits an event with the specified data using the native mechanism.
+    /// Emits an event with the specified data using the native mechanism, regardless of
+    /// this environment's configured [`EventMode`].
+    #[deprecated(
+        since = "2.10.0",
+        note = "configure the module with `#[odra::module(event_mode = native)]` (or `both`) \
+                and call `emit_event` instead; this bypasses the contract's configured event \
+                mode and is kept only so contracts written against the old two-method API keep \
+                compiling"
+    )]
     pub fn emit_native_event<T: ToBytes + EventInstance>(&self, event: T) {
         let backend = self.backend.borrow();
         let result = event.to_bytes().map_err(ExecutionError::from);
@@ -609,5 +674,76 @@ mod tests {
         let small_key = env.child(1).child(2).current_key();
         let path_key = env.child(1).child(20).current_key();
         assert_ne!(small_key, path_key);
+    }
+
+    #[derive(Debug, casper_event_standard::Event, PartialEq)]
+    struct TestEvent {}
+
+    fn make_env_with_mode(mode: EventMode) -> ContractEnv {
+        let mut ctx = MockContractContext::new();
+        ctx.expect_emit_event().returning(|_| ());
+        ctx.expect_emit_native_event().returning(|_| ());
+        ContractEnv::new(Rc::new(RefCell::new(ctx))).with_event_mode(mode)
+    }
+
+    #[test]
+    fn default_event_mode_is_ces() {
+        assert_eq!(make_env().event_mode(), EventMode::CES);
+    }
+
+    #[test]
+    fn ces_mode_emits_ces_only() {
+        let mut ctx = MockContractContext::new();
+        ctx.expect_emit_event().times(1).returning(|_| ());
+        ctx.expect_emit_native_event().times(0).returning(|_| ());
+        let env = ContractEnv::new(Rc::new(RefCell::new(ctx))).with_event_mode(EventMode::CES);
+
+        env.emit_event(TestEvent {});
+    }
+
+    #[test]
+    fn native_mode_emits_native_only() {
+        let mut ctx = MockContractContext::new();
+        ctx.expect_emit_event().times(0).returning(|_| ());
+        ctx.expect_emit_native_event().times(1).returning(|_| ());
+        let env = ContractEnv::new(Rc::new(RefCell::new(ctx))).with_event_mode(EventMode::Native);
+
+        env.emit_event(TestEvent {});
+    }
+
+    #[test]
+    fn both_mode_emits_the_same_bytes_through_both_backends() {
+        let mut ctx = MockContractContext::new();
+        ctx.expect_emit_event()
+            .times(1)
+            .withf(|bytes| bytes == &Bytes::from(TestEvent {}.to_bytes().unwrap()))
+            .returning(|_| ());
+        ctx.expect_emit_native_event()
+            .times(1)
+            .withf(|bytes| bytes == &Bytes::from(TestEvent {}.to_bytes().unwrap()))
+            .returning(|_| ());
+        let env = ContractEnv::new(Rc::new(RefCell::new(ctx))).with_event_mode(EventMode::Both);
+
+        env.emit_event(TestEvent {});
+    }
+
+    #[test]
+    fn child_inherits_parent_event_mode() {
+        let env = make_env_with_mode(EventMode::Native);
+        assert_eq!(env.child(1).event_mode(), EventMode::Native);
+        assert_eq!(env.child(1).child(2).event_mode(), EventMode::Native);
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn emit_native_event_ignores_the_configured_mode() {
+        // Even a CES-only environment still emits when explicitly asked to, via the
+        // deprecated escape hatch.
+        let mut ctx = MockContractContext::new();
+        ctx.expect_emit_event().times(0).returning(|_| ());
+        ctx.expect_emit_native_event().times(1).returning(|_| ());
+        let env = ContractEnv::new(Rc::new(RefCell::new(ctx))).with_event_mode(EventMode::CES);
+
+        env.emit_native_event(TestEvent {});
     }
 }

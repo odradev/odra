@@ -148,7 +148,11 @@ impl TryFrom<(&'_ ModuleImplIR, &'_ FnIR)> for ExecutableFnBodyItem {
         };
 
         Ok(Self {
-            env_rc_stmt: utils::stmt::new_rc(&env_rc_ident, &env_ident),
+            env_rc_stmt: utils::stmt::new_rc_with_event_mode(
+                &env_rc_ident,
+                &env_ident,
+                module.event_mode_expr()
+            ),
             exec_env_stmt,
             non_reentrant_before_stmt: func
                 .is_non_reentrant()
