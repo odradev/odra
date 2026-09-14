@@ -1,5 +1,6 @@
 [package]
 name = "odra-examples"
+publish = false
 description = "Examples of features of Odra Framework"
 
 authors = { workspace = true }

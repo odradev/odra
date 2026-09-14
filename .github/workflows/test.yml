@@ -15,6 +15,17 @@ on:
 run-name: Running lints and tests for ${{ github.head_ref }}
 
 jobs:
+  deny:
+    name: Dependency check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Run cargo-deny
+        uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check
+
   test:
     name: Test
     runs-on: ubuntu-latest
