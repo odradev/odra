@@ -258,16 +258,20 @@ pub fn upgrade_contract(
     let named_keys = initial_named_keys(events.clone());
 
     let contract_package_hash = ContractPackageHash::new(package_hash_to_upgrade);
-    force_package_migration_if_needed(contract_package_hash);
+    // Read the current version BEFORE migrating the package. The legacy package
+    // record is readable right up until the migration converts it, and there is
+    // no wasm API that reads a migrated package, so this is the only moment the
+    // authoritative value is available. The named key written at install time is
+    // the fallback for packages that are already migrated or were installed in
+    // addressable-entity mode.
     let previous_contract_hash = read_latest_contract_hash(contract_package_hash)
-        // Addressable-entity mode: the package record cannot be read from wasm,
-        // use the version hash tracked in the account's named keys instead.
         .or_else(|| {
             runtime::get_key(&latest_version_key_name(&contract_package_hash))
                 .and_then(|key| key.into_hash_addr())
                 .map(ContractHash::new)
         })
         .unwrap_or_revert_with(ApiError::ContractNotFound);
+    force_package_migration_if_needed(contract_package_hash);
 
     // Upgrade!
     let (new_version_hash, _) = storage::add_contract_version(
