@@ -42,6 +42,9 @@ Changelog for `odra`.
   contracts in `Odra.toml` of `odra-modules` and `odra-examples`; their tests run on OdraVM only.
 
 ### Fixed
+- Livenet: a transaction sent from an account that has never received CSPR failed with the node's bare
+  "no such addressable entity"; the error now explains that the account does not exist on chain yet
+  and has to be funded first.
 - `#[odra::module(events = ...)]` (and `errors`, `name`, `version`, `layout`) on an `impl` block is now a
   compile error pointing at the misplaced argument, instead of being silently ignored. Only `factory = on`
   is accepted on `impl`; `#[odra::module]` on a trait takes no arguments. Errors from the attribute

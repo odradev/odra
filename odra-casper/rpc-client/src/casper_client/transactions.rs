@@ -165,17 +165,7 @@ impl super::CasperClient {
             transaction
         )
         .await
-        .map_err(|e| match e {
-            casper_client::Error::ResponseIsRpcError {
-                rpc_method, error, ..
-            } => LivenetError::RpcRequestError(
-                rpc_method.to_string(),
-                error
-                    .data
-                    .map_or_else(|| "No data".to_string(), |d| d.to_string())
-            ),
-            _ => LivenetError::ExecutionError(format!("Failed to put transaction: {}", e))
-        })?;
+        .map_err(put_transaction_error)?;
         let transaction_hash = response.result.transaction_hash;
         let result = watch.wait_for_transaction_hash(&transaction_hash).await?;
         self.process_transaction(result, transaction_hash)?;
@@ -217,22 +207,10 @@ impl super::CasperClient {
             transaction
         )
         .await;
-        let transaction_hash = match response {
-            Ok(r) => r.result.transaction_hash,
-            Err(e) => {
-                return match e {
-                    casper_client::Error::ResponseIsRpcError {
-                        rpc_method, error, ..
-                    } => Err(LivenetError::RpcRequestError(
-                        rpc_method.to_string(),
-                        error
-                            .data
-                            .map_or_else(|| "No data".to_string(), |d| d.to_string())
-                    )),
-                    _ => Err(LivenetError::ExecutionError(e.to_string()))
-                }
-            }
-        };
+        let transaction_hash = response
+            .map_err(put_transaction_error)?
+            .result
+            .transaction_hash;
         let result = watch.wait_for_transaction_hash(&transaction_hash).await?;
         self.process_transaction(result, transaction_hash).map(|_| {
             ().to_bytes()
@@ -253,17 +231,7 @@ impl super::CasperClient {
             transaction
         )
         .await
-        .map_err(|e| match e {
-            casper_client::Error::ResponseIsRpcError {
-                rpc_method, error, ..
-            } => LivenetError::RpcRequestError(
-                rpc_method.to_string(),
-                error
-                    .data
-                    .map_or_else(|| "No data".to_string(), |d| d.to_string())
-            ),
-            _ => LivenetError::ExecutionError(format!("Failed to put transaction: {}", e))
-        })?;
+        .map_err(put_transaction_error)?;
         let transaction_hash = response.result.transaction_hash;
         log::debug(format!(
             "[TX] Transaction sent with hash: {}",
@@ -411,5 +379,31 @@ impl super::CasperClient {
             gas_price_tolerance: self.configuration.gas_price_tolerance(),
             standard_payment: true
         }
+    }
+}
+
+/// Maps a failed `account_put_transaction` call to a [LivenetError].
+///
+/// The node rejects a transaction from an account that has never received CSPR with a terse
+/// "no such addressable entity"; explain what that means, it is the most common first-deploy error.
+fn put_transaction_error(e: casper_client::Error) -> LivenetError {
+    match e {
+        casper_client::Error::ResponseIsRpcError {
+            rpc_method, error, ..
+        } => {
+            let data = error
+                .data
+                .map_or_else(|| "No data".to_string(), |d| d.to_string());
+            let data = if data.contains("no such addressable entity") {
+                format!(
+                    "{data}. The sending account does not exist on chain yet: an account is \
+                     created by the first transfer to it, so fund it with CSPR before deploying"
+                )
+            } else {
+                data
+            };
+            LivenetError::RpcRequestError(rpc_method.to_string(), data)
+        }
+        _ => LivenetError::ExecutionError(format!("Failed to put transaction: {}", e))
     }
 }
