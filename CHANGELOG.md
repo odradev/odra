@@ -22,6 +22,10 @@ Changelog for `odra`.
   contracts in `Odra.toml` of `odra-modules` and `odra-examples`; their tests run on OdraVM only.
 
 ### Fixed
+- `#[odra::module(events = ...)]` (and `errors`, `name`, `version`, `layout`) on an `impl` block is now a
+  compile error pointing at the misplaced argument, instead of being silently ignored. Only `factory = on`
+  is accepted on `impl`; `#[odra::module]` on a trait takes no arguments. Errors from the attribute
+  arguments are also reported as-is now, instead of the generic "Struct or impl block expected".
 - `odra-test` no longer declares `#![no_std]`; it depends on std crates and the attribute broke
   `no_std` builds of dependents.
 
