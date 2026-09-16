@@ -32,6 +32,9 @@ fqn = "features::storage::mapping::DogContract2"
 fqn = "features::storage::list::DogContract3"
 
 [[contracts]]
+fqn = "features::storage::list_in_mapping::ScheduleContract"
+
+[[contracts]]
 fqn = "features::testing::TestingContract"
 
 [[contracts]]
