@@ -23,10 +23,18 @@ impl BalanceChecker {
 }
 
 /// Token contract interface.
+///
+/// The trait is kept as is and implemented by the generated `TokenContractRef`
+/// and `TokenHostRef`, so it can be used as a bound.
 #[odra::external_contract]
 pub trait Token {
     /// Returns the balance of the given account.
     fn balance_of(&self, owner: &Address) -> U256;
+}
+
+/// Works with any `Token` implementation, in a contract or in a test.
+pub fn has_balance<T: Token>(token: &T, owner: &Address) -> bool {
+    !token.balance_of(owner).is_zero()
 }
 
 #[cfg(test)]
@@ -56,5 +64,17 @@ mod tests {
         // Different account should have zero balance.
         let balance = balance_checker.check_balance(&second_account);
         assert!(balance.is_zero());
+    }
+
+    #[test]
+    fn external_contract_trait_bound() {
+        let token = setup();
+        let env = token.env();
+        let (owner, second_account) = (env.get_account(0), env.get_account(1));
+
+        // `TokenHostRef` implements the `Token` trait.
+        let token = TokenHostRef::new(token.address(), env.clone());
+        assert!(has_balance(&token, &owner));
+        assert!(!has_balance(&token, &second_account));
     }
 }
