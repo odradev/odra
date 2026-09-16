@@ -40,6 +40,23 @@ impl HostContext for OdraVmHost {
         self.vm.remove_validator(index);
     }
 
+    fn get_storage_value(&self, address: &Address, key: &[u8]) -> Option<Bytes> {
+        self.vm.get_storage_value(address, key)
+    }
+
+    fn get_named_value(&self, address: &Address, name: &str) -> Option<Bytes> {
+        self.vm.get_named_value(address, name)
+    }
+
+    fn get_dictionary_value(
+        &self,
+        address: &Address,
+        dictionary_name: &str,
+        key: &[u8]
+    ) -> Option<Bytes> {
+        self.vm.get_dictionary_value(address, dictionary_name, key)
+    }
+
     fn balance_of(&self, address: &Address) -> U512 {
         self.vm.balance_of(address)
     }

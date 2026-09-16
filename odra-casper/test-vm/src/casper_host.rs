@@ -57,6 +57,25 @@ impl HostContext for CasperHost {
         backend.remove_validator(validator);
     }
 
+    fn get_storage_value(&self, address: &Address, key: &[u8]) -> Option<Bytes> {
+        self.vm.borrow().get_storage_value(address, key)
+    }
+
+    fn get_named_value(&self, address: &Address, name: &str) -> Option<Bytes> {
+        self.vm.borrow().get_named_value(address, name)
+    }
+
+    fn get_dictionary_value(
+        &self,
+        address: &Address,
+        dictionary_name: &str,
+        key: &[u8]
+    ) -> Option<Bytes> {
+        self.vm
+            .borrow()
+            .get_dictionary_value(address, dictionary_name, key)
+    }
+
     fn balance_of(&self, address: &Address) -> U512 {
         self.vm.borrow().balance_of(address)
     }

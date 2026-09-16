@@ -212,6 +212,23 @@ impl HostContext for DummyHostCtx {
     }
 
     #[doc = " Returns the CSPR balance of the specified address."]
+    fn get_storage_value(&self, address: &Address, key: &[u8]) -> Option<Bytes> {
+        None
+    }
+
+    fn get_named_value(&self, address: &Address, name: &str) -> Option<Bytes> {
+        None
+    }
+
+    fn get_dictionary_value(
+        &self,
+        address: &Address,
+        dictionary_name: &str,
+        key: &[u8]
+    ) -> Option<Bytes> {
+        None
+    }
+
     fn balance_of(&self, address: &Address) -> U512 {
         todo!()
     }

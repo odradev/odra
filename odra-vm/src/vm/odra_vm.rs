@@ -263,6 +263,29 @@ impl OdraVm {
         }
     }
 
+    /// Reads a value from the Odra storage of the contract at the given address.
+    ///
+    /// Unlike [OdraVm::get_var], it does not depend on the callstack and never sets
+    /// the virtual machine in the error state.
+    pub fn get_storage_value(&self, address: &Address, key: &[u8]) -> Option<Bytes> {
+        self.state.borrow().get_var_of(address, key).ok().flatten()
+    }
+
+    /// Reads the value of the named key of the contract at the given address.
+    pub fn get_named_value(&self, address: &Address, name: &str) -> Option<Bytes> {
+        let key = Self::key_of_named_key(name);
+        self.get_storage_value(address, key.as_bytes())
+    }
+
+    /// Reads the value of the dictionary item of the contract at the given address.
+    pub fn get_dictionary_value(&self, address: &Address, dict: &str, key: &[u8]) -> Option<Bytes> {
+        self.state
+            .borrow()
+            .get_dict_value_of(address, dict.as_bytes(), key)
+            .ok()
+            .flatten()
+    }
+
     /// Writes an event data to the global state.
     pub fn emit_event(&self, event_data: &Bytes) {
         self.state.borrow_mut().emit_event(event_data);

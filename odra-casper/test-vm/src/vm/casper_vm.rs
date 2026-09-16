@@ -778,6 +778,49 @@ impl CasperVm {
         self.context.get_package(package_hash).unwrap()
     }
 
+    /// Reads a raw value from the Odra storage (the `state` dictionary) of the contract
+    /// at the given address.
+    pub fn get_storage_value(&self, address: &Address, key: &[u8]) -> Option<Bytes> {
+        self.get_dictionary_value(address, STATE_KEY, key)
+    }
+
+    /// Reads the raw value stored under a named key of the contract at the given address.
+    pub fn get_named_value(&self, address: &Address, name: &str) -> Option<Bytes> {
+        let package_hash = address.as_package_hash()?;
+        let key = self.package_named_key(package_hash, name)?;
+        let stored_value = self.context.query(None, key, &[]).ok()?;
+        Self::stored_value_bytes(stored_value)
+    }
+
+    /// Reads the raw value stored in a named dictionary of the contract at the given address.
+    pub fn get_dictionary_value(
+        &self,
+        address: &Address,
+        dictionary_name: &str,
+        key: &[u8]
+    ) -> Option<Bytes> {
+        let package_hash = address.as_package_hash()?;
+        let seed_key = self.package_named_key(package_hash, dictionary_name)?;
+        let seed_uref = *seed_key.as_uref()?;
+        let key = String::from_utf8(key.to_vec()).ok()?;
+        let stored_value = self
+            .context
+            .query_dictionary_item(None, seed_uref, &key)
+            .ok()?;
+        Self::stored_value_bytes(stored_value)
+    }
+
+    /// Extracts the raw bytes of a stored `CLValue`, unwrapping `Vec<u8>` values the way
+    /// the Odra storage stores them.
+    fn stored_value_bytes(stored_value: StoredValue) -> Option<Bytes> {
+        let cl_value = stored_value.as_cl_value()?.clone();
+        if cl_value.cl_type() == &<Bytes as CLTyped>::cl_type() {
+            cl_value.into_t::<Bytes>().ok()
+        } else {
+            Some(Bytes::from(cl_value.inner_bytes().as_slice()))
+        }
+    }
+
     /// Gets current contract from contract package and
     /// returns it's named keys.
     fn package_named_keys(&self, package_hash: PackageHash) -> NamedKeys {

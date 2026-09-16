@@ -424,6 +424,23 @@ pub trait HostContext {
 
     /// Transfers the specified amount of CSPR from the current caller to the specified address.
     fn transfer(&self, to: Address, amount: U512) -> OdraResult<()>;
+
+    /// Reads a raw value from the Odra storage (the `state` dictionary) of the contract
+    /// at the given address.
+    ///
+    /// `key` is the storage key as produced by the contract environment (a hex-encoded hash).
+    fn get_storage_value(&self, address: &Address, key: &[u8]) -> Option<Bytes>;
+
+    /// Reads the raw value stored under a named key of the contract at the given address.
+    fn get_named_value(&self, address: &Address, name: &str) -> Option<Bytes>;
+
+    /// Reads the raw value stored in a named dictionary of the contract at the given address.
+    fn get_dictionary_value(
+        &self,
+        address: &Address,
+        dictionary_name: &str,
+        key: &[u8]
+    ) -> Option<Bytes>;
 }
 
 /// Represents the host environment for executing smart contracts.
@@ -934,6 +951,31 @@ impl HostEnv {
     pub fn set_gas(&self, gas: u64) {
         let backend = self.backend.as_ref();
         backend.set_gas(gas)
+    }
+
+    /// Reads a raw value from the Odra storage (the `state` dictionary) of the contract
+    /// at the given address, without calling the contract.
+    ///
+    /// `key` is the storage key as produced by the contract environment (a hex-encoded hash).
+    /// Use it together with the contract's storage layout to read the state directly.
+    pub fn get_storage_value(&self, address: &Address, key: &[u8]) -> Option<Bytes> {
+        self.backend.get_storage_value(address, key)
+    }
+
+    /// Reads the raw value stored under a named key of the contract at the given address.
+    pub fn get_named_value(&self, address: &Address, name: &str) -> Option<Bytes> {
+        self.backend.get_named_value(address, name)
+    }
+
+    /// Reads the raw value stored in a named dictionary of the contract at the given address.
+    pub fn get_dictionary_value(
+        &self,
+        address: &Address,
+        dictionary_name: &str,
+        key: &[u8]
+    ) -> Option<Bytes> {
+        self.backend
+            .get_dictionary_value(address, dictionary_name, key)
     }
 
     /// Transfers the specified amount of CSPR from the current caller to the specified address.
