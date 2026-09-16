@@ -4,6 +4,11 @@ Changelog for `odra`.
 
 ## [Unreleased]
 ### Fixed
+- The Casper test VM finds contract wasm files from any workspace member. It looks for
+  `wasm/<Contract>.wasm` in the working directory and then in each parent directory, so the single
+  `wasm` directory `cargo odra build` produces at the workspace root serves tests in every crate,
+  including ones that define no contract. Previously it relied on the working directory alone, and
+  Cargo runs a crate's tests inside that crate. A missing file now reports the directories searched.
 - Livenet backend no longer panics when a transaction fails with an internal Odra error that was missing
   from its error table (e.g. `ContractNotInstalled` or `PathIndexOutOfBounds`).
 
