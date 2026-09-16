@@ -212,10 +212,29 @@ impl TryFrom<(&proc_macro2::TokenStream, &proc_macro2::TokenStream)> for ModuleI
     ) -> Result<Self, Self::Error> {
         let config = syn::parse2::<ConfigItem>(stream.0.clone())?;
         if let Ok(code) = syn::parse2::<syn::ItemImpl>(stream.1.clone()) {
+            if let ConfigItem::Module(cfg) = &config {
+                if let Some((name, span)) = cfg.struct_only_args().next() {
+                    return Err(syn::Error::new(
+                        *span,
+                        format!(
+                            "`{name}` is not allowed on an impl block; put it on the module \
+                             struct: `#[odra::module({name} = ...)] pub struct ...`"
+                        )
+                    ));
+                }
+            }
             return Ok(Self::Impl(ModuleIR { code, config }));
         }
 
         if let Ok(code) = syn::parse2::<syn::ItemTrait>(stream.1.clone()) {
+            if let ConfigItem::Module(cfg) = &config {
+                if let Some((name, span)) = cfg.args().next() {
+                    return Err(syn::Error::new(
+                        *span,
+                        format!("`{name}` is not allowed on a trait; `#[odra::module]` on a trait takes no arguments")
+                    ));
+                }
+            }
             for c in code.items.iter() {
                 if let syn::TraitItem::Verbatim(func) = c {
                     syn::parse2::<syn::TraitItemFn>(func.clone())?;
@@ -988,6 +1007,51 @@ mod test {
              tokens - there is no way to attach CSPR to it. Use a separate payable \
              entrypoint instead"
         );
+    }
+
+    #[test]
+    fn test_module_args_on_impl_are_rejected() {
+        let item = quote::quote!(
+            impl Token {
+                pub fn transfer(&mut self) {}
+            }
+        );
+        for attr in [
+            quote::quote!(events = [Transfer]),
+            quote::quote!(errors = Error),
+            quote::quote!(name = "Token"),
+            quote::quote!(version = "1.0.0"),
+            quote::quote!(layout = my_layout()),
+            quote::quote!(factory = on, events = [Transfer])
+        ] {
+            let err = ModuleImplIR::try_from((&attr, &item)).err().unwrap();
+            assert!(
+                err.to_string().contains("is not allowed on an impl block"),
+                "{attr}: {err}"
+            );
+        }
+
+        let attr = quote::quote!(factory = on);
+        assert!(ModuleImplIR::try_from((&attr, &item)).is_ok());
+        let attr = quote::quote!();
+        assert!(ModuleImplIR::try_from((&attr, &item)).is_ok());
+    }
+
+    #[test]
+    fn test_module_args_on_trait_are_rejected() {
+        let item = quote::quote!(
+            pub trait Token {
+                fn transfer(&mut self);
+            }
+        );
+        let attr = quote::quote!(factory = on);
+        let err = ModuleImplIR::try_from((&attr, &item)).err().unwrap();
+        assert_eq!(
+            err.to_string(),
+            "`factory` is not allowed on a trait; `#[odra::module]` on a trait takes no arguments"
+        );
+        let attr = quote::quote!();
+        assert!(ModuleImplIR::try_from((&attr, &item)).is_ok());
     }
 
     #[test]
