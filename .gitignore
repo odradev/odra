@@ -33,3 +33,6 @@ odra-wasm-client/example/index.js
 odra-wasm-client/example/web/dist/**
 odra-wasm-client/package-lock.json
 CLAUDE.md
+# ...but the ones shipped with project templates are tracked
+!templates/*/AGENTS.md
+!templates/*/CLAUDE.md

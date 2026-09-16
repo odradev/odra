@@ -16,6 +16,8 @@ Changelog for `odra`.
 - `#[odra::external_contract]` keeps the annotated trait and implements it for the generated
   `XxxContractRef` and `XxxHostRef`, so the trait can be used as a bound or implemented by a module.
   A trait declared a second time by hand as a workaround must be removed.
+- Project templates ship `AGENTS.md` (and `CLAUDE.md` importing it): a short pointer that tells an AI
+  agent to install the Odra Claude Code plugin or read `llms.txt`, and lists the `cargo odra` commands.
 - `odra_test::odra_env()` and `odra_test::casper_env()` are public, so a test can be pinned to one backend
   regardless of `ODRA_BACKEND`. Modules that are not registered in `Odra.toml` (no wasm) can be tested
   on OdraVM under `cargo odra test -b casper` this way.
