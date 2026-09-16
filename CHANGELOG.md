@@ -31,6 +31,9 @@ Changelog for `odra`.
   on OdraVM under `cargo odra test -b casper` this way.
 
 ### Changed
+- Livenet: `CasperClient` caches the state root hash for up to 5 seconds and drops it after every
+  transaction it sends, instead of asking the node before every single query. On the `erc20_on_livenet`
+  example this removes 16 of 39 RPC calls; reads after the client's own writes stay consistent.
 - Mutable library functions of `odra-modules` that skip access checks (`raw_*`, `unchecked_*`,
   `set_*`, `init`, `pause`/`unpause`, ...) carry a `SECURITY` doc note reminding not to expose them
   as entry points without access control.
