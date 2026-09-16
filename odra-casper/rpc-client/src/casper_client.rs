@@ -4,9 +4,10 @@ use crate::casper_client::{
     configuration::CasperClientConfiguration, transaction_watcher::TransactionWatcher
 };
 use crate::error::LivenetError;
-use casper_types::U512;
+use casper_types::{Digest, U512};
+use std::cell::RefCell;
 use std::rc::Rc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tokio::runtime::{Builder, Runtime};
 
 pub mod accounts;
@@ -40,6 +41,9 @@ pub type Result<T> = core::result::Result<T, LivenetError>;
 
 const TRANSACTION_WAIT_TIME: u64 = 10;
 const TRANSACTION_MAX_RETRIES: u64 = 12;
+/// How long a fetched state root hash is reused for queries. Every transaction sent by this
+/// client drops it earlier, so the client's own writes are always visible to its next read.
+const STATE_ROOT_HASH_TTL: Duration = Duration::from_secs(5);
 
 /// Client for interacting with Casper node.
 ///
@@ -54,7 +58,9 @@ pub struct CasperClient {
     watcher: TransactionWatcher,
     active_account: usize,
     gas: U512,
-    runtime: Rc<Runtime>
+    runtime: Rc<Runtime>,
+    /// Cached state root hash and the time it was fetched, see [STATE_ROOT_HASH_TTL].
+    state_root_hash: RefCell<Option<(Digest, Instant)>>
 }
 
 impl CasperClient {
@@ -72,8 +78,26 @@ impl CasperClient {
             watcher,
             active_account: 0,
             gas: U512::zero(),
-            runtime: Rc::new(runtime)
+            runtime: Rc::new(runtime),
+            state_root_hash: RefCell::new(None)
         }
+    }
+
+    /// Returns the cached state root hash if it is younger than [STATE_ROOT_HASH_TTL].
+    fn cached_state_root_hash(&self) -> Option<Digest> {
+        self.state_root_hash
+            .borrow()
+            .filter(|(_, fetched_at)| fetched_at.elapsed() < STATE_ROOT_HASH_TTL)
+            .map(|(digest, _)| digest)
+    }
+
+    fn cache_state_root_hash(&self, digest: Digest) {
+        *self.state_root_hash.borrow_mut() = Some((digest, Instant::now()));
+    }
+
+    /// Forgets the cached state root hash; called after every transaction this client sends.
+    pub fn invalidate_state_root_hash(&self) {
+        *self.state_root_hash.borrow_mut() = None;
     }
 
     /// Returns a handle to the client's Tokio runtime.

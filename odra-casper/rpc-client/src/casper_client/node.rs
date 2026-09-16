@@ -39,7 +39,18 @@ impl super::CasperClient {
         Ok(base16::encode_lower(&digest))
     }
 
+    /// Returns the current state root hash, reusing a recently fetched one (see
+    /// `STATE_ROOT_HASH_TTL`) so a burst of queries does not ask the node for it every time.
     pub async fn get_state_root_hash_digest(&self) -> Result<Digest> {
+        if let Some(digest) = self.cached_state_root_hash() {
+            return Ok(digest);
+        }
+        let digest = self.fetch_state_root_hash_digest().await?;
+        self.cache_state_root_hash(digest);
+        Ok(digest)
+    }
+
+    async fn fetch_state_root_hash_digest(&self) -> Result<Digest> {
         let response = get_state_root_hash(
             &self.rpc_id(),
             self.configuration.node_address(),

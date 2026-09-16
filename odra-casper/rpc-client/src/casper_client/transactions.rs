@@ -247,6 +247,8 @@ impl super::CasperClient {
         result: ExecutionResult,
         transaction_hash: TransactionHash
     ) -> Result<()> {
+        // The transaction changed the global state; the next query must see the new root.
+        self.invalidate_state_root_hash();
         let deploy_hash_str = transaction_hash.to_hex_string();
         match result {
             ExecutionResult::V1(r) => match r {
