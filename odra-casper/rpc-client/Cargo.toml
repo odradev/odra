@@ -18,7 +18,7 @@ casper-types = { workspace = true, features = ["std-fs-io"] }
 
 base16 = { workspace = true }
 bytes = { workspace = true }
-dotenv = { workspace = true }
+dotenvy = { workspace = true }
 futures-util = { workspace = true }
 itertools = { workspace = true }
 prettycli = { workspace = true }
