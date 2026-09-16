@@ -13,23 +13,18 @@
 //!    // Test your contract here.
 //! }
 //! ```
-#![no_std]
-
 #[cfg(target_arch = "wasm32")]
 compile_error!("odra-test is not meant to be compiled for wasm32");
 
 use odra_casper_test_vm::{CasperHost, CasperVm};
 use odra_core::host::HostEnv;
-use odra_core::prelude::String;
 use odra_vm::{OdraVm, OdraVmHost};
 
 /// Returns the host environment for the testing purpose.
 ///
 /// Two environments are supported: [odra-vm](OdraVmHost) and [casper](CasperHost).
 pub fn env() -> HostEnv {
-    extern crate std;
-
-    let backend: String = std::env::var("ODRA_BACKEND").unwrap_or_default();
+    let backend = std::env::var("ODRA_BACKEND").unwrap_or_default();
     match backend.as_str() {
         "casper" => casper_env(),
         _ => odra_env()
