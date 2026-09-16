@@ -2,6 +2,11 @@
 
 Changelog for `odra`.
 
+## [Unreleased]
+### Fixed
+- Livenet backend no longer panics when a transaction fails with an internal Odra error that was missing
+  from its error table (e.g. `ContractNotInstalled` or `PathIndexOutOfBounds`).
+
 ## [2.9.1] - 2026-08-04
 ### Fixed
 - Full template is now compatible with new Odra

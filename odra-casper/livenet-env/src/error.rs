@@ -100,6 +100,7 @@ fn get_internal_error_name(error_num: u16) -> OdraError {
     match_errors!(
         error_num,
         ExecutionError::UnwrapError,
+        ExecutionError::UnexpectedError,
         ExecutionError::AdditionOverflow,
         ExecutionError::SubtractionOverflow,
         ExecutionError::NonPayable,
@@ -125,6 +126,19 @@ fn get_internal_error_name(error_num: u16) -> OdraError {
         ExecutionError::MissingArg,
         ExecutionError::MissingAddress,
         ExecutionError::OutOfGas,
+        ExecutionError::MainPurseError,
+        ExecutionError::ConversionError,
+        ExecutionError::ContractDeploymentError(String::new()),
+        ExecutionError::CannotExtractCallerInfo,
+        ExecutionError::ContractNotInstalled,
+        ExecutionError::UpgradingWithoutPreviousVersion,
+        ExecutionError::UpgradingNotAContract,
+        ExecutionError::SchemaMismatch,
+        ExecutionError::CannotDisablePreviousVersion,
+        ExecutionError::CannotUpgradeWithoutUpgrade,
+        ExecutionError::FactoryModuleCall,
+        ExecutionError::CannotGetAnImmediateCaller,
+        ExecutionError::PathIndexOutOfBounds,
         ExecutionError::MaxUserError,
         ExecutionError::UserErrorTooHigh
     )
