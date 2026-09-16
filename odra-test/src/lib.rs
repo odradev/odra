@@ -23,6 +23,11 @@ use odra_vm::{OdraVm, OdraVmHost};
 /// Returns the host environment for the testing purpose.
 ///
 /// Two environments are supported: [odra-vm](OdraVmHost) and [casper](CasperHost).
+/// The backend is selected with the `ODRA_BACKEND` env variable (`casper` or unset for OdraVM),
+/// which `cargo odra test -b <backend>` sets for you.
+///
+/// To pin a test to one backend regardless of `ODRA_BACKEND`, use [odra_env] or [casper_env]
+/// directly.
 pub fn env() -> HostEnv {
     let backend = std::env::var("ODRA_BACKEND").unwrap_or_default();
     match backend.as_str() {
@@ -31,13 +36,20 @@ pub fn env() -> HostEnv {
     }
 }
 
-fn casper_env() -> HostEnv {
+/// Returns the [CasperHost] environment, ignoring `ODRA_BACKEND`.
+///
+/// Requires the contracts to be built as wasm (`cargo odra test -b casper`).
+pub fn casper_env() -> HostEnv {
     let vm = CasperVm::new();
     let host_env = CasperHost::new(vm);
     HostEnv::new(host_env)
 }
 
-fn odra_env() -> HostEnv {
+/// Returns the [OdraVmHost] environment, ignoring `ODRA_BACKEND`.
+///
+/// Useful for testing a submodule that is not registered as a contract in `Odra.toml`:
+/// such tests run on OdraVM even under `cargo odra test -b casper`.
+pub fn odra_env() -> HostEnv {
     let vm = OdraVm::new();
     let host_env = OdraVmHost::new(vm);
     HostEnv::new(host_env)

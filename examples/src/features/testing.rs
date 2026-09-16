@@ -42,6 +42,7 @@ mod tests {
         host::{Deployer, HostEnv},
         prelude::*
     };
+    use odra_modules::access::{Ownable, OwnableInitArgs};
 
     #[test]
     fn env() {
@@ -59,5 +60,16 @@ mod tests {
         let testing_contract2 = TestingContract::deploy(&test_env, init_args);
         let creator2 = testing_contract2.created_by();
         assert_ne!(creator, creator2);
+    }
+
+    #[test]
+    fn odra_vm_only() {
+        // `odra_test::odra_env()` ignores `ODRA_BACKEND`, so this test runs on OdraVM
+        // even under `cargo odra test -b casper`. Handy for a submodule that is not
+        // registered as a contract in `Odra.toml` and has no wasm built.
+        let test_env = odra_test::odra_env();
+        let owner = test_env.get_account(0);
+        let ownable = Ownable::deploy(&test_env, OwnableInitArgs { owner });
+        assert_eq!(ownable.get_owner(), owner);
     }
 }
