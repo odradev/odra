@@ -56,12 +56,6 @@ fqn = "features::modules::ModulesContract"
 fqn = "features::native_token::PublicWallet"
 
 [[contracts]]
-fqn = "features::access_control::MockModerated"
-
-[[contracts]]
-fqn = "features::pauseable::PauseableCounter"
-
-[[contracts]]
 fqn = "features::livenet::LivenetContract"
 
 [[contracts]]

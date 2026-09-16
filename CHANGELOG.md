@@ -13,6 +13,17 @@ Changelog for `odra`.
   storage macros use it.
 - `storage` command in `odra-cli` that prints the storage layout of a contract and reads any field by its
   path. `inspect` includes the storage layout as well.
+- `odra_test::odra_env()` and `odra_test::casper_env()` are public, so a test can be pinned to one backend
+  regardless of `ODRA_BACKEND`. Modules that are not registered in `Odra.toml` (no wasm) can be tested
+  on OdraVM under `cargo odra test -b casper` this way.
+
+### Changed
+- `Ownable`, `Ownable2Step`, `MockModerated` and `PauseableCounter` are no longer registered as
+  contracts in `Odra.toml` of `odra-modules` and `odra-examples`; their tests run on OdraVM only.
+
+### Fixed
+- `odra-test` no longer declares `#![no_std]`; it depends on std crates and the attribute broke
+  `no_std` builds of dependents.
 
 ## [2.9.1] - 2026-08-04
 ### Fixed
