@@ -24,8 +24,10 @@ Changelog for `odra`.
 - Mutable library functions of `odra-modules` that skip access checks (`raw_*`, `unchecked_*`,
   `set_*`, `init`, `pause`/`unpause`, ...) carry a `SECURITY` doc note reminding not to expose them
   as entry points without access control.
-- `Ownable::unchecked_transfer_ownership` moved out of the `#[odra::module]` impl block, so it is
-  no longer an entry point of a contract built from `Ownable`. It stays callable from Rust.
+- `Ownable::unchecked_transfer_ownership`, `Erc20::mint` and `Erc20::burn` moved out of the
+  `#[odra::module]` impl blocks, so they are no longer entry points of contracts built from these
+  modules (a deployed `Erc20` let anyone mint). They stay callable from Rust, e.g. `self.erc20.mint(..)`
+  in a wrapping module that adds its own access control.
 - `Ownable`, `Ownable2Step`, `MockModerated` and `PauseableCounter` are no longer registered as
   contracts in `Odra.toml` of `odra-modules` and `odra-examples`; their tests run on OdraVM only.
 
