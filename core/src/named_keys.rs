@@ -76,9 +76,9 @@ macro_rules! key_value_storage {
 macro_rules! base64_encoded_key_value_storage {
     ($name:ident, $dict:expr, $key:ty, $value_type:ty) => {
         #[odra::module(layout = odra::schema::StorageKind::dictionary::<$key, $value_type>(
-                                    $dict,
-                                    odra::schema::KeyEncoding::Base64
-                                ))]
+                                            $dict,
+                                            odra::schema::KeyEncoding::Base64
+                                        ))]
         pub struct $name;
 
         impl $name {
