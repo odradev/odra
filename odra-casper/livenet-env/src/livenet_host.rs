@@ -87,6 +87,25 @@ impl HostContext for LivenetHost {
         panic!("remove_validator is not supported on livenet");
     }
 
+    fn get_storage_value(&self, address: &Address, key: &[u8]) -> Option<Bytes> {
+        self.casper_client.borrow().get_value(address, key)
+    }
+
+    fn get_named_value(&self, address: &Address, name: &str) -> Option<Bytes> {
+        self.casper_client.borrow().get_named_value(address, name)
+    }
+
+    fn get_dictionary_value(
+        &self,
+        address: &Address,
+        dictionary_name: &str,
+        key: &[u8]
+    ) -> Option<Bytes> {
+        self.casper_client
+            .borrow()
+            .get_dictionary_value(address, dictionary_name, key)
+    }
+
     fn balance_of(&self, address: &Address) -> U512 {
         let client = self.casper_client.borrow();
         client.get_balance(address).unwrap_or_else(|e| {

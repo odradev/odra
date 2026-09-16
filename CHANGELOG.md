@@ -11,6 +11,16 @@ Changelog for `odra`.
   Cargo runs a crate's tests inside that crate. A missing file now reports the directories searched.
 - Livenet backend no longer panics when a transaction fails with an internal Odra error that was missing
   from its error table (e.g. `ContractNotInstalled` or `PathIndexOutOfBounds`).
+### Added
+- Storage layout of contracts: every `#[odra::module]` implements `odra::schema::SchemaStorageLayout`,
+  describing its fields, their indices and storage kinds. `odra::schema::resolve_storage` turns a dotted
+  field path into the storage key, so the state of a deployed contract can be read without calling it.
+- `HostEnv::get_storage_value`, `HostEnv::get_named_value` and `HostEnv::get_dictionary_value` to read the raw
+  storage of a contract on every backend.
+- `layout` argument of the `#[odra::module]` attribute to declare an explicit storage layout; the named-key
+  storage macros use it.
+- `storage` command in `odra-cli` that prints the storage layout of a contract and reads any field by its
+  path. `inspect` includes the storage layout as well.
 
 ## [2.9.1] - 2026-08-04
 ### Fixed

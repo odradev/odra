@@ -27,6 +27,7 @@ mod kw {
     syn::custom_keyword!(events);
     syn::custom_keyword!(errors);
     syn::custom_keyword!(factory);
+    syn::custom_keyword!(layout);
 }
 
 #[derive(Default, Clone)]
@@ -35,7 +36,8 @@ pub struct ModuleConfiguration {
     pub errors: ModuleErrors,
     pub name: ModuleName,
     pub version: ModuleVersion,
-    pub factory: Factory
+    pub factory: Factory,
+    pub layout: ModuleLayout
 }
 
 impl Parse for ModuleConfiguration {
@@ -45,6 +47,7 @@ impl Parse for ModuleConfiguration {
         let mut events = None;
         let mut errors = None;
         let mut factory = None;
+        let mut layout = None;
         while !input.is_empty() {
             if events.is_none() && input.peek(kw::events) {
                 events = Some(input.parse::<ModuleEvents>()?);
@@ -76,6 +79,12 @@ impl Parse for ModuleConfiguration {
                 continue;
             }
 
+            if layout.is_none() && input.peek(kw::layout) {
+                layout = Some(input.parse::<ModuleLayout>()?);
+                let _ = input.parse::<Token![,]>(); // optional comma
+                continue;
+            }
+
             return Err(input.error("Unexpected token"));
         }
 
@@ -84,8 +93,33 @@ impl Parse for ModuleConfiguration {
             version: version.unwrap_or_default(),
             events: events.unwrap_or_default(),
             errors: errors.unwrap_or_default(),
-            factory: factory.unwrap_or_default()
+            factory: factory.unwrap_or_default(),
+            layout: layout.unwrap_or_default()
         })
+    }
+}
+
+/// An explicit storage layout of the module, overriding the one derived from its fields.
+///
+/// Used by modules that store data outside of the Odra storage layout, e.g. under named keys:
+/// `#[odra::module(layout = odra::schema::StorageKind::named_key::<u8>("decimals"))]`.
+#[derive(Default, Clone, Debug)]
+pub struct ModuleLayout(Option<syn::Expr>);
+
+impl Deref for ModuleLayout {
+    type Target = Option<syn::Expr>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl Parse for ModuleLayout {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        input.parse::<kw::layout>()?;
+        input.parse::<Token![=]>()?;
+        let layout = input.parse::<syn::Expr>()?;
+        Ok(Self(Some(layout)))
     }
 }
 

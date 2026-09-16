@@ -334,6 +334,55 @@ pub(crate) mod tests {
         setup_with_args(&env, init_args)
     }
 
+    #[test]
+    fn storage_layout_reads_named_keys_and_dictionaries() {
+        use odra::casper_types::bytesrepr::{FromBytes, ToBytes};
+        use odra::casper_types::U256;
+        use odra::schema::{resolve_storage, SchemaStorageLayout, StorageLocation};
+
+        let mut token = setup();
+        let env = token.env().clone();
+        let owner = env.get_account(0);
+        let spender = env.get_account(1);
+        let layout = Cep18Example::storage_kind();
+
+        // A named key.
+        let query = resolve_storage(&layout, "token.decimals", &[]).unwrap();
+        let StorageLocation::NamedKey { name } = &query.location else {
+            panic!("expected a named key")
+        };
+        let bytes = env
+            .get_named_value(&token.address(), name)
+            .expect("decimals should be stored");
+        assert_eq!(u8::from_bytes(&bytes).unwrap().0, token.decimals());
+
+        // A dictionary with base64-encoded keys.
+        let key = owner.to_bytes().unwrap();
+        let query = resolve_storage(&layout, "token.balances", &[key]).unwrap();
+        let StorageLocation::Dictionary { name, key } = &query.location else {
+            panic!("expected a dictionary")
+        };
+        let bytes = env
+            .get_dictionary_value(&token.address(), name, key.as_bytes())
+            .expect("balance should be stored");
+        assert_eq!(
+            U256::from_bytes(&bytes).unwrap().0,
+            token.balance_of(&owner)
+        );
+
+        // A dictionary with compound, hashed keys.
+        token.approve(&spender, &U256::from(42));
+        let key = (owner, spender).to_bytes().unwrap();
+        let query = resolve_storage(&layout, "token.allowances", &[key]).unwrap();
+        let StorageLocation::Dictionary { name, key } = &query.location else {
+            panic!("expected a dictionary")
+        };
+        let bytes = env
+            .get_dictionary_value(&token.address(), name, key.as_bytes())
+            .expect("allowance should be stored");
+        assert_eq!(U256::from_bytes(&bytes).unwrap().0, U256::from(42));
+    }
+
     pub fn setup_with_args(env: &HostEnv, args: Cep18ExampleInitArgs) -> Cep18ExampleHostRef {
         Cep18Example::deploy(env, args)
     }

@@ -93,20 +93,7 @@ impl ContractEnv {
     /// With `path_len` (actual `[0xFF, path_len, path..., mapping_data...]`):
     /// - A → `[0xFF, 2, 3, 5]`, B → `[0xFF, 1, 3] ++ [5]` = `[0xFF, 1, 3, 5]` — **distinct.**
     pub(crate) fn index_bytes(&self) -> Vec<u8> {
-        let path = &self.path[..self.path_len as usize];
-        // Legacy: pack indices into u32 via 4-bit shifts (e.g. path [3, 15] → 0x3F).
-        // Only used when all indices fit in a nibble, preserving old storage keys.
-        if path.iter().all(|&idx| idx <= 15) {
-            let index: u32 = path.iter().fold(0u32, |acc, &idx| (acc << 4) + idx as u32);
-            index.to_be_bytes().to_vec()
-        } else {
-            // Path encoding: [0xFF, len, idx_0, idx_1, ...]. Used for fields 16+.
-            let mut bytes = Vec::with_capacity(2 + path.len());
-            bytes.push(0xFF);
-            bytes.push(self.path_len);
-            bytes.extend_from_slice(path);
-            bytes
-        }
+        utils::storage_index_bytes(&self.path[..self.path_len as usize])
     }
 
     /// Returns the current storage key for the contract environment.

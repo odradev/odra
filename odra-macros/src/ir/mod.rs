@@ -127,6 +127,14 @@ impl ModuleStructIR {
         }
     }
 
+    pub fn storage_layout(&self) -> Option<syn::Expr> {
+        if let ConfigItem::Module(cfg) = &self.config {
+            (*cfg.layout).clone()
+        } else {
+            None
+        }
+    }
+
     pub fn is_factory(&self) -> bool {
         if let ConfigItem::Module(cfg) = &self.config {
             *cfg.factory

@@ -102,6 +102,19 @@ impl OdraVmState {
         self.storage.get_dict_value(ctx, dict, key)
     }
 
+    pub fn get_var_of(&self, address: &Address, key: &[u8]) -> Result<Option<Bytes>, Error> {
+        self.storage.get_value(address, key)
+    }
+
+    pub fn get_dict_value_of(
+        &self,
+        address: &Address,
+        dict: &[u8],
+        key: &[u8]
+    ) -> Result<Option<Bytes>, Error> {
+        self.storage.get_dict_value(address, dict, key)
+    }
+
     pub fn emit_event(&mut self, event_data: &Bytes) {
         let contract_address = self.callstack.current().address();
         #[allow(clippy::manual_inspect)]

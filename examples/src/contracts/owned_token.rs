@@ -74,6 +74,67 @@ pub mod tests {
     }
 
     #[test]
+    fn storage_layout_reads_state_without_calls() {
+        use odra::casper_types::bytesrepr::{FromBytes, ToBytes};
+        use odra::casper_types::U256;
+        use odra::schema::{resolve_storage, SchemaStorageLayout, StorageLocation};
+
+        let token = setup();
+        let env = token.env().clone();
+        let owner = env.get_account(0);
+        let layout = OwnedToken::storage_kind();
+
+        // A `Var` nested in a submodule.
+        let query = resolve_storage(&layout, "erc20.decimals", &[]).unwrap();
+        let StorageLocation::State { key } = &query.location else {
+            panic!("expected a state key")
+        };
+        let bytes = env
+            .get_storage_value(&token.address(), key.as_bytes())
+            .expect("decimals should be stored");
+        assert_eq!(u8::from_bytes(&bytes).unwrap().0, DECIMALS);
+
+        // A `Mapping` entry.
+        let key_bytes = owner.to_bytes().unwrap();
+        let query = resolve_storage(&layout, "erc20.balances", &[key_bytes]).unwrap();
+        let StorageLocation::State { key } = &query.location else {
+            panic!("expected a state key")
+        };
+        let bytes = env
+            .get_storage_value(&token.address(), key.as_bytes())
+            .expect("balance should be stored");
+        assert_eq!(
+            U256::from_bytes(&bytes).unwrap().0,
+            token.balance_of(&owner)
+        );
+
+        // A `Var<Option<Address>>` in another submodule.
+        let query = resolve_storage(&layout, "ownable.owner", &[]).unwrap();
+        let StorageLocation::State { key } = &query.location else {
+            panic!("expected a state key")
+        };
+        let bytes = env
+            .get_storage_value(&token.address(), key.as_bytes())
+            .expect("owner should be stored");
+        assert_eq!(
+            Option::<Address>::from_bytes(&bytes).unwrap().0,
+            Some(owner)
+        );
+
+        // A key that was never written.
+        let stranger = env.get_account(5);
+        let query =
+            resolve_storage(&layout, "erc20.balances", &[stranger.to_bytes().unwrap()]).unwrap();
+        let StorageLocation::State { key } = &query.location else {
+            panic!("expected a state key")
+        };
+        assert_eq!(
+            env.get_storage_value(&token.address(), key.as_bytes()),
+            None
+        );
+    }
+
+    #[test]
     fn init_works() {
         let token = setup();
         let test_env = token.env().clone();
