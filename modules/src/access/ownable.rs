@@ -62,9 +62,12 @@ impl Ownable {
     pub fn get_optional_owner(&self) -> Option<Address> {
         self.owner.get().flatten()
     }
+}
 
+impl Ownable {
     /// Unchecked version of the ownership transfer. It emits an event and sets
     /// the new owner.
+    /// SECURITY: Do not expose this function publicly without proper access control.
     pub fn unchecked_transfer_ownership(&mut self, new_owner: Option<Address>) {
         let previous_owner = self.get_optional_owner();
         self.owner.set(new_owner);

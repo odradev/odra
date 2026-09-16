@@ -21,6 +21,11 @@ Changelog for `odra`.
   on OdraVM under `cargo odra test -b casper` this way.
 
 ### Changed
+- Mutable library functions of `odra-modules` that skip access checks (`raw_*`, `unchecked_*`,
+  `set_*`, `init`, `pause`/`unpause`, ...) carry a `SECURITY` doc note reminding not to expose them
+  as entry points without access control.
+- `Ownable::unchecked_transfer_ownership` moved out of the `#[odra::module]` impl block, so it is
+  no longer an entry point of a contract built from `Ownable`. It stays callable from Rust.
 - `Ownable`, `Ownable2Step`, `MockModerated` and `PauseableCounter` are no longer registered as
   contracts in `Odra.toml` of `odra-modules` and `odra-examples`; their tests run on OdraVM only.
 
