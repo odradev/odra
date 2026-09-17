@@ -20,6 +20,10 @@ pub struct OdraVmContractEnv {
 }
 
 impl ContractContext for OdraVmContractEnv {
+    fn debug(&self, message: &str) {
+        println!("{message}");
+    }
+
     fn get_value(&self, key: &[u8]) -> Option<Bytes> {
         self.vm.get_var(key)
     }

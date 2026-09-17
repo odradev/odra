@@ -289,6 +289,24 @@ impl ContractEnv {
         backend.emit_event(&bytes.into())
     }
 
+    /// Prints a debug message on the host running the contract.
+    ///
+    /// Always printed on OdraVM and for getters on livenet (they run locally). Inside wasm the
+    /// call is a no-op unless the contract is built with the `test-support` feature of `odra`,
+    /// in which case the Casper VM used by `cargo odra test -b casper` prints it (run the tests
+    /// with `-- --nocapture` to see it). A contract built without the feature carries no trace of
+    /// the message - but the arguments are still evaluated, so keep `format!` out of hot paths.
+    /// Do not build production wasm with the feature: on a real network the message only lands in
+    /// the node's log and costs gas.
+    ///
+    /// ```ignore
+    /// self.env().debug(format!("transfer of {amount} from {from:?}"));
+    /// ```
+    pub fn debug(&self, message: impl AsRef<str>) {
+        let backend = self.backend.borrow();
+        backend.debug(message.as_ref())
+    }
+
     /// Emits an event with the specified data using the native mechanism.
     pub fn emit_native_event<T: ToBytes + EventInstance>(&self, event: T) {
         let backend = self.backend.borrow();

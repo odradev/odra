@@ -125,6 +125,10 @@ pub trait ContractContext {
     /// * `event` - The event data to emit.
     fn emit_native_event(&self, event: &Bytes);
 
+    /// Prints a debug message on the host: always on OdraVM and livenet, inside wasm only when the
+    /// contract is built with the `test-support` feature of `odra`.
+    fn debug(&self, message: &str);
+
     /// Transfers tokens to the specified address.
     ///
     /// # Arguments
