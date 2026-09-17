@@ -85,6 +85,14 @@ impl HostContext for OdraVmHost {
         self.vm.get_block_time()
     }
 
+    fn take_snapshot(&self) {
+        self.vm.take_snapshot()
+    }
+
+    fn restore_snapshot(&self) {
+        self.vm.restore_snapshot()
+    }
+
     fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, EventError> {
         self.vm.get_event(contract_address, index)
     }

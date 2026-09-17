@@ -8,6 +8,9 @@ Changelog for `odra`.
   contract being executed, and `ContractEnv::nth_caller(n)` walks it (`nth_caller(0)` is `caller()`),
   so a contract can find the account behind an intermediary contract. Works on OdraVM, CasperVM and
   livenet getters (#501).
+- `HostEnv::take_snapshot()` and `HostEnv::restore_snapshot()` remember the state of the test VM
+  (storage, CSPR balances, events, block time) and bring it back, as many times as needed, so several
+  test scenarios can branch off one setup. OdraVM and CasperVM; livenet panics (#533).
 - Storage layout of contracts: every `#[odra::module]` implements `odra::schema::SchemaStorageLayout`,
   describing its fields, their indices and storage kinds. `odra::schema::resolve_storage` turns a dotted
   field path into the storage key, so the state of a deployed contract can be read without calling it.
@@ -40,7 +43,7 @@ Changelog for `odra`.
 
 ### Changed
 - The livenet examples are scenarios of the examples' `odra_cli` binary (`erc20-transfer`, `cep18-transfer`,
-  `tlw`, `install-config`, `factory`, `gasless` behind the `eip712` feature) instead of one binary each;
+  `tlw`, `install-config`, `factory`, `gasless`) instead of one binary each;
   `cargo run --bin odra_cli -- --help`. The CI livenet job runs the CLI too (#631, #520).
 - CI: the test workflow runs lints, OdraVM, CasperVM and NCTL suites as parallel jobs; the benchmark
   artifact is produced on `release/**` pushes only, pull requests build and compare in one job (#593, #445).
@@ -76,6 +79,8 @@ Changelog for `odra`.
   contracts in `Odra.toml` of `odra-modules` and `odra-examples`; their tests run on OdraVM only.
 
 ### Fixed
+- `HostEnv::transfer` on CasperVM built a deploy without payment code and always panicked; it is a native
+  transfer request now (#533).
 - Livenet backend no longer panics when a transaction fails with an internal Odra error that was missing
   from its error table (e.g. `ContractNotInstalled` or `PathIndexOutOfBounds`).
 - Reading a stored value or a dictionary item as the wrong type reverts with the concrete `bytesrepr`

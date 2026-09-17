@@ -361,6 +361,14 @@ pub trait HostContext {
     /// Returns the current block time.
     fn block_time(&self) -> u64;
 
+    /// Remembers the current state of the backend, so that
+    /// [`restore_snapshot`](Self::restore_snapshot) can bring it back.
+    fn take_snapshot(&self);
+
+    /// Brings the backend back to the state remembered by the last
+    /// [`take_snapshot`](Self::take_snapshot).
+    fn restore_snapshot(&self);
+
     /// Returns the event bytes for the specified contract address and index.
     fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, EventError>;
 
@@ -565,6 +573,42 @@ impl HostEnv {
     pub fn block_time_secs(&self) -> u64 {
         let backend = self.backend.as_ref();
         backend.block_time() / 1000
+    }
+
+    /// Remembers the current state of the test VM: contract storage, CSPR balances, events and
+    /// the block time.
+    ///
+    /// [`restore_snapshot`](Self::restore_snapshot) brings that state back, as many times as
+    /// needed, so several scenarios can branch off one expensive setup. Only the last snapshot
+    /// is kept: taking a new one replaces it. The caller chosen with
+    /// [`set_caller`](Self::set_caller) and the gas report are not part of a snapshot.
+    ///
+    /// Available on OdraVM and CasperVM; livenet has no snapshots.
+    ///
+    /// ```
+    /// # use odra_core::host::HostEnv;
+    /// # fn scenarios(env: &HostEnv, run_scenario_a: impl Fn(), run_scenario_b: impl Fn()) {
+    /// // ... deploy and configure the contracts ...
+    /// env.take_snapshot();
+    /// run_scenario_a();
+    /// env.restore_snapshot();
+    /// run_scenario_b();
+    /// # }
+    /// ```
+    pub fn take_snapshot(&self) {
+        let backend = self.backend.as_ref();
+        backend.take_snapshot()
+    }
+
+    /// Brings the test VM back to the state remembered by the last
+    /// [`take_snapshot`](Self::take_snapshot).
+    ///
+    /// # Panics
+    ///
+    /// Panics if no snapshot has been taken.
+    pub fn restore_snapshot(&self) {
+        let backend = self.backend.as_ref();
+        backend.restore_snapshot()
     }
 
     /// Registers a new contract with the specified name, initialization arguments, and entry points caller.

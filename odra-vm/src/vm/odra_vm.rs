@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::panic::{self, AssertUnwindSafe};
 use std::rc::Rc;
 
-use super::odra_vm_state::OdraVmState;
+use super::odra_vm_state::{OdraVmSnapshot, OdraVmState};
 use anyhow::Result;
 use odra_core::callstack::CallstackElement;
 use odra_core::casper_types::bytesrepr::{deserialize, deserialize_from_slice, serialize};
@@ -27,14 +27,16 @@ const NAMED_KEY_PREFIX: &str = "NAMED_KEY";
 /// Odra in-memory virtual machine.
 pub struct OdraVm {
     state: Rc<RefCell<OdraVmState>>,
-    contract_register: Rc<RefCell<ContractRegister>>
+    contract_register: Rc<RefCell<ContractRegister>>,
+    snapshot: RefCell<Option<OdraVmSnapshot>>
 }
 
 impl Default for OdraVm {
     fn default() -> Self {
         Self {
             state: Rc::new(RefCell::new(OdraVmState::default())),
-            contract_register: Rc::new(RefCell::new(ContractRegister::default()))
+            contract_register: Rc::new(RefCell::new(ContractRegister::default())),
+            snapshot: RefCell::new(None)
         }
     }
 }
@@ -162,6 +164,26 @@ impl OdraVm {
     /// Retrieves from the state the whole call stack, initiating account first.
     pub fn call_stack(&self) -> Vec<Address> {
         self.state.borrow().call_stack()
+    }
+
+    /// Remembers the current state, replacing any previous snapshot.
+    pub fn take_snapshot(&self) {
+        let snapshot = self.state.borrow().snapshot();
+        *self.snapshot.borrow_mut() = Some(snapshot);
+    }
+
+    /// Brings back the state remembered by [`take_snapshot`](Self::take_snapshot). The snapshot
+    /// is kept, so it can be restored again.
+    ///
+    /// # Panics
+    ///
+    /// Panics if no snapshot has been taken.
+    pub fn restore_snapshot(&self) {
+        let snapshot = self.snapshot.borrow();
+        let snapshot = snapshot
+            .as_ref()
+            .expect("No snapshot to restore: call `take_snapshot` first");
+        self.state.borrow_mut().restore(snapshot);
     }
 
     /// Retrieves the callstack record.

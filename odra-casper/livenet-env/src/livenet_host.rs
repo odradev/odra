@@ -157,6 +157,14 @@ impl HostContext for LivenetHost {
         client.get_block_time().unwrap()
     }
 
+    fn take_snapshot(&self) {
+        panic!("Snapshots are not available on livenet: the state lives on a real chain")
+    }
+
+    fn restore_snapshot(&self) {
+        panic!("Snapshots are not available on livenet: the state lives on a real chain")
+    }
+
     fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, EventError> {
         let client = self.casper_client.borrow();
         client

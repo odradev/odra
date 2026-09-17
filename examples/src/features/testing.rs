@@ -39,7 +39,10 @@ impl TestingContract {
 
 #[cfg(test)]
 mod tests {
+    use crate::contracts::owned_token::{OwnedToken, OwnedTokenInitArgs};
     use crate::features::testing::{TestingContract, TestingContractInitArgs};
+    use core::time::Duration;
+    use odra::casper_types::{U256, U512};
     use odra::{
         host::{Deployer, HostEnv},
         prelude::*
@@ -62,6 +65,51 @@ mod tests {
         let testing_contract2 = TestingContract::deploy(&test_env, init_args);
         let creator2 = testing_contract2.created_by();
         assert_ne!(creator, creator2);
+    }
+
+    #[test]
+    fn snapshot_and_restore() {
+        let env = odra_test::env();
+        let owner = env.get_account(0);
+        let alice = env.get_account(1);
+        let mut token = OwnedToken::deploy(
+            &env,
+            OwnedTokenInitArgs {
+                name: "Token".to_string(),
+                symbol: "TKN".to_string(),
+                decimals: 3,
+                initial_supply: U256::from(1_000)
+            }
+        );
+
+        // Everything below branches off this point.
+        env.take_snapshot();
+        let block_time = env.block_time();
+        let events_count = env.events_count(&token);
+        let alice_cspr = env.balance_of(&alice);
+
+        // Scenario A: a transfer, some CSPR and an hour pass.
+        token.transfer(&alice, &U256::from(100));
+        env.transfer(alice, U512::from(1_000_000_000u64)).unwrap();
+        env.advance_block_time(Duration::from_secs(60 * 60));
+        assert_eq!(token.balance_of(&alice), U256::from(100));
+        assert_eq!(env.events_count(&token), events_count + 1);
+        assert_ne!(env.block_time(), block_time);
+        assert_ne!(env.balance_of(&alice), alice_cspr);
+
+        // Back to the starting point: scenario A never happened.
+        env.restore_snapshot();
+        assert_eq!(token.balance_of(&alice), U256::zero());
+        assert_eq!(token.balance_of(&owner), U256::from(1_000));
+        assert_eq!(env.events_count(&token), events_count);
+        assert_eq!(env.block_time(), block_time);
+        assert_eq!(env.balance_of(&alice), alice_cspr);
+
+        // Scenario B starts from the same point, and the snapshot can be restored again.
+        token.transfer(&alice, &U256::from(1));
+        assert_eq!(token.balance_of(&alice), U256::from(1));
+        env.restore_snapshot();
+        assert_eq!(token.balance_of(&alice), U256::zero());
     }
 
     #[test]

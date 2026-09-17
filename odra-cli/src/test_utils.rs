@@ -263,6 +263,14 @@ impl HostContext for DummyHostCtx {
         todo!()
     }
 
+    fn take_snapshot(&self) {
+        todo!()
+    }
+
+    fn restore_snapshot(&self) {
+        todo!()
+    }
+
     #[doc = " Returns the event bytes for the specified contract address and index."]
     fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, EventError> {
         todo!()
