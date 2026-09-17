@@ -218,6 +218,38 @@ impl ContractEnv {
         backend.caller()
     }
 
+    /// Returns the whole call stack, from the account that initiated the call to the contract
+    /// being executed.
+    ///
+    /// The first element is the account that sent the transaction, the last one is the address of
+    /// the current contract, and the one before it is [`caller`](Self::caller). A contract called
+    /// directly by an account sees a stack of two elements.
+    pub fn call_stack(&self) -> Vec<Address> {
+        let backend = self.backend.borrow();
+        backend.call_stack()
+    }
+
+    /// Returns the n-th caller up the call stack, or `None` if the stack is not that deep.
+    ///
+    /// `nth_caller(0)` is the immediate [`caller`](Self::caller), `nth_caller(1)` is the caller of
+    /// the caller, and so on. Lets a contract find the account behind an intermediary contract:
+    ///
+    /// ```ignore
+    /// let from = if self.env().caller() == self.burner.get() {
+    ///     // Called through the burner contract: burn from whoever called the burner.
+    ///     self.env().nth_caller(1).unwrap_or_revert(&self.env())
+    /// } else {
+    ///     self.env().caller()
+    /// };
+    /// ```
+    pub fn nth_caller(&self, n: usize) -> Option<Address> {
+        let stack = self.call_stack();
+        stack
+            .len()
+            .checked_sub(n + 2)
+            .and_then(|index| stack.get(index).copied())
+    }
+
     /// Calls another contract with the specified address and call definition.
     ///
     /// # Returns

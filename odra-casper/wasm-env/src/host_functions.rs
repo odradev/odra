@@ -574,6 +574,21 @@ pub fn caller() -> OdraResult<Address> {
     Ok(Address::from(caller))
 }
 
+/// Gets the whole call stack, from the initiating account to the current contract.
+///
+/// In a factory-created contract the frame of the factory is skipped, so the stack agrees
+/// with [`caller`].
+pub fn call_stack() -> OdraResult<Vec<Address>> {
+    let mut stack = runtime::get_call_stack()
+        .into_iter()
+        .map(|info| caller_info_to_caller(info).map(Address::from))
+        .collect::<OdraResult<Vec<Address>>>()?;
+    if unsafe { CALLER_OVERRIDE } && stack.len() >= 2 {
+        stack.remove(stack.len() - 2);
+    }
+    Ok(stack)
+}
+
 /// Calls a contract method by Address
 #[inline(always)]
 pub fn call_contract(address: Address, call_def: CallDef) -> Bytes {

@@ -4,6 +4,10 @@ Changelog for `odra`.
 
 ## [Unreleased]
 ### Added
+- `ContractEnv::call_stack()` returns every address from the account that initiated the call to the
+  contract being executed, and `ContractEnv::nth_caller(n)` walks it (`nth_caller(0)` is `caller()`),
+  so a contract can find the account behind an intermediary contract. Works on OdraVM, CasperVM and
+  livenet getters (#501).
 - Storage layout of contracts: every `#[odra::module]` implements `odra::schema::SchemaStorageLayout`,
   describing its fields, their indices and storage kinds. `odra::schema::resolve_storage` turns a dotted
   field path into the storage key, so the state of a deployed contract can be read without calling it.

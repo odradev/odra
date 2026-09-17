@@ -60,6 +60,10 @@ impl ContractContext for OdraVmContractEnv {
         self.vm.caller()
     }
 
+    fn call_stack(&self) -> Vec<Address> {
+        self.vm.call_stack()
+    }
+
     fn self_address(&self) -> Address {
         self.vm.self_address()
     }

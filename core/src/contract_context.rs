@@ -76,6 +76,10 @@ pub trait ContractContext {
     /// Retrieves the address of the caller.
     fn caller(&self) -> Address;
 
+    /// Retrieves the whole call stack: the account that initiated the call first, the contract
+    /// being executed last, and every contract in between in call order.
+    fn call_stack(&self) -> Vec<Address>;
+
     /// Retrieves the address of the current contract.
     fn self_address(&self) -> Address;
 
