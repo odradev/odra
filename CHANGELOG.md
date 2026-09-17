@@ -43,6 +43,9 @@ Changelog for `odra`.
   on OdraVM under `cargo odra test -b casper` this way.
 
 ### Changed
+- `#[odra::module(name = "..")]` now also names the package: the named key the package hash is stored
+  under at install is `<name>_package_hash` instead of `<StructName>_package_hash` (`HasIdent::contract_name()`,
+  used by `InstallConfig` and `UpgradeConfig`). Modules without `name` are unaffected (#385).
 - `HostEnv::advance_block_time` and `advance_with_auctions` take a `core::time::Duration`; `auction_delay()`
   and `unbonding_delay()` return one. Block time itself (`block_time()`, `get_block_time()`) stays in
   milliseconds. Wrap old values with `Duration::from_millis(..)` or write `Duration::from_secs(..)` (#589).

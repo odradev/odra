@@ -320,6 +320,9 @@ mod test {
                     fn ident() -> odra::prelude::string::String {
                         Erc20Factory::ident()
                     }
+                    fn contract_name() -> odra::prelude::string::String {
+                        <Erc20Factory as odra::contract_def::HasIdent>::contract_name()
+                    }
                 }
 
                 impl odra::host::EntryPointsCallerProvider for Erc20FactoryHostRef {
