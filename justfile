@@ -91,7 +91,8 @@ test-template name:
         && cargo odra test \
         && cargo odra test -b casper \
         && cargo odra schema \
-        && cargo build --bin {{name}}_cli
+        && cargo build --bin {{name}}_cli \
+        && cargo odra generate-client
 
 test-templates:
     rm -rf tests

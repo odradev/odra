@@ -55,6 +55,9 @@ Changelog for `odra`.
   contracts in `Odra.toml` of `odra-modules` and `odra-examples`; their tests run on OdraVM only.
 
 ### Fixed
+- `cargo odra generate-client` no longer emits an empty `<Contract>Errors` enum for a contract without
+  user errors; wasm-bindgen rejects empty enums, which broke the generated client of the `workspace`
+  template (#665).
 - Livenet: RPC reads rejected by the node with HTTP 429 (Too Many Requests) are retried with exponential
   backoff (5 attempts) instead of failing on the spot. A burst of getter calls against NCTL or cspr.cloud
   used to fail on the second or third one.
