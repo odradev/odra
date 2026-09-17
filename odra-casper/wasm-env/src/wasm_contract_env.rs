@@ -57,6 +57,10 @@ impl ContractContext for WasmContractEnv {
         host_functions::caller().unwrap_or_else(|e| self.revert(e))
     }
 
+    fn call_stack(&self) -> Vec<Address> {
+        host_functions::call_stack().unwrap_or_else(|e| self.revert(e))
+    }
+
     fn self_address(&self) -> Address {
         host_functions::self_address().unwrap_or_else(|e| self.revert(e))
     }

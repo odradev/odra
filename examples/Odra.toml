@@ -47,6 +47,12 @@ fqn = "features::handling_errors::OwnedContract"
 fqn = "features::events::PartyContract"
 
 [[contracts]]
+fqn = "features::call_stack::CallStackProbe"
+
+[[contracts]]
+fqn = "features::call_stack::CallStackRelay"
+
+[[contracts]]
 fqn = "features::cross_calls::CrossContract"
 
 [[contracts]]

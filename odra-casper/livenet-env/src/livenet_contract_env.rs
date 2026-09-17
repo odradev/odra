@@ -74,6 +74,10 @@ impl ContractContext for LivenetContractEnv {
         *self.callstack.borrow().first().address()
     }
 
+    fn call_stack(&self) -> Vec<Address> {
+        self.callstack.borrow().addresses()
+    }
+
     fn self_address(&self) -> Address {
         *self.callstack.borrow().current().address()
     }

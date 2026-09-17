@@ -159,6 +159,11 @@ impl OdraVm {
         self.state.borrow().caller()
     }
 
+    /// Retrieves from the state the whole call stack, initiating account first.
+    pub fn call_stack(&self) -> Vec<Address> {
+        self.state.borrow().call_stack()
+    }
+
     /// Retrieves the callstack record.
     pub fn read_stack_record(&self) -> String {
         self.state.borrow().read_stack_record()

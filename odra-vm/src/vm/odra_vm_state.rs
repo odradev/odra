@@ -60,6 +60,10 @@ impl OdraVmState {
         *self.callstack.previous().address()
     }
 
+    pub fn call_stack(&self) -> Vec<Address> {
+        self.callstack.addresses()
+    }
+
     pub fn callstack_tip(&self) -> &CallstackElement {
         self.callstack.current()
     }
