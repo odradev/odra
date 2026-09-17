@@ -16,6 +16,9 @@ Changelog for `odra`.
 - `#[odra::external_contract]` keeps the annotated trait and implements it for the generated
   `XxxContractRef` and `XxxHostRef`, so the trait can be used as a bound or implemented by a module.
   A trait declared a second time by hand as a workaround must be removed.
+- `odra_cli::ContractLoaderExt`: `MyContract::load_from_file(&env, path)`, `load_from_file_named` and
+  `load_from_default_file(&env)` load an already deployed contract from the contracts file written by the
+  `deploy` command, instead of pasting its package hash into a script (#566).
 - `ContractEnv::debug(message)` prints from a contract: always on OdraVM and for livenet getters, and on
   the Casper test VM when the contract is built with the new `test-support` feature of `odra` (`cargo odra
   test -b casper -- --nocapture`). Without the feature the wasm carries no trace of it (#616).
