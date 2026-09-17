@@ -1,2 +1,4 @@
 /target
 .env
+*.env
+secret_key*.pem
