@@ -57,6 +57,10 @@ impl HostContext for CasperHost {
         backend.remove_validator(validator);
     }
 
+    fn enable_addressable_entity(&self) -> bool {
+        self.vm.borrow_mut().enable_addressable_entity()
+    }
+
     fn balance_of(&self, address: &Address) -> U512 {
         self.vm.borrow().balance_of(address)
     }

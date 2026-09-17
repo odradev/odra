@@ -32,6 +32,14 @@ pub fn panic(_info: &core::panic::PanicInfo) -> ! {
     core::intrinsics::abort();
 }
 
+/// A no-op entry point registered on every Odra contract.
+///
+/// Calling any entry point migrates a legacy contract package to the
+/// addressable-entity form; this one exists so the upgrade flow can trigger
+/// that migration without any side effects.
+#[no_mangle]
+pub fn odra_noop() {}
+
 /// This function is used to migrate the contract's events schemas during the upgrade process.
 #[no_mangle]
 pub fn migrate_events() {
