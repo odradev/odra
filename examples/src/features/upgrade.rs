@@ -93,8 +93,8 @@ mod test {
         CounterV1, CounterV2, CounterV2UpgradeArgs, IncrementEvent, IncrementEventV2
     };
     use odra::casper_types::U256;
-    use odra::host::{Deployer, HostRef, InstallConfig, NoArgs};
-    use odra::prelude::Addressable;
+    use odra::host::{Deployer, HostRef, InstallConfig, NoArgs, UpgradeConfig};
+    use odra::prelude::*;
 
     #[test]
     fn it_works() {
@@ -150,5 +150,40 @@ mod test {
             CounterV2UpgradeArgs { new_start: None }
         )
         .unwrap();
+    }
+    /// A contract installed under one package-hash key (e.g. `Struct_package_hash` by Odra 2.x)
+    /// can be upgraded with a config that names the key differently (what a 3.0 `name = ".."`
+    /// produces): the upgrade finds the package by address and is authorized by the account's
+    /// access URef, not by the key name. Afterwards the package hash sits under both keys.
+    #[test]
+    fn upgrade_survives_a_package_key_rename() {
+        let test_env = odra_test::env();
+        let mut counter = CounterV1::deploy_with_cfg(
+            &test_env,
+            NoArgs,
+            InstallConfig {
+                package_named_key: String::from("OldName"),
+                is_upgradable: true,
+                allow_key_override: true
+            }
+        );
+        counter.increment();
+        assert_eq!(counter.get(), 1);
+
+        let counter2 = CounterV2::try_upgrade_with_cfg(
+            &test_env,
+            counter.address(),
+            CounterV2UpgradeArgs { new_start: None },
+            UpgradeConfig {
+                package_named_key: String::from("NewName"),
+                force_create_upgrade_group: false,
+                allow_key_override: true
+            }
+        )
+        .unwrap();
+
+        // Same package, state kept.
+        assert_eq!(counter2.address(), counter.address());
+        assert_eq!(counter2.get(), U256::one());
     }
 }
