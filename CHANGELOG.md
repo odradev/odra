@@ -37,6 +37,11 @@ Changelog for `odra`.
   contracts in `Odra.toml` of `odra-modules` and `odra-examples`; their tests run on OdraVM only.
 
 ### Fixed
+- Livenet: RPC reads rejected by the node with HTTP 429 (Too Many Requests) are retried with exponential
+  backoff (5 attempts) instead of failing on the spot. A burst of getter calls against NCTL or cspr.cloud
+  used to fail on the second or third one.
+- Livenet: `query_global_state` failures are no longer swallowed into a bare "not found"; transport and
+  HTTP errors are logged as warnings (`ODRA_LOG_LEVEL=warn` or above), a missing value at debug level.
 - Livenet: a transaction sent from an account that has never received CSPR failed with the node's bare
   "no such addressable entity"; the error now explains that the account does not exist on chain yet
   and has to be funded first.

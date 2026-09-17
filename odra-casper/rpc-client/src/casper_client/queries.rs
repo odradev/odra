@@ -3,7 +3,7 @@
 use crate::casper_client::Result;
 use crate::error::LivenetError::{ClientError, DictQueryError};
 use crate::log;
-use crate::utils::extract_stored_value;
+use crate::utils::{extract_stored_value, retry_on_rate_limit, RateLimited};
 use casper_client::cli::{get_account, get_dictionary_item, DictionaryItemStrParams};
 use casper_client::rpcs::results::{GetDeployResult, GetTransactionResult};
 use casper_client::rpcs::GlobalStateIdentifier;
@@ -116,13 +116,16 @@ impl super::CasperClient {
     /// Returns the balance of the account.
     async fn get_balance_async(&self, address: &Address) -> Result<U512> {
         let main_purse = self.get_main_purse(address).await?;
-        let response = get_balance(
-            self.rpc_id_typed(),
-            self.configuration.node_address(),
-            self.configuration.verbosity_typed(),
-            self.get_state_root_hash_digest().await?,
-            main_purse
-        )
+        let state_root_hash = self.get_state_root_hash_digest().await?;
+        let response = retry_on_rate_limit("state_get_balance", || {
+            get_balance(
+                self.rpc_id_typed(),
+                self.configuration.node_address(),
+                self.configuration.verbosity_typed(),
+                state_root_hash,
+                main_purse
+            )
+        })
         .await
         .map_err(|e| {
             ClientError(format!(
@@ -281,13 +284,17 @@ impl super::CasperClient {
 
     /// Discover the contract address by name.
     pub(crate) async fn get_contract_address(&self, key_name: &str) -> Result<Address> {
-        let result = get_account(
-            &self.rpc_id(),
-            self.configuration.node_address(),
-            self.configuration.verbosity(),
-            "",
-            &self.public_key().to_hex_string()
-        )
+        let rpc_id = self.rpc_id();
+        let public_key = self.public_key().to_hex_string();
+        let result = retry_on_rate_limit("state_get_account_info", || {
+            get_account(
+                &rpc_id,
+                self.configuration.node_address(),
+                self.configuration.verbosity(),
+                "",
+                &public_key
+            )
+        })
         .await
         .map_err(|e| {
             ClientError(format!(
@@ -363,19 +370,21 @@ impl super::CasperClient {
     ) -> Result<Bytes> {
         let entity_addr = self.query_global_state_for_entity_addr(address).await;
         let hash_addr = Key::Hash(entity_addr.value()).to_formatted_string();
-        let params = DictionaryItemStrParams::ContractNamedKey {
-            hash_addr: &hash_addr,
-            dictionary_name: &dictionary_name,
-            dictionary_item_key: &dictionary_item_key
-        };
-
-        let r = get_dictionary_item(
-            &self.rpc_id(),
-            self.configuration.node_address(),
-            self.configuration.verbosity(),
-            &self.get_state_root_hash().await?,
-            params
-        )
+        let state_root_hash = self.get_state_root_hash().await?;
+        let rpc_id = self.rpc_id();
+        let r = retry_on_rate_limit("state_get_dictionary_item", || {
+            get_dictionary_item(
+                &rpc_id,
+                self.configuration.node_address(),
+                self.configuration.verbosity(),
+                &state_root_hash,
+                DictionaryItemStrParams::ContractNamedKey {
+                    hash_addr: &hash_addr,
+                    dictionary_name: &dictionary_name,
+                    dictionary_item_key: &dictionary_item_key
+                }
+            )
+        })
         .await;
 
         let result = r.map_err(|e| ClientError(e.to_string()))?;
@@ -403,20 +412,38 @@ impl super::CasperClient {
         };
         let state_root_hash = match self.get_state_root_hash_digest().await {
             Ok(hash) => hash,
-            Err(_) => return None
+            Err(e) => {
+                log::warn(format!(
+                    "query_global_state({key:?}) skipped: {}",
+                    e.error_message()
+                ));
+                return None;
+            }
         };
-        let result = query_global_state(
-            self.rpc_id_typed(),
-            self.configuration.node_address(),
-            self.configuration.verbosity_typed(),
-            GlobalStateIdentifier::StateRootHash(state_root_hash),
-            key,
-            path
-        )
+        let result = retry_on_rate_limit("query_global_state", || {
+            query_global_state(
+                self.rpc_id_typed(),
+                self.configuration.node_address(),
+                self.configuration.verbosity_typed(),
+                GlobalStateIdentifier::StateRootHash(state_root_hash),
+                key,
+                path.clone()
+            )
+        })
         .await;
         match result {
             Ok(r) => Some(r.result.stored_value),
-            Err(_) => None
+            // The node answered; a missing value is a legitimate `None` for optional lookups.
+            Err(e @ casper_client::Error::ResponseIsRpcError { .. }) if !e.is_rate_limited() => {
+                log::debug(format!("query_global_state({key:?}): {e}"));
+                None
+            }
+            // Throttled even after retries, or a transport/HTTP failure: the caller will report
+            // "not found", so say what really happened.
+            Err(e) => {
+                log::warn(format!("query_global_state({key:?}) failed: {e}"));
+                None
+            }
         }
     }
 }

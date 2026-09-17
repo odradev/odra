@@ -2,6 +2,7 @@
 
 use crate::casper_client::Result;
 use crate::error::LivenetError::BlockTimeError;
+use crate::utils::retry_on_rate_limit;
 use casper_client::cli::{get_node_status, get_state_root_hash};
 use casper_client::get_chainspec;
 use casper_types::{Digest, TimeDiff};
@@ -51,12 +52,15 @@ impl super::CasperClient {
     }
 
     async fn fetch_state_root_hash_digest(&self) -> Result<Digest> {
-        let response = get_state_root_hash(
-            &self.rpc_id(),
-            self.configuration.node_address(),
-            self.configuration.verbosity(),
-            ""
-        )
+        let rpc_id = self.rpc_id();
+        let response = retry_on_rate_limit("chain_get_state_root_hash", || {
+            get_state_root_hash(
+                &rpc_id,
+                self.configuration.node_address(),
+                self.configuration.verbosity(),
+                ""
+            )
+        })
         .await
         .map_err(|e| {
             crate::error::LivenetError::ClientError(format!(
