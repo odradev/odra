@@ -6,7 +6,8 @@ use crate::casper_client::{
 use crate::error::LivenetError;
 use crate::log;
 use casper_types::bytesrepr::Bytes;
-use casper_types::{Digest, Key, StoredValue, U512};
+use casper_types::contract_messages::{MessagePayload, Messages};
+use casper_types::{Digest, EntityAddr, Key, StoredValue, U512};
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::time::{Duration, Instant};
@@ -71,7 +72,11 @@ pub struct CasperClient {
     /// Cached state root hash and the time it was fetched, see [STATE_ROOT_HASH_TTL].
     state_root_hash: RefCell<Option<(Digest, Instant)>>,
     /// Query responses, valid for one state root hash.
-    query_cache: RefCell<QueryCache>
+    query_cache: RefCell<QueryCache>,
+    /// The messages (native events) emitted by the transactions this client sent, per emitting
+    /// entity, in emission order. A message is only reported in the execution result of its
+    /// transaction, so this is the only place they can be read from later.
+    native_events: RefCell<BTreeMap<EntityAddr, Vec<Bytes>>>
 }
 
 /// Responses of global state and dictionary queries, keyed by the state root hash they were
@@ -114,8 +119,31 @@ impl CasperClient {
             active_account: 0,
             gas: U512::zero(),
             state_root_hash: RefCell::new(None),
-            query_cache: RefCell::new(QueryCache::default())
+            query_cache: RefCell::new(QueryCache::default()),
+            native_events: RefCell::new(BTreeMap::new())
         }
+    }
+
+    /// Remembers the messages of a transaction this client sent, see [Self::native_events].
+    pub(crate) fn record_messages(&self, messages: Messages) {
+        let mut native_events = self.native_events.borrow_mut();
+        for message in messages {
+            if let MessagePayload::Bytes(bytes) = message.payload() {
+                native_events
+                    .entry(*message.entity_addr())
+                    .or_default()
+                    .push(bytes.clone());
+            }
+        }
+    }
+
+    /// The native events recorded for `entity_addr`, see [Self::native_events].
+    pub(crate) fn recorded_native_events(&self, entity_addr: &EntityAddr) -> Vec<Bytes> {
+        self.native_events
+            .borrow()
+            .get(entity_addr)
+            .cloned()
+            .unwrap_or_default()
     }
 
     /// Global state query response cached at `state_root_hash`, if any.

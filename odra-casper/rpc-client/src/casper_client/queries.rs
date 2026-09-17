@@ -115,6 +115,43 @@ impl super::CasperClient {
             .await
     }
 
+    /// The number of native events the contract at `address` emitted in transactions sent by this
+    /// client.
+    ///
+    /// Native events are Casper messages: their payload is only in the execution result of the
+    /// emitting transaction, so the client can only know about the transactions it sent itself.
+    /// Events emitted before this client was created, or by someone else, are not counted.
+    pub fn native_events_count(&self, address: &Address) -> Result<u32> {
+        block_on(self.native_events_count_async(address))
+    }
+
+    /// The number of native events the contract at `address` emitted in transactions sent by this
+    /// client, see [Self::native_events_count].
+    pub async fn native_events_count_async(&self, address: &Address) -> Result<u32> {
+        let entity_addr = self.entity_addr(address).await?;
+        Ok(self.recorded_native_events(&entity_addr).len() as u32)
+    }
+
+    /// The `index`-th native event the contract at `address` emitted in transactions sent by this
+    /// client; `Ok(None)` past the end. See [Self::native_events_count].
+    pub fn get_native_event(&self, address: &Address, index: u32) -> Result<Option<Bytes>> {
+        block_on(self.get_native_event_async(address, index))
+    }
+
+    /// The `index`-th native event the contract at `address` emitted in transactions sent by this
+    /// client, see [Self::get_native_event].
+    pub async fn get_native_event_async(
+        &self,
+        address: &Address,
+        index: u32
+    ) -> Result<Option<Bytes>> {
+        let entity_addr = self.entity_addr(address).await?;
+        Ok(self
+            .recorded_native_events(&entity_addr)
+            .get(index as usize)
+            .cloned())
+    }
+
     /// Returns the balance of the account.
     pub fn get_balance(&self, address: &Address) -> Result<U512> {
         block_on(self.get_balance_async(address))
