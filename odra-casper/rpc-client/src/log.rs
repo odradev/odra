@@ -60,6 +60,13 @@ pub fn debug<T: AsRef<str>>(message: T) {
     }
 }
 
+/// Warning message.
+pub fn warn<T: AsRef<str>>(message: T) {
+    if should_log(LogLevel::Warn) {
+        prettycli::warn(message.as_ref());
+    }
+}
+
 /// Error message.
 pub fn error<T: AsRef<str>>(message: T) {
     if should_log(LogLevel::Error) {
