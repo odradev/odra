@@ -1,6 +1,7 @@
 use crate::host_functions;
 use casper_contract::contract_api::runtime;
 use casper_types::bytesrepr::ToBytes;
+use casper_types::ApiError;
 use casper_types::U512;
 use odra_core::casper_types;
 use odra_core::casper_types::bytesrepr::Bytes;
@@ -95,7 +96,11 @@ impl ContractContext for WasmContractEnv {
     fn get_named_arg_bytes(&self, name: &str) -> OdraResult<Bytes> {
         host_functions::get_named_arg(name)
             .map(Bytes::from)
-            .map_err(|_| OdraError::ExecutionError(ExecutionError::MissingArg))
+            .map_err(|e| match e {
+                ApiError::MissingArgument => ExecutionError::MissingArg,
+                _ => ExecutionError::InvalidArg
+            })
+            .map_err(OdraError::ExecutionError)
     }
 
     fn get_opt_named_arg_bytes(&self, name: &str) -> Option<Bytes> {

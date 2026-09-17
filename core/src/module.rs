@@ -103,7 +103,9 @@ impl<T: Module> SubModule<T> {
         if self.module.get().is_none() {
             let _ = self.module();
         }
-        self.module.get_mut().unwrap()
+        self.module
+            .get_mut()
+            .expect("initialized by module() above")
     }
 }
 

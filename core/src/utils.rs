@@ -61,10 +61,8 @@ pub fn event_absolute_position(len: u32, index: i32) -> Option<u32> {
         if abs_idx > len as i32 {
             return None;
         }
-        Some(
-            len.checked_sub(abs_idx as u32)
-                .expect("Checked sub failed, it shouldn't happen")
-        )
+        // `abs_idx <= len` was checked above.
+        Some(len - abs_idx as u32)
     } else {
         if index >= len as i32 {
             return None;

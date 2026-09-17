@@ -28,12 +28,12 @@ impl TestingContract {
 
     /// Returns the creation time of the contract
     pub fn created_at(&self) -> u64 {
-        self.created_at.get().unwrap()
+        self.created_at.get().unwrap_or_revert(&self.env())
     }
 
     /// Returns the address of the creator of the contract
     pub fn created_by(&self) -> Address {
-        self.created_by.get().unwrap()
+        self.created_by.get().unwrap_or_revert(&self.env())
     }
 }
 

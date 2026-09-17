@@ -72,6 +72,14 @@ Changelog for `odra`.
   contracts in `Odra.toml` of `odra-modules` and `odra-examples`; their tests run on OdraVM only.
 
 ### Fixed
+- Reading a stored value or a dictionary item as the wrong type reverts with the concrete `bytesrepr`
+  error (`LeftOverBytes`, `EarlyEndOfStream`, ...) instead of a blanket `Formatting`; the same for
+  deserializing a cross-contract call result on the host. A named argument that exists but cannot be
+  read as the declared type is `ExecutionError::InvalidArg` (138) instead of `MissingArg` (#417).
+- No naked `unwrap`/`expect` remains on code paths compiled into wasm: resolving the caller of a
+  contract call reverts with `CannotExtractCallerInfo` instead of trapping, the remaining `expect`s in
+  `odra-core` name the invariant they rely on, and the example contracts revert (`unwrap_or_revert`)
+  instead of panicking (#450).
 - The gasless CEP-18 example signed its EIP-712 authorization for a domain without the `version`
   field `CEP3009` includes, so every `transfer_with_authorization` on a live network failed with
   `InvalidSignature`. The signing helper now lives in `odra_examples::contracts::gasless_cep18::authorization`,
