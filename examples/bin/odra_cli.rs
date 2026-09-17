@@ -31,7 +31,8 @@ use odra_examples::factory::counter::{
 };
 use odra_examples::features::storage::variable::{DogContract, DogContractInitArgs};
 use odra_modules::cep18_token::{Cep18, Cep18InitArgs};
-use odra_modules::erc20::{Erc20, Erc20InitArgs};
+use odra_modules::erc20::{Erc20, Erc20HostRef, Erc20InitArgs};
+use std::time::Instant;
 
 /// Deploys every contract the scenarios need, reusing the ones already in the container.
 pub struct DeployScriptForExamples;
@@ -374,6 +375,84 @@ impl ScenarioMetadata for FactoryScenario {
         "Deploys a counter factory, spawns children, upgrades the factory and the children";
 }
 
+/// Deploys several tokens at once and reads them at once with `HostEnv::concurrently`.
+pub struct ConcurrentScenario;
+
+impl Scenario for ConcurrentScenario {
+    fn args(&self) -> Vec<CommandArg> {
+        vec![CommandArg::new(
+            "count",
+            "How many tokens to deploy; defaults to 3",
+            NamedCLType::U32
+        )]
+    }
+
+    fn run(
+        &self,
+        env: &HostEnv,
+        _container: &DeployedContractsContainer,
+        args: Args
+    ) -> Result<(), Error> {
+        let count = args.get_single::<u32>("count").unwrap_or(3);
+        env.set_gas(cspr!(450));
+
+        let started = Instant::now();
+        let addresses = env.concurrently((0..count).collect(), |env, i| {
+            let mut args = erc20_args();
+            args.name = format!("Plascoin {i}");
+            args.symbol = format!("PLS{i}");
+            args.initial_supply = Some(U256::from(1_000 * (i + 1)));
+            Erc20::deploy(env, args).address()
+        });
+        odra_cli::log(format!(
+            "Deployed {count} tokens concurrently in {:.1?}",
+            started.elapsed()
+        ));
+
+        // The same reads, one after another in this environment and spread over worker threads.
+        let read = |token: &Erc20HostRef| -> Result<(String, String, U256), Error> {
+            Ok((
+                token.try_name()?,
+                token.try_symbol()?,
+                token.try_total_supply()?
+            ))
+        };
+        let started = Instant::now();
+        let sequential = addresses
+            .iter()
+            .map(|address| read(&Erc20::load(env, *address)))
+            .collect::<Result<Vec<_>, _>>()?;
+        let sequential_time = started.elapsed();
+
+        let started = Instant::now();
+        let concurrent =
+            env.concurrently(addresses, |env, address| read(&Erc20::load(env, address)));
+        let concurrent = concurrent.into_iter().collect::<Result<Vec<_>, _>>()?;
+        let concurrent_time = started.elapsed();
+
+        if sequential != concurrent {
+            return Err(Error::OdraError {
+                message: format!(
+                    "concurrent reads differ from sequential ones: {concurrent:?} vs {sequential:?}"
+                )
+            });
+        }
+        for (name, symbol, supply) in &concurrent {
+            odra_cli::log(format!("{name} ({symbol}): total supply {supply}"));
+        }
+        odra_cli::log(format!(
+            "Read {count} tokens: {sequential_time:.1?} one after another, {concurrent_time:.1?} concurrently"
+        ));
+        Ok(())
+    }
+}
+
+impl ScenarioMetadata for ConcurrentScenario {
+    const NAME: &'static str = "concurrent";
+    const DESCRIPTION: &'static str =
+        "Deploys several tokens at once and reads them at once with HostEnv::concurrently";
+}
+
 /// Main function to run the CLI tool.
 pub fn main() {
     let cli = OdraCli::new()
@@ -389,7 +468,8 @@ pub fn main() {
         .scenario(TimeLockWalletScenario)
         .scenario(InstallConfigScenario)
         .scenario(FactoryScenario)
-        .scenario(GaslessTransferScenario);
+        .scenario(GaslessTransferScenario)
+        .scenario(ConcurrentScenario);
     cli.build().run();
 }
 

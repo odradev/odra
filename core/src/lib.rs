@@ -3,6 +3,8 @@
 #![cfg_attr(test, feature(never_type))]
 
 extern crate alloc;
+#[cfg(not(target_arch = "wasm32"))]
+extern crate std;
 
 mod address;
 pub mod args;

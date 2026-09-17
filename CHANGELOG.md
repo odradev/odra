@@ -16,6 +16,10 @@ Changelog for `odra`.
   contract being executed, and `ContractEnv::nth_caller(n)` walks it (`nth_caller(0)` is `caller()`),
   so a contract can find the account behind an intermediary contract. Works on OdraVM, CasperVM and
   livenet getters (#501).
+- `HostEnv::concurrently(items, |env, item| ..)` runs one closure per item and returns the results in order.
+  On livenet the items are spread over worker threads, each with its own node connection and `HostEnv`
+  (same caller and gas), so independent deploys and reads overlap; on OdraVM and CasperVM they run one
+  after another. Deploy in the closure, return the address, `load` it in the caller's environment (#482).
 - `CasperClient` has a public async API: every network call exists as `xxx_async` next to the blocking
   `xxx`, so async programs can drive it with `.await` and run several calls at once with `join_all` (#544).
 - `HostEnv::take_snapshot()` and `HostEnv::restore_snapshot()` remember the state of the test VM
@@ -94,6 +98,8 @@ Changelog for `odra`.
   contracts in `Odra.toml` of `odra-modules` and `odra-examples`; their tests run on OdraVM only.
 
 ### Fixed
+- `MyContract::load(&env, address)` (`HostRefLoader`) works on OdraVM and CasperVM; both panicked with
+  "register_contract is not supported".
 - `HostEnv::transfer` on CasperVM built a deploy without payment code and always panicked; it is a native
   transfer request now (#533).
 - Livenet backend no longer panics when a transaction fails with an internal Odra error that was missing

@@ -12,7 +12,7 @@ use odra_core::casper_types::Timestamp;
 use odra_core::entry_point_callback::EntryPointsCaller;
 use odra_core::{
     casper_types::{bytesrepr::Bytes, PublicKey, RuntimeArgs, U512},
-    host::HostContext,
+    host::{HostContext, HostEnv, ThreadEnvFactory},
     CallDef, ContractEnv, GasReport
 };
 use odra_core::{prelude::*, EventError, VmError};
@@ -155,6 +155,19 @@ impl HostContext for LivenetHost {
     fn block_time(&self) -> u64 {
         let client = self.casper_client.borrow();
         client.get_block_time().unwrap()
+    }
+
+    fn thread_env_factory(&self) -> Option<ThreadEnvFactory> {
+        // Every worker gets its own client (connection, caches) with this host's caller and gas.
+        let client = self.casper_client.borrow();
+        let caller = client.caller();
+        let gas = client.gas().as_u64();
+        Some(ThreadEnvFactory::new(move || {
+            let env = HostEnv::new(LivenetHost::new());
+            env.set_caller(caller);
+            env.set_gas(gas);
+            env
+        }))
     }
 
     fn take_snapshot(&self) {
