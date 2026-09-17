@@ -47,6 +47,9 @@ fqn = "features::handling_errors::OwnedContract"
 fqn = "features::events::PartyContract"
 
 [[contracts]]
+fqn = "features::offchain::BalanceBook"
+
+[[contracts]]
 fqn = "features::call_stack::CallStackProbe"
 
 [[contracts]]

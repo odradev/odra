@@ -176,6 +176,11 @@ impl TestContract {
 
     #[odra(payable)]
     pub fn deposit(&mut self) {}
+
+    #[odra(offchain)]
+    pub fn sum_of(&self, values: Vec<u64>) -> u64 {
+        values.iter().sum()
+    }
 }
 
 struct DummyHostCtx;

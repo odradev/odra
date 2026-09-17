@@ -223,7 +223,9 @@ impl TryFrom<(&proc_macro2::TokenStream, &proc_macro2::TokenStream)> for ModuleI
                     ));
                 }
             }
-            return Ok(Self::Impl(ModuleIR { code, config }));
+            let ir = Self::Impl(ModuleIR { code, config });
+            ir.validate_offchain_functions()?;
+            return Ok(ir);
         }
 
         if let Ok(code) = syn::parse2::<syn::ItemTrait>(stream.1.clone()) {
@@ -382,6 +384,67 @@ impl ModuleImplIR {
 
     pub fn host_functions(&self) -> syn::Result<Vec<FnIR>> {
         Ok(self.functions()?.into_iter().collect())
+    }
+
+    /// The functions that become entry points of the deployed contract: everything but the
+    /// `#[odra(offchain)]` ones.
+    pub fn onchain_functions(&self) -> syn::Result<Vec<FnIR>> {
+        Ok(self
+            .functions()?
+            .into_iter()
+            .filter(|f| !f.is_offchain())
+            .collect())
+    }
+
+    /// The `#[odra(offchain)]` functions: run on the host against the contract's state, never
+    /// deployed.
+    pub fn offchain_functions(&self) -> syn::Result<Vec<FnIR>> {
+        Ok(self
+            .functions()?
+            .into_iter()
+            .filter(FnIR::is_offchain)
+            .collect())
+    }
+
+    /// `#[odra(offchain)]` is only meaningful on a read-only function of a plain module impl.
+    fn validate_offchain_functions(&self) -> syn::Result<()> {
+        // A function list that does not parse is reported by whoever consumes it.
+        let Ok(offchain_functions) = self.offchain_functions() else {
+            return Ok(());
+        };
+        for f in offchain_functions {
+            let sig = f.sig();
+            let reason = if self.is_trait_impl() {
+                Some(
+                    "a trait impl cannot have offchain functions: the trait is also implemented \
+                     by the ContractRef, where an offchain function has no meaning. Move it to a \
+                     plain `impl` block of the module"
+                )
+            } else if self.is_factory() {
+                Some("offchain functions are not supported in a factory module")
+            } else if f.is_mut() {
+                Some(
+                    "an offchain function runs on the host and cannot change the state: take \
+                     `&self`"
+                )
+            } else if f.is_payable() || f.is_non_reentrant() {
+                Some(
+                    "an offchain function is never called on chain, so `payable` and \
+                     `non_reentrant` do not apply to it"
+                )
+            } else if utils::syn::receiver_arg(sig).is_none() {
+                Some("an offchain function reads the contract's state: take `&self`")
+            } else {
+                None
+            };
+            if let Some(reason) = reason {
+                return Err(syn::Error::new_spanned(
+                    sig,
+                    format!("`#[odra(offchain)]` on `{}`: {}", f.name_str(), reason)
+                ));
+            }
+        }
+        Ok(())
     }
 
     pub fn host_mut_ret_functions(&self) -> syn::Result<Vec<FnIR>> {
@@ -710,6 +773,11 @@ impl FnIR {
     pub fn is_non_reentrant(&self) -> bool {
         let (odra_attrs, _) = attr::partition_attributes(self.attrs()).unwrap_or_default();
         odra_attrs.iter().any(OdraAttribute::is_non_reentrant)
+    }
+
+    pub fn is_offchain(&self) -> bool {
+        let (odra_attrs, _) = attr::partition_attributes(self.attrs()).unwrap_or_default();
+        odra_attrs.iter().any(OdraAttribute::is_offchain)
     }
 
     pub fn arg_names(&self) -> Vec<Ident> {
@@ -1093,5 +1161,80 @@ mod test {
             pub fn init(&mut self) {}
         );
         assert!(FnIR::try_from(code).is_ok());
+    }
+}
+
+#[cfg(test)]
+mod offchain_tests {
+    use super::ModuleImplIR;
+    use quote::quote;
+
+    fn parse(module: proc_macro2::TokenStream) -> syn::Result<ModuleImplIR> {
+        ModuleImplIR::try_from((&quote!(), &module))
+    }
+
+    #[test]
+    fn offchain_functions_are_split_from_the_entry_points() {
+        let module = parse(quote! {
+            impl Token {
+                pub fn balance_of(&self, owner: &Address) -> U256 { U256::zero() }
+                #[odra(offchain)]
+                pub fn balances(&self, owners: Vec<Address>) -> Vec<U256> { vec![] }
+            }
+        })
+        .unwrap();
+        let names =
+            |fns: Vec<super::FnIR>| fns.iter().map(super::FnIR::name_str).collect::<Vec<_>>();
+        assert_eq!(
+            names(module.functions().unwrap()),
+            vec!["balance_of", "balances"]
+        );
+        assert_eq!(
+            names(module.onchain_functions().unwrap()),
+            vec!["balance_of"]
+        );
+        assert_eq!(
+            names(module.offchain_functions().unwrap()),
+            vec!["balances"]
+        );
+    }
+
+    #[test]
+    fn offchain_function_must_be_read_only() {
+        let err = parse(quote! {
+            impl Token {
+                #[odra(offchain)]
+                pub fn burn_all(&mut self) {}
+            }
+        })
+        .err()
+        .expect("a mutable offchain function must be rejected");
+        assert!(err.to_string().contains("cannot change the state"), "{err}");
+    }
+
+    #[test]
+    fn offchain_function_cannot_be_payable() {
+        let err = parse(quote! {
+            impl Token {
+                #[odra(offchain, payable)]
+                pub fn total(&self) -> U256 { U256::zero() }
+            }
+        })
+        .err()
+        .expect("payable + offchain must be rejected");
+        assert!(err.to_string().contains("payable"), "{err}");
+    }
+
+    #[test]
+    fn offchain_function_is_not_allowed_in_a_trait_impl() {
+        let err = parse(quote! {
+            impl Erc20 for Token {
+                #[odra(offchain)]
+                fn total(&self) -> U256 { U256::zero() }
+            }
+        })
+        .err()
+        .expect("an offchain function in a trait impl must be rejected");
+        assert!(err.to_string().contains("trait impl"), "{err}");
     }
 }

@@ -29,6 +29,7 @@ use odra_examples::contracts::tlw::{TimeLockWallet, TimeLockWalletInitArgs};
 use odra_examples::factory::counter::{
     BetterCounterFactory, BetterCounterUpgradeArgs, Counter, CounterFactory
 };
+use odra_examples::features::offchain::BalanceBook;
 use odra_examples::features::storage::variable::{DogContract, DogContractInitArgs};
 use odra_modules::cep18_token::{Cep18, Cep18InitArgs};
 use odra_modules::erc20::{Erc20, Erc20HostRef, Erc20InitArgs};
@@ -65,6 +66,9 @@ impl DeployScript for DeployScriptForExamples {
             container,
             cspr!(300)
         )?;
+        // `all_balances` and `balances_of` of the book are `#[odra(offchain)]`: the CLI lists them
+        // next to the entry points and runs them on the host.
+        BalanceBook::load_or_deploy(env, NoArgs, container, cspr!(300))?;
         // A one-second lock, so the `tlw` scenario can withdraw right after depositing.
         TimeLockWallet::load_or_deploy(
             env,
@@ -462,6 +466,7 @@ pub fn main() {
         .contract::<Erc20>()
         .contract::<Cep18>()
         .contract::<TimeLockWallet>()
+        .contract::<BalanceBook>()
         .scenario(DogCheckScenario)
         .scenario(Erc20TransferScenario)
         .scenario(Cep18TransferScenario)

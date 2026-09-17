@@ -94,7 +94,12 @@ impl ContractCmd {
         let entry_points = T::schema_entrypoints()
             .into_iter()
             .filter(|entry_point| entry_point.name != "init")
-            .map(|entry_point| CallCmd::new::<T>(entry_point, package_name.clone()))
+            .map(|entry_point| CallCmd::new::<T>(entry_point, package_name.clone(), false))
+            .chain(
+                T::schema_offchain_entrypoints()
+                    .into_iter()
+                    .map(|entry_point| CallCmd::new::<T>(entry_point, package_name.clone(), true))
+            )
             .collect::<Vec<_>>();
         ContractCmd {
             contract_name,
@@ -150,13 +155,16 @@ impl From<&ContractCmd> for Command {
 struct CallCmd {
     package_name: String,
     entry_point: Entrypoint,
-    custom_types: BTreeSet<CustomType>
+    custom_types: BTreeSet<CustomType>,
+    /// An `#[odra(offchain)]` function: runs on the host, costs no gas.
+    offchain: bool
 }
 
 impl CallCmd {
     pub fn new<T: SchemaEntrypoints + OdraContract + SchemaCustomTypes + SchemaEvents>(
         entry_point: Entrypoint,
-        package_name: String
+        package_name: String,
+        offchain: bool
     ) -> Self {
         let mut custom_types = BTreeSet::new();
         custom_types.extend(T::schema_types().into_iter().flatten());
@@ -164,7 +172,8 @@ impl CallCmd {
         CallCmd {
             package_name,
             entry_point,
-            custom_types
+            custom_types,
+            offchain
         }
     }
 }
@@ -253,8 +262,14 @@ impl CmdOutput for CallResultReport {
 
 impl From<&CallCmd> for Command {
     fn from(value: &CallCmd) -> Self {
+        let mut about = value.entry_point.description.clone().unwrap_or_default();
+        if value.offchain {
+            about = format!("{about} [offchain: runs on the host, no transaction]")
+                .trim()
+                .to_string();
+        }
         let mut cmd = Command::new(&value.entry_point.name)
-            .about(value.entry_point.description.clone().unwrap_or_default())
+            .about(about)
             .args(entry_point::cmd_args::entry_point_args(
                 &value.entry_point,
                 &value.custom_types
@@ -294,7 +309,23 @@ mod tests {
         let cmd = ContractCmd::new::<TestContract>();
 
         assert_eq!(cmd.contract_name, "TestContract");
-        assert_eq!(cmd.entry_points.len(), 6);
+        // 6 entry points and the offchain `sum_of`, which is listed but not an entry point.
+        assert_eq!(cmd.entry_points.len(), 7);
+        let sum_of = cmd
+            .entry_points
+            .iter()
+            .find(|cmd| cmd.entry_point.name == "sum_of")
+            .expect("offchain functions are listed");
+        assert!(sum_of.offchain);
+        assert!(!TestContract::schema_entrypoints()
+            .iter()
+            .any(|ep| ep.name == "sum_of"));
+        let command = Command::from(sum_of);
+        assert!(command
+            .get_about()
+            .unwrap()
+            .to_string()
+            .contains("offchain"));
     }
 
     #[test]
