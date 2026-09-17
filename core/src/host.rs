@@ -177,7 +177,7 @@ impl InstallConfig {
     /// Returns new InstallConfig
     pub fn new<T: HasIdent>(is_upgradable: bool, allow_key_override: bool) -> Self {
         InstallConfig {
-            package_named_key: T::ident(),
+            package_named_key: T::contract_name(),
             is_upgradable,
             allow_key_override
         }
@@ -195,7 +195,7 @@ impl UpgradeConfig {
     /// It is by default upgradable and allows key override.
     pub fn new<T: HasIdent>() -> Self {
         UpgradeConfig {
-            package_named_key: T::ident(),
+            package_named_key: T::contract_name(),
             force_create_upgrade_group: false,
             allow_key_override: true
         }

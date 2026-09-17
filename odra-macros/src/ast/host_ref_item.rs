@@ -58,7 +58,9 @@ pub struct HasIdentTraitImplItem {
     #[syn(braced)]
     brace_token: syn::token::Brace,
     #[syn(in = brace_token)]
-    ident_fn: IdentFnItem
+    ident_fn: IdentFnItem,
+    #[syn(in = brace_token)]
+    name_fn: NameFnItem
 }
 
 impl TryFrom<&'_ ModuleImplIR> for HasIdentTraitImplItem {
@@ -71,7 +73,8 @@ impl TryFrom<&'_ ModuleImplIR> for HasIdentTraitImplItem {
             for_token: Default::default(),
             ref_ident: module.host_ref_ident()?,
             brace_token: Default::default(),
-            ident_fn: module.try_into()?
+            ident_fn: module.try_into()?,
+            name_fn: module.try_into()?
         })
     }
 }
@@ -313,6 +316,31 @@ impl ToTokens for LastCallFnItem {
 #[derive(syn_derive::ToTokens)]
 struct IdentFnItem {
     fn_item: FnItem
+}
+
+/// `fn contract_name() -> String { <Module as HasIdent>::contract_name() }` - the host ref
+/// reports the same contract name as the module, so `InstallConfig::new::<XxxHostRef>()` and
+/// `::<Xxx>()` agree. Fully qualified, so an entry point of the same name cannot shadow it.
+#[derive(syn_derive::ToTokens)]
+struct NameFnItem {
+    fn_item: FnItem
+}
+
+impl TryFrom<&'_ ModuleImplIR> for NameFnItem {
+    type Error = syn::Error;
+
+    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
+        let name = quote::format_ident!("contract_name");
+        let ty_string = utils::ty::string();
+        let ty_has_ident = utils::ty::has_ident();
+        let module_ident = module.module_ident()?;
+        let ret_ty: syn::ReturnType = utils::misc::ret_ty(&ty_string);
+        let expr: syn::Expr = parse_quote!(<#module_ident as #ty_has_ident>::#name());
+
+        Ok(Self {
+            fn_item: FnItem::new(&name, vec![], ret_ty, expr.as_block())
+        })
+    }
 }
 
 impl TryFrom<&'_ ModuleImplIR> for IdentFnItem {

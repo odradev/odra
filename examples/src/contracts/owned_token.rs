@@ -52,6 +52,8 @@ impl OwnedToken {
 #[cfg(test)]
 pub mod tests {
     use super::*;
+    use odra::contract_def::HasIdent;
+    use odra::host::InstallConfig;
     use odra::{
         host::{Deployer, HostRef},
         VmError
@@ -215,6 +217,20 @@ pub mod tests {
         assert_eq!(
             token.try_transfer_ownership(&new_owner).unwrap_err(),
             CallerNotTheOwner.into()
+        );
+    }
+    #[test]
+    fn module_name_names_the_package() {
+        // `#[odra::module(name = "MyTokenContact")]` above.
+        assert_eq!(OwnedToken::ident(), "OwnedToken");
+        assert_eq!(OwnedToken::contract_name(), "MyTokenContact");
+        assert_eq!(
+            InstallConfig::upgradable::<OwnedToken>().package_named_key,
+            "MyTokenContact"
+        );
+        assert_eq!(
+            InstallConfig::upgradable::<OwnedTokenHostRef>().package_named_key,
+            "MyTokenContact"
         );
     }
 }
