@@ -4,6 +4,13 @@ Changelog for `odra`.
 
 ## [Unreleased]
 ### Added
+- `#[odra(offchain)]` on a `&self` function of a module: the function is not deployed (no wasm entry
+  point, not in the schema) and runs on the host against the contract's state instead. It is on the
+  `HostRef` like any getter, tests call it on OdraVM and CasperVM, livenet executes it offline, and
+  odra-cli lists it under `contract <Name>` marked as offchain. A function that would be too expensive
+  or too big as an entry point (iterate a list, aggregate many balances) goes there. `HostRefLoader::load`
+  works on OdraVM and CasperVM now, and CasperVM keeps a register of the entry points of deployed
+  contracts to run offchain functions the way livenet runs getters (#594).
 - `ContractEnv::call_stack()` returns every address from the account that initiated the call to the
   contract being executed, and `ContractEnv::nth_caller(n)` walks it (`nth_caller(0)` is `caller()`),
   so a contract can find the account behind an intermediary contract. Works on OdraVM, CasperVM and

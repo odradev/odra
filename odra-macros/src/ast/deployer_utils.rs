@@ -18,7 +18,14 @@ impl TryFrom<&'_ ModuleImplIR> for EntrypointsInitExpr {
         let entry_points = module
             .functions()?
             .iter()
-            .map(|f| utils::expr::new_entry_point(f.name_str(), f.raw_typed_args(), f.is_payable()))
+            .map(|f| {
+                utils::expr::new_entry_point(
+                    f.name_str(),
+                    f.raw_typed_args(),
+                    f.is_payable(),
+                    f.is_offchain()
+                )
+            })
             .collect::<Punctuated<_, syn::Token![,]>>();
 
         Ok(Self {

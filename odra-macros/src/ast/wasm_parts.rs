@@ -49,7 +49,7 @@ impl TryFrom<&'_ ModuleImplIR> for ModuleWasmPartsItem {
             entry_points_fn: module.try_into()?,
             call_fn: module.try_into()?,
             entry_points: module
-                .functions()?
+                .onchain_functions()?
                 .iter()
                 .map(|f| (module, f))
                 .map(TryInto::try_into)
@@ -90,7 +90,7 @@ impl TryFrom<&'_ ModuleImplIR> for EntryPointsFnItem {
             use_ext_import: wasm_parts_utils::use_entity_entry_points_ext(),
             var_declaration: parse_quote!(let mut #ident_entry_points = #expr_entry_points;),
             items: module
-                .functions()?
+                .onchain_functions()?
                 .iter()
                 .map(TryInto::try_into)
                 .collect::<Result<Vec<_>, _>>()?,

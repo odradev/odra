@@ -31,6 +31,12 @@ pub use ty::NamedCLTyped;
 pub trait SchemaEntrypoints {
     /// Returns a vector of [Entrypoint]s.
     fn schema_entrypoints() -> Vec<Entrypoint>;
+
+    /// The `#[odra(offchain)]` functions of the module: callable on the host (tests, scripts,
+    /// odra-cli), never deployed, so not part of the contract schema.
+    fn schema_offchain_entrypoints() -> Vec<Entrypoint> {
+        Vec::new()
+    }
 }
 
 /// Trait representing schema events.

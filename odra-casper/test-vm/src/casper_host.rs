@@ -9,7 +9,11 @@ use casper_engine_test_support::{
 };
 use std::rc::Rc;
 
+use crate::offchain_contract_env::{
+    no_such_method, CasperOffchainContractEnv, OffchainContract, OffchainRegister
+};
 use crate::CasperVm;
+use odra_core::callstack::{Callstack, CallstackElement};
 use odra_core::casper_types::account::AccountHash;
 use odra_core::casper_types::bytesrepr::{Bytes, ToBytes};
 use odra_core::casper_types::{runtime_args, BlockTime, Key, Motes, SecretKey};
@@ -27,7 +31,14 @@ use odra_core::{
 /// HostContext utilizing the Casper test virtual machine.
 pub struct CasperHost {
     /// The Casper VM used by the host.
-    pub vm: Rc<RefCell<CasperVm>>
+    pub vm: Rc<RefCell<CasperVm>>,
+    /// The entry points of every deployed or loaded contract; used to run `#[odra(offchain)]`
+    /// functions on the host, everything else goes to the VM.
+    contract_register: OffchainRegister,
+    callstack: Rc<RefCell<Callstack>>,
+    contract_env: Rc<ContractEnv>,
+    /// The error of the last offchain revert.
+    offchain_error: Rc<RefCell<Option<OdraError>>>
 }
 
 impl HostContext for CasperHost {
@@ -147,6 +158,9 @@ impl HostContext for CasperHost {
         call_def: CallDef,
         use_proxy: bool
     ) -> OdraResult<Bytes> {
+        if self.is_offchain(address, call_def.entry_point()) {
+            return self.call_offchain(address, call_def);
+        }
         let mut opt_result: Option<Bytes> = None;
         let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             opt_result = Some(
@@ -176,12 +190,15 @@ impl HostContext for CasperHost {
             opt_result = Some(self.vm.borrow_mut().new_contract(
                 name,
                 init_args,
-                entry_points_caller
+                entry_points_caller.clone()
             ));
         }));
 
         match opt_result {
-            Some(result) => Ok(result),
+            Some(address) => {
+                self.register(address, name, entry_points_caller);
+                Ok(address)
+            }
             None => {
                 let error = self.vm.borrow().error();
                 Err(error.unwrap_or(OdraError::VmError(VmError::Panic)))
@@ -202,12 +219,15 @@ impl HostContext for CasperHost {
                 name,
                 contract_to_upgrade,
                 upgrade_args,
-                entry_points_caller
+                entry_points_caller.clone()
             ));
         }));
 
         match opt_result {
-            Some(result) => Ok(result),
+            Some(address) => {
+                self.register(address, name, entry_points_caller);
+                Ok(address)
+            }
             None => {
                 let error = self.vm.borrow().error();
                 Err(error.unwrap_or(OdraError::VmError(VmError::Panic)))
@@ -219,14 +239,14 @@ impl HostContext for CasperHost {
         &self,
         address: Address,
         contract_name: String,
-        _entry_points_caller: EntryPointsCaller
+        entry_points_caller: EntryPointsCaller
     ) {
-        // Nothing to register: the contract lives in the VM's global state and every call is
-        // dispatched by the VM, so `HostRefLoader::load` only needs the address.
+        // The state lives in the VM; the entry points are kept for the offchain functions.
+        self.register(address, &contract_name, entry_points_caller);
     }
 
     fn contract_env(&self) -> ContractEnv {
-        unreachable!()
+        (*self.contract_env).clone()
     }
 
     fn gas_report(&self) -> GasReport {
@@ -253,6 +273,68 @@ impl HostContext for CasperHost {
 impl CasperHost {
     /// Creates a new instance of the host.
     pub fn new(vm: Rc<RefCell<CasperVm>>) -> Rc<Self> {
-        Rc::new(Self { vm })
+        let contract_register: OffchainRegister = Default::default();
+        let callstack: Rc<RefCell<Callstack>> = Default::default();
+        let offchain_error: Rc<RefCell<Option<OdraError>>> = Default::default();
+        let offchain_env = CasperOffchainContractEnv::new(
+            vm.clone(),
+            callstack.clone(),
+            contract_register.clone(),
+            offchain_error.clone()
+        );
+        let contract_env = Rc::new(ContractEnv::new(offchain_env.clone()));
+        offchain_env.borrow().set_contract_env(&contract_env);
+        Rc::new(Self {
+            vm,
+            contract_register,
+            callstack,
+            contract_env,
+            offchain_error
+        })
+    }
+
+    fn register(&self, address: Address, name: &str, entry_points_caller: EntryPointsCaller) {
+        self.contract_register
+            .borrow_mut()
+            .insert(address, OffchainContract::new(name, &entry_points_caller));
+    }
+
+    fn is_offchain(&self, address: &Address, entry_point: &str) -> bool {
+        self.contract_register
+            .borrow()
+            .get(address)
+            .is_some_and(|c| c.is_offchain(entry_point))
+    }
+
+    /// Runs an `#[odra(offchain)]` function on the host, reading the contract's state from the VM.
+    fn call_offchain(&self, address: &Address, call_def: CallDef) -> OdraResult<Bytes> {
+        let (contract_name, call) = {
+            let register = self.contract_register.borrow();
+            let contract = register
+                .get(address)
+                .ok_or_else(|| no_such_method(call_def.entry_point()))?;
+            (contract.name().to_string(), contract.callback())
+        };
+        {
+            let mut callstack = self.callstack.borrow_mut();
+            callstack.push(CallstackElement::new_account(self.vm.borrow().get_caller()));
+            callstack.push(CallstackElement::new_contract_call(
+                contract_name,
+                *address,
+                call_def.clone()
+            ));
+        }
+        *self.offchain_error.borrow_mut() = None;
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            call(self.contract_env(), call_def)
+        }));
+        *self.callstack.borrow_mut() = Callstack::default();
+        match result {
+            Ok(result) => result,
+            Err(_) => {
+                let error = self.offchain_error.borrow_mut().take();
+                Err(error.unwrap_or(OdraError::VmError(VmError::Panic)))
+            }
+        }
     }
 }
