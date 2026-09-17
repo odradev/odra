@@ -107,6 +107,14 @@ impl HostContext for CasperHost {
         self.vm.borrow().block_time()
     }
 
+    fn take_snapshot(&self) {
+        self.vm.borrow_mut().take_snapshot()
+    }
+
+    fn restore_snapshot(&self) {
+        self.vm.borrow_mut().restore_snapshot()
+    }
+
     fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, EventError> {
         if !contract_address.is_contract() {
             return Err(EventError::TriedToQueryEventForNonContract);
