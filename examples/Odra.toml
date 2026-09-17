@@ -59,6 +59,9 @@ fqn = "features::modules::ModulesContract"
 fqn = "features::native_token::PublicWallet"
 
 [[contracts]]
+fqn = "features::native_token::WalletProxy"
+
+[[contracts]]
 fqn = "features::livenet::LivenetContract"
 
 [[contracts]]
