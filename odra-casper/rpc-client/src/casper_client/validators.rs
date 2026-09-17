@@ -59,16 +59,19 @@ impl super::CasperClient {
 
         let stored_value = self.query_global_state_maybe(key, None).await;
         match stored_value {
-            None => U512::zero(),
-            Some(sv) => match sv {
-                StoredValue::BidKind(bid_kind) => bid_kind.staked_amount().unwrap_or_default(),
-                _ => {
-                    panic!(
-                        "Couldn't get delegated amount for address: {:?}",
-                        delegator.to_formatted_string()
-                    )
-                }
+            Ok(None) => U512::zero(),
+            Ok(Some(StoredValue::BidKind(bid_kind))) => {
+                bid_kind.staked_amount().unwrap_or_default()
             }
+            Ok(Some(_)) => panic!(
+                "Couldn't get delegated amount for address: {:?}",
+                delegator.to_formatted_string()
+            ),
+            Err(e) => panic!(
+                "Couldn't get delegated amount for address: {:?}: {}",
+                delegator.to_formatted_string(),
+                e.error_message()
+            )
         }
     }
 

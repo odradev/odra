@@ -4,7 +4,7 @@ use crate::casper_client::Result;
 use crate::error::LivenetError::{ClientError, DictQueryError};
 use crate::log;
 use crate::utils::{extract_stored_value, retry_on_rate_limit, RateLimited};
-use casper_client::cli::{get_account, get_dictionary_item, DictionaryItemStrParams};
+use casper_client::cli::{get_account, get_dictionary_item, CliError, DictionaryItemStrParams};
 use casper_client::rpcs::results::{GetDeployResult, GetTransactionResult};
 use casper_client::rpcs::GlobalStateIdentifier;
 use casper_client::{get_balance, get_deploy, get_transaction, query_global_state};
@@ -19,44 +19,43 @@ use odra_core::prelude::*;
 
 /// Query methods implementation for CasperClient.
 impl super::CasperClient {
-    /// Gets a value from the Odra storage (`state` dictionary)
-    pub fn get_value(&self, address: &Address, key: &[u8]) -> Option<Bytes> {
+    /// Gets a value from the Odra storage (`state` dictionary).
+    ///
+    /// `Ok(None)` means the node has no such value; `Err` means the node could not be asked.
+    pub fn get_value(&self, address: &Address, key: &[u8]) -> Result<Option<Bytes>> {
         let rt = self.runtime();
         rt.block_on(self.get_value_async(address, key))
     }
 
     /// Gets a value from the Odra storage (`state` dictionary)
-    async fn get_value_async(&self, address: &Address, key: &[u8]) -> Option<Bytes> {
+    async fn get_value_async(&self, address: &Address, key: &[u8]) -> Result<Option<Bytes>> {
         self.get_dictionary_value_async(address, STATE_KEY, key)
             .await
     }
 
-    /// Gets a value from a named key of an account or a contract
-    pub fn get_named_value(&self, address: &Address, name: &str) -> Option<Bytes> {
+    /// Gets a value from a named key of an account or a contract.
+    ///
+    /// `Ok(None)` means the node has no such value; `Err` means the node could not be asked.
+    pub fn get_named_value(&self, address: &Address, name: &str) -> Result<Option<Bytes>> {
         let rt = self.runtime();
         rt.block_on(self.get_named_value_async(address, name))
     }
 
     /// Gets a value from a named key of an account or a contract
-    async fn get_named_value_async(&self, address: &Address, name: &str) -> Option<Bytes> {
-        let entity_hash = self.query_global_state_for_entity_addr(address).await;
+    async fn get_named_value_async(&self, address: &Address, name: &str) -> Result<Option<Bytes>> {
+        let entity_hash = self.entity_addr(address).await?;
         let stored_value = self
             .query_global_state_maybe(Key::Hash(entity_hash.value()), Some(name.to_string()))
-            .await;
+            .await?;
         match stored_value {
-            None => None,
-            Some(value) => match value {
-                CLValue(value) => Some(Bytes::from(value.inner_bytes().as_slice())),
-                _ => {
-                    log::error(format!(
-                        "Couldn't get {} from {:?}, instead of CLValue got {:?}",
-                        name,
-                        address.to_formatted_string(),
-                        value
-                    ));
-                    None
-                }
-            }
+            None => Ok(None),
+            Some(CLValue(value)) => Ok(Some(Bytes::from(value.inner_bytes().as_slice()))),
+            Some(value) => Err(ClientError(format!(
+                "Couldn't get {} from {:?}, instead of CLValue got {:?}",
+                name,
+                address.to_formatted_string(),
+                value
+            )))
         }
     }
 
@@ -67,7 +66,8 @@ impl super::CasperClient {
             .await;
 
         match stored_value {
-            None => {
+            Ok(Some(sv)) => extract_stored_value(sv),
+            Ok(None) => {
                 log::error(format!(
                     "Couldn't query {} from {:?}, instead of CLValue got None",
                     RESULT_KEY,
@@ -75,17 +75,27 @@ impl super::CasperClient {
                 ));
                 Bytes::new()
             }
-            Some(sv) => extract_stored_value(sv)
+            Err(e) => {
+                log::error(format!(
+                    "Couldn't query {} from {:?}: {}",
+                    RESULT_KEY,
+                    self.caller().to_formatted_string(),
+                    e.error_message()
+                ));
+                Bytes::new()
+            }
         }
     }
 
-    /// Gets a value from a named dictionary
+    /// Gets a value from a named dictionary.
+    ///
+    /// `Ok(None)` means the node has no such value; `Err` means the node could not be asked.
     pub fn get_dictionary_value(
         &self,
         address: &Address,
         dictionary_name: &str,
         key: &[u8]
-    ) -> Option<Bytes> {
+    ) -> Result<Option<Bytes>> {
         let rt = self.runtime();
         rt.block_on(self.get_dictionary_value_async(address, dictionary_name, key))
     }
@@ -96,15 +106,11 @@ impl super::CasperClient {
         address: &Address,
         dictionary_name: &str,
         key: &[u8]
-    ) -> Option<Bytes> {
+    ) -> Result<Option<Bytes>> {
         let key = String::from_utf8(key.to_vec())
-            .map_err(|_| {
-                log::error(format!("Couldn't convert key to string: {:?}", key));
-            })
-            .ok()?;
+            .map_err(|_| ClientError(format!("Couldn't convert key to string: {:?}", key)))?;
         self.query_dict(address, dictionary_name.to_string(), key)
             .await
-            .ok()
     }
 
     /// Returns the balance of the account.
@@ -139,7 +145,9 @@ impl super::CasperClient {
 
     /// Gets an uref for a main purse of an account or a contract.
     pub async fn get_main_purse(&self, address: &Address) -> Result<URef> {
-        let maybe_purse_uref = self.query_global_state_maybe(address.as_key(), None).await;
+        let maybe_purse_uref = self
+            .query_global_state_maybe(address.as_key(), None)
+            .await?;
         let purse_uref_value = maybe_purse_uref.ok_or_else(|| {
             ClientError(format!(
                 "Couldn't get purse uref for address: {:?}",
@@ -166,7 +174,7 @@ impl super::CasperClient {
                 })?;
                 let maybe_contract = self
                     .query_global_state_maybe(Key::Hash(last_version.value()), None)
-                    .await;
+                    .await?;
                 let contract_value = maybe_contract.ok_or_else(|| {
                     ClientError(format!(
                         "Couldn't get contract for address: {:?}",
@@ -216,27 +224,38 @@ impl super::CasperClient {
     /// Get the event bytes from storage
     async fn get_event_async(&self, contract_address: &Address, index: u32) -> Result<Bytes> {
         self.query_dict(contract_address, EVENTS.to_string(), index.to_string())
-            .await
+            .await?
+            .ok_or_else(|| {
+                ClientError(format!(
+                    "No event at index {index} for contract {}",
+                    contract_address.to_formatted_string()
+                ))
+            })
     }
 
-    /// Get the events count from storage
-    pub fn events_count(&self, contract_address: &Address) -> Option<u32> {
+    /// Get the events count from storage.
+    ///
+    /// `Ok(None)` when the contract has no events dictionary.
+    pub fn events_count(&self, contract_address: &Address) -> Result<Option<u32>> {
         let rt = self.runtime();
         rt.block_on(self.events_count_async(contract_address))
     }
 
     /// Get the events count from storage
-    async fn events_count_async(&self, contract_address: &Address) -> Option<u32> {
-        self.get_named_value_async(contract_address, EVENTS_LENGTH)
-            .await
+    async fn events_count_async(&self, contract_address: &Address) -> Result<Option<u32>> {
+        let bytes = self
+            .get_named_value_async(contract_address, EVENTS_LENGTH)
+            .await?;
+        bytes
             .map(|bytes| {
-                deserialize_from_slice(&bytes).unwrap_or_else(|_| {
-                    panic!(
+                deserialize_from_slice(&bytes).map_err(|_| {
+                    ClientError(format!(
                         "Couldn't deserialize events count for contract: {:?}, bytes: {:?}",
                         contract_address, bytes
-                    )
+                    ))
                 })
             })
+            .transpose()
     }
 
     /// Query the node for the transaction state.
@@ -323,41 +342,44 @@ impl super::CasperClient {
         Ok(Address::from(package_hash))
     }
 
-    /// Find the entity addr in global state for an address
-    async fn query_global_state_for_entity_addr(&self, address: &Address) -> EntityAddr {
-        let maybe_result = self.query_global_state_maybe(address.as_key(), None).await;
-        let entity_addr_value = match maybe_result {
-            None => panic!("Couldn't query for entity address value at {:?}", address),
-            Some(entity_addr_value) => entity_addr_value
-        };
+    /// Resolves the current entity of the contract package at `address`.
+    ///
+    /// Served from the query cache within one state root hash, so a burst of reads from one
+    /// contract resolves it once.
+    async fn entity_addr(&self, address: &Address) -> Result<EntityAddr> {
+        let entity_addr_value = self
+            .query_global_state_maybe(address.as_key(), None)
+            .await?
+            .ok_or_else(|| {
+                ClientError(format!(
+                    "No contract found at {}",
+                    address.to_formatted_string()
+                ))
+            })?;
         match entity_addr_value {
-            StoredValue::SmartContract(package) => EntityAddr::SmartContract(
-                package
-                    .current_entity_hash()
-                    .unwrap_or_else(|| {
-                        panic!(
-                            "Couldn't get entity addr for address: {:?}",
-                            address.to_formatted_string()
-                        )
-                    })
-                    .value()
-            ),
-            StoredValue::ContractPackage(package) => {
-                let last_version = package.current_contract_hash().unwrap_or_else(|| {
-                    panic!(
-                        "Contract package has no current contract hash for address: {:?}",
+            StoredValue::SmartContract(package) => package
+                .current_entity_hash()
+                .map(|hash| EntityAddr::SmartContract(hash.value()))
+                .ok_or_else(|| {
+                    ClientError(format!(
+                        "Contract package {} has no current entity",
                         address.to_formatted_string()
-                    )
-                });
-                EntityAddr::SmartContract(last_version.value())
-            }
-            _ => {
-                panic!(
-                    "Entity addr for {:?} was incorrect: {:?}",
-                    address.to_formatted_string(),
-                    entity_addr_value
-                )
-            }
+                    ))
+                }),
+            StoredValue::ContractPackage(package) => package
+                .current_contract_hash()
+                .map(|hash| EntityAddr::SmartContract(hash.value()))
+                .ok_or_else(|| {
+                    ClientError(format!(
+                        "Contract package {} has no current contract hash",
+                        address.to_formatted_string()
+                    ))
+                }),
+            other => Err(ClientError(format!(
+                "Expected a contract package at {}, found {:?}",
+                address.to_formatted_string(),
+                other
+            )))
         }
     }
 
@@ -367,10 +389,19 @@ impl super::CasperClient {
         address: &Address,
         dictionary_name: String,
         dictionary_item_key: String
-    ) -> Result<Bytes> {
-        let entity_addr = self.query_global_state_for_entity_addr(address).await;
+    ) -> Result<Option<Bytes>> {
+        let entity_addr = self.entity_addr(address).await?;
         let hash_addr = Key::Hash(entity_addr.value()).to_formatted_string();
-        let state_root_hash = self.get_state_root_hash().await?;
+        let state_root_hash_digest = self.get_state_root_hash_digest().await?;
+        let cache_key = (
+            hash_addr.clone(),
+            dictionary_name.clone(),
+            dictionary_item_key.clone()
+        );
+        if let Some(cached) = self.cached_dictionary_item(state_root_hash_digest, &cache_key) {
+            return Ok(cached);
+        }
+        let state_root_hash = base16::encode_lower(&state_root_hash_digest);
         let rpc_id = self.rpc_id();
         let r = retry_on_rate_limit("state_get_dictionary_item", || {
             get_dictionary_item(
@@ -387,39 +418,50 @@ impl super::CasperClient {
         })
         .await;
 
-        let result = r.map_err(|e| ClientError(e.to_string()))?;
+        let result = match r {
+            Ok(result) => result,
+            // The node answered and has no such item: a legitimate miss.
+            Err(CliError::Core(e @ casper_client::Error::ResponseIsRpcError { .. }))
+                if !e.is_rate_limited() =>
+            {
+                log::debug(format!(
+                    "state_get_dictionary_item({dictionary_name}, {dictionary_item_key}): {e}"
+                ));
+                self.cache_dictionary_item(state_root_hash_digest, cache_key, None);
+                return Ok(None);
+            }
+            Err(e) => return Err(ClientError(e.to_string()))
+        };
         let stored_value = result.result.stored_value;
         let cl_value = stored_value.into_cl_value().ok_or(DictQueryError)?;
 
         // Note: this is for compatibility with CEP18 named keys.
-        if cl_value.cl_type() == &<Vec<u8> as CLTyped>::cl_type() {
-            let bytes = cl_value.into_t().map_err(|_| DictQueryError)?;
-            Ok(bytes)
+        let bytes = if cl_value.cl_type() == &<Vec<u8> as CLTyped>::cl_type() {
+            cl_value.into_t().map_err(|_| DictQueryError)?
         } else {
-            let bytes = cl_value.inner_bytes();
-            Ok(Bytes::from(bytes.to_vec()))
-        }
+            Bytes::from(cl_value.inner_bytes().to_vec())
+        };
+        self.cache_dictionary_item(state_root_hash_digest, cache_key, Some(bytes.clone()));
+        Ok(Some(bytes))
     }
 
+    /// Queries the global state at the current state root hash.
+    ///
+    /// `Ok(None)` means the node answered that there is no such value; `Err` means the node could
+    /// not be asked (transport failure, or still throttled after retries).
     pub(crate) async fn query_global_state_maybe(
         &self,
         key: Key,
         path: Option<String>
-    ) -> Option<StoredValue> {
+    ) -> Result<Option<StoredValue>> {
         let path = match path {
             None => vec![],
             Some(string) => vec![string]
         };
-        let state_root_hash = match self.get_state_root_hash_digest().await {
-            Ok(hash) => hash,
-            Err(e) => {
-                log::warn(format!(
-                    "query_global_state({key:?}) skipped: {}",
-                    e.error_message()
-                ));
-                return None;
-            }
-        };
+        let state_root_hash = self.get_state_root_hash_digest().await?;
+        if let Some(cached) = self.cached_global_state(state_root_hash, &key, &path) {
+            return Ok(cached);
+        }
         let result = retry_on_rate_limit("query_global_state", || {
             query_global_state(
                 self.rpc_id_typed(),
@@ -432,18 +474,21 @@ impl super::CasperClient {
         })
         .await;
         match result {
-            Ok(r) => Some(r.result.stored_value),
+            Ok(r) => {
+                let value = r.result.stored_value;
+                self.cache_global_state(state_root_hash, key, path, Some(value.clone()));
+                Ok(Some(value))
+            }
             // The node answered; a missing value is a legitimate `None` for optional lookups.
             Err(e @ casper_client::Error::ResponseIsRpcError { .. }) if !e.is_rate_limited() => {
                 log::debug(format!("query_global_state({key:?}): {e}"));
-                None
+                self.cache_global_state(state_root_hash, key, path, None);
+                Ok(None)
             }
-            // Throttled even after retries, or a transport/HTTP failure: the caller will report
-            // "not found", so say what really happened.
-            Err(e) => {
-                log::warn(format!("query_global_state({key:?}) failed: {e}"));
-                None
-            }
+            // Throttled even after retries, or a transport/HTTP failure.
+            Err(e) => Err(ClientError(format!(
+                "query_global_state({key:?}) failed: {e}"
+            )))
         }
     }
 }
