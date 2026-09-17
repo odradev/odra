@@ -1079,3 +1079,14 @@ pub fn override_factory_caller() {
         CALLER_OVERRIDE = true;
     }
 }
+
+/// Prints `message` on the host through `casper_print`. Compiled in only with the `test-support`
+/// feature; a production contract has no trace of it.
+#[cfg(feature = "test-support")]
+pub fn debug(message: &str) {
+    casper_contract::contract_api::runtime::print(message);
+}
+
+/// No-op without the `test-support` feature.
+#[cfg(not(feature = "test-support"))]
+pub fn debug(_message: &str) {}

@@ -30,3 +30,5 @@ missing_docs = "warn"
 [features]
 default = []
 disable-allocator = []
+# Compiles `ContractEnv::debug` into `casper_print`; for wasm run on the test VM, not for production.
+test-support = ["casper-contract/test-support"]

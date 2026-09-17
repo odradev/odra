@@ -14,6 +14,8 @@ pub struct TestingContract {
 impl TestingContract {
     /// Initializes the contract with the name
     pub fn init(&mut self, name: String) {
+        self.env()
+            .debug(format!("TestingContract::init called with name {name:?}"));
         self.name.set(name);
         self.created_at.set(self.env().get_block_time());
         self.created_by.set(self.env().caller())

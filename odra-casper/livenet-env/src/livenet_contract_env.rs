@@ -19,6 +19,10 @@ pub struct LivenetContractEnv {
 }
 
 impl ContractContext for LivenetContractEnv {
+    fn debug(&self, message: &str) {
+        println!("{message}");
+    }
+
     fn get_value(&self, key: &[u8]) -> Option<Bytes> {
         let callstack = self.callstack.borrow();
         let client = self.casper_client.borrow();

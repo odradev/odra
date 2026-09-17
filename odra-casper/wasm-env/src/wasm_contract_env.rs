@@ -16,6 +16,10 @@ use odra_core::{ContractContext, ContractEnv};
 pub struct WasmContractEnv;
 
 impl ContractContext for WasmContractEnv {
+    fn debug(&self, message: &str) {
+        host_functions::debug(message);
+    }
+
     fn get_value(&self, key: &[u8]) -> Option<Bytes> {
         host_functions::get_value(key).map(Bytes::from)
     }
