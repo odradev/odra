@@ -61,6 +61,7 @@ impl Default for OdraCli {
 impl OdraCli {
     /// Creates a new empty instance of the Odra CLI.
     pub fn new() -> Self {
+        env_setup::apply_state_root_hash_arg(std::env::args());
         let host_env = env_setup::create_host_env();
         Self {
             main_cmd: MainCmd::default(),

@@ -24,6 +24,9 @@ Changelog for `odra`.
 - `#[odra::external_contract]` keeps the annotated trait and implements it for the generated
   `XxxContractRef` and `XxxHostRef`, so the trait can be used as a bound or implemented by a module.
   A trait declared a second time by hand as a workaround must be removed.
+- Livenet: `ODRA_CASPER_LIVENET_STATE_ROOT_HASH` pins every read to a past state root hash (transactions are
+  refused while it is set). In `odra-cli` the global `--state-root-hash <HEX>` flag does the same for one
+  invocation or REPL session, so any getter, `inspect` or `storage` command can look at the chain as it was (#572).
 - `odra_cli::ContractLoaderExt`: `MyContract::load_from_file(&env, path)`, `load_from_file_named` and
   `load_from_default_file(&env)` load an already deployed contract from the contracts file written by the
   `deploy` command, instead of pasting its package hash into a script (#566).
