@@ -44,7 +44,7 @@ mod tests {
     use core::time::Duration;
     use odra::casper_types::{U256, U512};
     use odra::{
-        host::{Deployer, HostEnv},
+        host::{Deployer, HostEnv, HostRefLoader},
         prelude::*
     };
     use odra_modules::access::{Ownable, OwnableInitArgs};
@@ -110,6 +110,32 @@ mod tests {
         assert_eq!(token.balance_of(&alice), U256::from(1));
         env.restore_snapshot();
         assert_eq!(token.balance_of(&alice), U256::zero());
+    }
+
+    #[test]
+    fn concurrently_deploys_and_reads() {
+        // On the VMs `concurrently` runs the items one after another; on livenet they are spread
+        // over worker threads. The code is the same either way.
+        let env = odra_test::env();
+        let supplies = [U256::from(10), U256::from(20), U256::from(30)];
+
+        let addresses = env.concurrently(supplies.to_vec(), |env, initial_supply| {
+            OwnedToken::deploy(
+                env,
+                OwnedTokenInitArgs {
+                    name: "Token".to_string(),
+                    symbol: "TKN".to_string(),
+                    decimals: 0,
+                    initial_supply
+                }
+            )
+            .address()
+        });
+
+        let read = env.concurrently(addresses, |env, address| {
+            OwnedToken::load(env, address).total_supply()
+        });
+        assert_eq!(read, supplies.to_vec());
     }
 
     #[test]

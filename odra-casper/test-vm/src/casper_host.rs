@@ -219,9 +219,10 @@ impl HostContext for CasperHost {
         &self,
         address: Address,
         contract_name: String,
-        entry_points_caller: EntryPointsCaller
+        _entry_points_caller: EntryPointsCaller
     ) {
-        panic!("register_contract is not supported in CasperHost");
+        // Nothing to register: the contract lives in the VM's global state and every call is
+        // dispatched by the VM, so `HostRefLoader::load` only needs the address.
     }
 
     fn contract_env(&self) -> ContractEnv {

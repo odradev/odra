@@ -68,6 +68,23 @@ impl OdraVm {
         address
     }
 
+    /// Makes a contract callable under `address` without deploying it (`HostRefLoader::load`).
+    ///
+    /// A contract deployed in this VM is already registered and is left as it is.
+    pub fn register_contract(
+        &self,
+        address: Address,
+        name: &str,
+        entry_points_caller: EntryPointsCaller
+    ) {
+        let mut contract_register = self.contract_register.borrow_mut();
+        if contract_register.get(&address).is_some() {
+            return;
+        }
+        contract_register.add(address, ContractContainer::new(name, entry_points_caller));
+        self.state.borrow_mut().set_balance(address, U512::zero());
+    }
+
     /// Upgrades an existing contract.
     pub fn upgrade_contract(
         &self,
