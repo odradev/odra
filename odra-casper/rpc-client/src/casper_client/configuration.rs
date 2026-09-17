@@ -36,11 +36,11 @@ impl CasperClientConfiguration {
 
         if let Ok(additional_env_file) = additional_env_file {
             let filename = PathBuf::from(additional_env_file).with_extension("env");
-            dotenv::from_filename(filename).ok();
+            dotenvy::from_filename(filename).ok();
         }
 
         // Load .env
-        dotenv::dotenv().ok();
+        dotenvy::dotenv().ok();
 
         // Initialize logging from environment variable
         log::init_log_level();

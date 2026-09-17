@@ -72,6 +72,8 @@ Changelog for `odra`.
   contracts in `Odra.toml` of `odra-modules` and `odra-examples`; their tests run on OdraVM only.
 
 ### Fixed
+- Livenet backend no longer panics when a transaction fails with an internal Odra error that was missing
+  from its error table (e.g. `ContractNotInstalled` or `PathIndexOutOfBounds`).
 - Reading a stored value or a dictionary item as the wrong type reverts with the concrete `bytesrepr`
   error (`LeftOverBytes`, `EarlyEndOfStream`, ...) instead of a blanket `Formatting`; the same for
   deserializing a cross-contract call result on the host. A named argument that exists but cannot be

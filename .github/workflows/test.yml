@@ -15,6 +15,16 @@ run-name: Running lints and tests for ${{ github.head_ref }}
 # The suite is split into independent jobs so the OdraVM tests (no wasm needed) report in minutes
 # while the wasm-based ones build. Every job restores the same cache and saves under its own key.
 jobs:
+  deny:
+    name: Dependency check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run cargo-deny
+        uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check
+
   lint:
     name: Lint
     runs-on: ubuntu-latest

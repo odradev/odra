@@ -1,0 +1,79 @@
+# cargo-deny configuration - see https://embarkstudios.github.io/cargo-deny/
+#
+# Run locally with `just check-deny`. CI runs the same command.
+
+[graph]
+# Odra builds for wasm32 as well as the host, so check both target graphs.
+targets = [
+    { triple = "x86_64-unknown-linux-gnu" },
+    { triple = "wasm32-unknown-unknown" },
+]
+all-features = true
+
+[advisories]
+# Security vulnerabilities are always denied; there are none today. The entries
+# below are `unmaintained` advisories only, each with the reason it is accepted.
+ignore = [
+    # bincode 1.3.3, pulled in by casper-execution-engine. Not reachable from
+    # Odra's own code and not ours to bump - it goes away when the casper stack
+    # moves to bincode 2.
+    "RUSTSEC-2025-0141",
+    # proc-macro-error 1.0.4, pulled in by derive-try-from-ref. Build-time only
+    # (proc-macro dependency), so it ships in no contract wasm.
+    "RUSTSEC-2024-0370",
+    # proc-macro-error2 2.0.1, pulled in by syn_derive. Same story: build-time
+    # only. The advisory itself notes no safe upgrade exists.
+    "RUSTSEC-2026-0173",
+]
+
+[licenses]
+# Odra is MIT. These are the licenses present in the dependency graph; anything
+# new shows up as a build failure, which is the point of the check.
+allow = [
+    "0BSD",
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "BSL-1.0",
+    "BlueOak-1.0.0",
+    "CC0-1.0",
+    "ISC",
+    "MIT",
+    "MIT-0",
+    "Unicode-3.0",
+    "Unlicense",
+    "Zlib",
+]
+confidence-threshold = 0.8
+
+# MPL-2.0 is file-level copyleft: linking it from an MIT crate is fine as long
+# as the crate itself is not modified, which we do not do. Scoped to this one
+# crate rather than allowing MPL-2.0 across the board.
+exceptions = [
+    { allow = ["MPL-2.0"], crate = "memory_units" },
+]
+
+[bans]
+# A dependency graph this size always carries duplicates, mostly from the casper
+# stack. Warn so they stay visible without blocking CI.
+multiple-versions = "warn"
+wildcards = "deny"
+# Workspace members depend on each other by path without a version requirement,
+# which reads as a wildcard. That is fine for crates that are never published.
+allow-wildcard-paths = true
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+# Every dependency currently resolves from crates.io, so this list is empty -
+# an entry that is never encountered raises an `unmatched-source` warning.
+#
+# A branch that patches the casper stack to git (see [patch.crates-io] in
+# Cargo.toml) must add the repositories it patches, e.g.
+#
+#   allow-git = [
+#       "https://github.com/casper-network/casper-node",
+#       "https://github.com/odradev/casper-event-standard",
+#       "https://github.com/odradev/casper-contract-schema",
+#   ]
+allow-git = []

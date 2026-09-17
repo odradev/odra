@@ -23,6 +23,11 @@ check-lint: clippy
     cargo check --all-targets
     cd odra-casper/proxy-caller && cargo fmt -- --check
 
+# Audit dependencies for advisories, licenses, banned crates and sources.
+# Install with `cargo install cargo-deny --locked`.
+check-deny:
+    cargo deny check
+
 install-cargo-odra:
     rustup toolchain install stable
     cargo +stable install cargo-odra --git {{CARGO_ODRA_GIT_REPO}} --branch {{CARGO_ODRA_BRANCH}} --locked
