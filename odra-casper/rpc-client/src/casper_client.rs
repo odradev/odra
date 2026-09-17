@@ -4,6 +4,7 @@ use crate::casper_client::{
     configuration::CasperClientConfiguration, transaction_watcher::TransactionWatcher
 };
 use crate::error::LivenetError;
+use crate::log;
 use casper_types::bytesrepr::Bytes;
 use casper_types::{Digest, Key, StoredValue, U512};
 use std::cell::RefCell;
@@ -38,6 +39,9 @@ pub const ENV_LIVENET_ENV_FILE: &str = "ODRA_CASPER_LIVENET_ENV";
 pub const ENV_TTL: &str = "ODRA_CASPER_LIVENET_TTL";
 /// Environment variable holding gas price tolerance for transactions.
 pub const ENV_GAS_PRICE_TOLERANCE: &str = "ODRA_CASPER_LIVENET_GAS_PRICE_TOLERANCE";
+/// Environment variable pinning every read to a past state root hash (hex). Transactions are
+/// refused while it is set.
+pub const ENV_STATE_ROOT_HASH: &str = "ODRA_CASPER_LIVENET_STATE_ROOT_HASH";
 
 pub type Result<T> = core::result::Result<T, LivenetError>;
 
@@ -61,6 +65,8 @@ pub struct CasperClient {
     active_account: usize,
     gas: U512,
     runtime: Rc<Runtime>,
+    /// A state root hash every read is pinned to (`ODRA_CASPER_LIVENET_STATE_ROOT_HASH`).
+    pinned_state_root_hash: Option<Digest>,
     /// Cached state root hash and the time it was fetched, see [STATE_ROOT_HASH_TTL].
     state_root_hash: RefCell<Option<(Digest, Instant)>>,
     /// Query responses, valid for one state root hash.
@@ -99,7 +105,14 @@ impl CasperClient {
 
         let timeout = Duration::from_secs(TRANSACTION_WAIT_TIME * TRANSACTION_MAX_RETRIES);
         let watcher = TransactionWatcher::new(&configuration, timeout);
+        if let Some(digest) = configuration.state_root_hash {
+            log::info(format!(
+                "Reads pinned to state root hash {}; transactions are disabled.",
+                base16::encode_lower(&digest)
+            ));
+        }
         CasperClient {
+            pinned_state_root_hash: configuration.state_root_hash,
             configuration,
             watcher,
             active_account: 0,
@@ -156,8 +169,30 @@ impl CasperClient {
         cache.dictionary.insert(item, value);
     }
 
-    /// Returns the cached state root hash if it is younger than [STATE_ROOT_HASH_TTL].
+    /// The state root hash all reads are pinned to, if any.
+    pub fn pinned_state_root_hash(&self) -> Option<Digest> {
+        self.pinned_state_root_hash
+    }
+
+    /// Fails when reads are pinned to a past state root hash: a transaction would execute at the
+    /// chain tip and its effects would never show up in the pinned view.
+    fn ensure_not_pinned(&self) -> Result<()> {
+        match self.pinned_state_root_hash {
+            None => Ok(()),
+            Some(digest) => Err(LivenetError::ClientError(format!(
+                "Transactions are disabled while reads are pinned to state root hash {} \
+                 ({ENV_STATE_ROOT_HASH})",
+                base16::encode_lower(&digest)
+            )))
+        }
+    }
+
+    /// Returns the pinned state root hash, or the cached one if it is younger than
+    /// [STATE_ROOT_HASH_TTL].
     fn cached_state_root_hash(&self) -> Option<Digest> {
+        if self.pinned_state_root_hash.is_some() {
+            return self.pinned_state_root_hash;
+        }
         self.state_root_hash
             .borrow()
             .filter(|(_, fetched_at)| fetched_at.elapsed() < STATE_ROOT_HASH_TTL)
@@ -169,6 +204,7 @@ impl CasperClient {
     }
 
     /// Forgets the cached state root hash; called after every transaction this client sends.
+    /// A pinned state root hash stays.
     pub fn invalidate_state_root_hash(&self) {
         *self.state_root_hash.borrow_mut() = None;
     }
@@ -179,5 +215,46 @@ impl CasperClient {
     /// without borrowing `self` twice.
     fn runtime(&self) -> Rc<Runtime> {
         self.runtime.clone()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::casper_client::configuration::CasperClientConfiguration;
+
+    fn configuration(state_root_hash: Option<Digest>) -> CasperClientConfiguration {
+        CasperClientConfiguration {
+            node_address: "http://localhost:11101".to_string(),
+            events_url: "http://localhost:18101/events".to_string(),
+            chain_name: "casper-net-1".to_string(),
+            secret_keys: vec![],
+            secret_key_paths: vec![],
+            cspr_cloud_auth_token: None,
+            gas_price_tolerance: 1,
+            ttl: 300,
+            state_root_hash
+        }
+    }
+
+    #[test]
+    fn pinned_state_root_hash_is_used_and_survives_invalidation() {
+        let digest = Digest::hash(b"past");
+        let client = CasperClient::new(configuration(Some(digest)));
+        assert_eq!(client.cached_state_root_hash(), Some(digest));
+        client.invalidate_state_root_hash();
+        assert_eq!(client.cached_state_root_hash(), Some(digest));
+        assert!(client.ensure_not_pinned().is_err());
+    }
+
+    #[test]
+    fn unpinned_client_starts_without_a_cached_hash() {
+        let client = CasperClient::new(configuration(None));
+        assert_eq!(client.cached_state_root_hash(), None);
+        assert!(client.ensure_not_pinned().is_ok());
+        client.cache_state_root_hash(Digest::hash(b"now"));
+        assert!(client.cached_state_root_hash().is_some());
+        client.invalidate_state_root_hash();
+        assert_eq!(client.cached_state_root_hash(), None);
     }
 }

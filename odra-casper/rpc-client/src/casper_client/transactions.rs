@@ -156,6 +156,7 @@ impl super::CasperClient {
 
         let transaction = self.new_wasm_deploy_transaction(module_bytes, args, timestamp)?;
         log::debug(serde_json::to_string_pretty(&transaction).unwrap());
+        self.ensure_not_pinned()?;
         let watch = self.watcher.start_watching().await?;
 
         let response = put_transaction(
@@ -198,6 +199,7 @@ impl super::CasperClient {
 
         let transaction = self.new_call_transaction(addr, call_def, timestamp)?;
         log::debug(serde_json::to_string_pretty(&transaction).unwrap());
+        self.ensure_not_pinned()?;
         let watch = self.watcher.start_watching().await?;
 
         let response = put_transaction(
@@ -221,6 +223,7 @@ impl super::CasperClient {
 
     async fn put_transaction(&self, transaction: Transaction) -> Result<TransactionHash> {
         log::debug("[TX] Starting event watcher before sending transaction...");
+        self.ensure_not_pinned()?;
         let watch = self.watcher.start_watching().await?;
         log::debug("[TX] Event watcher ready, now sending transaction...");
 
