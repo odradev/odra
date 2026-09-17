@@ -248,7 +248,7 @@ impl HostContext for LivenetHost {
         let wasm_path = find_wasm_file_path(name)?;
         let wasm_bytes = fs::read(wasm_path).unwrap();
         let address = {
-            let mut client = self.casper_client.borrow_mut();
+            let client = self.casper_client.borrow();
             match client.deploy_wasm(name, init_args, timestamp, wasm_bytes) {
                 Ok(addr) => addr,
                 Err(e) => {
@@ -271,7 +271,7 @@ impl HostContext for LivenetHost {
         let timestamp = Timestamp::now();
         let wasm_path = find_wasm_file_path(name)?;
         let wasm_bytes = fs::read(wasm_path).unwrap();
-        let mut client = self.casper_client.borrow_mut();
+        let client = self.casper_client.borrow();
         match client.deploy_wasm(name, upgrade_args, timestamp, wasm_bytes) {
             Ok(_) => {}
             Err(e) => {

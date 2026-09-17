@@ -3,6 +3,7 @@
 use crate::casper_client::Result;
 use crate::error::LivenetError;
 use crate::log;
+use crate::utils::block_on;
 use casper_client::cli::TransactionV1Builder;
 use casper_client::put_transaction;
 use casper_types::bytesrepr::{Bytes, ToBytes};
@@ -30,12 +31,11 @@ impl super::CasperClient {
         amount: U512,
         timestamp: Timestamp
     ) -> Result<TransactionHash> {
-        let rt = self.runtime();
-        rt.block_on(self.transfer_async(to, amount, timestamp))
+        block_on(self.transfer_async(to, amount, timestamp))
     }
 
     /// Transfers the specified number of tokens to the given address.
-    async fn transfer_async(
+    pub async fn transfer_async(
         &self,
         to: Address,
         amount: U512,
@@ -48,19 +48,18 @@ impl super::CasperClient {
 
     /// Deploy the contract.
     pub fn deploy_wasm(
-        &mut self,
+        &self,
         contract_name: &str,
         args: RuntimeArgs,
         timestamp: Timestamp,
         wasm_bytes: Vec<u8>
     ) -> Result<Address> {
-        let rt = self.runtime();
-        rt.block_on(self.deploy_wasm_async(contract_name, args, timestamp, wasm_bytes))
+        block_on(self.deploy_wasm_async(contract_name, args, timestamp, wasm_bytes))
     }
 
     /// Deploy the contract.
-    async fn deploy_wasm_async(
-        &mut self,
+    pub async fn deploy_wasm_async(
+        &self,
         contract_name: &str,
         args: RuntimeArgs,
         timestamp: Timestamp,
@@ -112,14 +111,13 @@ impl super::CasperClient {
         call_def: CallDef,
         timestamp: Timestamp
     ) -> Result<Bytes> {
-        let rt = self.runtime();
-        rt.block_on(self.deploy_entrypoint_call_with_proxy_async(address, call_def, timestamp))
+        block_on(self.deploy_entrypoint_call_with_proxy_async(address, call_def, timestamp))
     }
 
     /// Deploy the entrypoint call using getter_proxy.
     /// It runs the getter_proxy contract in an account context and stores the return value of the call
     /// in under the key RESULT_KEY.
-    async fn deploy_entrypoint_call_with_proxy_async(
+    pub async fn deploy_entrypoint_call_with_proxy_async(
         &self,
         address: Address,
         call_def: CallDef,
@@ -180,12 +178,11 @@ impl super::CasperClient {
         call_def: CallDef,
         timestamp: Timestamp
     ) -> Result<Bytes> {
-        let rt = self.runtime();
-        rt.block_on(self.deploy_entrypoint_call_async(addr, call_def, timestamp))
+        block_on(self.deploy_entrypoint_call_async(addr, call_def, timestamp))
     }
 
     /// Deploy the entrypoint call.
-    async fn deploy_entrypoint_call_async(
+    pub async fn deploy_entrypoint_call_async(
         &self,
         addr: Address,
         call_def: CallDef,

@@ -3,6 +3,7 @@
 use crate::casper_client::Result;
 use crate::error::LivenetError::{ClientError, DictQueryError};
 use crate::log;
+use crate::utils::block_on;
 use crate::utils::{extract_stored_value, retry_on_rate_limit, RateLimited};
 use casper_client::cli::{get_account, get_dictionary_item, CliError, DictionaryItemStrParams};
 use casper_client::rpcs::results::{GetDeployResult, GetTransactionResult};
@@ -23,12 +24,11 @@ impl super::CasperClient {
     ///
     /// `Ok(None)` means the node has no such value; `Err` means the node could not be asked.
     pub fn get_value(&self, address: &Address, key: &[u8]) -> Result<Option<Bytes>> {
-        let rt = self.runtime();
-        rt.block_on(self.get_value_async(address, key))
+        block_on(self.get_value_async(address, key))
     }
 
     /// Gets a value from the Odra storage (`state` dictionary)
-    async fn get_value_async(&self, address: &Address, key: &[u8]) -> Result<Option<Bytes>> {
+    pub async fn get_value_async(&self, address: &Address, key: &[u8]) -> Result<Option<Bytes>> {
         self.get_dictionary_value_async(address, STATE_KEY, key)
             .await
     }
@@ -37,12 +37,15 @@ impl super::CasperClient {
     ///
     /// `Ok(None)` means the node has no such value; `Err` means the node could not be asked.
     pub fn get_named_value(&self, address: &Address, name: &str) -> Result<Option<Bytes>> {
-        let rt = self.runtime();
-        rt.block_on(self.get_named_value_async(address, name))
+        block_on(self.get_named_value_async(address, name))
     }
 
     /// Gets a value from a named key of an account or a contract
-    async fn get_named_value_async(&self, address: &Address, name: &str) -> Result<Option<Bytes>> {
+    pub async fn get_named_value_async(
+        &self,
+        address: &Address,
+        name: &str
+    ) -> Result<Option<Bytes>> {
         let entity_hash = self.entity_addr(address).await?;
         let stored_value = self
             .query_global_state_maybe(Key::Hash(entity_hash.value()), Some(name.to_string()))
@@ -96,12 +99,11 @@ impl super::CasperClient {
         dictionary_name: &str,
         key: &[u8]
     ) -> Result<Option<Bytes>> {
-        let rt = self.runtime();
-        rt.block_on(self.get_dictionary_value_async(address, dictionary_name, key))
+        block_on(self.get_dictionary_value_async(address, dictionary_name, key))
     }
 
     /// Gets a value from a named dictionary
-    async fn get_dictionary_value_async(
+    pub async fn get_dictionary_value_async(
         &self,
         address: &Address,
         dictionary_name: &str,
@@ -115,12 +117,11 @@ impl super::CasperClient {
 
     /// Returns the balance of the account.
     pub fn get_balance(&self, address: &Address) -> Result<U512> {
-        let rt = self.runtime();
-        rt.block_on(self.get_balance_async(address))
+        block_on(self.get_balance_async(address))
     }
 
     /// Returns the balance of the account.
-    async fn get_balance_async(&self, address: &Address) -> Result<U512> {
+    pub async fn get_balance_async(&self, address: &Address) -> Result<U512> {
         let main_purse = self.get_main_purse(address).await?;
         let state_root_hash = self.get_state_root_hash_digest().await?;
         let response = retry_on_rate_limit("state_get_balance", || {
@@ -217,12 +218,11 @@ impl super::CasperClient {
 
     /// Get the event bytes from storage
     pub fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes> {
-        let rt = self.runtime();
-        rt.block_on(self.get_event_async(contract_address, index))
+        block_on(self.get_event_async(contract_address, index))
     }
 
     /// Get the event bytes from storage
-    async fn get_event_async(&self, contract_address: &Address, index: u32) -> Result<Bytes> {
+    pub async fn get_event_async(&self, contract_address: &Address, index: u32) -> Result<Bytes> {
         self.query_dict(contract_address, EVENTS.to_string(), index.to_string())
             .await?
             .ok_or_else(|| {
@@ -237,12 +237,11 @@ impl super::CasperClient {
     ///
     /// `Ok(None)` when the contract has no events dictionary.
     pub fn events_count(&self, contract_address: &Address) -> Result<Option<u32>> {
-        let rt = self.runtime();
-        rt.block_on(self.events_count_async(contract_address))
+        block_on(self.events_count_async(contract_address))
     }
 
     /// Get the events count from storage
-    async fn events_count_async(&self, contract_address: &Address) -> Result<Option<u32>> {
+    pub async fn events_count_async(&self, contract_address: &Address) -> Result<Option<u32>> {
         let bytes = self
             .get_named_value_async(contract_address, EVENTS_LENGTH)
             .await?;

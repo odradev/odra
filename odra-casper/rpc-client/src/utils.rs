@@ -4,7 +4,9 @@ use casper_types::StoredValue::CLValue;
 use casper_types::{CLTyped, StoredValue};
 use odra_core::prelude::{ExecutionError, OdraError, OdraResult};
 use std::path::{self, PathBuf};
+use std::sync::LazyLock;
 use std::time::Duration;
+use tokio::runtime::{Builder, Handle, Runtime, RuntimeFlavor};
 
 use crate::error::LivenetError;
 
@@ -107,6 +109,41 @@ impl RateLimited for casper_client::cli::CliError {
     }
 }
 
+/// The Tokio runtime every blocking client call is driven by, built on first use and shared by
+/// every [CasperClient](crate::casper_client::CasperClient) and thread in the process.
+static RUNTIME: LazyLock<Runtime> = LazyLock::new(|| {
+    Builder::new_multi_thread()
+        .enable_all()
+        .thread_name("odra-livenet")
+        .build()
+        .expect("Failed to build the Tokio runtime")
+});
+
+/// Drives `future` to completion on the current thread.
+///
+/// Outside of a Tokio runtime the future runs on a process-wide runtime, so it is safe to call from
+/// plain synchronous code and from several threads at once. Inside a multi-thread Tokio runtime
+/// (a `#[tokio::main]` program, a web service) the call yields the worker thread first, so the
+/// runtime keeps serving other tasks while this one blocks.
+///
+/// # Panics
+///
+/// Panics inside a current-thread Tokio runtime, where blocking would stall every other task: use
+/// the `*_async` methods of [CasperClient](crate::casper_client::CasperClient) there instead, or
+/// move the blocking call to `tokio::task::spawn_blocking`.
+pub fn block_on<F: core::future::Future>(future: F) -> F::Output {
+    match Handle::try_current() {
+        Ok(handle) if handle.runtime_flavor() == RuntimeFlavor::MultiThread => {
+            tokio::task::block_in_place(|| handle.block_on(future))
+        }
+        Ok(_) => panic!(
+            "Blocking Odra livenet call inside a current-thread Tokio runtime: it would stall every \
+             other task. Use the `*_async` methods of `CasperClient`, or a multi-thread runtime."
+        ),
+        Err(_) => RUNTIME.block_on(future)
+    }
+}
+
 /// Runs an RPC call, retrying with exponential backoff while the node answers HTTP 429.
 ///
 /// Nodes and sidecars (NCTL, cspr.cloud) rate-limit JSON-RPC; a burst of reads from a test or a
@@ -162,6 +199,42 @@ mod tests {
             .build()
             .unwrap()
             .block_on(fut)
+    }
+
+    #[test]
+    fn block_on_works_outside_a_runtime_and_from_many_threads() {
+        assert_eq!(block_on(async { 1 + 1 }), 2);
+        let results: Vec<u32> = std::thread::scope(|scope| {
+            let handles: Vec<_> = (0..8)
+                .map(|i| {
+                    scope.spawn(move || {
+                        block_on(async move {
+                            tokio::time::sleep(Duration::from_millis(10)).await;
+                            i * 2
+                        })
+                    })
+                })
+                .collect();
+            handles.into_iter().map(|h| h.join().unwrap()).collect()
+        });
+        assert_eq!(results, (0..8).map(|i| i * 2).collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn block_on_works_inside_a_multi_thread_runtime() {
+        let runtime = Builder::new_multi_thread().enable_all().build().unwrap();
+        let result = runtime.block_on(async {
+            tokio::task::spawn(async { block_on(async { 42 }) })
+                .await
+                .unwrap()
+        });
+        assert_eq!(result, 42);
+    }
+
+    #[test]
+    #[should_panic(expected = "current-thread Tokio runtime")]
+    fn block_on_refuses_a_current_thread_runtime() {
+        run(async { block_on(async { 1 }) });
     }
 
     #[test]

@@ -9,9 +9,7 @@ use casper_types::bytesrepr::Bytes;
 use casper_types::{Digest, Key, StoredValue, U512};
 use std::cell::RefCell;
 use std::collections::BTreeMap;
-use std::rc::Rc;
 use std::time::{Duration, Instant};
-use tokio::runtime::{Builder, Runtime};
 
 pub mod accounts;
 pub mod configuration;
@@ -53,18 +51,21 @@ const STATE_ROOT_HASH_TTL: Duration = Duration::from_secs(5);
 
 /// Client for interacting with Casper node.
 ///
-/// The client exposes a synchronous public API. Internally each network call is
-/// driven by a single Tokio runtime owned by the client (`runtime`), so callers
-/// don't need to manage an executor themselves. The async methods (`*_async`)
-/// remain the internal engine and must only ever be composed via `.await` from
-/// other async methods — never through the sync wrappers, which would
-/// `block_on` inside `block_on` and panic.
+/// Every network call comes in two flavours:
+/// - `xxx_async`: an `async fn`, the actual implementation. Use it from async code; several of them
+///   can run at once with `futures::future::join_all` or `tokio::join!` (the futures borrow the
+///   client, so they run on one task, which is all the concurrency the network needs).
+/// - `xxx`: a blocking wrapper that drives the async one with [`utils::block_on`](crate::utils::block_on)
+///   on a process-wide Tokio runtime. This is what the livenet `HostEnv` uses. It also works inside
+///   a multi-thread Tokio runtime; inside a current-thread runtime it panics, use the async flavour.
+///
+/// The client keeps no runtime of its own, so it can be created and used from any thread; the
+/// livenet `HostEnv` builds one per thread when work runs concurrently.
 pub struct CasperClient {
     pub configuration: CasperClientConfiguration,
     watcher: TransactionWatcher,
     active_account: usize,
     gas: U512,
-    runtime: Rc<Runtime>,
     /// A state root hash every read is pinned to (`ODRA_CASPER_LIVENET_STATE_ROOT_HASH`).
     pinned_state_root_hash: Option<Digest>,
     /// Cached state root hash and the time it was fetched, see [STATE_ROOT_HASH_TTL].
@@ -98,11 +99,6 @@ impl QueryCache {
 impl CasperClient {
     /// Creates new CasperClient.
     pub fn new(configuration: CasperClientConfiguration) -> Self {
-        let runtime = Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .expect("Failed to build Tokio runtime");
-
         let timeout = Duration::from_secs(TRANSACTION_WAIT_TIME * TRANSACTION_MAX_RETRIES);
         let watcher = TransactionWatcher::new(&configuration, timeout);
         if let Some(digest) = configuration.state_root_hash {
@@ -117,7 +113,6 @@ impl CasperClient {
             watcher,
             active_account: 0,
             gas: U512::zero(),
-            runtime: Rc::new(runtime),
             state_root_hash: RefCell::new(None),
             query_cache: RefCell::new(QueryCache::default())
         }
@@ -207,14 +202,6 @@ impl CasperClient {
     /// A pinned state root hash stays.
     pub fn invalidate_state_root_hash(&self) {
         *self.state_root_hash.borrow_mut() = None;
-    }
-
-    /// Returns a handle to the client's Tokio runtime.
-    ///
-    /// Cloning the `Rc` first lets a sync wrapper call `rt.block_on(self.x_async())`
-    /// without borrowing `self` twice.
-    fn runtime(&self) -> Rc<Runtime> {
-        self.runtime.clone()
     }
 }
 
