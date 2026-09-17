@@ -29,6 +29,7 @@ use odra_examples::contracts::tlw::{TimeLockWallet, TimeLockWalletInitArgs};
 use odra_examples::factory::counter::{
     BetterCounterFactory, BetterCounterUpgradeArgs, Counter, CounterFactory
 };
+use odra_examples::features::events::{NativePartyStarted, PartyContract};
 use odra_examples::features::offchain::BalanceBook;
 use odra_examples::features::storage::variable::{DogContract, DogContractInitArgs};
 use odra_modules::cep18_token::{Cep18, Cep18InitArgs};
@@ -457,6 +458,69 @@ impl ScenarioMetadata for ConcurrentScenario {
         "Deploys several tokens at once and reads them at once with HostEnv::concurrently";
 }
 
+/// Native events on livenet: the ones emitted by this session's transactions are readable.
+pub struct NativeEventsScenario;
+
+impl Scenario for NativeEventsScenario {
+    fn run(
+        &self,
+        env: &HostEnv,
+        _container: &DeployedContractsContainer,
+        _args: Args
+    ) -> Result<(), Error> {
+        // Scenarios run with per-call event capture off; this one is about events.
+        env.set_captures_events(true);
+        env.set_gas(cspr!(300));
+        // `init` emits one CES event and one native event.
+        let mut party = PartyContract::deploy(env, NoArgs);
+        let caller = env.caller();
+        let native_after_init = env.native_events_count(&party);
+        let first: NativePartyStarted = env.get_native_event(&party, 0).map_err(event_error)?;
+
+        env.set_gas(cspr!(3));
+        party.try_emit()?;
+        let native_after_emit = env.native_events_count(&party);
+        let last_call = party.last_call();
+        let emitted_now = last_call.native_event_names();
+
+        odra_cli::log(format!(
+            "Native events: {native_after_init} after init, {native_after_emit} after emit; \
+             the last call emitted {emitted_now:?}; first event caller {:?}, block time {}",
+            first.caller, first.block_time
+        ));
+        if native_after_init != 1 || native_after_emit != 2 || first.caller != caller {
+            return Err(Error::OdraError {
+                message: "native events of the session's transactions are not all visible"
+                    .to_string()
+            });
+        }
+        if emitted_now != vec!["NativePartyStarted".to_string()] {
+            return Err(Error::OdraError {
+                message: format!("last_call() should list the native event, got {emitted_now:?}")
+            });
+        }
+        // CES events are read from the contract's storage and stay in step.
+        if env.events_count(&party) != 2 {
+            return Err(Error::OdraError {
+                message: "two CES events were expected".to_string()
+            });
+        }
+        Ok(())
+    }
+}
+
+impl ScenarioMetadata for NativeEventsScenario {
+    const NAME: &'static str = "native-events";
+    const DESCRIPTION: &'static str =
+        "Deploys the party contract and reads the native events its transactions emitted";
+}
+
+fn event_error(e: odra::EventError) -> Error {
+    Error::OdraError {
+        message: format!("{e:?}")
+    }
+}
+
 /// Main function to run the CLI tool.
 pub fn main() {
     let cli = OdraCli::new()
@@ -474,7 +538,8 @@ pub fn main() {
         .scenario(InstallConfigScenario)
         .scenario(FactoryScenario)
         .scenario(GaslessTransferScenario)
-        .scenario(ConcurrentScenario);
+        .scenario(ConcurrentScenario)
+        .scenario(NativeEventsScenario);
     cli.build().run();
 }
 

@@ -731,6 +731,10 @@ impl HostEnv {
         self.deployed_contracts
             .borrow_mut()
             .insert(contract_address, DeployedContract::new(contract_address));
+        // The events of `init` belong to the deploy, not to the first call after it.
+        if *self.captures_events.borrow() {
+            self.init_events(&contract_address);
+        }
         Ok(contract_address)
     }
 
@@ -775,6 +779,10 @@ impl HostEnv {
         self.deployed_contracts
             .borrow_mut()
             .insert(address, DeployedContract::new(address));
+        // Events emitted before the contract was loaded belong to nobody's `last_call`.
+        if *self.captures_events.borrow() {
+            self.init_events(&address);
+        }
     }
 
     /// Calls a contract at the specified address with the given call definition.
@@ -1346,6 +1354,9 @@ mod test {
         let mut ctx = MockHostContext::new();
         ctx.expect_new_contract()
             .returning(|_, _, _| Ok(Address::Account(AccountHash::new([0; 32]))));
+        // The event baseline of the new contract is read right after the deploy.
+        ctx.expect_get_events_count().returning(|_| Ok(0));
+        ctx.expect_get_native_events_count().returning(|_| Ok(0));
         let env = HostEnv::new(Rc::new(ctx));
         MockTestRef::deploy(&env, NoArgs);
     }

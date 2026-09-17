@@ -187,11 +187,16 @@ impl HostContext for LivenetHost {
 
     fn get_native_event(
         &self,
-        _contract_address: &Address,
-        _index: u32
+        contract_address: &Address,
+        index: u32
     ) -> Result<Bytes, EventError> {
-        // TODO: Implement
-        Err(EventError::CouldntExtractEventData)
+        // Only the native events of the transactions this environment sent, see
+        // `CasperClient::native_events_count`.
+        self.casper_client
+            .borrow()
+            .get_native_event(contract_address, index)
+            .unwrap_or_else(|e| read_failed("native event", contract_address, e))
+            .ok_or(EventError::IndexOutOfBounds)
     }
 
     fn get_events_count(&self, contract_address: &Address) -> Result<u32, EventError> {
@@ -202,9 +207,11 @@ impl HostContext for LivenetHost {
             .ok_or(EventError::CouldntExtractEventData)
     }
 
-    fn get_native_events_count(&self, _contract_address: &Address) -> Result<u32, EventError> {
-        // TODO: Implement
-        Err(EventError::CouldntExtractEventData)
+    fn get_native_events_count(&self, contract_address: &Address) -> Result<u32, EventError> {
+        self.casper_client
+            .borrow()
+            .native_events_count(contract_address)
+            .map_err(|e| read_failed("native events count", contract_address, e))
     }
 
     fn call_contract(

@@ -1,5 +1,6 @@
 //! Transaction building and deployment methods.
 
+use crate::casper_client::transaction_watcher::ProcessedTransaction;
 use crate::casper_client::Result;
 use crate::error::LivenetError;
 use crate::log;
@@ -244,13 +245,14 @@ impl super::CasperClient {
 
     fn process_transaction(
         &self,
-        result: ExecutionResult,
+        processed: ProcessedTransaction,
         transaction_hash: TransactionHash
     ) -> Result<()> {
         // The transaction changed the global state; the next query must see the new root.
         self.invalidate_state_root_hash();
+        self.record_messages(processed.messages);
         let deploy_hash_str = transaction_hash.to_hex_string();
-        match result {
+        match processed.execution_result {
             ExecutionResult::V1(r) => match r {
                 Failure { error_message, .. } => {
                     log::error(format!(

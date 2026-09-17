@@ -12,6 +12,11 @@ Changelog for `odra`.
 - Livenet backend no longer panics when a transaction fails with an internal Odra error that was missing
   from its error table (e.g. `ContractNotInstalled` or `PathIndexOutOfBounds`).
 ### Added
+- Native events on livenet: the events emitted by the transactions an environment sends are recorded
+  from their execution results, so `native_events_count`, `get_native_event`, `emitted_native_event` and
+  `last_call().emitted_native_events` work there like in tests. Casper keeps a message's payload only in
+  the execution result of its transaction, so events emitted before the environment was created, or by
+  someone else, are not visible; CES events keep reading the contract's storage (#538, #511).
 - `#[odra(offchain)]` on a `&self` function of a module: the function is not deployed (no wasm entry
   point, not in the schema) and runs on the host against the contract's state instead. It is on the
   `HostRef` like any getter, tests call it on OdraVM and CasperVM, livenet executes it offline, and
@@ -105,6 +110,9 @@ Changelog for `odra`.
   contracts in `Odra.toml` of `odra-modules` and `odra-examples`; their tests run on OdraVM only.
 
 ### Fixed
+- `last_call()` of the first call after `deploy` (or `load`) no longer includes the events emitted by
+  `init` (or before the load): the event baseline of a contract is set when it is deployed or loaded.
+- `CallResult::contract_native_events` returned the CES events of the call instead of the native ones.
 - `MyContract::load(&env, address)` (`HostRefLoader`) works on OdraVM and CasperVM; both panicked with
   "register_contract is not supported".
 - `HostEnv::transfer` on CasperVM built a deploy without payment code and always panicked; it is a native
