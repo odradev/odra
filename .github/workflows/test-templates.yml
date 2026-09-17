@@ -6,11 +6,15 @@ on:
       - 'hotfix/**'
     paths:
       - 'templates/**'
+      - 'odra-wasm-client/**'
+      - 'odra-wasm-client-builder/**'
   push:
     branches:
       - 'release/**'
     paths:
       - 'templates/**'
+      - 'odra-wasm-client/**'
+      - 'odra-wasm-client-builder/**'
 
 run-name: Running templates tests for ${{ github.head_ref }}
 
@@ -40,5 +44,7 @@ jobs:
           components: rustfmt, clippy, llvm-tools-preview
       - name: Prepare test environment
         run: just prepare-test-env
+      - name: Install wasm-pack
+        run: cargo install wasm-pack --locked
       - name: Run tests
         run: just test-templates
