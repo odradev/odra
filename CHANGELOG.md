@@ -43,6 +43,13 @@ Changelog for `odra`.
   on OdraVM under `cargo odra test -b casper` this way.
 
 ### Changed
+- The livenet examples are scenarios of the examples' `odra_cli` binary (`erc20-transfer`, `cep18-transfer`,
+  `tlw`, `install-config`, `factory`, `gasless` behind the `eip712` feature) instead of one binary each;
+  `cargo run --bin odra_cli -- --help`. The CI livenet job runs the CLI too (#631, #520).
+- CI: the test workflow runs lints, OdraVM, CasperVM and NCTL suites as parallel jobs; the benchmark
+  artifact is produced on `release/**` pushes only, pull requests build and compare in one job (#593, #445).
+- Project templates ship a `.env.sample` for a local NCTL network and a README walkthrough from
+  `cargo odra build` to `<project>_cli deploy` (#466).
 - `#[odra::module(name = "..")]` now also names the package: the named key the package hash is stored
   under at install is `<name>_package_hash` instead of `<StructName>_package_hash` (`HasIdent::contract_name()`,
   used by `InstallConfig` and `UpgradeConfig`). Modules without `name` are unaffected (#385).

@@ -45,32 +45,8 @@ path = "bin/build_schema.rs"
 test = false
 
 [[bin]]
-name = "erc20_on_livenet"
-path = "bin/erc20_on_livenet.rs"
-required-features = ["livenet"]
-test = false
-
-[[bin]]
-name = "tlw_on_livenet"
-path = "bin/tlw_on_livenet.rs"
-required-features = ["livenet"]
-test = false
-
-[[bin]]
-name = "cep18_on_livenet"
-path = "bin/cep18_on_livenet.rs"
-required-features = ["livenet"]
-test = false
-
-[[bin]]
 name = "livenet_tests"
 path = "bin/livenet_tests.rs"
-required-features = ["livenet"]
-test = false
-
-[[bin]]
-name = "odra_cfg_on_livenet"
-path = "bin/odra_cfg_on_livenet.rs"
 required-features = ["livenet"]
 test = false
 
@@ -89,16 +65,7 @@ test = false
 [[bin]]
 name = "odra_cli"
 path = "bin/odra_cli.rs"
-
-[[bin]]
-name = "factory_example"
-path = "bin/factory_example.rs"
 required-features = ["livenet"]
-
-[[bin]]
-name = "gassless_example"
-path = "bin/gassless_payment.rs"
-required-features = ["livenet", "eip712"]
 
 [lints.rust]
 missing_docs = "warn"
