@@ -64,7 +64,7 @@ test-examples-on-odravm:
 
 test-examples-on-casper:
     mkdir -p examples/wasm
-    cp modules/wasm/Erc20.wasm examples/wasm/
+    cp modules/wasm/Erc20.wasm modules/wasm/Cep18.wasm examples/wasm/
     cd examples && cargo odra test -b casper
     cd examples/ourcoin && cargo odra test -b casper
 
@@ -103,12 +103,13 @@ run-nctl:
 # Wasm files the livenet suite deploys; `just test` builds them as a side effect, CI does not.
 build-livenet-wasm:
     cd modules && cargo odra build -c Erc20
+    cd modules && cargo odra build -c Cep18
     cd examples && cargo odra build
 
 test-livenet:
     set shell := bash
     mkdir -p examples/.node-keys
-    cp modules/wasm/Erc20.wasm examples/wasm/
+    cp modules/wasm/Erc20.wasm modules/wasm/Cep18.wasm examples/wasm/
     # Extract the secret keys from the local Casper node
     docker exec mynctl /bin/bash -c "cat /home/casper/casper-nctl/assets/net-1/users/user-1/secret_key.pem" > examples/.node-keys/secret_key.pem
     docker exec mynctl /bin/bash -c "cat  /home/casper/casper-nctl/assets/net-1/users/user-2/secret_key.pem" > examples/.node-keys/secret_key_1.pem
@@ -119,15 +120,18 @@ test-livenet:
     cd examples && ODRA_CASPER_LIVENET_SECRET_KEY_PATH=.node-keys/secret_key.pem ODRA_CASPER_LIVENET_NODE_ADDRESS=http://localhost:11101 ODRA_CASPER_LIVENET_EVENTS_URL=http://localhost:18101/events ODRA_CASPER_LIVENET_CHAIN_NAME=casper-net-1 ODRA_CASPER_LIVENET_KEY_1=.node-keys/secret_key_1.pem  cargo run --bin validators_on_livenet --features=livenet
     # Livenet tests of upgrade
     cd examples && ODRA_CASPER_LIVENET_SECRET_KEY_PATH=.node-keys/secret_key.pem ODRA_CASPER_LIVENET_NODE_ADDRESS=http://localhost:11101 ODRA_CASPER_LIVENET_EVENTS_URL=http://localhost:18101/events ODRA_CASPER_LIVENET_CHAIN_NAME=casper-net-1 ODRA_CASPER_LIVENET_KEY_1=.node-keys/secret_key_1.pem  cargo run --bin upgrade_on_livenet --features=livenet
+    # Odra CLI: deploy script, a contract call and the scenarios
+    rm -f resources/casper-net-1-contracts.toml
+    cd examples && for cmd in "deploy" "contract DogContract name" "scenario check --name Mantus" "scenario erc20-transfer --amount 1000" "scenario cep18-transfer --amount 1" "scenario tlw"; do ODRA_CASPER_LIVENET_SECRET_KEY_PATH=.node-keys/secret_key.pem ODRA_CASPER_LIVENET_NODE_ADDRESS=http://localhost:11101 ODRA_CASPER_LIVENET_EVENTS_URL=http://localhost:18101/events ODRA_CASPER_LIVENET_CHAIN_NAME=casper-net-1 ODRA_CASPER_LIVENET_KEY_1=.node-keys/secret_key_1.pem cargo run --bin odra_cli --features livenet -- $cmd || exit 1; done
     rm -rf examples/.node-keys
 
-run-example-erc20-on-livenet:
+run-example-cli +args:
     set shell := bash
     mkdir -p examples/.node-keys
-    cp modules/wasm/Erc20.wasm examples/wasm/
+    cp modules/wasm/Erc20.wasm modules/wasm/Cep18.wasm examples/wasm/
     docker exec mynctl /bin/bash -c "cat /home/casper/casper-nctl/assets/net-1/users/user-1/secret_key.pem" > examples/.node-keys/secret_key.pem
-    cd examples && ODRA_CASPER_LIVENET_SECRET_KEY_PATH=.node-keys/secret_key.pem ODRA_CASPER_LIVENET_NODE_ADDRESS=http://localhost:11101 ODRA_CASPER_LIVENET_EVENTS_URL=http://localhost:18101/events ODRA_CASPER_LIVENET_CHAIN_NAME=casper-net-1 ODRA_CASPER_LIVENET_KEY_1=.node-keys/secret_key.pem cargo run --bin erc20_on_livenet --features livenet
-    rm -rf examples/.node-keys
+    docker exec mynctl /bin/bash -c "cat  /home/casper/casper-nctl/assets/net-1/users/user-2/secret_key.pem" > examples/.node-keys/secret_key_1.pem
+    cd examples && ODRA_CASPER_LIVENET_SECRET_KEY_PATH=.node-keys/secret_key.pem ODRA_CASPER_LIVENET_NODE_ADDRESS=http://localhost:11101 ODRA_CASPER_LIVENET_EVENTS_URL=http://localhost:18101/events ODRA_CASPER_LIVENET_CHAIN_NAME=casper-net-1 ODRA_CASPER_LIVENET_KEY_1=.node-keys/secret_key_1.pem cargo run --bin odra_cli --features livenet -- {{args}}
 
 clean:
     cargo clean
