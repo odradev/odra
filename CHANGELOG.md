@@ -8,6 +8,8 @@ Changelog for `odra`.
   contract being executed, and `ContractEnv::nth_caller(n)` walks it (`nth_caller(0)` is `caller()`),
   so a contract can find the account behind an intermediary contract. Works on OdraVM, CasperVM and
   livenet getters (#501).
+- `CasperClient` has a public async API: every network call exists as `xxx_async` next to the blocking
+  `xxx`, so async programs can drive it with `.await` and run several calls at once with `join_all` (#544).
 - `HostEnv::take_snapshot()` and `HostEnv::restore_snapshot()` remember the state of the test VM
   (storage, CSPR balances, events, block time) and bring it back, as many times as needed, so several
   test scenarios can branch off one setup. OdraVM and CasperVM; livenet panics (#533).
@@ -42,6 +44,11 @@ Changelog for `odra`.
   on OdraVM under `cargo odra test -b casper` this way.
 
 ### Changed
+- The blocking livenet calls run on one process-wide Tokio runtime (`odra_casper_rpc_client::utils::block_on`)
+  instead of a runtime per `CasperClient`. They also work inside a multi-thread Tokio runtime (a
+  `#[tokio::main]` program); inside a current-thread runtime they panic with a pointer to the async API,
+  where they used to fail with Tokio's own "cannot start a runtime from within a runtime" (#544).
+- `CasperClient::deploy_wasm` takes `&self`.
 - The livenet examples are scenarios of the examples' `odra_cli` binary (`erc20-transfer`, `cep18-transfer`,
   `tlw`, `install-config`, `factory`, `gasless`) instead of one binary each;
   `cargo run --bin odra_cli -- --help`. The CI livenet job runs the CLI too (#631, #520).

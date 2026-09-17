@@ -2,6 +2,7 @@
 
 use crate::casper_client::Result;
 use crate::error::LivenetError::BlockTimeError;
+use crate::utils::block_on;
 use crate::utils::retry_on_rate_limit;
 use casper_client::cli::{get_node_status, get_state_root_hash};
 use casper_client::get_chainspec;
@@ -13,12 +14,11 @@ use toml::Value;
 impl super::CasperClient {
     /// Returns the current block_time
     pub fn get_block_time(&self) -> Result<u64> {
-        let rt = self.runtime();
-        rt.block_on(self.get_block_time_async())
+        block_on(self.get_block_time_async())
     }
 
     /// Returns the current block_time
-    async fn get_block_time_async(&self) -> Result<u64> {
+    pub async fn get_block_time_async(&self) -> Result<u64> {
         let block_time = get_node_status(
             &self.rpc_id(),
             self.configuration.node_address(),
