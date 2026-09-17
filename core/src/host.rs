@@ -17,6 +17,7 @@ use casper_types::{
     bytesrepr::{Bytes, FromBytes, ToBytes},
     CLTyped, PublicKey, RuntimeArgs, U512
 };
+use core::time::Duration;
 
 /// A host side reference to a contract.
 pub trait HostRef {
@@ -501,29 +502,39 @@ impl HostEnv {
         backend.set_caller(address)
     }
 
-    /// Advances the block time by the specified time difference in milliseconds.
-    pub fn advance_block_time(&self, time_diff: u64) {
+    /// Advances the block time by `time_diff`.
+    ///
+    /// Block time has millisecond resolution; anything finer is truncated.
+    ///
+    /// ```
+    /// # use core::time::Duration;
+    /// # fn shift(env: &odra_core::host::HostEnv) {
+    /// env.advance_block_time(Duration::from_secs(60 * 60 * 24));
+    /// # }
+    /// ```
+    pub fn advance_block_time(&self, time_diff: Duration) {
         let backend = self.backend.as_ref();
-        backend.advance_block_time(time_diff)
+        backend.advance_block_time(millis(time_diff))
     }
 
-    /// Advances the block time by the specified time difference in milliseconds
-    /// and processes auctions.
-    pub fn advance_with_auctions(&self, time_diff: u64) {
+    /// Advances the block time by `time_diff` and processes auctions.
+    ///
+    /// Block time has millisecond resolution; anything finer is truncated.
+    pub fn advance_with_auctions(&self, time_diff: Duration) {
         let backend = self.backend.as_ref();
-        backend.advance_with_auctions(time_diff);
+        backend.advance_with_auctions(millis(time_diff));
     }
 
-    /// Returns the era length in milliseconds.
-    pub fn auction_delay(&self) -> u64 {
+    /// Returns the era length.
+    pub fn auction_delay(&self) -> Duration {
         let backend = self.backend.as_ref();
-        backend.auction_delay()
+        Duration::from_millis(backend.auction_delay())
     }
 
-    /// Returns the delay between unstaking and the transfer of funds back to the delegator in milliseconds.
-    pub fn unbonding_delay(&self) -> u64 {
+    /// Returns the delay between unstaking and the transfer of funds back to the delegator.
+    pub fn unbonding_delay(&self) -> Duration {
         let backend = self.backend.as_ref();
-        backend.unbonding_delay()
+        Duration::from_millis(backend.unbonding_delay())
     }
 
     /// Returns the amount of CSPR delegated to the specified validator by the specified delegator.
@@ -1040,6 +1051,11 @@ impl HostEnv {
             contract.events_initialized = true;
         }
     }
+}
+
+/// Block time is kept in milliseconds by every backend.
+fn millis(duration: Duration) -> u64 {
+    u64::try_from(duration.as_millis()).unwrap_or(u64::MAX)
 }
 
 #[cfg(test)]

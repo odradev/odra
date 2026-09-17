@@ -111,9 +111,10 @@ pub struct Withdrawal {
 mod test {
     use super::*;
     use crate::contracts::tlw::{Deposit, Withdrawal};
+    use core::time::Duration;
     use odra::host::{Deployer, HostRef};
 
-    const ONE_DAY_IN_SECONDS: u64 = 60 * 60 * 24;
+    const ONE_DAY: Duration = Duration::from_secs(60 * 60 * 24);
 
     fn setup() -> (TimeLockWalletHostRef, Address, Address) {
         let test_env = odra_test::env();
@@ -121,7 +122,7 @@ mod test {
             TimeLockWallet::deploy(
                 &test_env,
                 TimeLockWalletInitArgs {
-                    lock_duration: ONE_DAY_IN_SECONDS
+                    lock_duration: ONE_DAY.as_millis() as u64
                 }
             ),
             test_env.get_account(0),
@@ -197,7 +198,7 @@ mod test {
         contract.with_tokens(deposit_amount).deposit();
 
         // When the user makes two token withdrawals after the lock is expired.
-        test_env.advance_block_time(ONE_DAY_IN_SECONDS + 1);
+        test_env.advance_block_time(ONE_DAY + Duration::from_millis(1));
         let balance_before_withdrawals = test_env.balance_of(&user);
         let first_withdrawal_amount: U512 = 50.into();
         let second_withdrawal_amount: U512 = 40.into();
@@ -254,7 +255,9 @@ mod test {
         contract.with_tokens(deposit.into()).deposit();
 
         // When the user withdraws more tokens than has in the deposit, an error occurs.
-        contract.env().advance_block_time(ONE_DAY_IN_SECONDS + 1);
+        contract
+            .env()
+            .advance_block_time(ONE_DAY + Duration::from_millis(1));
         let withdrawal = deposit + 1;
         assert_eq!(
             contract.try_withdraw(&withdrawal.into()).unwrap_err(),

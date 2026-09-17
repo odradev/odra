@@ -1,4 +1,5 @@
 //! Deploys an example Validators contract and tests its functionality.
+use core::time::Duration;
 use odra::casper_types::{PublicKey, U512};
 use odra::host::{Deployer, HostEnv, HostRef};
 use odra::prelude::*;
@@ -30,7 +31,7 @@ fn main() {
     println!("Auction delay: {:?}", env.auction_delay());
     println!("Unbonding delay: {:?}", env.unbonding_delay());
 
-    env.advance_with_auctions(1000);
+    env.advance_with_auctions(Duration::from_secs(1));
 }
 
 /// Deploys an ERC20 contract.
