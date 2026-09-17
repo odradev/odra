@@ -88,11 +88,17 @@ impl HostContext for LivenetHost {
     }
 
     fn get_storage_value(&self, address: &Address, key: &[u8]) -> Option<Bytes> {
-        self.casper_client.borrow().get_value(address, key)
+        self.casper_client
+            .borrow()
+            .get_value(address, key)
+            .unwrap_or_else(|e| read_failed("state value", address, e))
     }
 
     fn get_named_value(&self, address: &Address, name: &str) -> Option<Bytes> {
-        self.casper_client.borrow().get_named_value(address, name)
+        self.casper_client
+            .borrow()
+            .get_named_value(address, name)
+            .unwrap_or_else(|e| read_failed(name, address, e))
     }
 
     fn get_dictionary_value(
@@ -104,6 +110,7 @@ impl HostContext for LivenetHost {
         self.casper_client
             .borrow()
             .get_dictionary_value(address, dictionary_name, key)
+            .unwrap_or_else(|e| read_failed(dictionary_name, address, e))
     }
 
     fn balance_of(&self, address: &Address) -> U512 {
@@ -170,6 +177,7 @@ impl HostContext for LivenetHost {
         let client = self.casper_client.borrow();
         client
             .events_count(contract_address)
+            .unwrap_or_else(|e| read_failed("events count", contract_address, e))
             .ok_or(EventError::CouldntExtractEventData)
     }
 
@@ -325,4 +333,14 @@ impl LivenetHost {
             _ => OdraError::VmError(VmError::Other(error_msg))
         }
     }
+}
+
+/// A read could not be served by the node. `None` would be mistaken for "value not set" by the
+/// contract code, so stop with the real reason instead.
+pub(crate) fn read_failed(what: &str, address: &Address, e: LivenetError) -> ! {
+    panic!(
+        "Livenet: reading {what} of {} failed: {}",
+        address.to_formatted_string(),
+        e.error_message()
+    )
 }

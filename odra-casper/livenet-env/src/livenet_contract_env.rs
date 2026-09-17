@@ -1,4 +1,5 @@
 //! Livenet contract environment.
+use crate::livenet_host::read_failed;
 use blake2::digest::VariableOutput;
 use blake2::Blake2bVar;
 use odra_casper_rpc_client::casper_client::CasperClient;
@@ -21,7 +22,10 @@ impl ContractContext for LivenetContractEnv {
     fn get_value(&self, key: &[u8]) -> Option<Bytes> {
         let callstack = self.callstack.borrow();
         let client = self.casper_client.borrow();
-        client.get_value(callstack.current().address(), key)
+        let address = callstack.current().address();
+        client
+            .get_value(address, key)
+            .unwrap_or_else(|e| read_failed("state value", address, e))
     }
 
     fn set_value(&self, _key: &[u8], _value: Bytes) {
@@ -31,7 +35,10 @@ impl ContractContext for LivenetContractEnv {
     fn get_named_value(&self, name: &str) -> Option<Bytes> {
         let client = self.casper_client.borrow();
         let callstack = self.callstack.borrow();
-        client.get_named_value(callstack.current().address(), name)
+        let address = callstack.current().address();
+        client
+            .get_named_value(address, name)
+            .unwrap_or_else(|e| read_failed(name, address, e))
     }
 
     fn set_named_value(&self, _name: &str, _value: CLValue) {
@@ -41,7 +48,10 @@ impl ContractContext for LivenetContractEnv {
     fn get_dictionary_value(&self, dictionary_name: &str, key: &[u8]) -> Option<Bytes> {
         let callstack = self.callstack.borrow();
         let client = self.casper_client.borrow();
-        client.get_dictionary_value(callstack.current().address(), dictionary_name, key)
+        let address = callstack.current().address();
+        client
+            .get_dictionary_value(address, dictionary_name, key)
+            .unwrap_or_else(|e| read_failed(dictionary_name, address, e))
     }
 
     fn set_dictionary_value(&self, _dictionary_name: &str, _key: &[u8], _value: CLValue) {

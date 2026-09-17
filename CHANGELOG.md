@@ -31,6 +31,16 @@ Changelog for `odra`.
   on OdraVM under `cargo odra test -b casper` this way.
 
 ### Changed
+- Livenet: `CasperClient` caches global state and dictionary query responses for the state root hash
+  they were read at (a query at a fixed state root is deterministic). Resolving a contract's entity,
+  the events counter `HostEnv` reads after every call and repeated getters cost no RPC calls within
+  one state root; a burst of 31 getter calls went from 64 queries to 6.
+- Livenet: `CasperClient::get_value`, `get_named_value`, `get_dictionary_value` and `events_count`
+  return `Result<Option<_>>`: `Ok(None)` is a value the node does not have, `Err` a node that could
+  not be asked. The livenet host and contract env stop with the real reason
+  (`Livenet: reading <what> of <address> failed: ...`) instead of the misleading
+  "Couldn't query for entity address value" panic, and a wrong address reports
+  "No contract found at ...".
 - Livenet: `CasperClient` caches the state root hash for up to 5 seconds and drops it after every
   transaction it sends, instead of asking the node before every single query. On the `erc20_on_livenet`
   example this removes 16 of 39 RPC calls; reads after the client's own writes stay consistent.

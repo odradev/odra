@@ -4,8 +4,10 @@ use crate::casper_client::{
     configuration::CasperClientConfiguration, transaction_watcher::TransactionWatcher
 };
 use crate::error::LivenetError;
-use casper_types::{Digest, U512};
+use casper_types::bytesrepr::Bytes;
+use casper_types::{Digest, Key, StoredValue, U512};
 use std::cell::RefCell;
+use std::collections::BTreeMap;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 use tokio::runtime::{Builder, Runtime};
@@ -60,7 +62,31 @@ pub struct CasperClient {
     gas: U512,
     runtime: Rc<Runtime>,
     /// Cached state root hash and the time it was fetched, see [STATE_ROOT_HASH_TTL].
-    state_root_hash: RefCell<Option<(Digest, Instant)>>
+    state_root_hash: RefCell<Option<(Digest, Instant)>>,
+    /// Query responses, valid for one state root hash.
+    query_cache: RefCell<QueryCache>
+}
+
+/// Responses of global state and dictionary queries, keyed by the state root hash they were
+/// read at. A query at a fixed state root is deterministic, so serving it from here is the same
+/// as asking the node again; the whole map is dropped whenever the state root hash the queries
+/// use moves on (see [STATE_ROOT_HASH_TTL]).
+#[derive(Default)]
+struct QueryCache {
+    state_root_hash: Option<Digest>,
+    global_state: BTreeMap<(Key, Vec<String>), Option<StoredValue>>,
+    dictionary: BTreeMap<(String, String, String), Option<Bytes>>
+}
+
+impl QueryCache {
+    /// Drops everything read at another state root.
+    fn reset_to(&mut self, state_root_hash: Digest) {
+        if self.state_root_hash != Some(state_root_hash) {
+            self.state_root_hash = Some(state_root_hash);
+            self.global_state.clear();
+            self.dictionary.clear();
+        }
+    }
 }
 
 impl CasperClient {
@@ -79,8 +105,55 @@ impl CasperClient {
             active_account: 0,
             gas: U512::zero(),
             runtime: Rc::new(runtime),
-            state_root_hash: RefCell::new(None)
+            state_root_hash: RefCell::new(None),
+            query_cache: RefCell::new(QueryCache::default())
         }
+    }
+
+    /// Global state query response cached at `state_root_hash`, if any.
+    pub(crate) fn cached_global_state(
+        &self,
+        state_root_hash: Digest,
+        key: &Key,
+        path: &[String]
+    ) -> Option<Option<StoredValue>> {
+        let mut cache = self.query_cache.borrow_mut();
+        cache.reset_to(state_root_hash);
+        cache.global_state.get(&(*key, path.to_vec())).cloned()
+    }
+
+    pub(crate) fn cache_global_state(
+        &self,
+        state_root_hash: Digest,
+        key: Key,
+        path: Vec<String>,
+        value: Option<StoredValue>
+    ) {
+        let mut cache = self.query_cache.borrow_mut();
+        cache.reset_to(state_root_hash);
+        cache.global_state.insert((key, path), value);
+    }
+
+    /// Dictionary item response cached at `state_root_hash`, if any.
+    pub(crate) fn cached_dictionary_item(
+        &self,
+        state_root_hash: Digest,
+        item: &(String, String, String)
+    ) -> Option<Option<Bytes>> {
+        let mut cache = self.query_cache.borrow_mut();
+        cache.reset_to(state_root_hash);
+        cache.dictionary.get(item).cloned()
+    }
+
+    pub(crate) fn cache_dictionary_item(
+        &self,
+        state_root_hash: Digest,
+        item: (String, String, String),
+        value: Option<Bytes>
+    ) {
+        let mut cache = self.query_cache.borrow_mut();
+        cache.reset_to(state_root_hash);
+        cache.dictionary.insert(item, value);
     }
 
     /// Returns the cached state root hash if it is younger than [STATE_ROOT_HASH_TTL].
