@@ -751,12 +751,12 @@ impl CasperVm {
 
     fn deploy_wasm(&mut self, wasm_path: &str, args: &RuntimeArgs) -> Option<engine_state::Error> {
         self.error = None;
-        let session_code = PathBuf::from(wasm_path);
+        let module_bytes = super::wasm_lookup::read_wasm_file(wasm_path);
         let deploy_item = DeployItemBuilder::new()
             .with_standard_payment(runtime_args! {ARG_AMOUNT => *DEFAULT_PAYMENT})
             .with_authorization_keys(&[self.active_account_hash()])
             .with_address(self.active_account_hash())
-            .with_session_code(session_code, args.clone())
+            .with_session_bytes(module_bytes, args.clone())
             .with_deploy_hash(self.next_hash())
             .build();
 
