@@ -190,6 +190,8 @@ pub enum ExecutionError {
     CannotGetAnImmediateCaller = 136,
     /// Path index out of bounds.
     PathIndexOutOfBounds = 137,
+    /// A named argument is present but cannot be read as the expected type.
+    InvalidArg = 138,
     /// Maximum code for user errors
     MaxUserError = 64535,
     /// User error too high. The code should be in range 0..32767.
@@ -360,6 +362,7 @@ impl From<BytesReprError> for OdraError {
             BytesReprError::OutOfMemory => ExecutionError::OutOfMemory,
             BytesReprError::NotRepresentable => ExecutionError::NotRepresentable,
             BytesReprError::ExceededRecursionDepth => ExecutionError::ExceededRecursionDepth,
+            // `bytesrepr::Error` is `#[non_exhaustive]`; every variant that exists today is listed.
             _ => ExecutionError::Formatting
         }
         .into()

@@ -7,7 +7,7 @@ use crate::gas_report::GasReport;
 use crate::host::deployed_contracts::DeployedContract;
 use crate::{
     call_result::CallResult, entry_point_callback::EntryPointsCaller, CallDef, ContractCallResult,
-    ContractEnv, EventError, VmError
+    ContractEnv, EventError
 };
 #[cfg(not(target_arch = "wasm32"))]
 use crate::{consts, contract::OdraContract, contract_def::HasIdent};
@@ -564,7 +564,7 @@ impl HostEnv {
     /// Returns the current block time in seconds.
     pub fn block_time_secs(&self) -> u64 {
         let backend = self.backend.as_ref();
-        backend.block_time().checked_div(1000).unwrap()
+        backend.block_time() / 1000
     }
 
     /// Registers a new contract with the specified name, initialization arguments, and entry points caller.
@@ -641,7 +641,7 @@ impl HostEnv {
         call_result.map(|bytes| {
             T::from_bytes(&bytes)
                 .map(|(obj, _)| obj)
-                .map_err(|_| OdraError::VmError(VmError::Deserialization))
+                .map_err(OdraError::from)
         })?
     }
 

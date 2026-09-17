@@ -945,9 +945,10 @@ fn caller_info_to_caller(info: CallerInfo) -> OdraResult<Caller> {
                 .ok_or(ExecutionError::CannotExtractCallerInfo)?;
             let contract_hash = info
                 .get_field_by_index(4)
-                .map(|val| val.to_t::<Option<ContractHash>>().unwrap_or_revert())
-                .expect("must have index 4 in fields")
-                .expect("contract hash must be some");
+                .ok_or(ExecutionError::CannotExtractCallerInfo)?
+                .to_t::<Option<ContractHash>>()
+                .map_err(|_| ExecutionError::CannotExtractCallerInfo)?
+                .ok_or(ExecutionError::CannotExtractCallerInfo)?;
             Ok(Caller::SmartContract {
                 contract_package_hash,
                 contract_hash

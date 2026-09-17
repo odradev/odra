@@ -181,11 +181,9 @@ impl ContractEnv {
             .backend
             .borrow()
             .get_dictionary_value(dictionary_name, key);
-        bytes.map(|b| {
-            deserialize_from_slice(b)
-                .map_err(|_| ExecutionError::Formatting)
-                .unwrap_or_revert(self)
-        })
+        // A failed read reverts with the concrete `bytesrepr` error (`LeftOverBytes`,
+        // `EarlyEndOfStream`, ...), not a blanket `Formatting`.
+        bytes.map(|b| deserialize_from_slice(b).unwrap_or_revert(self))
     }
 
     /// Sets the value associated with the given named key in the named dictionary in the contract storage.
@@ -196,9 +194,7 @@ impl ContractEnv {
         value: T
     ) {
         let dictionary_name = dictionary_name.as_ref();
-        let cl_value = CLValue::from_t(value)
-            .map_err(|_| ExecutionError::Formatting)
-            .unwrap_or_revert(self);
+        let cl_value = CLValue::from_t(value).unwrap_or_revert(self);
         self.backend
             .borrow()
             .set_dictionary_value(dictionary_name, key, cl_value);
@@ -260,7 +256,7 @@ impl ContractEnv {
     /// Returns the current block time in seconds.
     pub fn get_block_time_secs(&self) -> u64 {
         let backend = self.backend.borrow();
-        backend.get_block_time().checked_div(1000).unwrap()
+        backend.get_block_time() / 1000
     }
 
     /// Returns the value attached to the contract call.
@@ -552,6 +548,19 @@ mod tests {
             result
         });
         ContractEnv::new(Rc::new(RefCell::new(ctx)))
+    }
+
+    /// A stored `u64` read back as a `u32` leaves bytes over: the revert carries that fact.
+    #[test]
+    #[should_panic(expected = "LeftOverBytes")]
+    fn wrong_type_read_reverts_with_the_bytesrepr_error() {
+        let mut ctx = MockContractContext::new();
+        ctx.expect_get_dictionary_value()
+            .returning(|_, _| Some(Bytes::from(7u64.to_bytes().unwrap())));
+        ctx.expect_revert().returning(|error| panic!("{error:?}"));
+        let env = ContractEnv::new(Rc::new(RefCell::new(ctx)));
+
+        let _: Option<u32> = env.get_dictionary_value("state", b"key");
     }
 
     fn legacy_u32_for_path(path: &[u8]) -> u32 {
