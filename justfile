@@ -105,6 +105,11 @@ test-templates:
 run-nctl:
     docker run --rm -it --cpus=1 --name mynctl -d -p 11101:11101 -p 14101:14101 -p 18101:18101 -p 25101:25101 makesoftware/casper-nctl:v203
 
+# Wasm files the livenet suite deploys; `just test` builds them as a side effect, CI does not.
+build-livenet-wasm:
+    cd modules && cargo odra build -c Erc20
+    cd examples && cargo odra build
+
 test-livenet:
     set shell := bash
     mkdir -p examples/.node-keys
