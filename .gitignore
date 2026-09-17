@@ -36,3 +36,5 @@ CLAUDE.md
 # ...but the ones shipped with project templates are tracked
 !templates/*/AGENTS.md
 !templates/*/CLAUDE.md
+!templates/*/.env.sample
+!templates/*/.gitignore
