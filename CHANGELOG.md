@@ -80,6 +80,10 @@ Changelog for `odra`.
   contracts in `Odra.toml` of `odra-modules` and `odra-examples`; their tests run on OdraVM only.
 
 ### Fixed
+- The gasless CEP-18 example signed its EIP-712 authorization for a domain without the `version`
+  field `CEP3009` includes, so every `transfer_with_authorization` on a live network failed with
+  `InvalidSignature`. The signing helper now lives in `odra_examples::contracts::gasless_cep18::authorization`,
+  is used by the CLI `gasless` scenario and is tested on both VMs (#667).
 - `cargo odra generate-client` no longer emits an empty `<Contract>Errors` enum for a contract without
   user errors; wasm-bindgen rejects empty enums, which broke the generated client of the `workspace`
   template (#665).

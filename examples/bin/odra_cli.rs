@@ -3,12 +3,13 @@
 //! Every scenario that used to be a separate `*_on_livenet` binary lives here:
 //!
 //! ```bash
-//! cargo run --bin odra_cli -- deploy
+//! cargo run --bin odra_cli --features livenet -- deploy
 //! cargo run --bin odra_cli -- contract DogContract name
 //! cargo run --bin odra_cli -- scenario erc20-transfer --amount 1000
 //! cargo run --bin odra_cli -- --help
 //! ```
 use core::time::Duration;
+use odra::casper_types::bytesrepr::Bytes;
 use odra::casper_types::{U256, U512};
 use odra::host::{Deployer, HostEnv, HostRef, HostRefLoader, InstallConfig, NoArgs};
 use odra::prelude::*;
@@ -20,6 +21,10 @@ use odra_cli::{
     scenario::{Args, Error, Scenario, ScenarioMetadata},
     CommandArg, ContractProvider, DeployedContractsContainer, DeployerExt, OdraCli
 };
+use odra_examples::contracts::gasless_cep18::authorization::{
+    sign_transfer_authorization, TransferWithAuthorization
+};
+use odra_examples::contracts::gasless_cep18::{GaslessCep18, GaslessCep18InitArgs};
 use odra_examples::contracts::tlw::{TimeLockWallet, TimeLockWalletInitArgs};
 use odra_examples::factory::counter::{
     BetterCounterFactory, BetterCounterUpgradeArgs, Counter, CounterFactory
@@ -383,148 +388,74 @@ pub fn main() {
         .scenario(Cep18TransferScenario)
         .scenario(TimeLockWalletScenario)
         .scenario(InstallConfigScenario)
-        .scenario(FactoryScenario);
-    #[cfg(feature = "eip712")]
-    let cli = cli.scenario(gasless::GaslessTransferScenario);
+        .scenario(FactoryScenario)
+        .scenario(GaslessTransferScenario);
     cli.build().run();
 }
 
-/// A gasless CEP-18 transfer authorized with an EIP-712 signature (formerly `gassless_example`).
-/// Needs the `eip712` feature: `cargo run --bin odra_cli --features livenet,eip712`.
-#[cfg(feature = "eip712")]
-mod gasless {
-    use super::*;
-    use casper_eip_712::Address as Eip712Address;
-    use odra::casper_types::bytesrepr::Bytes;
-    use odra::casper_types::KeyTag;
-    use odra_examples::contracts::gasless_cep18::{GaslessCep18, GaslessCep18InitArgs};
+/// A gasless CEP-18 transfer authorized with an EIP-712 signature (formerly `gassless_example`):
+/// Alice signs a transfer, Charlie submits it and pays the gas.
+pub struct GaslessTransferScenario;
 
-    pub struct GaslessTransferScenario;
-
-    impl Scenario for GaslessTransferScenario {
-        fn args(&self) -> Vec<CommandArg> {
-            vec![]
-        }
-
-        fn run(
-            &self,
-            env: &HostEnv,
-            _container: &DeployedContractsContainer,
-            _args: Args
-        ) -> Result<(), Error> {
-            let chain_name = std::env::var("ODRA_CASPER_LIVENET_CHAIN_NAME")
-                .unwrap_or_else(|_| "casper-test".to_string());
-            env.set_gas(cspr!(500));
-            let mut contract = GaslessCep18::try_deploy(
-                env,
-                GaslessCep18InitArgs {
-                    chain_name: chain_name.clone()
-                }
-            )?;
-            let contract_address = contract.address();
-            let alice = env.get_account(0);
-            let bob = env.get_account(1);
-            let charlie = env.get_account(2);
-
-            let signature = sign_transfer_auth(env, &chain_name, &contract_address, &alice, &bob);
-            odra_cli::log(format!(
-                "Signature: 0x{}",
-                signature
-                    .iter()
-                    .map(|b| format!("{b:02x}"))
-                    .collect::<String>()
-            ));
-
-            // Charlie submits Alice's signed transfer and pays for it.
-            env.set_caller(charlie);
-            contract.try_transfer_with_authorization(
-                alice,
-                bob,
-                U256::from(1000),
-                0,
-                u64::MAX,
-                Bytes::from([0u8; 32].to_vec()),
-                env.public_key(&alice),
-                signature
-            )?;
-            odra_cli::log("Transfer with authorization succeeded");
-            Ok(())
-        }
+impl Scenario for GaslessTransferScenario {
+    fn args(&self) -> Vec<CommandArg> {
+        vec![]
     }
 
-    impl ScenarioMetadata for GaslessTransferScenario {
-        const NAME: &'static str = "gasless";
-        const DESCRIPTION: &'static str =
-            "Submits a CEP-18 transfer signed by another account (EIP-712 authorization)";
-    }
-
-    fn sign_transfer_auth(
+    fn run(
+        &self,
         env: &HostEnv,
-        chain_name: &str,
-        contract_address: &Address,
-        signer: &Address,
-        recipient: &Address
-    ) -> Bytes {
+        _container: &DeployedContractsContainer,
+        _args: Args
+    ) -> Result<(), Error> {
+        let chain_name = std::env::var("ODRA_CASPER_LIVENET_CHAIN_NAME")
+            .unwrap_or_else(|_| "casper-test".to_string());
+        env.set_gas(cspr!(500));
+        let mut contract = GaslessCep18::try_deploy(
+            env,
+            GaslessCep18InitArgs {
+                chain_name: chain_name.clone()
+            }
+        )?;
+        let (alice, bob, charlie) = (env.get_account(0), env.get_account(1), env.get_account(2));
         let auth = TransferWithAuthorization {
-            from: *signer,
-            to: *recipient,
+            from: alice,
+            to: bob,
             value: U256::from(1000),
             valid_after: 0,
             valid_before: u64::MAX,
             nonce: [0u8; 32]
         };
-        let domain = casper_eip_712::DomainBuilder::new()
-            .name("USDC")
-            .custom_field(
-                "chain_name",
-                casper_eip_712::DomainFieldValue::String(chain_name.to_string())
-            )
-            .custom_field(
-                "contract_package_hash",
-                casper_eip_712::DomainFieldValue::Bytes32(contract_address.value())
-            )
-            .build();
-        let message = Bytes::from(casper_eip_712::hash_typed_data(&domain, &auth).to_vec());
-        env.set_caller(*signer);
-        env.sign_message(&message, signer)
-    }
+        let signature = sign_transfer_authorization(env, &chain_name, &contract.address(), &auth);
+        odra_cli::log(format!(
+            "Signature: 0x{}",
+            signature
+                .iter()
+                .map(|b| format!("{b:02x}"))
+                .collect::<String>()
+        ));
 
-    // keccak256("TransferWithAuthorization(address from,address to,uint256 value,uint256 validAfter,uint256 validBefore,bytes32 nonce)")
-    struct TransferWithAuthorization {
-        from: Address,
-        to: Address,
-        value: U256,
-        valid_after: u64,
-        valid_before: u64,
-        nonce: [u8; 32]
+        env.set_caller(charlie);
+        contract.try_transfer_with_authorization(
+            alice,
+            bob,
+            auth.value,
+            auth.valid_after,
+            auth.valid_before,
+            Bytes::from(auth.nonce.to_vec()),
+            env.public_key(&alice),
+            signature
+        )?;
+        odra_cli::log(format!(
+            "Transfer with authorization succeeded; Bob's balance: {}",
+            contract.try_balance_of(&bob)?
+        ));
+        Ok(())
     }
+}
 
-    impl casper_eip_712::Eip712Struct for TransferWithAuthorization {
-        fn type_string() -> &'static str {
-            "TransferWithAuthorization(address from,address to,uint256 value,uint256 validAfter,uint256 validBefore,bytes32 nonce)"
-        }
-
-        fn encode_data(&self) -> Vec<u8> {
-            let mut value_bytes = [0u8; 32];
-            self.value.to_big_endian(&mut value_bytes);
-            let mut encoded_data = Vec::with_capacity(6 * 32);
-            encoded_data.extend(casper_eip_712::encode_address(to_eip712_address(self.from)));
-            encoded_data.extend(casper_eip_712::encode_address(to_eip712_address(self.to)));
-            encoded_data.extend(casper_eip_712::encode_uint256(value_bytes));
-            encoded_data.extend(casper_eip_712::encode_uint64(self.valid_after));
-            encoded_data.extend(casper_eip_712::encode_uint64(self.valid_before));
-            encoded_data.extend(casper_eip_712::encode_bytes32(self.nonce));
-            encoded_data
-        }
-    }
-
-    fn to_eip712_address(addr: Address) -> Eip712Address {
-        let mut bytes = [0u8; 33];
-        match addr {
-            Address::Account(_) => bytes[0] = KeyTag::Account as u8,
-            Address::Contract(_) => bytes[0] = KeyTag::Hash as u8
-        }
-        bytes[1..33].copy_from_slice(&addr.value());
-        Eip712Address::Casper(bytes)
-    }
+impl ScenarioMetadata for GaslessTransferScenario {
+    const NAME: &'static str = "gasless";
+    const DESCRIPTION: &'static str =
+        "Submits a CEP-18 transfer signed by another account (EIP-712 authorization)";
 }
