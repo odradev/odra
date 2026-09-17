@@ -16,6 +16,9 @@ Changelog for `odra`.
 - `#[odra::external_contract]` keeps the annotated trait and implements it for the generated
   `XxxContractRef` and `XxxHostRef`, so the trait can be used as a bound or implemented by a module.
   A trait declared a second time by hand as a workaround must be removed.
+- `WalletProxy` example: a contract attaches CSPR to a cross-contract call with
+  `XxxContractRef::with_tokens(..)`, both from the value attached to its own call and from its balance;
+  tested on OdraVM and CasperVM (#529).
 - Project templates ship `AGENTS.md` (and `CLAUDE.md` importing it): a short pointer that tells an AI
   agent to install the Odra Claude Code plugin or read `llms.txt`, and lists the `cargo odra` commands.
 - `odra_test::odra_env()` and `odra_test::casper_env()` are public, so a test can be pinned to one backend
