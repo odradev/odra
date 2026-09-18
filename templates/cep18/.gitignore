@@ -3,6 +3,8 @@
 /target
 Cargo.lock
 .backend*
+.builder*
+/wasm
 .env
 *.env
 secret_key*.pem

@@ -1,4 +1,6 @@
 /target
+/wasm
+.builder*
 .env
 *.env
 secret_key*.pem

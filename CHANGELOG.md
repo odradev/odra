@@ -109,6 +109,9 @@ Changelog for `odra`.
   contracts in `Odra.toml` of `odra-modules` and `odra-examples`; their tests run on OdraVM only.
 
 ### Fixed
+- Project templates ignore the `wasm` directory where it is actually created: at the root of a
+  workspace project rather than in its members, and in the `cep18` and `cep95` templates, which
+  never ignored it.
 - `odra-wasm-client` builds without `WASM_CLIENT_SK`: the key is empty then and signing fails with a
   clear message, so a workspace-wide `cargo clippy` needs no secret.
 - `last_call()` of the first call after `deploy` (or `load`) no longer includes the events emitted by
