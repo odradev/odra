@@ -85,6 +85,7 @@ test-modules: test-modules-on-odravm test-modules-on-casper
 
 test: test-odra test-modules test-examples
 
+# `cargo odra generate-client` only works in workspace projects, see cargo-odra issue #104.
 test-template name:
     cd tests && cargo odra new -n {{name}} --template {{name}} -s ../ \
         && cd {{name}} \
@@ -92,7 +93,7 @@ test-template name:
         && cargo odra test -b casper \
         && cargo odra schema \
         && cargo build --bin {{name}}_cli \
-        && cargo odra generate-client
+        && if [ "{{name}}" = "workspace" ]; then cargo odra generate-client; fi
 
 test-templates:
     rm -rf tests

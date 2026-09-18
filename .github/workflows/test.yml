@@ -47,6 +47,8 @@ jobs:
           toolchain: nightly-2026-01-01
           target: wasm32-unknown-unknown
           components: rustfmt, clippy, rust-src
+      - name: Set key for speculative execution
+        run: echo "WASM_CLIENT_SK=${{ secrets.CLIENT_SK }}" >> $GITHUB_ENV
       - name: Run lints
         run: just check-lint
 

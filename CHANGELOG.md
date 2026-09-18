@@ -102,6 +102,8 @@ Changelog for `odra`.
   contracts in `Odra.toml` of `odra-modules` and `odra-examples`; their tests run on OdraVM only.
 
 ### Fixed
+- `odra-wasm-client` builds without `WASM_CLIENT_SK`: the key is empty then and signing fails with a
+  clear message, so a workspace-wide `cargo clippy` needs no secret.
 - `last_call()` of the first call after `deploy` (or `load`) no longer includes the events emitted by
   `init` (or before the load): the event baseline of a contract is set when it is deployed or loaded.
 - `CallResult::contract_native_events` returned the CES events of the call instead of the native ones.
