@@ -68,8 +68,6 @@ test-examples-on-odravm:
     cd examples/ourcoin && cargo odra test
 
 test-examples-on-casper:
-    mkdir -p examples/wasm
-    cp modules/wasm/Erc20.wasm modules/wasm/Cep18.wasm examples/wasm/
     cd examples && cargo odra test -b casper
     cd examples/ourcoin && cargo odra test -b casper
 
@@ -108,14 +106,11 @@ run-nctl:
 
 # Wasm files the livenet suite deploys; `just test` builds them as a side effect, CI does not.
 build-livenet-wasm:
-    cd modules && cargo odra build -c Erc20
-    cd modules && cargo odra build -c Cep18
     cd examples && cargo odra build
 
 test-livenet:
     set shell := bash
     mkdir -p examples/.node-keys
-    cp modules/wasm/Erc20.wasm modules/wasm/Cep18.wasm examples/wasm/
     # Extract the secret keys from the local Casper node
     docker exec mynctl /bin/bash -c "cat /home/casper/casper-nctl/assets/net-1/users/user-1/secret_key.pem" > examples/.node-keys/secret_key.pem
     docker exec mynctl /bin/bash -c "cat  /home/casper/casper-nctl/assets/net-1/users/user-2/secret_key.pem" > examples/.node-keys/secret_key_1.pem
@@ -135,7 +130,6 @@ test-livenet:
 run-example-cli +args:
     set shell := bash
     mkdir -p examples/.node-keys
-    cp modules/wasm/Erc20.wasm modules/wasm/Cep18.wasm examples/wasm/
     docker exec mynctl /bin/bash -c "cat /home/casper/casper-nctl/assets/net-1/users/user-1/secret_key.pem" > examples/.node-keys/secret_key.pem
     docker exec mynctl /bin/bash -c "cat  /home/casper/casper-nctl/assets/net-1/users/user-2/secret_key.pem" > examples/.node-keys/secret_key_1.pem
     docker exec mynctl /bin/bash -c "cat  /home/casper/casper-nctl/assets/net-1/users/user-3/secret_key.pem" > examples/.node-keys/secret_key_2.pem

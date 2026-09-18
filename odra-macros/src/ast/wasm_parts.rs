@@ -302,7 +302,7 @@ mod test {
 
         let expected = quote::quote! {
             #[cfg(target_arch = "wasm32")]
-            #[cfg(odra_module = "Erc20")]
+            #[cfg(any(odra_module = "Erc20", odra_module = "unknown_crate::Erc20"))]
             mod __erc20_wasm_parts {
                 use super::*;
                 use odra::prelude::*;
@@ -467,7 +467,7 @@ mod test {
 
         let expected = quote::quote! {
             #[cfg(target_arch = "wasm32")]
-            #[cfg(odra_module = "Erc20")]
+            #[cfg(any(odra_module = "Erc20", odra_module = "unknown_crate::Erc20"))]
             mod __erc20_wasm_parts {
                 use super::*;
                 use odra::prelude::*;
@@ -560,7 +560,7 @@ mod test {
 
         let expected = quote::quote! {
             #[cfg(target_arch = "wasm32")]
-            #[cfg(odra_module = "Erc20")]
+            #[cfg(any(odra_module = "Erc20", odra_module = "unknown_crate::Erc20"))]
             mod __erc20_wasm_parts {
                 use super::*;
                 use odra::prelude::*;

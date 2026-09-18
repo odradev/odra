@@ -58,8 +58,15 @@ Changelog for `odra`.
 - `odra_test::odra_env()` and `odra_test::casper_env()` are public, so a test can be pinned to one backend
   regardless of `ODRA_BACKEND`. Modules that are not registered in `Odra.toml` (no wasm) can be tested
   on OdraVM under `cargo odra test -b casper` this way.
+- Contracts from dependency crates: an `Odra.toml` entry whose first segment is a crate name
+  (`fqn = "odra_modules::erc20::Erc20"`) builds that crate's contract wasm and schema from the current
+  project, so `cargo odra build -c Erc20` works in any project that depends on `odra-modules`; the
+  examples build `Erc20` and `Cep18` this way instead of copying them from `modules/wasm` (#617).
 
 ### Changed
+- The wasm parts of a module are gated by `cfg(any(odra_module = "<Struct>", odra_module = "<crate>::<Struct>"))`;
+  `cargo odra` passes the crate-qualified form, so two crates defining the same struct name no longer both
+  compile their entry points into one wasm. A bare `ODRA_MODULE=<Struct>` still works (#321).
 - The blocking livenet calls run on one process-wide Tokio runtime (`odra_casper_rpc_client::utils::block_on`)
   instead of a runtime per `CasperClient`. They also work inside a multi-thread Tokio runtime (a
   `#[tokio::main]` program); inside a current-thread runtime they panic with a pointer to the async API,

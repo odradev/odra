@@ -413,7 +413,7 @@ mod test {
             }
 
             #[cfg(target_arch = "wasm32")]
-            #[cfg(odra_module = "Erc20Factory")]
+            #[cfg(any(odra_module = "Erc20Factory", odra_module = "unknown_crate::Erc20Factory"))]
             mod __erc20_factory_wasm_parts {
                 use super::*;
                 use odra::prelude::*;
@@ -662,7 +662,7 @@ mod test {
                 type UpgradeArgs = odra::host::NoArgs;
             }
 
-            #[cfg(odra_module = "Erc20Factory")]
+            #[cfg(any(odra_module = "Erc20Factory", odra_module = "unknown_crate::Erc20Factory"))]
             mod __erc20_factory_schema {
                 use super::*;
                 #[no_mangle]
