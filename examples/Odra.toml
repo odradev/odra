@@ -47,6 +47,15 @@ fqn = "features::handling_errors::OwnedContract"
 fqn = "features::events::PartyContract"
 
 [[contracts]]
+fqn = "features::offchain::BalanceBook"
+
+[[contracts]]
+fqn = "features::call_stack::CallStackProbe"
+
+[[contracts]]
+fqn = "features::call_stack::CallStackRelay"
+
+[[contracts]]
 fqn = "features::cross_calls::CrossContract"
 
 [[contracts]]
@@ -59,10 +68,7 @@ fqn = "features::modules::ModulesContract"
 fqn = "features::native_token::PublicWallet"
 
 [[contracts]]
-fqn = "features::access_control::MockModerated"
-
-[[contracts]]
-fqn = "features::pauseable::PauseableCounter"
+fqn = "features::native_token::WalletProxy"
 
 [[contracts]]
 fqn = "features::livenet::LivenetContract"
@@ -117,3 +123,10 @@ fqn = "features::many_fields::ManyFieldsContract"
 
 [[contracts]]
 fqn = "contracts::gasless_cep18::GaslessCep18"
+
+# Contracts from a dependency crate - the first segment of the fqn is the crate name.
+[[contracts]]
+fqn = "odra_modules::erc20::Erc20"
+
+[[contracts]]
+fqn = "odra_modules::cep18_token::Cep18"

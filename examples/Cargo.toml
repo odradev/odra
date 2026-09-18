@@ -12,10 +12,10 @@ repository = { workspace = true }
 version = { workspace = true }
 
 [dependencies]
-odra = { path = "../odra", features = [], default-features = false }
+odra = { path = "../odra", features = ["test-support"], default-features = false }
 odra-casper-livenet-env = { path = "../odra-casper/livenet-env", optional = true }
 odra-modules = { path = "../modules", features = ["eip712"], default-features = false }
-casper-eip-712 = { version = "1.2.0", optional = true }
+casper-eip-712 = { version = "1.2.0" }
 sha3 = { workspace = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
@@ -32,7 +32,6 @@ odra-build = { path = "../odra-build" }
 [features]
 default = []
 livenet = ["odra-casper-livenet-env"]
-eip712 = ["odra-modules/eip712", "casper-eip-712"]
 
 [[bin]]
 name = "odra_examples_build_contract"
@@ -45,32 +44,8 @@ path = "bin/build_schema.rs"
 test = false
 
 [[bin]]
-name = "erc20_on_livenet"
-path = "bin/erc20_on_livenet.rs"
-required-features = ["livenet"]
-test = false
-
-[[bin]]
-name = "tlw_on_livenet"
-path = "bin/tlw_on_livenet.rs"
-required-features = ["livenet"]
-test = false
-
-[[bin]]
-name = "cep18_on_livenet"
-path = "bin/cep18_on_livenet.rs"
-required-features = ["livenet"]
-test = false
-
-[[bin]]
 name = "livenet_tests"
 path = "bin/livenet_tests.rs"
-required-features = ["livenet"]
-test = false
-
-[[bin]]
-name = "odra_cfg_on_livenet"
-path = "bin/odra_cfg_on_livenet.rs"
 required-features = ["livenet"]
 test = false
 
@@ -89,16 +64,7 @@ test = false
 [[bin]]
 name = "odra_cli"
 path = "bin/odra_cli.rs"
-
-[[bin]]
-name = "factory_example"
-path = "bin/factory_example.rs"
 required-features = ["livenet"]
-
-[[bin]]
-name = "gassless_example"
-path = "bin/gassless_payment.rs"
-required-features = ["livenet", "eip712"]
 
 [lints.rust]
 missing_docs = "warn"

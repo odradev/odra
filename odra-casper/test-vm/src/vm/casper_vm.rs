@@ -17,11 +17,12 @@ use std::path::PathBuf;
 
 use casper_engine_test_support::{
     ChainspecConfig, DeployItemBuilder, EntityWithNamedKeys, ExecuteRequestBuilder,
-    LmdbWasmTestBuilder, WasmTestBuilder, ARG_AMOUNT, DEFAULT_ACCOUNTS, DEFAULT_AUCTION_DELAY,
-    DEFAULT_CHAINSPEC_REGISTRY, DEFAULT_EXEC_CONFIG, DEFAULT_GENESIS_CONFIG_HASH,
-    DEFAULT_GENESIS_TIMESTAMP_MILLIS, DEFAULT_LOCKED_FUNDS_PERIOD_MILLIS, DEFAULT_PAYMENT,
-    DEFAULT_PROTOCOL_VERSION, DEFAULT_ROUND_SEIGNIORAGE_RATE, DEFAULT_SYSTEM_CONFIG,
-    DEFAULT_UNBONDING_DELAY, DEFAULT_VALIDATOR_SLOTS, DEFAULT_WASM_CONFIG, SYSTEM_ADDR
+    LmdbWasmTestBuilder, TransferRequestBuilder, WasmTestBuilder, ARG_AMOUNT, DEFAULT_ACCOUNTS,
+    DEFAULT_AUCTION_DELAY, DEFAULT_CHAINSPEC_REGISTRY, DEFAULT_EXEC_CONFIG,
+    DEFAULT_GENESIS_CONFIG_HASH, DEFAULT_GENESIS_TIMESTAMP_MILLIS,
+    DEFAULT_LOCKED_FUNDS_PERIOD_MILLIS, DEFAULT_PAYMENT, DEFAULT_PROTOCOL_VERSION,
+    DEFAULT_ROUND_SEIGNIORAGE_RATE, DEFAULT_SYSTEM_CONFIG, DEFAULT_UNBONDING_DELAY,
+    DEFAULT_VALIDATOR_SLOTS, DEFAULT_WASM_CONFIG, SYSTEM_ADDR
 };
 use casper_event_standard::try_full_name_from_bytes;
 use casper_execution_engine::{engine_state, execution};
@@ -34,6 +35,8 @@ use odra_core::casper_types::account::{Account, AccountHash};
 use odra_core::casper_types::bytesrepr::{Bytes, ToBytes};
 use odra_core::casper_types::contract_messages::MessagePayload;
 use odra_core::casper_types::contracts::{ContractHash, ContractPackageHash};
+use odra_core::casper_types::execution::Effects;
+use odra_core::casper_types::Digest;
 use odra_core::casper_types::{
     bytesrepr::FromBytes, CLTyped, GenesisAccount, PublicKey, RuntimeArgs, U512
 };
@@ -67,7 +70,18 @@ pub struct CasperVm {
     error: Option<OdraError>,
     attached_value: U512,
     gas_used: BTreeMap<AccountHash, U512>,
-    gas_report: GasReport
+    gas_report: GasReport,
+    snapshot: Option<CasperVmSnapshot>
+}
+
+/// What [`CasperVm::take_snapshot`] remembers: the global state root plus the bookkeeping the VM
+/// keeps outside of the global state.
+struct CasperVmSnapshot {
+    post_state_hash: Digest,
+    block_time: u64,
+    messages: BTreeMap<EntityAddr, Vec<MessagePayload>>,
+    gas_used: BTreeMap<AccountHash, U512>,
+    removed_validators: Vec<PublicKey>
 }
 
 impl CasperVm {
@@ -237,6 +251,47 @@ impl CasperVm {
     /// Gets the current block time.
     pub fn block_time(&self) -> u64 {
         self.block_time
+    }
+
+    /// Remembers the current global state root and the VM bookkeeping, replacing any previous
+    /// snapshot.
+    pub fn take_snapshot(&mut self) {
+        self.snapshot = Some(CasperVmSnapshot {
+            post_state_hash: self.context.get_post_state_hash(),
+            block_time: self.block_time,
+            messages: self.messages.clone(),
+            gas_used: self.gas_used.clone(),
+            removed_validators: self.removed_validators.clone()
+        });
+    }
+
+    /// Brings back the state remembered by [`take_snapshot`](Self::take_snapshot). The snapshot
+    /// is kept, so it can be restored again.
+    ///
+    /// The global state is a content-addressed trie and nothing is ever pruned from it, so going
+    /// back is just pointing the test builder at the old root again: committing no effects on
+    /// top of it.
+    ///
+    /// # Panics
+    ///
+    /// Panics if no snapshot has been taken.
+    pub fn restore_snapshot(&mut self) {
+        let snapshot = self
+            .snapshot
+            .as_ref()
+            .expect("No snapshot to restore: call `take_snapshot` first");
+        self.context
+            .commit_transforms(snapshot.post_state_hash, Effects::new());
+        assert_eq!(
+            self.context.get_post_state_hash(),
+            snapshot.post_state_hash,
+            "restoring a snapshot must not change the state root"
+        );
+        self.block_time = snapshot.block_time;
+        self.messages = snapshot.messages.clone();
+        self.gas_used = snapshot.gas_used.clone();
+        self.removed_validators = snapshot.removed_validators.clone();
+        self.error = None;
     }
 
     /// Gets the event at the specified index for the given contract address.
@@ -504,21 +559,19 @@ impl CasperVm {
     ///
     /// Results an OdraError if the transfer fails.
     pub fn transfer(&mut self, to: Address, amount: U512) -> OdraResult<()> {
-        let deploy_item = DeployItemBuilder::new()
-            .with_transfer_args(runtime_args! {
-                "amount" => amount,
-                "target" => to,
-                "id" => Some(0u64),
-            })
-            .with_authorization_keys(&[self.active_account_hash()])
-            .with_address(self.active_account_hash())
-            .with_deploy_hash(self.next_hash())
-            .build();
-
-        let execute_request = ExecuteRequestBuilder::from_deploy_item(&deploy_item)
+        // A native transfer: no wasm, no payment code, just the mint.
+        let target = *to.as_account_hash().unwrap_or_else(|| {
+            panic!("Native transfers go to accounts only, {to:?} is a contract")
+        });
+        let initiator = self.active_account_hash();
+        let transfer_request = TransferRequestBuilder::new(amount, target)
+            .with_initiator(initiator)
+            .with_authorization_keys([initiator])
             .with_block_time(self.block_time)
+            .with_transfer_id(self.calls_counter as u64)
             .build();
-        self.context.exec(execute_request).commit();
+        self.calls_counter += 1;
+        self.context.transfer_and_commit(transfer_request);
 
         if let Some(error) = self.context.get_error() {
             let odra_error = parse_error(error);
@@ -745,7 +798,8 @@ impl CasperVm {
             key_pairs,
             messages: Default::default(),
             validators,
-            removed_validators: Default::default()
+            removed_validators: Default::default(),
+            snapshot: None
         }
     }
 
@@ -776,6 +830,49 @@ impl CasperVm {
 impl CasperVm {
     fn get_package(&self, package_hash: PackageHash) -> Package {
         self.context.get_package(package_hash).unwrap()
+    }
+
+    /// Reads a raw value from the Odra storage (the `state` dictionary) of the contract
+    /// at the given address.
+    pub fn get_storage_value(&self, address: &Address, key: &[u8]) -> Option<Bytes> {
+        self.get_dictionary_value(address, STATE_KEY, key)
+    }
+
+    /// Reads the raw value stored under a named key of the contract at the given address.
+    pub fn get_named_value(&self, address: &Address, name: &str) -> Option<Bytes> {
+        let package_hash = address.as_package_hash()?;
+        let key = self.package_named_key(package_hash, name)?;
+        let stored_value = self.context.query(None, key, &[]).ok()?;
+        Self::stored_value_bytes(stored_value)
+    }
+
+    /// Reads the raw value stored in a named dictionary of the contract at the given address.
+    pub fn get_dictionary_value(
+        &self,
+        address: &Address,
+        dictionary_name: &str,
+        key: &[u8]
+    ) -> Option<Bytes> {
+        let package_hash = address.as_package_hash()?;
+        let seed_key = self.package_named_key(package_hash, dictionary_name)?;
+        let seed_uref = *seed_key.as_uref()?;
+        let key = String::from_utf8(key.to_vec()).ok()?;
+        let stored_value = self
+            .context
+            .query_dictionary_item(None, seed_uref, &key)
+            .ok()?;
+        Self::stored_value_bytes(stored_value)
+    }
+
+    /// Extracts the raw bytes of a stored `CLValue`, unwrapping `Vec<u8>` values the way
+    /// the Odra storage stores them.
+    fn stored_value_bytes(stored_value: StoredValue) -> Option<Bytes> {
+        let cl_value = stored_value.as_cl_value()?.clone();
+        if cl_value.cl_type() == &<Bytes as CLTyped>::cl_type() {
+            cl_value.into_t::<Bytes>().ok()
+        } else {
+            Some(Bytes::from(cl_value.inner_bytes().as_slice()))
+        }
     }
 
     /// Gets current contract from contract package and

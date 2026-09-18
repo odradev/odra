@@ -176,6 +176,11 @@ impl TestContract {
 
     #[odra(payable)]
     pub fn deposit(&mut self) {}
+
+    #[odra(offchain)]
+    pub fn sum_of(&self, values: Vec<u64>) -> u64 {
+        values.iter().sum()
+    }
 }
 
 struct DummyHostCtx;
@@ -212,6 +217,23 @@ impl HostContext for DummyHostCtx {
     }
 
     #[doc = " Returns the CSPR balance of the specified address."]
+    fn get_storage_value(&self, address: &Address, key: &[u8]) -> Option<Bytes> {
+        None
+    }
+
+    fn get_named_value(&self, address: &Address, name: &str) -> Option<Bytes> {
+        None
+    }
+
+    fn get_dictionary_value(
+        &self,
+        address: &Address,
+        dictionary_name: &str,
+        key: &[u8]
+    ) -> Option<Bytes> {
+        None
+    }
+
     fn balance_of(&self, address: &Address) -> U512 {
         todo!()
     }
@@ -243,6 +265,14 @@ impl HostContext for DummyHostCtx {
 
     #[doc = " Returns the current block time."]
     fn block_time(&self) -> u64 {
+        todo!()
+    }
+
+    fn take_snapshot(&self) {
+        todo!()
+    }
+
+    fn restore_snapshot(&self) {
         todo!()
     }
 

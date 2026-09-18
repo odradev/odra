@@ -320,6 +320,9 @@ mod test {
                     fn ident() -> odra::prelude::string::String {
                         Erc20Factory::ident()
                     }
+                    fn contract_name() -> odra::prelude::string::String {
+                        <Erc20Factory as odra::contract_def::HasIdent>::contract_name()
+                    }
                 }
 
                 impl odra::host::EntryPointsCallerProvider for Erc20FactoryHostRef {
@@ -410,7 +413,7 @@ mod test {
             }
 
             #[cfg(target_arch = "wasm32")]
-            #[cfg(odra_module = "Erc20Factory")]
+            #[cfg(any(odra_module = "Erc20Factory", odra_module = "unknown_crate::Erc20Factory"))]
             mod __erc20_factory_wasm_parts {
                 use super::*;
                 use odra::prelude::*;
@@ -659,7 +662,7 @@ mod test {
                 type UpgradeArgs = odra::host::NoArgs;
             }
 
-            #[cfg(odra_module = "Erc20Factory")]
+            #[cfg(any(odra_module = "Erc20Factory", odra_module = "unknown_crate::Erc20Factory"))]
             mod __erc20_factory_schema {
                 use super::*;
                 #[no_mangle]

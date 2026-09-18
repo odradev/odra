@@ -139,6 +139,7 @@ fn get_internal_error_name(error_num: u16) -> OdraError {
         ExecutionError::FactoryModuleCall,
         ExecutionError::CannotGetAnImmediateCaller,
         ExecutionError::PathIndexOutOfBounds,
+        ExecutionError::InvalidArg,
         ExecutionError::MaxUserError,
         ExecutionError::UserErrorTooHigh
     )

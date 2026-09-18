@@ -61,10 +61,8 @@ pub fn event_absolute_position(len: u32, index: i32) -> Option<u32> {
         if abs_idx > len as i32 {
             return None;
         }
-        Some(
-            len.checked_sub(abs_idx as u32)
-                .expect("Checked sub failed, it shouldn't happen")
-        )
+        // `abs_idx <= len` was checked above.
+        Some(len - abs_idx as u32)
     } else {
         if index >= len as i32 {
             return None;
@@ -104,6 +102,62 @@ pub fn hex_to_slice(src: &[u8], dst: &mut [u8]) {
         slots[0] = hex((*byte >> 4) & 0xf);
         slots[1] = hex(*byte & 0xf);
     }
+}
+
+/// Encodes the storage path (the chain of module field indices) into bytes.
+///
+/// Two encoding modes exist to support backward compatibility:
+///
+/// **Legacy encoding** (default, when all path indices fit in 4 bits):
+/// Packs indices into a `u32` using 4-bit left shifts, identical to the original
+/// `(parent << 4) + child` formula. Produces 4 big-endian bytes. This ensures
+/// deployed contracts with ≤15 fields per module get the same storage keys.
+///
+/// **Path encoding** (indices > 15):
+/// Emits `[0xFF, path_len, path[0], ..., path[n]]`. The `0xFF` prefix cannot
+/// collide with legacy keys (whose first byte never exceeds `0x0F`). The
+/// `path_len` byte makes the boundary with appended mapping data unambiguous,
+/// preventing collisions between e.g. a `Var` at a deeper path and a `Mapping`
+/// at a shallower path with matching key bytes.
+///
+/// **Why `path_len` is necessary — collision example:**
+///
+/// Consider two fields whose path bytes and mapping data concatenate identically:
+/// - Field A: `Var` at path `[3, 5]` (depth 2), no mapping data.
+/// - Field B: `Mapping` at path `[3]` (depth 1), mapping key serializes to `[5]`.
+///
+/// The final hash input is `index_bytes ++ mapping_data`.
+///
+/// Without `path_len` (hypothetical `[0xFF, path..., mapping_data...]`):
+/// - A → `[0xFF, 3, 5]`, B → `[0xFF, 3] ++ [5]` = `[0xFF, 3, 5]` — **collision!**
+///
+/// With `path_len` (actual `[0xFF, path_len, path..., mapping_data...]`):
+/// - A → `[0xFF, 2, 3, 5]`, B → `[0xFF, 1, 3] ++ [5]` = `[0xFF, 1, 3, 5]` — **distinct.**
+pub fn storage_index_bytes(path: &[u8]) -> Vec<u8> {
+    // Legacy: pack indices into u32 via 4-bit shifts (e.g. path [3, 15] → 0x3F).
+    // Only used when all indices fit in a nibble, preserving old storage keys.
+    if path.iter().all(|&idx| idx <= 15) {
+        let index: u32 = path.iter().fold(0u32, |acc, &idx| (acc << 4) + idx as u32);
+        index.to_be_bytes().to_vec()
+    } else {
+        // Path encoding: [0xFF, len, idx_0, idx_1, ...]. Used for fields 16+.
+        let mut bytes = Vec::with_capacity(2 + path.len());
+        bytes.push(0xFF);
+        bytes.push(path.len() as u8);
+        bytes.extend_from_slice(path);
+        bytes
+    }
+}
+
+/// Returns the bytes that are hashed to produce a storage key of a module element.
+///
+/// `path` is the chain of field indices from the contract root to the element and
+/// `mapping_data` is the concatenation of serialized [`Mapping`](crate::mapping::Mapping)
+/// keys used along the way. The storage key is the hex-encoded `blake2b` hash of the result.
+pub fn storage_key_preimage(path: &[u8], mapping_data: &[u8]) -> Vec<u8> {
+    let mut key = storage_index_bytes(path);
+    key.extend_from_slice(mapping_data);
+    key
 }
 
 #[cfg(test)]

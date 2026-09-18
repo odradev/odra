@@ -20,6 +20,10 @@ pub struct OdraVmContractEnv {
 }
 
 impl ContractContext for OdraVmContractEnv {
+    fn debug(&self, message: &str) {
+        println!("{message}");
+    }
+
     fn get_value(&self, key: &[u8]) -> Option<Bytes> {
         self.vm.get_var(key)
     }
@@ -54,6 +58,10 @@ impl ContractContext for OdraVmContractEnv {
 
     fn caller(&self) -> Address {
         self.vm.caller()
+    }
+
+    fn call_stack(&self) -> Vec<Address> {
+        self.vm.call_stack()
     }
 
     fn self_address(&self) -> Address {

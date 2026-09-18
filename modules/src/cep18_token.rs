@@ -179,6 +179,7 @@ impl Cep18 {
 
 impl Cep18 {
     /// Transfers tokens from the sender to the recipient without checking the permissions.
+    /// SECURITY: Do not expose this function publicly without proper access control.
     pub fn raw_transfer(&mut self, sender: &Address, recipient: &Address, amount: &U256) {
         if amount > &self.balance_of(sender) {
             self.env().revert(Error::InsufficientBalance)
@@ -191,6 +192,7 @@ impl Cep18 {
     }
 
     /// Mints new tokens and assigns them to the given address without checking the permissions.
+    /// SECURITY: Do not expose this function publicly without proper access control.
     pub fn raw_mint(&mut self, owner: &Address, amount: &U256) {
         self.total_supply.add(*amount);
         self.balances.add(owner, *amount);
@@ -202,6 +204,7 @@ impl Cep18 {
     }
 
     /// Approves the spender to spend the given amount of tokens on behalf of the owner without checking the permissions.
+    /// SECURITY: Do not expose this function publicly without proper access control.
     pub fn raw_approve(&mut self, owner: &Address, spender: &Address, amount: &U256) {
         self.allowances.set(owner, spender, *amount);
         self.env().emit_event(SetAllowance {
@@ -212,6 +215,7 @@ impl Cep18 {
     }
 
     /// Burns the given amount of tokens from the given address without checking the permissions.
+    /// SECURITY: Do not expose this function publicly without proper access control.
     pub fn raw_burn(&mut self, owner: &Address, amount: &U256) {
         if &self.balance_of(owner) < amount {
             self.env().revert(Error::InsufficientBalance);
@@ -227,16 +231,19 @@ impl Cep18 {
     }
 
     /// Set name of the token.
+    /// SECURITY: Do not expose this function publicly without proper access control.
     pub fn set_name(&mut self, name: String) {
         self.name.set(name);
     }
 
     /// Set symbol of the token.
+    /// SECURITY: Do not expose this function publicly without proper access control.
     pub fn set_symbol(&mut self, symbol: String) {
         self.symbol.set(symbol);
     }
 
     /// Set decimals of the token.
+    /// SECURITY: Do not expose this function publicly without proper access control.
     pub fn set_decimals(&mut self, decimals: u8) {
         self.decimals.set(decimals);
     }
@@ -332,6 +339,55 @@ pub(crate) mod tests {
             initial_supply: TOKEN_TOTAL_SUPPLY.into()
         };
         setup_with_args(&env, init_args)
+    }
+
+    #[test]
+    fn storage_layout_reads_named_keys_and_dictionaries() {
+        use odra::casper_types::bytesrepr::{FromBytes, ToBytes};
+        use odra::casper_types::U256;
+        use odra::schema::{resolve_storage, SchemaStorageLayout, StorageLocation};
+
+        let mut token = setup();
+        let env = token.env().clone();
+        let owner = env.get_account(0);
+        let spender = env.get_account(1);
+        let layout = Cep18Example::storage_kind();
+
+        // A named key.
+        let query = resolve_storage(&layout, "token.decimals", &[]).unwrap();
+        let StorageLocation::NamedKey { name } = &query.location else {
+            panic!("expected a named key")
+        };
+        let bytes = env
+            .get_named_value(&token.address(), name)
+            .expect("decimals should be stored");
+        assert_eq!(u8::from_bytes(&bytes).unwrap().0, token.decimals());
+
+        // A dictionary with base64-encoded keys.
+        let key = owner.to_bytes().unwrap();
+        let query = resolve_storage(&layout, "token.balances", &[key]).unwrap();
+        let StorageLocation::Dictionary { name, key } = &query.location else {
+            panic!("expected a dictionary")
+        };
+        let bytes = env
+            .get_dictionary_value(&token.address(), name, key.as_bytes())
+            .expect("balance should be stored");
+        assert_eq!(
+            U256::from_bytes(&bytes).unwrap().0,
+            token.balance_of(&owner)
+        );
+
+        // A dictionary with compound, hashed keys.
+        token.approve(&spender, &U256::from(42));
+        let key = (owner, spender).to_bytes().unwrap();
+        let query = resolve_storage(&layout, "token.allowances", &[key]).unwrap();
+        let StorageLocation::Dictionary { name, key } = &query.location else {
+            panic!("expected a dictionary")
+        };
+        let bytes = env
+            .get_dictionary_value(&token.address(), name, key.as_bytes())
+            .expect("allowance should be stored");
+        assert_eq!(U256::from_bytes(&bytes).unwrap().0, U256::from(42));
     }
 
     pub fn setup_with_args(env: &HostEnv, args: Cep18ExampleInitArgs) -> Cep18ExampleHostRef {

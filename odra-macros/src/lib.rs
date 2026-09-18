@@ -33,13 +33,28 @@ macro_rules! span_error {
 pub fn module(attr: TokenStream, item: TokenStream) -> TokenStream {
     let attr: TokenStream2 = attr.into();
     let item: TokenStream2 = item.into();
-    if let Ok(ir) = ModuleImplIR::try_from((&attr, &item)) {
-        return ModuleImplItem::try_from(&ir).into_code();
+    if is_impl_or_trait(&item) {
+        return match ModuleImplIR::try_from((&attr, &item)) {
+            Ok(ir) => ModuleImplItem::try_from(&ir).into_code(),
+            Err(e) => e.to_compile_error().into()
+        };
     }
-    if let Ok(ir) = ModuleStructIR::try_from((&attr, &item)) {
-        return ModuleStructItem::try_from(&ir).into_code();
+    if is_struct(&item) {
+        return match ModuleStructIR::try_from((&attr, &item)) {
+            Ok(ir) => ModuleStructItem::try_from(&ir).into_code(),
+            Err(e) => e.to_compile_error().into()
+        };
     }
     span_error!(item, "Struct or impl block expected")
+}
+
+fn is_impl_or_trait(item: &TokenStream2) -> bool {
+    syn::parse2::<syn::ItemImpl>(item.clone()).is_ok()
+        || syn::parse2::<syn::ItemTrait>(item.clone()).is_ok()
+}
+
+fn is_struct(item: &TokenStream2) -> bool {
+    syn::parse2::<syn::ItemStruct>(item.clone()).is_ok()
 }
 
 /// Implements boilerplate for a factory module.
@@ -48,11 +63,17 @@ pub fn factory(attr: TokenStream, item: TokenStream) -> TokenStream {
     let attr: TokenStream2 = attr.into();
     let item: TokenStream2 = item.into();
 
-    if let Ok(ir) = ModuleStructIR::try_from((&attr, &item)) {
-        return FactoryModuleStructItem::try_from(&ir).into_code();
+    if is_struct(&item) {
+        return match ModuleStructIR::try_from((&attr, &item)) {
+            Ok(ir) => FactoryModuleStructItem::try_from(&ir).into_code(),
+            Err(e) => e.to_compile_error().into()
+        };
     }
-    if let Ok(ir) = ModuleImplIR::try_from((&attr, &item)) {
-        return FactoryModuleImplItem::try_from(&ir).into_code();
+    if is_impl_or_trait(&item) {
+        return match ModuleImplIR::try_from((&attr, &item)) {
+            Ok(ir) => FactoryModuleImplItem::try_from(&ir).into_code(),
+            Err(e) => e.to_compile_error().into()
+        };
     }
     span_error!(item, "Struct or impl block expected")
 }

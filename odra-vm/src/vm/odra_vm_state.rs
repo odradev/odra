@@ -33,6 +33,24 @@ pub struct AwaitingTransfer {
     pub transfer_unlock: u64
 }
 
+/// A copy of everything in [`OdraVmState`] that a contract call can change, taken by
+/// [`OdraVmState::snapshot`] and brought back by [`OdraVmState::restore`].
+///
+/// The accounts and their keys never change, so they are not part of it.
+#[derive(Clone)]
+pub struct OdraVmSnapshot {
+    storage: Storage,
+    events: BTreeMap<Address, Vec<Bytes>>,
+    native_events: BTreeMap<Address, Vec<Bytes>>,
+    contract_counter: u32,
+    block_time: u64,
+    validators: BTreeMap<PublicKey, ValidatorInfo>,
+    validator_account: BTreeMap<PublicKey, Address>,
+    delegations: BTreeMap<PublicKey, BTreeMap<Address, U512>>,
+    removed_validators: Vec<PublicKey>,
+    awaiting_transfers: Vec<AwaitingTransfer>
+}
+
 /// Struct representing the state of the Odra VM.
 pub struct OdraVmState {
     storage: Storage,
@@ -58,6 +76,43 @@ impl OdraVmState {
 
     pub fn caller(&self) -> Address {
         *self.callstack.previous().address()
+    }
+
+    pub fn call_stack(&self) -> Vec<Address> {
+        self.callstack.addresses()
+    }
+
+    /// Copies the mutable part of the state.
+    pub fn snapshot(&self) -> OdraVmSnapshot {
+        OdraVmSnapshot {
+            storage: self.storage.clone(),
+            events: self.events.clone(),
+            native_events: self.native_events.clone(),
+            contract_counter: self.contract_counter,
+            block_time: self.block_time,
+            validators: self.validators.clone(),
+            validator_account: self.validator_account.clone(),
+            delegations: self.delegations.clone(),
+            removed_validators: self.removed_validators.clone(),
+            awaiting_transfers: self.awaiting_transfers.clone()
+        }
+    }
+
+    /// Brings back the state copied by [`snapshot`](Self::snapshot) and clears the error. The
+    /// callstack is left alone: it only holds the caller account between calls.
+    pub fn restore(&mut self, snapshot: &OdraVmSnapshot) {
+        let snapshot = snapshot.clone();
+        self.storage = snapshot.storage;
+        self.events = snapshot.events;
+        self.native_events = snapshot.native_events;
+        self.contract_counter = snapshot.contract_counter;
+        self.block_time = snapshot.block_time;
+        self.validators = snapshot.validators;
+        self.validator_account = snapshot.validator_account;
+        self.delegations = snapshot.delegations;
+        self.removed_validators = snapshot.removed_validators;
+        self.awaiting_transfers = snapshot.awaiting_transfers;
+        self.error = None;
     }
 
     pub fn callstack_tip(&self) -> &CallstackElement {
@@ -100,6 +155,19 @@ impl OdraVmState {
     pub fn get_dict_value(&self, dict: &[u8], key: &[u8]) -> Result<Option<Bytes>, Error> {
         let ctx = &self.callstack.current().address();
         self.storage.get_dict_value(ctx, dict, key)
+    }
+
+    pub fn get_var_of(&self, address: &Address, key: &[u8]) -> Result<Option<Bytes>, Error> {
+        self.storage.get_value(address, key)
+    }
+
+    pub fn get_dict_value_of(
+        &self,
+        address: &Address,
+        dict: &[u8],
+        key: &[u8]
+    ) -> Result<Option<Bytes>, Error> {
+        self.storage.get_dict_value(address, dict, key)
     }
 
     pub fn emit_event(&mut self, event_data: &Bytes) {

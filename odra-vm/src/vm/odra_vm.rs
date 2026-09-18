@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::panic::{self, AssertUnwindSafe};
 use std::rc::Rc;
 
-use super::odra_vm_state::OdraVmState;
+use super::odra_vm_state::{OdraVmSnapshot, OdraVmState};
 use anyhow::Result;
 use odra_core::callstack::CallstackElement;
 use odra_core::casper_types::bytesrepr::{deserialize, deserialize_from_slice, serialize};
@@ -27,14 +27,16 @@ const NAMED_KEY_PREFIX: &str = "NAMED_KEY";
 /// Odra in-memory virtual machine.
 pub struct OdraVm {
     state: Rc<RefCell<OdraVmState>>,
-    contract_register: Rc<RefCell<ContractRegister>>
+    contract_register: Rc<RefCell<ContractRegister>>,
+    snapshot: RefCell<Option<OdraVmSnapshot>>
 }
 
 impl Default for OdraVm {
     fn default() -> Self {
         Self {
             state: Rc::new(RefCell::new(OdraVmState::default())),
-            contract_register: Rc::new(RefCell::new(ContractRegister::default()))
+            contract_register: Rc::new(RefCell::new(ContractRegister::default())),
+            snapshot: RefCell::new(None)
         }
     }
 }
@@ -64,6 +66,23 @@ impl OdraVm {
         }
 
         address
+    }
+
+    /// Makes a contract callable under `address` without deploying it (`HostRefLoader::load`).
+    ///
+    /// A contract deployed in this VM is already registered and is left as it is.
+    pub fn register_contract(
+        &self,
+        address: Address,
+        name: &str,
+        entry_points_caller: EntryPointsCaller
+    ) {
+        let mut contract_register = self.contract_register.borrow_mut();
+        if contract_register.get(&address).is_some() {
+            return;
+        }
+        contract_register.add(address, ContractContainer::new(name, entry_points_caller));
+        self.state.borrow_mut().set_balance(address, U512::zero());
     }
 
     /// Upgrades an existing contract.
@@ -157,6 +176,31 @@ impl OdraVm {
     /// Retrieves from the state the address of the current caller.
     pub fn caller(&self) -> Address {
         self.state.borrow().caller()
+    }
+
+    /// Retrieves from the state the whole call stack, initiating account first.
+    pub fn call_stack(&self) -> Vec<Address> {
+        self.state.borrow().call_stack()
+    }
+
+    /// Remembers the current state, replacing any previous snapshot.
+    pub fn take_snapshot(&self) {
+        let snapshot = self.state.borrow().snapshot();
+        *self.snapshot.borrow_mut() = Some(snapshot);
+    }
+
+    /// Brings back the state remembered by [`take_snapshot`](Self::take_snapshot). The snapshot
+    /// is kept, so it can be restored again.
+    ///
+    /// # Panics
+    ///
+    /// Panics if no snapshot has been taken.
+    pub fn restore_snapshot(&self) {
+        let snapshot = self.snapshot.borrow();
+        let snapshot = snapshot
+            .as_ref()
+            .expect("No snapshot to restore: call `take_snapshot` first");
+        self.state.borrow_mut().restore(snapshot);
     }
 
     /// Retrieves the callstack record.
@@ -261,6 +305,29 @@ impl OdraVm {
                 None
             }
         }
+    }
+
+    /// Reads a value from the Odra storage of the contract at the given address.
+    ///
+    /// Unlike [OdraVm::get_var], it does not depend on the callstack and never sets
+    /// the virtual machine in the error state.
+    pub fn get_storage_value(&self, address: &Address, key: &[u8]) -> Option<Bytes> {
+        self.state.borrow().get_var_of(address, key).ok().flatten()
+    }
+
+    /// Reads the value of the named key of the contract at the given address.
+    pub fn get_named_value(&self, address: &Address, name: &str) -> Option<Bytes> {
+        let key = Self::key_of_named_key(name);
+        self.get_storage_value(address, key.as_bytes())
+    }
+
+    /// Reads the value of the dictionary item of the contract at the given address.
+    pub fn get_dictionary_value(&self, address: &Address, dict: &str, key: &[u8]) -> Option<Bytes> {
+        self.state
+            .borrow()
+            .get_dict_value_of(address, dict.as_bytes(), key)
+            .ok()
+            .flatten()
     }
 
     /// Writes an event data to the global state.

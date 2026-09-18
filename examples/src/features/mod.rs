@@ -1,5 +1,6 @@
 //! Module containing examples of various Odra features.
 pub mod access_control;
+pub mod call_stack;
 pub mod collecting_events;
 pub mod cross_calls;
 pub mod custom_types;
@@ -12,6 +13,7 @@ pub mod module_nesting;
 pub mod modules;
 pub mod native_token;
 pub mod no_ret;
+pub mod offchain;
 pub mod optional_args;
 pub mod pauseable;
 pub mod reentrancy_guard;

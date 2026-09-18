@@ -425,6 +425,7 @@ impl CEP95Interface for Cep95 {
 
 impl Cep95 {
     /// Initializes the module with a name and symbol.
+    /// SECURITY: Do not expose this function publicly without proper access control.
     pub fn init(&mut self, name: String, symbol: String) {
         // Initialize the name and symbol.
         self.name.set(name);

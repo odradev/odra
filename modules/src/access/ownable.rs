@@ -62,9 +62,12 @@ impl Ownable {
     pub fn get_optional_owner(&self) -> Option<Address> {
         self.owner.get().flatten()
     }
+}
 
+impl Ownable {
     /// Unchecked version of the ownership transfer. It emits an event and sets
     /// the new owner.
+    /// SECURITY: Do not expose this function publicly without proper access control.
     pub fn unchecked_transfer_ownership(&mut self, new_owner: Option<Address>) {
         let previous_owner = self.get_optional_owner();
         self.owner.set(new_owner);
@@ -347,7 +350,7 @@ mod test {
     }
 
     fn setup_ownable() -> (OwnableHostRef, Address) {
-        let env = odra_test::env();
+        let env = odra_test::odra_env();
         (
             Ownable::deploy(
                 &env,
@@ -360,7 +363,7 @@ mod test {
     }
 
     fn setup_ownable_2_step() -> (Ownable2StepHostRef, Address) {
-        let env = odra_test::env();
+        let env = odra_test::odra_env();
         (
             Ownable2Step::deploy(
                 &env,
@@ -373,7 +376,7 @@ mod test {
     }
 
     fn setup_renounceable() -> (Vec<RenounceableHostRef>, Address) {
-        let env = odra_test::env();
+        let env = odra_test::odra_env();
         let owner = env.caller();
         let ownable = Ownable::deploy(&env, OwnableInitArgs { owner });
         let ownable_2_step = Ownable2Step::deploy(&env, Ownable2StepInitArgs { owner });
@@ -387,7 +390,7 @@ mod test {
     }
 
     fn setup_owned() -> (HostEnv, OwnableHostRef, Ownable2StepHostRef, Address) {
-        let env = odra_test::env();
+        let env = odra_test::odra_env();
         let owner = env.caller();
         let ownable = Ownable::deploy(&env, OwnableInitArgs { owner });
         let ownable_2_step = Ownable2Step::deploy(&env, Ownable2StepInitArgs { owner });

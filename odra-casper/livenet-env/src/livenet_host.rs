@@ -12,7 +12,7 @@ use odra_core::casper_types::Timestamp;
 use odra_core::entry_point_callback::EntryPointsCaller;
 use odra_core::{
     casper_types::{bytesrepr::Bytes, PublicKey, RuntimeArgs, U512},
-    host::HostContext,
+    host::{HostContext, HostEnv, ThreadEnvFactory},
     CallDef, ContractEnv, GasReport
 };
 use odra_core::{prelude::*, EventError, VmError};
@@ -87,6 +87,32 @@ impl HostContext for LivenetHost {
         panic!("remove_validator is not supported on livenet");
     }
 
+    fn get_storage_value(&self, address: &Address, key: &[u8]) -> Option<Bytes> {
+        self.casper_client
+            .borrow()
+            .get_value(address, key)
+            .unwrap_or_else(|e| read_failed("state value", address, e))
+    }
+
+    fn get_named_value(&self, address: &Address, name: &str) -> Option<Bytes> {
+        self.casper_client
+            .borrow()
+            .get_named_value(address, name)
+            .unwrap_or_else(|e| read_failed(name, address, e))
+    }
+
+    fn get_dictionary_value(
+        &self,
+        address: &Address,
+        dictionary_name: &str,
+        key: &[u8]
+    ) -> Option<Bytes> {
+        self.casper_client
+            .borrow()
+            .get_dictionary_value(address, dictionary_name, key)
+            .unwrap_or_else(|e| read_failed(dictionary_name, address, e))
+    }
+
     fn balance_of(&self, address: &Address) -> U512 {
         let client = self.casper_client.borrow();
         client.get_balance(address).unwrap_or_else(|e| {
@@ -131,6 +157,27 @@ impl HostContext for LivenetHost {
         client.get_block_time().unwrap()
     }
 
+    fn thread_env_factory(&self) -> Option<ThreadEnvFactory> {
+        // Every worker gets its own client (connection, caches) with this host's caller and gas.
+        let client = self.casper_client.borrow();
+        let caller = client.caller();
+        let gas = client.gas().as_u64();
+        Some(ThreadEnvFactory::new(move || {
+            let env = HostEnv::new(LivenetHost::new());
+            env.set_caller(caller);
+            env.set_gas(gas);
+            env
+        }))
+    }
+
+    fn take_snapshot(&self) {
+        panic!("Snapshots are not available on livenet: the state lives on a real chain")
+    }
+
+    fn restore_snapshot(&self) {
+        panic!("Snapshots are not available on livenet: the state lives on a real chain")
+    }
+
     fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, EventError> {
         let client = self.casper_client.borrow();
         client
@@ -140,23 +187,31 @@ impl HostContext for LivenetHost {
 
     fn get_native_event(
         &self,
-        _contract_address: &Address,
-        _index: u32
+        contract_address: &Address,
+        index: u32
     ) -> Result<Bytes, EventError> {
-        // TODO: Implement
-        Err(EventError::CouldntExtractEventData)
+        // Only the native events of the transactions this environment sent, see
+        // `CasperClient::native_events_count`.
+        self.casper_client
+            .borrow()
+            .get_native_event(contract_address, index)
+            .unwrap_or_else(|e| read_failed("native event", contract_address, e))
+            .ok_or(EventError::IndexOutOfBounds)
     }
 
     fn get_events_count(&self, contract_address: &Address) -> Result<u32, EventError> {
         let client = self.casper_client.borrow();
         client
             .events_count(contract_address)
+            .unwrap_or_else(|e| read_failed("events count", contract_address, e))
             .ok_or(EventError::CouldntExtractEventData)
     }
 
-    fn get_native_events_count(&self, _contract_address: &Address) -> Result<u32, EventError> {
-        // TODO: Implement
-        Err(EventError::CouldntExtractEventData)
+    fn get_native_events_count(&self, contract_address: &Address) -> Result<u32, EventError> {
+        self.casper_client
+            .borrow()
+            .native_events_count(contract_address)
+            .map_err(|e| read_failed("native events count", contract_address, e))
     }
 
     fn call_contract(
@@ -213,7 +268,7 @@ impl HostContext for LivenetHost {
         let wasm_path = find_wasm_file_path(name)?;
         let wasm_bytes = fs::read(wasm_path).unwrap();
         let address = {
-            let mut client = self.casper_client.borrow_mut();
+            let client = self.casper_client.borrow();
             match client.deploy_wasm(name, init_args, timestamp, wasm_bytes) {
                 Ok(addr) => addr,
                 Err(e) => {
@@ -236,7 +291,7 @@ impl HostContext for LivenetHost {
         let timestamp = Timestamp::now();
         let wasm_path = find_wasm_file_path(name)?;
         let wasm_bytes = fs::read(wasm_path).unwrap();
-        let mut client = self.casper_client.borrow_mut();
+        let client = self.casper_client.borrow();
         match client.deploy_wasm(name, upgrade_args, timestamp, wasm_bytes) {
             Ok(_) => {}
             Err(e) => {
@@ -306,4 +361,14 @@ impl LivenetHost {
             _ => OdraError::VmError(VmError::Other(error_msg))
         }
     }
+}
+
+/// A read could not be served by the node. `None` would be mistaken for "value not set" by the
+/// contract code, so stop with the real reason instead.
+pub(crate) fn read_failed(what: &str, address: &Address, e: LivenetError) -> ! {
+    panic!(
+        "Livenet: reading {what} of {} failed: {}",
+        address.to_formatted_string(),
+        e.error_message()
+    )
 }
