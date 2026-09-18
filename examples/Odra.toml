@@ -123,3 +123,10 @@ fqn = "features::many_fields::ManyFieldsContract"
 
 [[contracts]]
 fqn = "contracts::gasless_cep18::GaslessCep18"
+
+# Contracts from a dependency crate - the first segment of the fqn is the crate name.
+[[contracts]]
+fqn = "odra_modules::erc20::Erc20"
+
+[[contracts]]
+fqn = "odra_modules::cep18_token::Cep18"

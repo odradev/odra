@@ -15,10 +15,18 @@ impl ToTokens for SchemaItem {
         let ident = &self.module_ident;
         let module_name = &self.module_ident.to_string();
         let mod_ident = &self.mod_ident;
+        let qualified_module_name = format!(
+            "{}::{}",
+            crate::utils::attr::current_crate_name(),
+            module_name
+        );
 
         let item = quote::quote! {
             #[automatically_derived]
-            #[cfg(all(not(target_arch = "wasm32"), odra_module = #module_name))]
+            #[cfg(all(
+                not(target_arch = "wasm32"),
+                any(odra_module = #module_name, odra_module = #qualified_module_name)
+            ))]
             mod #mod_ident {
                 use super::*;
 
@@ -84,7 +92,10 @@ mod test {
         let item = SchemaItem::try_from(&module).unwrap();
         let expected = quote!(
             #[automatically_derived]
-            #[cfg(all(not(target_arch = "wasm32"), odra_module = "CounterPack"))]
+            #[cfg(all(
+                not(target_arch = "wasm32"),
+                any(odra_module = "CounterPack", odra_module = "unknown_crate::CounterPack")
+            ))]
             mod __counter_pack_contract_schema {
                 use super::*;
 
