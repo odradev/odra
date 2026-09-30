@@ -406,6 +406,13 @@ mod test {
                     odra::odra_casper_wasm_env::host_functions::install_or_upgrade(
                         entry_points(),
                         schemas,
+                        {
+                            #[cfg(odra_contract_schema)]
+                            let contract_schema = Some(include_str!(env!("ODRA_CONTRACT_SCHEMA_PATH")));
+                            #[cfg(not(odra_contract_schema))]
+                            let contract_schema: Option<&'static str> = None;
+                            contract_schema
+                        },
                         named_args
                     );
                 }
@@ -519,6 +526,13 @@ mod test {
                     odra::odra_casper_wasm_env::host_functions::install_or_upgrade(
                         entry_points(),
                         schemas,
+                        {
+                            #[cfg(odra_contract_schema)]
+                            let contract_schema = Some(include_str!(env!("ODRA_CONTRACT_SCHEMA_PATH")));
+                            #[cfg(not(odra_contract_schema))]
+                            let contract_schema: Option<&'static str> = None;
+                            contract_schema
+                        },
                         named_args
                     );
                 }
@@ -626,6 +640,13 @@ mod test {
                     odra::odra_casper_wasm_env::host_functions::install_or_upgrade(
                         entry_points(),
                         schemas,
+                        {
+                            #[cfg(odra_contract_schema)]
+                            let contract_schema = Some(include_str!(env!("ODRA_CONTRACT_SCHEMA_PATH")));
+                            #[cfg(not(odra_contract_schema))]
+                            let contract_schema: Option<&'static str> = None;
+                            contract_schema
+                        },
                         named_args
                     );
                 }
