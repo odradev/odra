@@ -1,4 +1,5 @@
 use serde::Serialize;
+use std::path::Path;
 
 pub fn build() {
     // Allow the `odra_module` cfg flag to be set.
@@ -77,14 +78,14 @@ fn contract_schema_flags() -> Vec<String> {
         return flags;
     }
     let module = match std::env::var("ODRA_MODULE") {
-        Ok(module) if !module.is_empty() => to_snake_case(&module),
+        Ok(module) if !module.is_empty() => module,
         _ => return flags
     };
     let Ok(manifest_dir) = std::env::var("CARGO_MANIFEST_DIR") else {
         return flags;
     };
-    let file_name = format!("{}_schema.json", module);
-    let schema_path = std::path::Path::new(&manifest_dir)
+    let file_name = format!("{}_schema.json", to_snake_case(&module));
+    let schema_path = Path::new(&manifest_dir)
         .ancestors()
         .map(|dir| dir.join(CONTRACT_SCHEMAS_DIR).join(&file_name))
         .find(|path| path.is_file());
@@ -101,13 +102,45 @@ fn contract_schema_flags() -> Vec<String> {
         }
         None => {
             // Rerun once the schema gets generated.
-            let path = std::path::Path::new(&manifest_dir)
+            let path = Path::new(&manifest_dir)
                 .join(CONTRACT_SCHEMAS_DIR)
                 .join(&file_name);
             flags.push(format!("cargo:rerun-if-changed={}", path.display()));
+            // Dependencies are built with the same `ODRA_MODULE`, so warn only in the crate that
+            // defines the contract.
+            if !odra_toml_lists_contract(Path::new(&manifest_dir), &module) {
+                return flags;
+            }
+            flags.push(format!(
+                "cargo:warning=Contract schema for {} not found at {}. The contract will be built without an embedded schema. Run `cargo odra schema -c {}` to generate it.",
+                module,
+                path.display(),
+                module
+            ));
         }
     }
     flags
+}
+
+/// Checks if the `Odra.toml` closest to `dir` lists a contract named `contract_name`
+/// (the last segment of its `fqn`).
+fn odra_toml_lists_contract(dir: &Path, contract_name: &str) -> bool {
+    let Some(odra_toml) = dir
+        .ancestors()
+        .map(|dir| dir.join("Odra.toml"))
+        .find(|path| path.is_file())
+    else {
+        return false;
+    };
+    let Ok(content) = std::fs::read_to_string(odra_toml) else {
+        return false;
+    };
+    content
+        .lines()
+        .filter_map(|line| line.trim().strip_prefix("fqn"))
+        .filter_map(|rest| rest.trim_start().strip_prefix('='))
+        .map(|fqn| fqn.trim().trim_matches('"'))
+        .any(|fqn| fqn.rsplit("::").next() == Some(contract_name))
 }
 
 fn flags() -> Vec<String> {
@@ -127,6 +160,30 @@ fn flags() -> Vec<String> {
 
 #[cfg(test)]
 mod test {
+    #[test]
+    fn test_odra_toml_lists_contract() {
+        let root = std::env::temp_dir().join(format!("odra-build-test-{}", std::process::id()));
+        let member = root.join("member");
+        std::fs::create_dir_all(&member).unwrap();
+        std::fs::write(
+            root.join("Odra.toml"),
+            "[[contracts]]\nfqn = \"features::storage::variable::DogContract\"\n\n[[contracts]]\nfqn=\"Counter\"\n"
+        )
+        .unwrap();
+
+        // Found in the crate directory and in its ancestors.
+        assert!(super::odra_toml_lists_contract(&root, "DogContract"));
+        assert!(super::odra_toml_lists_contract(&member, "DogContract"));
+        assert!(super::odra_toml_lists_contract(&root, "Counter"));
+        // Only the last segment of the fqn matches.
+        assert!(!super::odra_toml_lists_contract(&root, "variable"));
+        assert!(!super::odra_toml_lists_contract(&root, "Dog"));
+
+        std::fs::remove_dir_all(&root).unwrap();
+        // No Odra.toml at all.
+        assert!(!super::odra_toml_lists_contract(&root, "DogContract"));
+    }
+
     #[test]
     fn test_flags() {
         std::env::remove_var("ODRA_MODULE");
