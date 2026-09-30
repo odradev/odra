@@ -77,6 +77,7 @@ impl ToTokens for SchemaEntrypointsItem {
                     syn::ReturnType::Type(_, t) => quote::quote! { #t }
                 };
                 let is_mut = f.is_mut();
+                let is_payable = f.is_payable();
                 let mut args = if f.fn_type() == FnType::FactoryBatchUpgrader {
                     let ty_bytes = utils::ty::bytes();
                     vec![quote::quote!(odra::schema::argument::<#ty_bytes>("args"))]
@@ -93,6 +94,7 @@ impl ToTokens for SchemaEntrypointsItem {
                         #name,
                         #desc,
                         #is_mut,
+                        #is_payable,
                         odra::prelude::vec![ #(#args),* ]
                     )
                 }
