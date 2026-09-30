@@ -12,62 +12,81 @@
   ],
   "repository": "https://github.com/odradev/odra",
   "homepage": "https://odra.dev/docs",
-  "contract_name": "HostContract",
+  "contract_name": "ScheduleContract",
   "contract_version": "2.9.1",
   "types": [],
   "errors": [],
   "entry_points": [
     {
-      "name": "name",
-      "description": "Returns the contract's name.",
-      "is_mutable": false,
+      "name": "add_task",
+      "description": "Adds a task id to the caller's schedule.",
+      "is_mutable": true,
       "is_payable": false,
-      "arguments": [],
-      "return_ty": "String",
+      "arguments": [
+        {
+          "name": "owner",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "id",
+          "description": null,
+          "ty": "U32",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
       "is_contract_context": true,
       "access": "public"
     },
     {
-      "name": "pseudorandom_bytes",
-      "description": "Returns pseudorandom bytes of the given size.",
+      "name": "task_count",
+      "description": "Returns the number of tasks scheduled for the given address.",
       "is_mutable": false,
       "is_payable": false,
       "arguments": [
         {
-          "name": "size",
+          "name": "owner",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        }
+      ],
+      "return_ty": "U32",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "task_at",
+      "description": "Returns the n-th task id scheduled for the given address.",
+      "is_mutable": false,
+      "is_payable": false,
+      "arguments": [
+        {
+          "name": "owner",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "index",
           "description": null,
           "ty": "U32",
           "optional": false
         }
       ],
       "return_ty": {
-        "List": "U8"
+        "Option": "U32"
       },
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "pseudorandom_number",
-      "description": "Returns the pseudorandom number",
-      "is_mutable": false,
-      "is_payable": false,
-      "arguments": [
-        {
-          "name": "max",
-          "description": null,
-          "ty": "U512",
-          "optional": false
-        }
-      ],
-      "return_ty": "U512",
       "is_contract_context": true,
       "access": "public"
     }
   ],
   "events": [],
   "call": {
-    "wasm_file_name": "HostContract.wasm",
-    "description": "Initializes the contract with the given parameters.",
+    "wasm_file_name": "ScheduleContract.wasm",
+    "description": null,
     "arguments": [
       {
         "name": "odra_cfg_package_hash_key_name",
@@ -91,12 +110,6 @@
         "name": "odra_cfg_is_upgrade",
         "description": "The arg name for telling the installer that the contract is being upgraded.",
         "ty": "Bool",
-        "optional": false
-      },
-      {
-        "name": "name",
-        "description": null,
-        "ty": "String",
         "optional": false
       }
     ]

@@ -12,9 +12,49 @@
   ],
   "repository": "https://github.com/odradev/odra",
   "homepage": "https://odra.dev/docs",
-  "contract_name": "Cep18",
+  "contract_name": "CEP3009Wrapper",
   "contract_version": "2.9.1",
   "types": [
+    {
+      "struct": {
+        "name": "AuthorizationCanceled",
+        "description": null,
+        "members": [
+          {
+            "name": "authorizer",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "nonce",
+            "description": null,
+            "ty": {
+              "List": "U8"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "AuthorizationUsed",
+        "description": null,
+        "members": [
+          {
+            "name": "authorizer",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "nonce",
+            "description": null,
+            "ty": {
+              "List": "U8"
+            }
+          }
+        ]
+      }
+    },
     {
       "struct": {
         "name": "Burn",
@@ -184,6 +224,21 @@
   ],
   "errors": [
     {
+      "name": "AuthorizationExpired",
+      "description": "The current block time is past `valid_before` — the authorization has",
+      "discriminant": 37001
+    },
+    {
+      "name": "AuthorizationNotYetValid",
+      "description": "The current block time is at or before `valid_after` — the",
+      "discriminant": 37002
+    },
+    {
+      "name": "AuthorizationUsed",
+      "description": "Attempted to cancel an authorization whose `(authorizer, nonce)` pair",
+      "discriminant": 37006
+    },
+    {
       "name": "CannotTargetSelfUser",
       "description": "The user cannot target themselves.",
       "discriminant": 60003
@@ -197,52 +252,227 @@
       "name": "InsufficientBalance",
       "description": "Spender does not have enough balance.",
       "discriminant": 60001
+    },
+    {
+      "name": "InvalidCaller",
+      "description": "`receive_with_authorization` was submitted by an account other than",
+      "discriminant": 37005
+    },
+    {
+      "name": "InvalidNonceLength",
+      "description": "The supplied `nonce` is not exactly 32 bytes. ERC-3009 nonces are",
+      "discriminant": 37007
+    },
+    {
+      "name": "InvalidPublicKey",
+      "description": "The supplied `public_key` does not hash to the declared `from` /",
+      "discriminant": 37004
+    },
+    {
+      "name": "InvalidSignature",
+      "description": "Signature verification against the supplied public key failed, or the",
+      "discriminant": 37003
+    },
+    {
+      "name": "NonceAlreadyUsed",
+      "description": "The `(from, nonce)` pair has already been consumed by a transfer or",
+      "discriminant": 37000
     }
   ],
   "entry_points": [
     {
-      "name": "name",
-      "description": "Returns the name of the token.",
+      "name": "authorization_state",
+      "description": "Delegated. See `self.cep3009.authorization_state()` for details.",
       "is_mutable": false,
       "is_payable": false,
-      "arguments": [],
-      "return_ty": "String",
+      "arguments": [
+        {
+          "name": "authorizer",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "nonce",
+          "description": null,
+          "ty": {
+            "List": "U8"
+          },
+          "optional": false
+        }
+      ],
+      "return_ty": "Bool",
       "is_contract_context": true,
       "access": "public"
     },
     {
-      "name": "symbol",
-      "description": "Returns the symbol of the token.",
-      "is_mutable": false,
+      "name": "transfer_with_authorization",
+      "description": "Delegated. See `self.cep3009.transfer_with_authorization()` for details.",
+      "is_mutable": true,
       "is_payable": false,
-      "arguments": [],
-      "return_ty": "String",
+      "arguments": [
+        {
+          "name": "from",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "to",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "value",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        },
+        {
+          "name": "valid_after",
+          "description": null,
+          "ty": "U64",
+          "optional": false
+        },
+        {
+          "name": "valid_before",
+          "description": null,
+          "ty": "U64",
+          "optional": false
+        },
+        {
+          "name": "nonce",
+          "description": null,
+          "ty": {
+            "List": "U8"
+          },
+          "optional": false
+        },
+        {
+          "name": "public_key",
+          "description": null,
+          "ty": "PublicKey",
+          "optional": false
+        },
+        {
+          "name": "signature",
+          "description": null,
+          "ty": {
+            "List": "U8"
+          },
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
       "is_contract_context": true,
       "access": "public"
     },
     {
-      "name": "decimals",
-      "description": "Returns the number of decimals the token uses.",
-      "is_mutable": false,
+      "name": "receive_with_authorization",
+      "description": "Delegated. See `self.cep3009.receive_with_authorization()` for details.",
+      "is_mutable": true,
       "is_payable": false,
-      "arguments": [],
-      "return_ty": "U8",
+      "arguments": [
+        {
+          "name": "from",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "to",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "value",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        },
+        {
+          "name": "valid_after",
+          "description": null,
+          "ty": "U64",
+          "optional": false
+        },
+        {
+          "name": "valid_before",
+          "description": null,
+          "ty": "U64",
+          "optional": false
+        },
+        {
+          "name": "nonce",
+          "description": null,
+          "ty": {
+            "List": "U8"
+          },
+          "optional": false
+        },
+        {
+          "name": "public_key",
+          "description": null,
+          "ty": "PublicKey",
+          "optional": false
+        },
+        {
+          "name": "signature",
+          "description": null,
+          "ty": {
+            "List": "U8"
+          },
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
       "is_contract_context": true,
       "access": "public"
     },
     {
-      "name": "total_supply",
-      "description": "Returns the total supply of the token.",
-      "is_mutable": false,
+      "name": "cancel_authorization",
+      "description": "Delegated. See `self.cep3009.cancel_authorization()` for details.",
+      "is_mutable": true,
       "is_payable": false,
-      "arguments": [],
-      "return_ty": "U256",
+      "arguments": [
+        {
+          "name": "authorizer",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "nonce",
+          "description": null,
+          "ty": {
+            "List": "U8"
+          },
+          "optional": false
+        },
+        {
+          "name": "public_key",
+          "description": null,
+          "ty": "PublicKey",
+          "optional": false
+        },
+        {
+          "name": "signature",
+          "description": null,
+          "ty": {
+            "List": "U8"
+          },
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
       "is_contract_context": true,
       "access": "public"
     },
     {
       "name": "balance_of",
-      "description": "Returns the balance of the given address.",
+      "description": "Delegated. See `self.token.balance_of()` for details.",
       "is_mutable": false,
       "is_payable": false,
       "arguments": [
@@ -256,153 +486,17 @@
       "return_ty": "U256",
       "is_contract_context": true,
       "access": "public"
-    },
-    {
-      "name": "allowance",
-      "description": "Returns the amount of tokens the owner has allowed the spender to spend.",
-      "is_mutable": false,
-      "is_payable": false,
-      "arguments": [
-        {
-          "name": "owner",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "spender",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        }
-      ],
-      "return_ty": "U256",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "approve",
-      "description": "Approves the spender to spend the given amount of tokens on behalf of the caller.",
-      "is_mutable": true,
-      "is_payable": false,
-      "arguments": [
-        {
-          "name": "spender",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "amount",
-          "description": null,
-          "ty": "U256",
-          "optional": false
-        }
-      ],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "decrease_allowance",
-      "description": "Decreases the allowance of the spender by the given amount.",
-      "is_mutable": true,
-      "is_payable": false,
-      "arguments": [
-        {
-          "name": "spender",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "decr_by",
-          "description": null,
-          "ty": "U256",
-          "optional": false
-        }
-      ],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "increase_allowance",
-      "description": "Increases the allowance of the spender by the given amount.",
-      "is_mutable": true,
-      "is_payable": false,
-      "arguments": [
-        {
-          "name": "spender",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "inc_by",
-          "description": null,
-          "ty": "U256",
-          "optional": false
-        }
-      ],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "transfer",
-      "description": "Transfers tokens from the caller to the recipient.",
-      "is_mutable": true,
-      "is_payable": false,
-      "arguments": [
-        {
-          "name": "recipient",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "amount",
-          "description": null,
-          "ty": "U256",
-          "optional": false
-        }
-      ],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "transfer_from",
-      "description": "Transfers tokens from the owner to the recipient using the spender's allowance.",
-      "is_mutable": true,
-      "is_payable": false,
-      "arguments": [
-        {
-          "name": "owner",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "recipient",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "amount",
-          "description": null,
-          "ty": "U256",
-          "optional": false
-        }
-      ],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
     }
   ],
   "events": [
+    {
+      "name": "AuthorizationCanceled",
+      "ty": "AuthorizationCanceled"
+    },
+    {
+      "name": "AuthorizationUsed",
+      "ty": "AuthorizationUsed"
+    },
     {
       "name": "Burn",
       "ty": "Burn"
@@ -433,8 +527,8 @@
     }
   ],
   "call": {
-    "wasm_file_name": "Cep18.wasm",
-    "description": "Initializes the contract with the given metadata, initial supply.",
+    "wasm_file_name": "CEP3009Wrapper.wasm",
+    "description": "Initializes both the authorization module (storing the EIP-712 chain",
     "arguments": [
       {
         "name": "odra_cfg_package_hash_key_name",
@@ -458,6 +552,12 @@
         "name": "odra_cfg_is_upgrade",
         "description": "The arg name for telling the installer that the contract is being upgraded.",
         "ty": "Bool",
+        "optional": false
+      },
+      {
+        "name": "chain_name",
+        "description": null,
+        "ty": "String",
         "optional": false
       },
       {

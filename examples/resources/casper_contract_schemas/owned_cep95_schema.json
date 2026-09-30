@@ -1,6 +1,10 @@
 {
   "casper_contract_schema_version": 1,
-  "toolchain": "rustc 1.85.0-nightly (d117b7f21 2024-12-31)",
+  "toolchain": "rustc 1.94.0-nightly (8d670b93d 2025-12-31)",
+  "toolkit": {
+    "name": "Odra",
+    "version": "2.9.1"
+  },
   "authors": [
     "Jakub Płaskonka <kuba@odra.dev>",
     "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
@@ -9,7 +13,7 @@
   "repository": "https://github.com/odradev/odra",
   "homepage": "https://odra.dev/docs",
   "contract_name": "OwnedCep95",
-  "contract_version": "2.5.0",
+  "contract_version": "2.9.1",
   "types": [
     {
       "struct": {
@@ -255,6 +259,7 @@
       "name": "mint",
       "description": "Mints a new token with the given ID and metadata to the specified address.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "to",
@@ -290,6 +295,7 @@
       "name": "burn",
       "description": "Burns the token with the given ID.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "token_id",
@@ -306,6 +312,7 @@
       "name": "name",
       "description": "Delegated. See `self.token.name()` for details.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "String",
       "is_contract_context": true,
@@ -315,6 +322,7 @@
       "name": "symbol",
       "description": "Delegated. See `self.token.symbol()` for details.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "String",
       "is_contract_context": true,
@@ -324,6 +332,7 @@
       "name": "balance_of",
       "description": "Delegated. See `self.token.balance_of()` for details.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "owner",
@@ -340,6 +349,7 @@
       "name": "owner_of",
       "description": "Delegated. See `self.token.owner_of()` for details.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "token_id",
@@ -358,6 +368,7 @@
       "name": "safe_transfer_from",
       "description": "Delegated. See `self.token.safe_transfer_from()` for details.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "from",
@@ -396,6 +407,7 @@
       "name": "transfer_from",
       "description": "Delegated. See `self.token.transfer_from()` for details.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "from",
@@ -424,6 +436,7 @@
       "name": "approve",
       "description": "Delegated. See `self.token.approve()` for details.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "spender",
@@ -446,6 +459,7 @@
       "name": "revoke_approval",
       "description": "Delegated. See `self.token.revoke_approval()` for details.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "token_id",
@@ -462,6 +476,7 @@
       "name": "approved_for",
       "description": "Delegated. See `self.token.approved_for()` for details.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "token_id",
@@ -480,6 +495,7 @@
       "name": "approve_for_all",
       "description": "Delegated. See `self.token.approve_for_all()` for details.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "operator",
@@ -496,6 +512,7 @@
       "name": "revoke_approval_for_all",
       "description": "Delegated. See `self.token.revoke_approval_for_all()` for details.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "operator",
@@ -512,6 +529,7 @@
       "name": "is_approved_for_all",
       "description": "Delegated. See `self.token.is_approved_for_all()` for details.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "owner",
@@ -534,6 +552,7 @@
       "name": "token_metadata",
       "description": "Delegated. See `self.token.token_metadata()` for details.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "token_id",
@@ -557,6 +576,7 @@
       "name": "get_owner",
       "description": "Delegated. See `self.ownable.get_owner()` for details.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "Key",
       "is_contract_context": true,
@@ -566,6 +586,7 @@
       "name": "transfer_ownership",
       "description": "Delegated. See `self.ownable.transfer_ownership()` for details.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "new_owner",

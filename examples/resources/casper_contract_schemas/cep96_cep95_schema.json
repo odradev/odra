@@ -12,7 +12,7 @@
   ],
   "repository": "https://github.com/odradev/odra",
   "homepage": "https://odra.dev/docs",
-  "contract_name": "BasicCep95",
+  "contract_name": "Cep96Cep95",
   "contract_version": "2.9.1",
   "types": [
     {
@@ -107,28 +107,6 @@
     },
     {
       "struct": {
-        "name": "OwnershipTransferred",
-        "description": null,
-        "members": [
-          {
-            "name": "previous_owner",
-            "description": null,
-            "ty": {
-              "Option": "Key"
-            }
-          },
-          {
-            "name": "new_owner",
-            "description": null,
-            "ty": {
-              "Option": "Key"
-            }
-          }
-        ]
-      }
-    },
-    {
-      "struct": {
         "name": "RevokeApproval",
         "description": null,
         "members": [
@@ -204,39 +182,14 @@
       "discriminant": 40004
     },
     {
-      "name": "CallerNotTheNewOwner",
-      "description": "The caller is not the new owner.",
-      "discriminant": 20002
-    },
-    {
-      "name": "CallerNotTheOwner",
-      "description": "The caller is not the owner.",
-      "discriminant": 20001
-    },
-    {
       "name": "InvalidTokenId",
       "description": "The token ID is invalid.",
       "discriminant": 40005
     },
     {
-      "name": "MissingRole",
-      "description": "The role is missing.",
-      "discriminant": 20003
-    },
-    {
       "name": "NotAnOwnerOrApproved",
       "description": "The token ID is invalid.",
       "discriminant": 40002
-    },
-    {
-      "name": "OwnerNotSet",
-      "description": "The owner is not set.",
-      "discriminant": 20000
-    },
-    {
-      "name": "RoleRenounceForAnotherAddress",
-      "description": "The role cannot be renounced for another address.",
-      "discriminant": 20004
     },
     {
       "name": "TokenAlreadyExists",
@@ -257,7 +210,7 @@
   "entry_points": [
     {
       "name": "mint",
-      "description": "",
+      "description": "Mints a new token with the given ID and metadata to the specified address.",
       "is_mutable": true,
       "is_payable": false,
       "arguments": [
@@ -293,7 +246,7 @@
     },
     {
       "name": "burn",
-      "description": "",
+      "description": "Burns the token with the given ID.",
       "is_mutable": true,
       "is_payable": false,
       "arguments": [
@@ -304,76 +257,6 @@
           "optional": false
         }
       ],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "set_metadata",
-      "description": "",
-      "is_mutable": true,
-      "is_payable": false,
-      "arguments": [
-        {
-          "name": "token_id",
-          "description": null,
-          "ty": "U256",
-          "optional": false
-        },
-        {
-          "name": "metadata",
-          "description": null,
-          "ty": {
-            "List": {
-              "Tuple2": [
-                "String",
-                "String"
-              ]
-            }
-          },
-          "optional": false
-        }
-      ],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "update_metadata",
-      "description": "",
-      "is_mutable": true,
-      "is_payable": false,
-      "arguments": [
-        {
-          "name": "token_id",
-          "description": null,
-          "ty": "U256",
-          "optional": false
-        },
-        {
-          "name": "metadata",
-          "description": null,
-          "ty": {
-            "List": {
-              "Tuple2": [
-                "String",
-                "String"
-              ]
-            }
-          },
-          "optional": false
-        }
-      ],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "assert_owner",
-      "description": "",
-      "is_mutable": false,
-      "is_payable": false,
-      "arguments": [],
       "return_ty": "Unit",
       "is_contract_context": true,
       "access": "public"
@@ -641,6 +524,54 @@
       },
       "is_contract_context": true,
       "access": "public"
+    },
+    {
+      "name": "contract_name",
+      "description": "Delegated. See `self.metadata.contract_name()` for details.",
+      "is_mutable": false,
+      "is_payable": false,
+      "arguments": [],
+      "return_ty": {
+        "Option": "String"
+      },
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "contract_description",
+      "description": "Delegated. See `self.metadata.contract_description()` for details.",
+      "is_mutable": false,
+      "is_payable": false,
+      "arguments": [],
+      "return_ty": {
+        "Option": "String"
+      },
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "contract_icon_uri",
+      "description": "Delegated. See `self.metadata.contract_icon_uri()` for details.",
+      "is_mutable": false,
+      "is_payable": false,
+      "arguments": [],
+      "return_ty": {
+        "Option": "String"
+      },
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "contract_project_uri",
+      "description": "Delegated. See `self.metadata.contract_project_uri()` for details.",
+      "is_mutable": false,
+      "is_payable": false,
+      "arguments": [],
+      "return_ty": {
+        "Option": "String"
+      },
+      "is_contract_context": true,
+      "access": "public"
     }
   ],
   "events": [
@@ -665,10 +596,6 @@
       "ty": "Mint"
     },
     {
-      "name": "OwnershipTransferred",
-      "ty": "OwnershipTransferred"
-    },
-    {
       "name": "RevokeApproval",
       "ty": "RevokeApproval"
     },
@@ -682,8 +609,8 @@
     }
   ],
   "call": {
-    "wasm_file_name": "BasicCep95.wasm",
-    "description": "Initializes the contract with the given parameters.",
+    "wasm_file_name": "Cep96Cep95.wasm",
+    "description": "Initializes the contract with CEP-95 token params and CEP-96 metadata.",
     "arguments": [
       {
         "name": "odra_cfg_package_hash_key_name",
@@ -719,6 +646,38 @@
         "name": "symbol",
         "description": null,
         "ty": "String",
+        "optional": false
+      },
+      {
+        "name": "contract_name",
+        "description": null,
+        "ty": {
+          "Option": "String"
+        },
+        "optional": false
+      },
+      {
+        "name": "contract_description",
+        "description": null,
+        "ty": {
+          "Option": "String"
+        },
+        "optional": false
+      },
+      {
+        "name": "contract_icon_uri",
+        "description": null,
+        "ty": {
+          "Option": "String"
+        },
+        "optional": false
+      },
+      {
+        "name": "contract_project_uri",
+        "description": null,
+        "ty": {
+          "Option": "String"
+        },
         "optional": false
       }
     ]

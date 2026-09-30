@@ -1,6 +1,10 @@
 {
   "casper_contract_schema_version": 1,
-  "toolchain": "rustc 1.85.0-nightly (d117b7f21 2024-12-31)",
+  "toolchain": "rustc 1.94.0-nightly (8d670b93d 2025-12-31)",
+  "toolkit": {
+    "name": "Odra",
+    "version": "2.9.1"
+  },
   "authors": [
     "Jakub Płaskonka <kuba@odra.dev>",
     "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
@@ -9,7 +13,7 @@
   "repository": "https://github.com/odradev/odra",
   "homepage": "https://odra.dev/docs",
   "contract_name": "OwnedContract",
-  "contract_version": "2.5.0",
+  "contract_version": "2.9.1",
   "types": [],
   "errors": [
     {
@@ -28,6 +32,7 @@
       "name": "name",
       "description": "Returns the contract's name.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "String",
       "is_contract_context": true,
@@ -37,6 +42,7 @@
       "name": "owner",
       "description": "Returns the contract's owner.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "Key",
       "is_contract_context": true,
@@ -46,6 +52,7 @@
       "name": "change_name",
       "description": "Changes the contract's name.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "name",

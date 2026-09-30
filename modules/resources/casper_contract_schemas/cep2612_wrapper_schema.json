@@ -12,7 +12,7 @@
   ],
   "repository": "https://github.com/odradev/odra",
   "homepage": "https://odra.dev/docs",
-  "contract_name": "Cep18",
+  "contract_name": "CEP2612Wrapper",
   "contract_version": "2.9.1",
   "types": [
     {
@@ -201,65 +201,57 @@
   ],
   "entry_points": [
     {
-      "name": "name",
-      "description": "Returns the name of the token.",
-      "is_mutable": false,
-      "is_payable": false,
-      "arguments": [],
-      "return_ty": "String",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "symbol",
-      "description": "Returns the symbol of the token.",
-      "is_mutable": false,
-      "is_payable": false,
-      "arguments": [],
-      "return_ty": "String",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "decimals",
-      "description": "Returns the number of decimals the token uses.",
-      "is_mutable": false,
-      "is_payable": false,
-      "arguments": [],
-      "return_ty": "U8",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "total_supply",
-      "description": "Returns the total supply of the token.",
-      "is_mutable": false,
-      "is_payable": false,
-      "arguments": [],
-      "return_ty": "U256",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "balance_of",
-      "description": "Returns the balance of the given address.",
-      "is_mutable": false,
+      "name": "permit",
+      "description": "Delegated. See `self.cep2612.permit()` for details.",
+      "is_mutable": true,
       "is_payable": false,
       "arguments": [
         {
-          "name": "address",
+          "name": "owner",
           "description": null,
           "ty": "Key",
           "optional": false
+        },
+        {
+          "name": "spender",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "value",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        },
+        {
+          "name": "deadline",
+          "description": null,
+          "ty": "U64",
+          "optional": false
+        },
+        {
+          "name": "public_key",
+          "description": null,
+          "ty": "PublicKey",
+          "optional": false
+        },
+        {
+          "name": "signature",
+          "description": null,
+          "ty": {
+            "List": "U8"
+          },
+          "optional": false
         }
       ],
-      "return_ty": "U256",
+      "return_ty": "Unit",
       "is_contract_context": true,
       "access": "public"
     },
     {
       "name": "allowance",
-      "description": "Returns the amount of tokens the owner has allowed the spender to spend.",
+      "description": "Delegated. See `self.token.allowance()` for details.",
       "is_mutable": false,
       "is_payable": false,
       "arguments": [
@@ -277,127 +269,6 @@
         }
       ],
       "return_ty": "U256",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "approve",
-      "description": "Approves the spender to spend the given amount of tokens on behalf of the caller.",
-      "is_mutable": true,
-      "is_payable": false,
-      "arguments": [
-        {
-          "name": "spender",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "amount",
-          "description": null,
-          "ty": "U256",
-          "optional": false
-        }
-      ],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "decrease_allowance",
-      "description": "Decreases the allowance of the spender by the given amount.",
-      "is_mutable": true,
-      "is_payable": false,
-      "arguments": [
-        {
-          "name": "spender",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "decr_by",
-          "description": null,
-          "ty": "U256",
-          "optional": false
-        }
-      ],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "increase_allowance",
-      "description": "Increases the allowance of the spender by the given amount.",
-      "is_mutable": true,
-      "is_payable": false,
-      "arguments": [
-        {
-          "name": "spender",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "inc_by",
-          "description": null,
-          "ty": "U256",
-          "optional": false
-        }
-      ],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "transfer",
-      "description": "Transfers tokens from the caller to the recipient.",
-      "is_mutable": true,
-      "is_payable": false,
-      "arguments": [
-        {
-          "name": "recipient",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "amount",
-          "description": null,
-          "ty": "U256",
-          "optional": false
-        }
-      ],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "transfer_from",
-      "description": "Transfers tokens from the owner to the recipient using the spender's allowance.",
-      "is_mutable": true,
-      "is_payable": false,
-      "arguments": [
-        {
-          "name": "owner",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "recipient",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "amount",
-          "description": null,
-          "ty": "U256",
-          "optional": false
-        }
-      ],
-      "return_ty": "Unit",
       "is_contract_context": true,
       "access": "public"
     }
@@ -433,8 +304,8 @@
     }
   ],
   "call": {
-    "wasm_file_name": "Cep18.wasm",
-    "description": "Initializes the contract with the given metadata, initial supply.",
+    "wasm_file_name": "CEP2612Wrapper.wasm",
+    "description": "Initializes the wrapper by deploying the ERC-2612 module and the CEP-18 token, and setting up the EIP-712 domain.",
     "arguments": [
       {
         "name": "odra_cfg_package_hash_key_name",
@@ -458,6 +329,12 @@
         "name": "odra_cfg_is_upgrade",
         "description": "The arg name for telling the installer that the contract is being upgraded.",
         "ty": "Bool",
+        "optional": false
+      },
+      {
+        "name": "chain_name",
+        "description": null,
+        "ty": "String",
         "optional": false
       },
       {
