@@ -20,6 +20,12 @@ impl BalanceChecker {
         // TokenContractRef::new(self.env(), *token).balance_of(account)
         self.token.balance_of(account)
     }
+
+    /// Checks whether the given account holds any tokens.
+    pub fn holds_tokens(&self, account: &Address) -> bool {
+        // A helper defined once with `#[odra::ref_helpers]`, called on the contract ref.
+        self.token.holds_tokens(account)
+    }
 }
 
 /// Token contract interface.
@@ -30,6 +36,15 @@ impl BalanceChecker {
 pub trait Token {
     /// Returns the balance of the given account.
     fn balance_of(&self, owner: &Address) -> U256;
+}
+
+/// Helpers available on both `TokenContractRef` and `TokenHostRef`.
+#[odra::ref_helpers]
+impl Token {
+    /// Returns true if the given account holds any tokens.
+    pub fn holds_tokens(&self, owner: &Address) -> bool {
+        !self.balance_of(owner).is_zero()
+    }
 }
 
 /// Works with any `Token` implementation, in a contract or in a test.
@@ -64,6 +79,14 @@ mod tests {
         // Different account should have zero balance.
         let balance = balance_checker.check_balance(&second_account);
         assert!(balance.is_zero());
+
+        // The `holds_tokens` helper, called by the contract on `TokenContractRef`...
+        assert!(balance_checker.holds_tokens(&owner));
+        assert!(!balance_checker.holds_tokens(&second_account));
+        // ...and by the test on `TokenHostRef`.
+        let token = TokenHostRef::new(token.address(), env.clone());
+        assert!(token.holds_tokens(&owner));
+        assert!(!token.holds_tokens(&second_account));
     }
 
     #[test]

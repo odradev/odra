@@ -123,6 +123,34 @@ pub fn external_contract(attr: TokenStream, item: TokenStream) -> TokenStream {
     }
 }
 
+/// Adds the same helper functions to the generated `XxxContractRef` and `XxxHostRef`.
+///
+/// Apply it to an inherent impl block named after a module or an `#[odra::external_contract]`
+/// trait. The block is not emitted for `Xxx` itself: its items are copied into
+/// `impl XxxContractRef` and into `impl XxxHostRef` (the latter only outside wasm), so a
+/// helper written once can be called with method syntax in a contract and in a test.
+///
+/// ```ignore
+/// #[odra::ref_helpers]
+/// impl NameToken {
+///     pub fn metadata_by_hash(&self, hash: String) -> String {
+///         self.metadata(Maybe::None, Maybe::Some(hash))
+///     }
+/// }
+/// ```
+///
+/// The bodies may use only what both refs have - the entry points. A helper calling an entry point
+/// that takes `&mut self` has to take `&mut self` too.
+#[proc_macro_attribute]
+pub fn ref_helpers(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let attr: TokenStream2 = attr.into();
+    if !attr.is_empty() {
+        return span_error!(attr, "#[odra::ref_helpers] takes no arguments");
+    }
+    let item: TokenStream2 = item.into();
+    RefHelpersItem::try_from(&item).into_code()
+}
+
 /// This macro is used to implement the boilerplate code for the event and contract schema.
 #[proc_macro_attribute]
 pub fn event(_attr: TokenStream, input: TokenStream) -> TokenStream {

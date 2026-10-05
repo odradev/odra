@@ -4,6 +4,9 @@ Changelog for `odra`.
 
 ## [Unreleased]
 ### Added
+- `#[odra::ref_helpers]` on an inherent impl block named after a module or an external contract
+  trait adds its functions to both the generated `XxxContractRef` and `XxxHostRef`, so a helper built
+  from entry point calls is written once and called with method syntax in contracts and tests (#490).
 - Native events on livenet: the events emitted by the transactions an environment sends are recorded
   from their execution results, so `native_events_count`, `get_native_event`, `emitted_native_event` and
   `last_call().emitted_native_events` work there like in tests. Casper keeps a message's payload only in

@@ -49,6 +49,21 @@ impl OwnedToken {
     }
 }
 
+/// Helpers available on both `OwnedTokenContractRef` and `OwnedTokenHostRef`.
+#[odra::ref_helpers]
+impl OwnedToken {
+    /// Returns the balance of the current owner.
+    pub fn owner_balance(&self) -> U256 {
+        self.balance_of(&self.get_owner())
+    }
+
+    /// Transfers the given amount of tokens to the current owner.
+    pub fn transfer_to_owner(&mut self, amount: &U256) {
+        let owner = self.get_owner();
+        self.transfer(&owner, amount);
+    }
+}
+
 #[cfg(test)]
 pub mod tests {
     use super::*;
@@ -73,6 +88,23 @@ pub mod tests {
             initial_supply: INITIAL_SUPPLY.into()
         };
         OwnedToken::deploy(&odra_test::env(), init_args)
+    }
+
+    #[test]
+    fn ref_helpers() {
+        let mut token = setup();
+        let env = token.env().clone();
+        let (owner, second_account) = (env.get_account(0), env.get_account(1));
+        assert_eq!(token.owner_balance(), INITIAL_SUPPLY.into());
+
+        token.transfer(&second_account, &100.into());
+        assert_eq!(token.owner_balance(), (INITIAL_SUPPLY - 100).into());
+
+        env.set_caller(second_account);
+        token.transfer_to_owner(&40.into());
+        assert_eq!(token.owner_balance(), (INITIAL_SUPPLY - 60).into());
+        assert_eq!(token.balance_of(&second_account), 60.into());
+        assert_eq!(token.get_owner(), owner);
     }
 
     #[test]
