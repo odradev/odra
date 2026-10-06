@@ -4,6 +4,12 @@ Changelog for `odra`.
 
 ## [Unreleased]
 ### Added
+- `odra_modules::dapp` groups the contracts of a dapp. `DappRegistryBase` keeps the dapp metadata and its contracts,
+  and verifies each added contract by calling its `get_dapp_registry`; `DappContractBase` stores the registry a contract
+  belongs to. Neither checks the caller, so they compose with `Ownable` or `AccessControl`; the `DappRegistry` and
+  `DappContract` external contract traits are their calling interfaces. `OwnedDappRegistry` is ready to deploy: the owner
+  manages the dapp, and a contract registered as a factory may add the contracts it spawns. The
+  `examples/src/factory/dapp.rs` example registers contracts deployed by a factory.
 - `HostEnv::advance_block_time` and `advance_with_auctions` accept a `core::time::Duration` as well as
   a number of milliseconds (`odra::host::BlockTimeDiff`), so `Duration::from_secs(60)` says the unit
   itself. Existing calls with milliseconds keep working (#589).
