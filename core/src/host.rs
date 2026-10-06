@@ -393,11 +393,19 @@ pub trait HostContext {
 
     /// Remembers the current state of the backend, so that
     /// [`restore_snapshot`](Self::restore_snapshot) can bring it back.
-    fn take_snapshot(&self);
+    ///
+    /// The default panics: the backend does not support snapshots.
+    fn take_snapshot(&self) {
+        panic!("Snapshots are not supported by this backend")
+    }
 
     /// Brings the backend back to the state remembered by the last
     /// [`take_snapshot`](Self::take_snapshot).
-    fn restore_snapshot(&self);
+    ///
+    /// The default panics: the backend does not support snapshots.
+    fn restore_snapshot(&self) {
+        panic!("Snapshots are not supported by this backend")
+    }
 
     /// Returns the event bytes for the specified contract address and index.
     fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, EventError>;

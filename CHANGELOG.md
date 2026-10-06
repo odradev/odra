@@ -78,6 +78,10 @@ Changelog for `odra`.
   `#[tokio::main]` program); inside a current-thread runtime they panic with a pointer to the async API,
   where they used to fail with Tokio's own "cannot start a runtime from within a runtime" (#544).
 - `CasperClient::deploy_wasm` takes `&self`.
+- Custom backends: `ContractContext` gained `call_stack` and `debug`, `HostContext` gained `take_snapshot`,
+  `restore_snapshot` and `thread_env_factory`, all with default implementations, so existing backends
+  keep compiling (snapshots then panic as unsupported). `EntryPoint` has a new `is_offchain` field; build
+  it with `EntryPoint::new` / `new_payable` / `new_offchain` rather than a struct literal (#594).
 - The livenet examples are scenarios of the examples' `odra_cli` binary (`erc20-transfer`, `cep18-transfer`,
   `tlw`, `install-config`, `factory`, `gasless`) instead of one binary each;
   `cargo run --bin odra_cli -- --help`. The CI livenet job runs the CLI too (#631, #520).
