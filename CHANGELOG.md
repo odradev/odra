@@ -7,6 +7,12 @@ Changelog for `odra`.
 - Factory modules (`#[odra::module(factory = on)]`) work on OdraVM: `new_contract`,
   `upgrade_child_contract` and `batch_upgrade_child_contract` deploy and upgrade the children like on
   Casper, only the account that installed the factory may upgrade them, and their events are tracked.
+- `odra_modules::dapp` groups the contracts of a dapp: `DappRegistryBase` keeps the dapp metadata and its
+  contracts and verifies each added contract by calling its `get_dapp_registry`, `DappContractBase` stores the
+  registry a contract belongs to, and neither checks the caller, so they compose with `Ownable` or
+  `AccessControl` (`DappRegistry` and `DappContract` are their external contract traits). `OwnedDappRegistry`
+  is ready to deploy: the owner manages the dapp and a contract registered as a factory may add the contracts
+  it spawns (`examples/src/factory/dapp.rs`).
 - `#[odra(offchain)]` on a `&self` function of a module: the function is not deployed and runs on the
   host against the contract's state, on OdraVM, CasperVM and livenet alike, for reads too expensive or
   too big for an entry point (#594).
