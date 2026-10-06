@@ -151,8 +151,8 @@ mod test {
         )
         .unwrap();
     }
-    /// A contract installed under one package-hash key (e.g. `Struct_package_hash` by Odra 2.x)
-    /// can be upgraded with a config that names the key differently (what a 3.0 `name = ".."`
+    /// A contract installed under one package-hash key (e.g. `Struct_package_hash` by Odra 2.9)
+    /// can be upgraded with a config that names the key differently (what a 2.10 `name = ".."`
     /// produces): the upgrade finds the package by address and is authorized by the account's
     /// access URef, not by the key name. Afterwards the package hash sits under both keys.
     #[test]
