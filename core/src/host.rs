@@ -540,7 +540,7 @@ impl HostEnv {
         backend.set_caller(address)
     }
 
-    /// Advances the block time by `time_diff`.
+    /// Advances the block time by `time_diff`: a [Duration] or a number of milliseconds.
     ///
     /// Block time has millisecond resolution; anything finer is truncated.
     ///
@@ -548,31 +548,33 @@ impl HostEnv {
     /// # use core::time::Duration;
     /// # fn shift(env: &odra_core::host::HostEnv) {
     /// env.advance_block_time(Duration::from_secs(60 * 60 * 24));
+    /// env.advance_block_time(1_000); // milliseconds
     /// # }
     /// ```
-    pub fn advance_block_time(&self, time_diff: Duration) {
+    pub fn advance_block_time(&self, time_diff: impl BlockTimeDiff) {
         let backend = self.backend.as_ref();
-        backend.advance_block_time(millis(time_diff))
+        backend.advance_block_time(time_diff.into_millis())
     }
 
-    /// Advances the block time by `time_diff` and processes auctions.
+    /// Advances the block time by `time_diff` (a [Duration] or a number of milliseconds) and
+    /// processes auctions.
     ///
     /// Block time has millisecond resolution; anything finer is truncated.
-    pub fn advance_with_auctions(&self, time_diff: Duration) {
+    pub fn advance_with_auctions(&self, time_diff: impl BlockTimeDiff) {
         let backend = self.backend.as_ref();
-        backend.advance_with_auctions(millis(time_diff));
+        backend.advance_with_auctions(time_diff.into_millis());
     }
 
-    /// Returns the era length.
-    pub fn auction_delay(&self) -> Duration {
+    /// Returns the era length in milliseconds.
+    pub fn auction_delay(&self) -> u64 {
         let backend = self.backend.as_ref();
-        Duration::from_millis(backend.auction_delay())
+        backend.auction_delay()
     }
 
-    /// Returns the delay between unstaking and the transfer of funds back to the delegator.
-    pub fn unbonding_delay(&self) -> Duration {
+    /// Returns the delay between unstaking and the transfer of funds back to the delegator in milliseconds.
+    pub fn unbonding_delay(&self) -> u64 {
         let backend = self.backend.as_ref();
-        Duration::from_millis(backend.unbonding_delay())
+        backend.unbonding_delay()
     }
 
     /// Returns the amount of CSPR delegated to the specified validator by the specified delegator.
@@ -1208,9 +1210,25 @@ impl HostEnv {
     }
 }
 
-/// Block time is kept in milliseconds by every backend.
-fn millis(duration: Duration) -> u64 {
-    u64::try_from(duration.as_millis()).unwrap_or(u64::MAX)
+/// A block time shift: a [Duration] or a number of milliseconds (`u64`).
+///
+/// Block time is kept in milliseconds by every backend; a [Duration] is truncated to whole
+/// milliseconds.
+pub trait BlockTimeDiff {
+    /// The shift in milliseconds.
+    fn into_millis(self) -> u64;
+}
+
+impl BlockTimeDiff for u64 {
+    fn into_millis(self) -> u64 {
+        self
+    }
+}
+
+impl BlockTimeDiff for Duration {
+    fn into_millis(self) -> u64 {
+        u64::try_from(self.as_millis()).unwrap_or(u64::MAX)
+    }
 }
 
 #[cfg(test)]

@@ -4,6 +4,9 @@ Changelog for `odra`.
 
 ## [Unreleased]
 ### Added
+- `HostEnv::advance_block_time` and `advance_with_auctions` accept a `core::time::Duration` as well as
+  a number of milliseconds (`odra::host::BlockTimeDiff`), so `Duration::from_secs(60)` says the unit
+  itself. Existing calls with milliseconds keep working (#589).
 - `#[odra::ref_helpers]` on an inherent impl block named after a module or an external contract
   trait adds its functions to both the generated `XxxContractRef` and `XxxHostRef`, so a helper built
   from entry point calls is written once and called with method syntax in contracts and tests (#490).
@@ -85,9 +88,6 @@ Changelog for `odra`.
 - `#[odra::module(name = "..")]` now also names the package: the named key the package hash is stored
   under at install is `<name>_package_hash` instead of `<StructName>_package_hash` (`HasIdent::contract_name()`,
   used by `InstallConfig` and `UpgradeConfig`). Modules without `name` are unaffected (#385).
-- `HostEnv::advance_block_time` and `advance_with_auctions` take a `core::time::Duration`; `auction_delay()`
-  and `unbonding_delay()` return one. Block time itself (`block_time()`, `get_block_time()`) stays in
-  milliseconds. Wrap old values with `Duration::from_millis(..)` or write `Duration::from_secs(..)` (#589).
 - Livenet: `CasperClient` caches global state and dictionary query responses for the state root hash
   they were read at (a query at a fixed state root is deterministic). Resolving a contract's entity,
   the events counter `HostEnv` reads after every call and repeated getters cost no RPC calls within

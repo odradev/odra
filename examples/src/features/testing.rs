@@ -50,6 +50,24 @@ mod tests {
     use odra_modules::access::{Ownable, OwnableInitArgs};
 
     #[test]
+    fn block_time_shifts_by_millis_or_duration() {
+        let env = odra_test::env();
+        let start = env.block_time();
+
+        // A number is milliseconds, as before 2.10...
+        env.advance_block_time(1_000);
+        assert_eq!(env.block_time(), start + 1_000);
+
+        // ...and a `Duration` says the unit itself.
+        env.advance_block_time(Duration::from_secs(2));
+        assert_eq!(env.block_time(), start + 3_000);
+
+        // The delays are in milliseconds and can be passed straight back.
+        env.advance_with_auctions(env.auction_delay());
+        assert_eq!(env.block_time(), start + 3_000 + env.auction_delay());
+    }
+
+    #[test]
     fn env() {
         let test_env: HostEnv = odra_test::env();
         test_env.set_caller(test_env.get_account(0));
