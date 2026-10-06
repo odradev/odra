@@ -21,6 +21,10 @@ const PATH_ARG: &str = "path";
 const KEY_ARG: &str = "key";
 const RAW_ARG: &str = "raw";
 
+/// The version of the JSON layout format (`--json storage <Contract>`), bumped on breaking
+/// changes so consumers like `odra-storage-reader` can reject files they cannot read.
+const LAYOUT_FORMAT_VERSION: u8 = 1;
+
 /// Reads the storage of a deployed contract directly, without calling any entry point.
 ///
 /// `storage <Contract>` prints the storage layout of the contract, `storage <Contract> <path>`
@@ -85,9 +89,11 @@ impl OdraCommand for StorageCmd {
 
         let Some(path) = args.get_one::<String>(PATH_ARG) else {
             return Ok(StorageReport::Layout(LayoutReport {
+                version: LAYOUT_FORMAT_VERSION,
                 contract: contract.key_name.clone(),
                 ident: contract.ident.clone(),
-                layout: contract.layout.clone()
+                layout: contract.layout.clone(),
+                types: contract.custom_types.clone()
             }));
         };
 
@@ -228,9 +234,13 @@ pub(crate) enum StorageReport {
 
 #[derive(Serialize)]
 pub(crate) struct LayoutReport {
+    /// The version of this format, see [LAYOUT_FORMAT_VERSION].
+    version: u8,
     contract: String,
     ident: String,
-    layout: StorageKind
+    layout: StorageKind,
+    /// The custom types needed to decode the stored values.
+    types: CustomTypeSet
 }
 
 #[derive(Serialize)]
@@ -453,5 +463,11 @@ mod tests {
             .exec(&env, &matches, &CustomTypeSet::new(), &container)
             .unwrap();
         assert!(matches!(report, StorageReport::Layout(_)));
+
+        let json = serde_json::to_value(&report).unwrap();
+        assert_eq!(json["version"], LAYOUT_FORMAT_VERSION);
+        assert_eq!(json["contract"], "TestContract");
+        assert_eq!(json["layout"]["kind"], "module");
+        assert!(json["types"].is_array());
     }
 }

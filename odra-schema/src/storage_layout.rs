@@ -21,12 +21,12 @@ use casper_types::CLTyped;
 use num_traits::{Num, One};
 use odra_core::prelude::*;
 use odra_core::{utils, ContractRef};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::NamedCLTyped;
 
 /// A single field of a module together with its index in the module.
-#[derive(Serialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct StorageField {
     /// The field name as written in the module struct.
     pub name: String,
@@ -49,7 +49,7 @@ impl StorageField {
 }
 
 /// How a dictionary item key is derived from the key value.
-#[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum KeyEncoding {
     /// The key is a string used as-is.
@@ -61,7 +61,7 @@ pub enum KeyEncoding {
 }
 
 /// Describes what is stored under a module element.
-#[derive(Serialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum StorageKind {
     /// A single value (`Var<T>`, `External<T>`).
@@ -94,6 +94,9 @@ pub enum StorageKind {
     /// A value stored under a Casper named key.
     NamedKey {
         /// The name of the named key.
+        ///
+        /// Renamed in JSON, a [StorageField] is flattened and has its own `name`.
+        #[serde(rename = "key_name")]
         name: String,
         /// The type of the value.
         ty: Type
@@ -101,6 +104,9 @@ pub enum StorageKind {
     /// A value stored in a Casper dictionary.
     Dictionary {
         /// The name of the dictionary.
+        ///
+        /// Renamed in JSON, a [StorageField] is flattened and has its own `name`.
+        #[serde(rename = "dictionary_name")]
         name: String,
         /// The type of the key.
         key: Type,
@@ -673,5 +679,15 @@ mod tests {
         assert_eq!(json["fields"][0]["fields"][1]["kind"], "mapping");
         assert_eq!(json["fields"][0]["fields"][1]["key"], "Key");
         assert_eq!(json["fields"][3]["key_encoding"], "utf8");
+        assert_eq!(json["fields"][2]["name"], "decimals");
+        assert_eq!(json["fields"][2]["key_name"], "decimals");
+        assert_eq!(json["fields"][3]["dictionary_name"], "allowances");
+    }
+
+    #[test]
+    fn deserializes_layout() {
+        let json = serde_json::to_string(&loans()).unwrap();
+        let layout: StorageKind = serde_json::from_str(&json).unwrap();
+        assert_eq!(layout, loans());
     }
 }
