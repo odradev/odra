@@ -1,8 +1,10 @@
 //! Transaction building and deployment methods.
 
+use crate::casper_client::transaction_watcher::ProcessedTransaction;
 use crate::casper_client::Result;
 use crate::error::LivenetError;
 use crate::log;
+use crate::utils::block_on;
 use casper_client::cli::TransactionV1Builder;
 use casper_client::put_transaction;
 use casper_types::bytesrepr::{Bytes, ToBytes};
@@ -30,12 +32,11 @@ impl super::CasperClient {
         amount: U512,
         timestamp: Timestamp
     ) -> Result<TransactionHash> {
-        let rt = self.runtime();
-        rt.block_on(self.transfer_async(to, amount, timestamp))
+        block_on(self.transfer_async(to, amount, timestamp))
     }
 
     /// Transfers the specified number of tokens to the given address.
-    async fn transfer_async(
+    pub async fn transfer_async(
         &self,
         to: Address,
         amount: U512,
@@ -48,19 +49,18 @@ impl super::CasperClient {
 
     /// Deploy the contract.
     pub fn deploy_wasm(
-        &mut self,
+        &self,
         contract_name: &str,
         args: RuntimeArgs,
         timestamp: Timestamp,
         wasm_bytes: Vec<u8>
     ) -> Result<Address> {
-        let rt = self.runtime();
-        rt.block_on(self.deploy_wasm_async(contract_name, args, timestamp, wasm_bytes))
+        block_on(self.deploy_wasm_async(contract_name, args, timestamp, wasm_bytes))
     }
 
     /// Deploy the contract.
-    async fn deploy_wasm_async(
-        &mut self,
+    pub async fn deploy_wasm_async(
+        &self,
         contract_name: &str,
         args: RuntimeArgs,
         timestamp: Timestamp,
@@ -112,14 +112,13 @@ impl super::CasperClient {
         call_def: CallDef,
         timestamp: Timestamp
     ) -> Result<Bytes> {
-        let rt = self.runtime();
-        rt.block_on(self.deploy_entrypoint_call_with_proxy_async(address, call_def, timestamp))
+        block_on(self.deploy_entrypoint_call_with_proxy_async(address, call_def, timestamp))
     }
 
     /// Deploy the entrypoint call using getter_proxy.
     /// It runs the getter_proxy contract in an account context and stores the return value of the call
     /// in under the key RESULT_KEY.
-    async fn deploy_entrypoint_call_with_proxy_async(
+    pub async fn deploy_entrypoint_call_with_proxy_async(
         &self,
         address: Address,
         call_def: CallDef,
@@ -156,6 +155,7 @@ impl super::CasperClient {
 
         let transaction = self.new_wasm_deploy_transaction(module_bytes, args, timestamp)?;
         log::debug(serde_json::to_string_pretty(&transaction).unwrap());
+        self.ensure_not_pinned()?;
         let watch = self.watcher.start_watching().await?;
 
         let response = put_transaction(
@@ -165,17 +165,7 @@ impl super::CasperClient {
             transaction
         )
         .await
-        .map_err(|e| match e {
-            casper_client::Error::ResponseIsRpcError {
-                rpc_method, error, ..
-            } => LivenetError::RpcRequestError(
-                rpc_method.to_string(),
-                error
-                    .data
-                    .map_or_else(|| "No data".to_string(), |d| d.to_string())
-            ),
-            _ => LivenetError::ExecutionError(format!("Failed to put transaction: {}", e))
-        })?;
+        .map_err(put_transaction_error)?;
         let transaction_hash = response.result.transaction_hash;
         let result = watch.wait_for_transaction_hash(&transaction_hash).await?;
         self.process_transaction(result, transaction_hash)?;
@@ -189,12 +179,11 @@ impl super::CasperClient {
         call_def: CallDef,
         timestamp: Timestamp
     ) -> Result<Bytes> {
-        let rt = self.runtime();
-        rt.block_on(self.deploy_entrypoint_call_async(addr, call_def, timestamp))
+        block_on(self.deploy_entrypoint_call_async(addr, call_def, timestamp))
     }
 
     /// Deploy the entrypoint call.
-    async fn deploy_entrypoint_call_async(
+    pub async fn deploy_entrypoint_call_async(
         &self,
         addr: Address,
         call_def: CallDef,
@@ -208,6 +197,7 @@ impl super::CasperClient {
 
         let transaction = self.new_call_transaction(addr, call_def, timestamp)?;
         log::debug(serde_json::to_string_pretty(&transaction).unwrap());
+        self.ensure_not_pinned()?;
         let watch = self.watcher.start_watching().await?;
 
         let response = put_transaction(
@@ -217,22 +207,10 @@ impl super::CasperClient {
             transaction
         )
         .await;
-        let transaction_hash = match response {
-            Ok(r) => r.result.transaction_hash,
-            Err(e) => {
-                return match e {
-                    casper_client::Error::ResponseIsRpcError {
-                        rpc_method, error, ..
-                    } => Err(LivenetError::RpcRequestError(
-                        rpc_method.to_string(),
-                        error
-                            .data
-                            .map_or_else(|| "No data".to_string(), |d| d.to_string())
-                    )),
-                    _ => Err(LivenetError::ExecutionError(e.to_string()))
-                }
-            }
-        };
+        let transaction_hash = response
+            .map_err(put_transaction_error)?
+            .result
+            .transaction_hash;
         let result = watch.wait_for_transaction_hash(&transaction_hash).await?;
         self.process_transaction(result, transaction_hash).map(|_| {
             ().to_bytes()
@@ -243,6 +221,7 @@ impl super::CasperClient {
 
     async fn put_transaction(&self, transaction: Transaction) -> Result<TransactionHash> {
         log::debug("[TX] Starting event watcher before sending transaction...");
+        self.ensure_not_pinned()?;
         let watch = self.watcher.start_watching().await?;
         log::debug("[TX] Event watcher ready, now sending transaction...");
 
@@ -253,17 +232,7 @@ impl super::CasperClient {
             transaction
         )
         .await
-        .map_err(|e| match e {
-            casper_client::Error::ResponseIsRpcError {
-                rpc_method, error, ..
-            } => LivenetError::RpcRequestError(
-                rpc_method.to_string(),
-                error
-                    .data
-                    .map_or_else(|| "No data".to_string(), |d| d.to_string())
-            ),
-            _ => LivenetError::ExecutionError(format!("Failed to put transaction: {}", e))
-        })?;
+        .map_err(put_transaction_error)?;
         let transaction_hash = response.result.transaction_hash;
         log::debug(format!(
             "[TX] Transaction sent with hash: {}",
@@ -276,11 +245,14 @@ impl super::CasperClient {
 
     fn process_transaction(
         &self,
-        result: ExecutionResult,
+        processed: ProcessedTransaction,
         transaction_hash: TransactionHash
     ) -> Result<()> {
+        // The transaction changed the global state; the next query must see the new root.
+        self.invalidate_state_root_hash();
+        self.record_messages(processed.messages);
         let deploy_hash_str = transaction_hash.to_hex_string();
-        match result {
+        match processed.execution_result {
             ExecutionResult::V1(r) => match r {
                 Failure { error_message, .. } => {
                     log::error(format!(
@@ -411,5 +383,31 @@ impl super::CasperClient {
             gas_price_tolerance: self.configuration.gas_price_tolerance(),
             standard_payment: true
         }
+    }
+}
+
+/// Maps a failed `account_put_transaction` call to a [LivenetError].
+///
+/// The node rejects a transaction from an account that has never received CSPR with a terse
+/// "no such addressable entity"; explain what that means, it is the most common first-deploy error.
+fn put_transaction_error(e: casper_client::Error) -> LivenetError {
+    match e {
+        casper_client::Error::ResponseIsRpcError {
+            rpc_method, error, ..
+        } => {
+            let data = error
+                .data
+                .map_or_else(|| "No data".to_string(), |d| d.to_string());
+            let data = if data.contains("no such addressable entity") {
+                format!(
+                    "{data}. The sending account does not exist on chain yet: an account is \
+                     created by the first transfer to it, so fund it with CSPR before deploying"
+                )
+            } else {
+                data
+            };
+            LivenetError::RpcRequestError(rpc_method.to_string(), data)
+        }
+        _ => LivenetError::ExecutionError(format!("Failed to put transaction: {}", e))
     }
 }

@@ -43,6 +43,7 @@ impl Erc721Metadata for Erc721MetadataExtension {
 
 impl Erc721MetadataExtension {
     /// Initializes the ERC721 metadata extension.
+    /// SECURITY: Do not expose this function publicly without proper access control.
     pub fn init(&mut self, name: String, symbol: String, base_uri: String) {
         self.name.set(name);
         self.symbol.set(symbol);

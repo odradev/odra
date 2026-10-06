@@ -96,11 +96,13 @@ impl From<casper_types::bytesrepr::Error> for ExecutionError {
 ///
 /// It is represented by an error code and a human-readable message.
 ///
-/// Errors codes 0..32767 are available for the user to define custom error
+/// Errors codes 0..64534 are available for the user to define custom error
 /// in smart contracts.
-/// 32768 code is a special code representing a violation of the custom error code space.
+/// 64535 code (`MaxUserError`) is the upper bound of the custom error code space and
+/// 64536 (`UserErrorTooHigh`) is reported when a custom error exceeds it.
 ///
-/// The rest of codes 32769..[u16::MAX](u16::MAX), are used internally by the framework.
+/// The rest of codes 64537..[u16::MAX](u16::MAX) are used internally by the framework.
+/// The on-chain code of an internal error is `64536 + discriminant`.
 #[repr(u16)]
 #[derive(Clone, Debug, PartialEq)]
 pub enum ExecutionError {
@@ -188,6 +190,8 @@ pub enum ExecutionError {
     CannotGetAnImmediateCaller = 136,
     /// Path index out of bounds.
     PathIndexOutOfBounds = 137,
+    /// A named argument is present but cannot be read as the expected type.
+    InvalidArg = 138,
     /// Maximum code for user errors
     MaxUserError = 64535,
     /// User error too high. The code should be in range 0..32767.
@@ -358,6 +362,7 @@ impl From<BytesReprError> for OdraError {
             BytesReprError::OutOfMemory => ExecutionError::OutOfMemory,
             BytesReprError::NotRepresentable => ExecutionError::NotRepresentable,
             BytesReprError::ExceededRecursionDepth => ExecutionError::ExceededRecursionDepth,
+            // `bytesrepr::Error` is `#[non_exhaustive]`; every variant that exists today is listed.
             _ => ExecutionError::Formatting
         }
         .into()

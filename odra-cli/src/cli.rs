@@ -9,7 +9,7 @@ use odra::{
     contract_def::HasIdent,
     entry_point_callback::EntryPointsCaller,
     host::{EntryPointsCallerProvider, HostEnv},
-    schema::{SchemaCustomTypes, SchemaEntrypoints, SchemaEvents},
+    schema::{SchemaCustomTypes, SchemaEntrypoints, SchemaEvents, SchemaStorageLayout},
     OdraContract
 };
 
@@ -17,10 +17,10 @@ use crate::{
     cmd::{
         CompletionsCmd, ConfigCmd, ContractsCmd, DeployCmd, DeployScript, InspectCmd, MainCmd,
         MutableCommand, OdraCommand, PrintEventsCmd, Scenario, ScenarioMetadata, ScenariosCmd,
-        StatusCmd, TransferCmd, WhoamiCmd, COMPLETIONS_SUBCOMMAND, CONFIG_SUBCOMMAND,
+        StatusCmd, StorageCmd, TransferCmd, WhoamiCmd, COMPLETIONS_SUBCOMMAND, CONFIG_SUBCOMMAND,
         CONTRACTS_SUBCOMMAND, DEPLOY_SUBCOMMAND, INSPECT_SUBCOMMAND, PRINT_EVENTS_SUBCOMMAND,
-        REPL_SUBCOMMAND, SCENARIOS_SUBCOMMAND, STATUS_SUBCOMMAND, TRANSFER_SUBCOMMAND,
-        WHOAMI_SUBCOMMAND
+        REPL_SUBCOMMAND, SCENARIOS_SUBCOMMAND, STATUS_SUBCOMMAND, STORAGE_SUBCOMMAND,
+        TRANSFER_SUBCOMMAND, WHOAMI_SUBCOMMAND
     },
     container::FileContractStorage,
     custom_types::CustomTypes,
@@ -42,6 +42,7 @@ pub struct OdraCli {
     whoami_cmd: WhoamiCmd,
     status_cmd: StatusCmd,
     inspect_cmd: InspectCmd,
+    storage_cmd: StorageCmd,
     config_cmd: ConfigCmd,
     transfer_cmd: TransferCmd,
     completions_cmd: CompletionsCmd,
@@ -60,6 +61,7 @@ impl Default for OdraCli {
 impl OdraCli {
     /// Creates a new empty instance of the Odra CLI.
     pub fn new() -> Self {
+        env_setup::apply_state_root_hash_arg(std::env::args());
         let host_env = env_setup::create_host_env();
         Self {
             main_cmd: MainCmd::default(),
@@ -70,6 +72,7 @@ impl OdraCli {
             whoami_cmd: WhoamiCmd::new(),
             status_cmd: StatusCmd::default(),
             inspect_cmd: InspectCmd::default(),
+            storage_cmd: StorageCmd::default(),
             config_cmd: ConfigCmd,
             transfer_cmd: TransferCmd,
             completions_cmd: CompletionsCmd,
@@ -98,7 +101,9 @@ impl OdraCli {
     ///
     /// Generates a subcommand for the contract with all of its entry points except the `init` entry point.
     /// To call the constructor of the contract, implement and register the [DeployScript].
-    pub fn contract<T: SchemaEntrypoints + SchemaCustomTypes + SchemaEvents + OdraContract>(
+    pub fn contract<
+        T: SchemaEntrypoints + SchemaCustomTypes + SchemaEvents + SchemaStorageLayout + OdraContract
+    >(
         mut self
     ) -> Self {
         self.callers.insert(
@@ -110,6 +115,7 @@ impl OdraCli {
         self.print_events_cmd.add_contract::<T>();
         self.status_cmd.add_contract::<T>();
         self.inspect_cmd.add_contract::<T>();
+        self.storage_cmd.add_contract::<T>();
         self
     }
 
@@ -118,7 +124,7 @@ impl OdraCli {
     /// Generates a subcommand for the contract with all of its entry points except the `init` entry point.
     /// To call the constructor of the contract, implement and register the [DeployScript].
     pub fn named_contract<
-        T: SchemaEntrypoints + SchemaCustomTypes + SchemaEvents + OdraContract
+        T: SchemaEntrypoints + SchemaCustomTypes + SchemaEvents + SchemaStorageLayout + OdraContract
     >(
         mut self,
         name: String
@@ -131,7 +137,8 @@ impl OdraCli {
         self.contracts_cmd.add_contract_named::<T>(name.clone());
         self.print_events_cmd.add_contract_named::<T>(name.clone());
         self.status_cmd.add_contract_named::<T>(name.clone());
-        self.inspect_cmd.add_contract_named::<T>(name);
+        self.inspect_cmd.add_contract_named::<T>(name.clone());
+        self.storage_cmd.add_contract_named::<T>(name);
         self
     }
 
@@ -163,6 +170,7 @@ impl OdraCli {
         self.main_cmd = self.main_cmd.subcommand(&self.whoami_cmd);
         self.main_cmd = self.main_cmd.subcommand(&self.status_cmd);
         self.main_cmd = self.main_cmd.subcommand(&self.inspect_cmd);
+        self.main_cmd = self.main_cmd.subcommand(&self.storage_cmd);
         self.main_cmd = self.main_cmd.subcommand(&self.config_cmd);
         self.main_cmd = self.main_cmd.subcommand(&self.transfer_cmd);
         self.main_cmd = self.main_cmd.subcommand(&self.completions_cmd);
@@ -269,6 +277,7 @@ impl OdraCli {
             WHOAMI_SUBCOMMAND => self.run_command(&self.whoami_cmd, args, container),
             STATUS_SUBCOMMAND => self.run_command(&self.status_cmd, args, container),
             INSPECT_SUBCOMMAND => self.run_command(&self.inspect_cmd, args, container),
+            STORAGE_SUBCOMMAND => self.run_command(&self.storage_cmd, args, container),
             CONFIG_SUBCOMMAND => self.run_command(&self.config_cmd, args, container),
             TRANSFER_SUBCOMMAND => self.run_command(&self.transfer_cmd, args, container),
             COMPLETIONS_SUBCOMMAND => self

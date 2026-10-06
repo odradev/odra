@@ -40,6 +40,23 @@ impl HostContext for OdraVmHost {
         self.vm.remove_validator(index);
     }
 
+    fn get_storage_value(&self, address: &Address, key: &[u8]) -> Option<Bytes> {
+        self.vm.get_storage_value(address, key)
+    }
+
+    fn get_named_value(&self, address: &Address, name: &str) -> Option<Bytes> {
+        self.vm.get_named_value(address, name)
+    }
+
+    fn get_dictionary_value(
+        &self,
+        address: &Address,
+        dictionary_name: &str,
+        key: &[u8]
+    ) -> Option<Bytes> {
+        self.vm.get_dictionary_value(address, dictionary_name, key)
+    }
+
     fn balance_of(&self, address: &Address) -> U512 {
         self.vm.balance_of(address)
     }
@@ -66,6 +83,14 @@ impl HostContext for OdraVmHost {
 
     fn block_time(&self) -> u64 {
         self.vm.get_block_time()
+    }
+
+    fn take_snapshot(&self) {
+        self.vm.take_snapshot()
+    }
+
+    fn restore_snapshot(&self) {
+        self.vm.restore_snapshot()
     }
 
     fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, EventError> {
@@ -173,7 +198,8 @@ impl HostContext for OdraVmHost {
         contract_name: String,
         entry_points_caller: EntryPointsCaller
     ) {
-        panic!("register_contract is not supported for OdraVM");
+        self.vm
+            .register_contract(address, &contract_name, entry_points_caller);
     }
 
     fn contract_env(&self) -> ContractEnv {

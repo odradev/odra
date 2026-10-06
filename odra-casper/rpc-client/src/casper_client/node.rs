@@ -2,6 +2,8 @@
 
 use crate::casper_client::Result;
 use crate::error::LivenetError::BlockTimeError;
+use crate::utils::block_on;
+use crate::utils::retry_on_rate_limit;
 use casper_client::cli::{get_node_status, get_state_root_hash};
 use casper_client::get_chainspec;
 use casper_types::{Digest, TimeDiff};
@@ -12,12 +14,11 @@ use toml::Value;
 impl super::CasperClient {
     /// Returns the current block_time
     pub fn get_block_time(&self) -> Result<u64> {
-        let rt = self.runtime();
-        rt.block_on(self.get_block_time_async())
+        block_on(self.get_block_time_async())
     }
 
     /// Returns the current block_time
-    async fn get_block_time_async(&self) -> Result<u64> {
+    pub async fn get_block_time_async(&self) -> Result<u64> {
         let block_time = get_node_status(
             &self.rpc_id(),
             self.configuration.node_address(),
@@ -39,13 +40,27 @@ impl super::CasperClient {
         Ok(base16::encode_lower(&digest))
     }
 
+    /// Returns the current state root hash, reusing a recently fetched one (see
+    /// `STATE_ROOT_HASH_TTL`) so a burst of queries does not ask the node for it every time.
     pub async fn get_state_root_hash_digest(&self) -> Result<Digest> {
-        let response = get_state_root_hash(
-            &self.rpc_id(),
-            self.configuration.node_address(),
-            self.configuration.verbosity(),
-            ""
-        )
+        if let Some(digest) = self.cached_state_root_hash() {
+            return Ok(digest);
+        }
+        let digest = self.fetch_state_root_hash_digest().await?;
+        self.cache_state_root_hash(digest);
+        Ok(digest)
+    }
+
+    async fn fetch_state_root_hash_digest(&self) -> Result<Digest> {
+        let rpc_id = self.rpc_id();
+        let response = retry_on_rate_limit("chain_get_state_root_hash", || {
+            get_state_root_hash(
+                &rpc_id,
+                self.configuration.node_address(),
+                self.configuration.verbosity(),
+                ""
+            )
+        })
         .await
         .map_err(|e| {
             crate::error::LivenetError::ClientError(format!(

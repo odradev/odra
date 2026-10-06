@@ -54,6 +54,7 @@ impl PartyContract {
 #[cfg(test)]
 mod tests {
     use super::{NativePartyStarted, PartyContract, PartyStarted};
+    use core::time::Duration;
     use odra::host::{Deployer, NoArgs};
 
     #[test]
@@ -79,7 +80,7 @@ mod tests {
         assert!(test_env.emitted_native(&party_contract, "NativePartyStarted"));
         assert_eq!(test_env.events_count(&party_contract), 1);
         assert_eq!(test_env.native_events_count(&party_contract), 1);
-        test_env.advance_block_time(42);
+        test_env.advance_block_time(Duration::from_millis(42));
         test_env.set_caller(test_env.get_account(1));
         party_contract.emit();
 

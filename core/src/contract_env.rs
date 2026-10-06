@@ -93,20 +93,7 @@ impl ContractEnv {
     /// With `path_len` (actual `[0xFF, path_len, path..., mapping_data...]`):
     /// - A → `[0xFF, 2, 3, 5]`, B → `[0xFF, 1, 3] ++ [5]` = `[0xFF, 1, 3, 5]` — **distinct.**
     pub(crate) fn index_bytes(&self) -> Vec<u8> {
-        let path = &self.path[..self.path_len as usize];
-        // Legacy: pack indices into u32 via 4-bit shifts (e.g. path [3, 15] → 0x3F).
-        // Only used when all indices fit in a nibble, preserving old storage keys.
-        if path.iter().all(|&idx| idx <= 15) {
-            let index: u32 = path.iter().fold(0u32, |acc, &idx| (acc << 4) + idx as u32);
-            index.to_be_bytes().to_vec()
-        } else {
-            // Path encoding: [0xFF, len, idx_0, idx_1, ...]. Used for fields 16+.
-            let mut bytes = Vec::with_capacity(2 + path.len());
-            bytes.push(0xFF);
-            bytes.push(self.path_len);
-            bytes.extend_from_slice(path);
-            bytes
-        }
+        utils::storage_index_bytes(&self.path[..self.path_len as usize])
     }
 
     /// Returns the current storage key for the contract environment.
@@ -194,11 +181,9 @@ impl ContractEnv {
             .backend
             .borrow()
             .get_dictionary_value(dictionary_name, key);
-        bytes.map(|b| {
-            deserialize_from_slice(b)
-                .map_err(|_| ExecutionError::Formatting)
-                .unwrap_or_revert(self)
-        })
+        // A failed read reverts with the concrete `bytesrepr` error (`LeftOverBytes`,
+        // `EarlyEndOfStream`, ...), not a blanket `Formatting`.
+        bytes.map(|b| deserialize_from_slice(b).unwrap_or_revert(self))
     }
 
     /// Sets the value associated with the given named key in the named dictionary in the contract storage.
@@ -209,9 +194,7 @@ impl ContractEnv {
         value: T
     ) {
         let dictionary_name = dictionary_name.as_ref();
-        let cl_value = CLValue::from_t(value)
-            .map_err(|_| ExecutionError::Formatting)
-            .unwrap_or_revert(self);
+        let cl_value = CLValue::from_t(value).unwrap_or_revert(self);
         self.backend
             .borrow()
             .set_dictionary_value(dictionary_name, key, cl_value);
@@ -233,6 +216,38 @@ impl ContractEnv {
     pub fn caller(&self) -> Address {
         let backend = self.backend.borrow();
         backend.caller()
+    }
+
+    /// Returns the whole call stack, from the account that initiated the call to the contract
+    /// being executed.
+    ///
+    /// The first element is the account that sent the transaction, the last one is the address of
+    /// the current contract, and the one before it is [`caller`](Self::caller). A contract called
+    /// directly by an account sees a stack of two elements.
+    pub fn call_stack(&self) -> Vec<Address> {
+        let backend = self.backend.borrow();
+        backend.call_stack()
+    }
+
+    /// Returns the n-th caller up the call stack, or `None` if the stack is not that deep.
+    ///
+    /// `nth_caller(0)` is the immediate [`caller`](Self::caller), `nth_caller(1)` is the caller of
+    /// the caller, and so on. Lets a contract find the account behind an intermediary contract:
+    ///
+    /// ```ignore
+    /// let from = if self.env().caller() == self.burner.get() {
+    ///     // Called through the burner contract: burn from whoever called the burner.
+    ///     self.env().nth_caller(1).unwrap_or_revert(&self.env())
+    /// } else {
+    ///     self.env().caller()
+    /// };
+    /// ```
+    pub fn nth_caller(&self, n: usize) -> Option<Address> {
+        let stack = self.call_stack();
+        stack
+            .len()
+            .checked_sub(n + 2)
+            .and_then(|index| stack.get(index).copied())
     }
 
     /// Calls another contract with the specified address and call definition.
@@ -273,7 +288,7 @@ impl ContractEnv {
     /// Returns the current block time in seconds.
     pub fn get_block_time_secs(&self) -> u64 {
         let backend = self.backend.borrow();
-        backend.get_block_time().checked_div(1000).unwrap()
+        backend.get_block_time() / 1000
     }
 
     /// Returns the value attached to the contract call.
@@ -300,6 +315,24 @@ impl ContractEnv {
         let result = event.to_bytes().map_err(ExecutionError::from);
         let bytes = result.unwrap_or_revert(self);
         backend.emit_event(&bytes.into())
+    }
+
+    /// Prints a debug message on the host running the contract.
+    ///
+    /// Always printed on OdraVM and for getters on livenet (they run locally). Inside wasm the
+    /// call is a no-op unless the contract is built with the `test-support` feature of `odra`,
+    /// in which case the Casper VM used by `cargo odra test -b casper` prints it (run the tests
+    /// with `-- --nocapture` to see it). A contract built without the feature carries no trace of
+    /// the message - but the arguments are still evaluated, so keep `format!` out of hot paths.
+    /// Do not build production wasm with the feature: on a real network the message only lands in
+    /// the node's log and costs gas.
+    ///
+    /// ```ignore
+    /// self.env().debug(format!("transfer of {amount} from {from:?}"));
+    /// ```
+    pub fn debug(&self, message: impl AsRef<str>) {
+        let backend = self.backend.borrow();
+        backend.debug(message.as_ref())
     }
 
     /// Emits an event with the specified data using the native mechanism.
@@ -547,6 +580,19 @@ mod tests {
             result
         });
         ContractEnv::new(Rc::new(RefCell::new(ctx)))
+    }
+
+    /// A stored `u64` read back as a `u32` leaves bytes over: the revert carries that fact.
+    #[test]
+    #[should_panic(expected = "LeftOverBytes")]
+    fn wrong_type_read_reverts_with_the_bytesrepr_error() {
+        let mut ctx = MockContractContext::new();
+        ctx.expect_get_dictionary_value()
+            .returning(|_, _| Some(Bytes::from(7u64.to_bytes().unwrap())));
+        ctx.expect_revert().returning(|error| panic!("{error:?}"));
+        let env = ContractEnv::new(Rc::new(RefCell::new(ctx)));
+
+        let _: Option<u32> = env.get_dictionary_value("state", b"key");
     }
 
     fn legacy_u32_for_path(path: &[u8]) -> u32 {

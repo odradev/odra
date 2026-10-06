@@ -99,8 +99,11 @@ impl Erc20 {
     pub fn allowance(&self, owner: &Address, spender: &Address) -> U256 {
         self.allowances.get_or_default(&(*owner, *spender))
     }
+}
 
+impl Erc20 {
     /// Mints new tokens and assigns them to the given address.
+    /// SECURITY: Do not expose this function publicly without proper access control.
     pub fn mint(&mut self, address: &Address, amount: &U256) {
         self.total_supply.add(*amount);
         self.balances.add(address, *amount);
@@ -113,6 +116,7 @@ impl Erc20 {
     }
 
     /// Burns the given amount of tokens from the given address.
+    /// SECURITY: Do not expose this function publicly without proper access control.
     pub fn burn(&mut self, address: &Address, amount: &U256) {
         if self.balance_of(address) < *amount {
             self.env().revert(Error::InsufficientBalance);
@@ -126,9 +130,7 @@ impl Erc20 {
             amount: *amount
         });
     }
-}
 
-impl Erc20 {
     fn raw_transfer(&mut self, owner: &Address, recipient: &Address, amount: &U256) {
         if *amount > self.balances.get_or_default(owner) {
             self.env().revert(Error::InsufficientBalance)

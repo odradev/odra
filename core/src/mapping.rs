@@ -3,6 +3,7 @@ use crate::casper_types::{
     bytesrepr::{FromBytes, ToBytes},
     CLTyped
 };
+use crate::list::List;
 use crate::module::{ModuleComponent, ModulePrimitive};
 use crate::prelude::*;
 use crate::ContractEnv;
@@ -77,6 +78,24 @@ impl<K: ToBytes, V: Module> Mapping<K, V> {
     pub fn module(&self, key: &K) -> SubModule<V> {
         let env = self.env_for_key(key);
         SubModule::instance(Rc::new(env), self.index)
+    }
+}
+
+impl<K: ToBytes, T> Mapping<K, List<T>> {
+    /// Retrieves the [`List`] associated with the given key.
+    ///
+    /// Each key gets its own, independently-stored `List`: the key is folded into the
+    /// storage namespace (the same way [`Mapping::env_for_key`] namespaces any other
+    /// value), so two different keys never share the underlying storage, even though
+    /// both lists are addressed using the same `index`.
+    ///
+    /// `List` cannot itself be a mapping KEY: every accessor here requires
+    /// `K: ToBytes`, and `List` is a storage component that deliberately implements
+    /// no serialization, so `Mapping<List<T>, V>` fails to compile with
+    /// `trait bound List<u32>: ToBytes was not satisfied`.
+    pub fn list(&self, key: &K) -> List<T> {
+        let env = self.env_for_key(key);
+        List::instance(Rc::new(env), self.index)
     }
 }
 

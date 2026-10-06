@@ -74,6 +74,12 @@ impl OdraAttribute {
             .any(|attr_kind| matches!(attr_kind, &AttrType::NonReentrant))
     }
 
+    pub fn is_offchain(&self) -> bool {
+        self.types
+            .iter()
+            .any(|attr_kind| matches!(attr_kind, &AttrType::Offchain))
+    }
+
     /// Names of the arguments this attribute carries, as written by the user,
     /// eg. `["payable"]` for `#[odra(payable)]`.
     pub fn arg_names(&self) -> Vec<&'static str> {
@@ -100,14 +106,16 @@ impl TryFrom<syn::Attribute> for OdraAttribute {
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 enum AttrType {
     Payable,
-    NonReentrant
+    NonReentrant,
+    Offchain
 }
 
 impl AttrType {
     fn name(&self) -> &'static str {
         match self {
             AttrType::Payable => "payable",
-            AttrType::NonReentrant => "non_reentrant"
+            AttrType::NonReentrant => "non_reentrant",
+            AttrType::Offchain => "offchain"
         }
     }
 }
@@ -120,6 +128,7 @@ impl TryFrom<&'_ syn::Meta> for AttrType {
             Meta::Path(path) => match path.try_to_string(path)?.as_str() {
                 "payable" => Ok(AttrType::Payable),
                 "non_reentrant" => Ok(AttrType::NonReentrant),
+                "offchain" => Ok(AttrType::Offchain),
                 _ => Err(AttrTypeError::Path(meta).into())
             },
             Meta::List(_) => Err(AttrTypeError::List(meta).into()),
@@ -239,6 +248,18 @@ mod tests {
             },
             Ok(Attribute::Odra(OdraAttribute {
                 types: vec![AttrType::NonReentrant]
+            }))
+        );
+    }
+
+    #[test]
+    fn offchain_attr_works() {
+        assert_attribute_try_from(
+            syn::parse_quote! {
+                #[odra(offchain)]
+            },
+            Ok(Attribute::Odra(OdraAttribute {
+                types: vec![AttrType::Offchain]
             }))
         );
     }

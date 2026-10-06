@@ -6,7 +6,14 @@ use syn::{parse_quote, punctuated::Punctuated, Token};
 
 use crate::types::{OdraType, WasmType};
 
+/// `#[wasm_bindgen] pub enum <Contract>Errors { .. }` for the user errors of a contract.
+///
+/// Nothing is emitted for a contract without errors: wasm-bindgen refuses to export an empty enum
+/// ("cannot export empty enums to JS"), and no generated code refers to the type.
 pub fn user_errors(contract_ident: &str, errors: &[UserError]) -> TokenStream {
+    if errors.is_empty() {
+        return TokenStream::new();
+    }
     let errors = errors
         .iter()
         .map(|err| {
@@ -293,6 +300,31 @@ mod test {
     use super::*;
     use crate::codegen::custom_types::field_def;
     use odra_schema::casper_contract_schema::{NamedCLType, Type};
+
+    #[test]
+    fn user_errors_are_an_enum() {
+        let errors = [UserError {
+            name: "TooMuch".to_string(),
+            description: Some("Amount too big".to_string()),
+            discriminant: 3
+        }];
+        let tokens = user_errors("Token", &errors);
+        let expected = quote::quote!(
+            #[wasm_bindgen]
+            #[derive(Debug, Clone)]
+            pub enum TokenErrors {
+                #[doc = "Amount too big"]
+                TooMuch = 3isize
+            }
+        );
+        pretty_assertions::assert_eq!(tokens.to_string(), expected.to_string());
+    }
+
+    #[test]
+    fn no_user_errors_no_enum() {
+        // wasm-bindgen rejects `pub enum FlipperErrors {}` (#665).
+        assert!(user_errors("Flipper", &[]).is_empty());
+    }
 
     #[test]
     fn test_field_def() {

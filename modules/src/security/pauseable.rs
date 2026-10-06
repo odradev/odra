@@ -40,6 +40,7 @@ impl Pauseable {
     /// The contract must not be paused.
     ///
     /// Emits Paused event.
+    /// SECURITY: Do not expose this function publicly without proper access control.
     pub fn pause(&mut self) {
         self.require_not_paused();
         self.is_paused.set(true);
@@ -54,6 +55,7 @@ impl Pauseable {
     /// The contract must be paused.
     ///
     /// Emits Unpaused event.
+    /// SECURITY: Do not expose this function publicly without proper access control.
     pub fn unpause(&mut self) {
         self.require_paused();
         self.is_paused.set(false);

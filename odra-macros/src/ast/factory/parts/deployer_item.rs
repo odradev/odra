@@ -45,7 +45,8 @@ impl TryFrom<&'_ ModuleImplIR> for FactoryContractEpcFn {
 
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         let fun = module.factory_fn();
-        let entry_point = utils::expr::new_entry_point(fun.name_str(), fun.raw_typed_args(), fun.is_payable());
+        let entry_point =
+            utils::expr::new_entry_point(fun.name_str(), fun.raw_typed_args(), fun.is_payable(), false);
         Ok(Self {
             sig: module.try_into()?,
             entry_points_expr: utils::expr::vec(entry_point),

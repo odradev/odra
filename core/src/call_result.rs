@@ -107,7 +107,10 @@ impl CallResult {
 
     /// Returns the native events emitted by the contract in this call.
     pub fn contract_native_events(&self, contract_address: &Address) -> Vec<Bytes> {
-        self.events.get(contract_address).unwrap_or(&vec![]).clone()
+        self.native_events
+            .get(contract_address)
+            .unwrap_or(&vec![])
+            .clone()
     }
 
     /// Checks if the specified event has been emitted by the contract during the call.

@@ -53,13 +53,20 @@ impl LivenetContract {
 
     /// Returns the total supply of the ERC20 contract. This is an example of an immutable cross-contract call.
     pub fn immutable_cross_call(&self) -> U256 {
-        Erc20ContractRef::new(self.env(), self.erc20_address.get().unwrap()).total_supply()
+        Erc20ContractRef::new(
+            self.env(),
+            self.erc20_address.get().unwrap_or_revert(&self.env())
+        )
+        .total_supply()
     }
 
     /// Transfers 1 token from the ERC20 contract to the caller. This is an example of a mutable cross-contract call.
     pub fn mutable_cross_call(&mut self) {
-        Erc20ContractRef::new(self.env(), self.erc20_address.get().unwrap())
-            .transfer(&self.env().caller(), &1.into());
+        Erc20ContractRef::new(
+            self.env(),
+            self.erc20_address.get().unwrap_or_revert(&self.env())
+        )
+        .transfer(&self.env().caller(), &1.into());
     }
 
     /// Function that reverts with a silly error.

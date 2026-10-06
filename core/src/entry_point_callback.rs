@@ -53,6 +53,13 @@ impl EntryPointsCaller {
         (self.f)(self.host_env.contract_env(), call_def)
     }
 
+    /// The function that runs an entry point in a given contract environment.
+    pub fn callback(
+        &self
+    ) -> fn(contract_env: ContractEnv, call_def: CallDef) -> OdraResult<Bytes> {
+        self.f
+    }
+
     /// Returns a reference to the list of entry points.
     pub fn entry_points(&self) -> &[EntryPoint] {
         self.entry_points.as_ref()
@@ -72,7 +79,10 @@ pub struct EntryPoint {
     /// The collection of arguments to the entry point.
     pub args: Vec<Argument>,
     /// A flag indicating whether the entry point is payable.
-    pub is_payable: bool
+    pub is_payable: bool,
+    /// A flag indicating that the function is `#[odra(offchain)]`: it is not deployed, the host
+    /// runs it against the contract's state.
+    pub is_offchain: bool
 }
 
 impl EntryPoint {
@@ -81,7 +91,8 @@ impl EntryPoint {
         Self {
             name,
             args,
-            is_payable: false
+            is_payable: false,
+            is_offchain: false
         }
     }
 
@@ -90,7 +101,18 @@ impl EntryPoint {
         Self {
             name,
             args,
-            is_payable: true
+            is_payable: true,
+            is_offchain: false
+        }
+    }
+
+    /// Creates a new instance of an offchain `EntryPoint`, see [EntryPoint::is_offchain].
+    pub fn new_offchain(name: String, args: Vec<Argument>) -> Self {
+        Self {
+            name,
+            args,
+            is_payable: false,
+            is_offchain: true
         }
     }
 }

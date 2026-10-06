@@ -22,6 +22,7 @@ const ENV_NODE_ADDRESS: &str = "ODRA_CASPER_LIVENET_NODE_ADDRESS";
 const ENV_CHAIN_NAME: &str = "ODRA_CASPER_LIVENET_CHAIN_NAME";
 const ENV_EVENTS_URL: &str = "ODRA_CASPER_LIVENET_EVENTS_URL";
 const ENV_SECRET_KEY_PATH: &str = "ODRA_CASPER_LIVENET_SECRET_KEY_PATH";
+const ENV_STATE_ROOT_HASH: &str = "ODRA_CASPER_LIVENET_STATE_ROOT_HASH";
 
 const DOCS_URL: &str = "https://odra.dev/docs/backends/livenet#setup";
 
@@ -211,4 +212,54 @@ fn confirm(question: &str) -> bool {
 fn fail(msg: &str) -> ! {
     prettycli::error(msg);
     std::process::exit(1);
+}
+
+/// Honours a global `--state-root-hash <HEX>` before the host environment exists.
+///
+/// The environment is created once, ahead of argument parsing, so the flag is picked out of the
+/// raw arguments and handed to the livenet backend through its environment variable.
+pub(super) fn apply_state_root_hash_arg(args: impl IntoIterator<Item = String>) {
+    if let Some(hash) = state_root_hash_arg(args) {
+        std::env::set_var(ENV_STATE_ROOT_HASH, hash);
+    }
+}
+
+fn state_root_hash_arg(args: impl IntoIterator<Item = String>) -> Option<String> {
+    let flag = format!("--{}", crate::cmd::args::ARG_STATE_ROOT_HASH);
+    let mut args = args.into_iter();
+    while let Some(arg) = args.next() {
+        if arg == flag {
+            return args.next();
+        }
+        if let Some(value) = arg.strip_prefix(&format!("{flag}=")) {
+            return Some(value.to_string());
+        }
+    }
+    None
+}
+
+#[cfg(test)]
+mod state_root_hash_arg_tests {
+    use super::state_root_hash_arg;
+
+    fn args(list: &[&str]) -> Vec<String> {
+        list.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn finds_the_flag_in_both_forms() {
+        assert_eq!(
+            state_root_hash_arg(args(&["cli", "--state-root-hash", "abcd", "status"])),
+            Some("abcd".to_string())
+        );
+        assert_eq!(
+            state_root_hash_arg(args(&["cli", "status", "--state-root-hash=abcd"])),
+            Some("abcd".to_string())
+        );
+        assert_eq!(state_root_hash_arg(args(&["cli", "status"])), None);
+        assert_eq!(
+            state_root_hash_arg(args(&["cli", "--state-root-hash"])),
+            None
+        );
+    }
 }

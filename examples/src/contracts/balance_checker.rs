@@ -20,13 +20,36 @@ impl BalanceChecker {
         // TokenContractRef::new(self.env(), *token).balance_of(account)
         self.token.balance_of(account)
     }
+
+    /// Checks whether the given account holds any tokens.
+    pub fn holds_tokens(&self, account: &Address) -> bool {
+        // A helper defined once with `#[odra::ref_helpers]`, called on the contract ref.
+        self.token.holds_tokens(account)
+    }
 }
 
 /// Token contract interface.
+///
+/// The trait is kept as is and implemented by the generated `TokenContractRef`
+/// and `TokenHostRef`, so it can be used as a bound.
 #[odra::external_contract]
 pub trait Token {
     /// Returns the balance of the given account.
     fn balance_of(&self, owner: &Address) -> U256;
+}
+
+/// Helpers available on both `TokenContractRef` and `TokenHostRef`.
+#[odra::ref_helpers]
+impl Token {
+    /// Returns true if the given account holds any tokens.
+    pub fn holds_tokens(&self, owner: &Address) -> bool {
+        !self.balance_of(owner).is_zero()
+    }
+}
+
+/// Works with any `Token` implementation, in a contract or in a test.
+pub fn has_balance<T: Token>(token: &T, owner: &Address) -> bool {
+    !token.balance_of(owner).is_zero()
 }
 
 #[cfg(test)]
@@ -56,5 +79,25 @@ mod tests {
         // Different account should have zero balance.
         let balance = balance_checker.check_balance(&second_account);
         assert!(balance.is_zero());
+
+        // The `holds_tokens` helper, called by the contract on `TokenContractRef`...
+        assert!(balance_checker.holds_tokens(&owner));
+        assert!(!balance_checker.holds_tokens(&second_account));
+        // ...and by the test on `TokenHostRef`.
+        let token = TokenHostRef::new(token.address(), env.clone());
+        assert!(token.holds_tokens(&owner));
+        assert!(!token.holds_tokens(&second_account));
+    }
+
+    #[test]
+    fn external_contract_trait_bound() {
+        let token = setup();
+        let env = token.env();
+        let (owner, second_account) = (env.get_account(0), env.get_account(1));
+
+        // `TokenHostRef` implements the `Token` trait.
+        let token = TokenHostRef::new(token.address(), env.clone());
+        assert!(has_balance(&token, &owner));
+        assert!(!has_balance(&token, &second_account));
     }
 }

@@ -76,8 +76,17 @@ pub enum EntrypointAttribute {
 
 /// A trait that should be implemented by each smart contract to allow the backend.
 pub trait HasIdent {
-    /// Returns the contract's ident.
+    /// Returns the contract's ident - the name of the module struct.
     fn ident() -> String;
+
+    /// Returns the contract's name: the `name` given in `#[odra::module(name = "..")]`, or the
+    /// ident when none was given. It names the contract in the schema and is the base of the
+    /// named key the package hash is stored under (`<name>_package_hash`).
+    ///
+    /// Not called `name` on purpose: that is a common entry point name (token contracts).
+    fn contract_name() -> String {
+        Self::ident()
+    }
 }
 
 /// A trait that should be implemented by each smart contract to allow the backend

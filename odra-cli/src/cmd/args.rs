@@ -10,6 +10,7 @@ use odra::schema::casper_contract_schema::NamedCLType;
 pub const ARG_ATTACHED_VALUE: &str = "attached_value";
 pub const ARG_GAS: &str = "gas";
 pub const ARG_CONTRACTS: &str = "contracts-toml";
+pub const ARG_STATE_ROOT_HASH: &str = "state-root-hash";
 pub const ARG_PRINT_EVENTS: &str = "print-events";
 pub const ARG_NUMBER: &str = "number";
 pub const ARG_JSON: &str = "json";
@@ -126,7 +127,8 @@ pub enum Arg {
     EventsNumber,
     PrintEvents,
     DeployMode,
-    Json
+    Json,
+    StateRootHash
 }
 
 impl Arg {
@@ -138,7 +140,8 @@ impl Arg {
             Arg::EventsNumber => ARG_NUMBER,
             Arg::PrintEvents => ARG_PRINT_EVENTS,
             Arg::DeployMode => ARG_DEPLOY_MODE,
-            Arg::Json => ARG_JSON
+            Arg::Json => ARG_JSON,
+            Arg::StateRootHash => ARG_STATE_ROOT_HASH
         }
     }
 }
@@ -152,7 +155,8 @@ impl From<Arg> for clap::Arg {
             Arg::EventsNumber => arg_number("Number of events to print"),
             Arg::PrintEvents => arg_print_events(),
             Arg::DeployMode => arg_deploy_mode(),
-            Arg::Json => arg_json()
+            Arg::Json => arg_json(),
+            Arg::StateRootHash => arg_state_root_hash()
         }
     }
 }
@@ -174,6 +178,19 @@ fn arg_gas() -> clap::Arg {
         .required(true)
         .value_name("AMOUNT (motes, or 'X.Y cspr')")
         .value_parser(GasParser)
+        .action(ArgAction::Set)
+}
+
+fn arg_state_root_hash() -> clap::Arg {
+    clap::Arg::new(ARG_STATE_ROOT_HASH)
+        .help(
+            "Read the chain state as of this state root hash (hex) instead of the latest one. \
+             Commands that send transactions fail while it is set."
+        )
+        .long(ARG_STATE_ROOT_HASH)
+        .required(false)
+        .global(true)
+        .value_name("HEX")
         .action(ArgAction::Set)
 }
 

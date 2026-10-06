@@ -19,7 +19,7 @@ mod utils;
 pub use cli::OdraCli;
 pub use cmd::args::CommandArg;
 pub use container::{ContractProvider, DeployedContractsContainer};
-pub use utils::{log, DeployerExt};
+pub use utils::{log, ContractLoaderExt, DeployerExt};
 
 pub mod scenario {
     //! Traits and structs for defining custom scenarios.

@@ -1,6 +1,6 @@
 {
   "casper_contract_schema_version": 1,
-  "toolchain": "rustc 1.85.0-nightly (d117b7f21 2024-12-31)",
+  "toolchain": "rustc 1.94.0-nightly (8d670b93d 2025-12-31)",
   "authors": [
     "Jakub Płaskonka <kuba@odra.dev>",
     "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
@@ -9,7 +9,7 @@
   "repository": "https://github.com/odradev/odra",
   "homepage": "https://odra.dev/docs",
   "contract_name": "Erc20",
-  "contract_version": "2.5.0",
+  "contract_version": "2.9.1",
   "types": [
     {
       "struct": {
@@ -233,50 +233,6 @@
         }
       ],
       "return_ty": "U256",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "mint",
-      "description": "Mints new tokens and assigns them to the given address.",
-      "is_mutable": true,
-      "arguments": [
-        {
-          "name": "address",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "amount",
-          "description": null,
-          "ty": "U256",
-          "optional": false
-        }
-      ],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "burn",
-      "description": "Burns the given amount of tokens from the given address.",
-      "is_mutable": true,
-      "arguments": [
-        {
-          "name": "address",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "amount",
-          "description": null,
-          "ty": "U256",
-          "optional": false
-        }
-      ],
-      "return_ty": "Unit",
       "is_contract_context": true,
       "access": "public"
     }

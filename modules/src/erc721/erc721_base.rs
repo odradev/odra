@@ -138,6 +138,7 @@ impl Erc721Base {
     }
 
     /// Transfers the `token_id` token from `from` to `to`.
+    /// SECURITY: Do not expose this function publicly without proper access control.
     pub fn transfer(&mut self, from: &Address, to: &Address, token_id: &U256) {
         self.clear_approval(token_id);
         self.balances.set(from, self.balance_of(from) - 1);
@@ -152,6 +153,7 @@ impl Erc721Base {
     }
 
     /// Revokes permission to transfer the `token_id` token.
+    /// SECURITY: Do not expose this function publicly without proper access control.
     pub fn clear_approval(&mut self, token_id: &U256) {
         if self.token_approvals.get_or_default(token_id).is_some() {
             self.token_approvals.set(token_id, None);

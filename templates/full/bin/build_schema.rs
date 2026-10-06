@@ -1,6 +1,8 @@
 #![doc = "Binary for building schema definitions from odra contracts."]
 #![allow(unused_imports, redundant_imports)]
 #![allow(clippy::single_component_path_imports)]
+// Contracts from a dependency crate (`fqn = "other_crate::module::Contract"` in Odra.toml) link their
+// entry points only if this crate is referenced here: add `use other_crate;` next to the line below.
 use {{project-name}};
 
 #[cfg(all(not(odra_module = ""), not(target_arch = "wasm32")))]

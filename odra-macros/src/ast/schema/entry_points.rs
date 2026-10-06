@@ -48,7 +48,8 @@ impl TryFrom<&ModuleImplIR> for FactorySchemaEntrypointsItem {
                     module.factory_upgrade_fn(),
                     module.factory_batch_upgrade_fn(),
                 ])
-                .collect()
+                .collect(),
+            offchain_fns: vec![]
         };
         Ok(Self { item })
     }
@@ -56,16 +57,14 @@ impl TryFrom<&ModuleImplIR> for FactorySchemaEntrypointsItem {
 
 pub struct SchemaEntrypointsItem {
     module_ident: syn::Ident,
-    fns: Vec<FnIR>
+    fns: Vec<FnIR>,
+    offchain_fns: Vec<FnIR>
 }
 
 impl ToTokens for SchemaEntrypointsItem {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let module_ident = &self.module_ident;
-        let fns = self
-            .fns
-            .iter()
-            .map(|f| {
+        let entry_point_tokens = |f: &FnIR| {
                 let desc = f
                     .docs()
                     .first()
@@ -96,8 +95,21 @@ impl ToTokens for SchemaEntrypointsItem {
                         odra::prelude::vec![ #(#args),* ]
                     )
                 }
-            })
+        };
+        let fns = self.fns.iter().map(entry_point_tokens).collect::<Vec<_>>();
+        let offchain_fns = self
+            .offchain_fns
+            .iter()
+            .map(entry_point_tokens)
             .collect::<Vec<_>>();
+        // The trait has an empty default; only a module with offchain functions overrides it.
+        let offchain_fn = (!offchain_fns.is_empty()).then(|| {
+            quote::quote! {
+                fn schema_offchain_entrypoints() -> odra::prelude::vec::Vec<odra::schema::casper_contract_schema::Entrypoint> {
+                    odra::prelude::vec![ #(#offchain_fns),* ]
+                }
+            }
+        });
 
         let item = quote::quote! {
             #[automatically_derived]
@@ -106,6 +118,7 @@ impl ToTokens for SchemaEntrypointsItem {
                 fn schema_entrypoints() -> odra::prelude::vec::Vec<odra::schema::casper_contract_schema::Entrypoint> {
                     odra::prelude::vec![ #(#fns),* ]
                 }
+                #offchain_fn
             }
         };
 
@@ -129,7 +142,8 @@ impl TryFrom<&ModuleImplIR> for SchemaEntrypointsItem {
     fn try_from(module: &ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
             module_ident: module.module_ident()?,
-            fns: module.functions()?
+            fns: module.onchain_functions()?,
+            offchain_fns: module.offchain_functions()?
         })
     }
 }

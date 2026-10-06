@@ -504,6 +504,7 @@ impl CEP3009Wrapper {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use core::time::Duration;
     use odra::host::{Deployer, HostEnv};
 
     const TOKEN_NAME: &str = "Test Token";
@@ -541,7 +542,7 @@ mod tests {
             }
         );
 
-        env.advance_block_time(1_000);
+        env.advance_block_time(Duration::from_secs(1));
 
         Setup {
             env,
@@ -732,7 +733,7 @@ mod tests {
         } = setup();
 
         // Move further into the future so that valid_before is in the past.
-        env.advance_block_time(60_000);
+        env.advance_block_time(Duration::from_secs(60));
 
         let valid_after: u64 = 0;
         let valid_before: u64 = 10;

@@ -1,5 +1,6 @@
 //! Validator-related methods.
 
+use crate::utils::block_on;
 use casper_client::get_auction_info;
 use casper_types::system::auction::BidAddr;
 use casper_types::system::auction::ValidatorBid;
@@ -9,11 +10,10 @@ use odra_core::prelude::*;
 /// Validator-related methods implementation for CasperClient.
 impl super::CasperClient {
     pub fn get_validator(&self, index: usize) -> PublicKey {
-        let rt = self.runtime();
-        rt.block_on(self.get_validator_async(index))
+        block_on(self.get_validator_async(index))
     }
 
-    async fn get_validator_async(&self, index: usize) -> PublicKey {
+    pub async fn get_validator_async(&self, index: usize) -> PublicKey {
         let auction_info = get_auction_info(
             self.rpc_id_typed(),
             self.configuration.node_address(),
@@ -42,11 +42,10 @@ impl super::CasperClient {
     }
 
     pub fn delegated_amount(&self, delegator: Address, validator: PublicKey) -> U512 {
-        let rt = self.runtime();
-        rt.block_on(self.delegated_amount_async(delegator, validator))
+        block_on(self.delegated_amount_async(delegator, validator))
     }
 
-    async fn delegated_amount_async(&self, delegator: Address, validator: PublicKey) -> U512 {
+    pub async fn delegated_amount_async(&self, delegator: Address, validator: PublicKey) -> U512 {
         let purse_uref = match self.get_main_purse(&delegator).await {
             Ok(uref) => uref,
             Err(_) => return U512::zero()
@@ -59,16 +58,19 @@ impl super::CasperClient {
 
         let stored_value = self.query_global_state_maybe(key, None).await;
         match stored_value {
-            None => U512::zero(),
-            Some(sv) => match sv {
-                StoredValue::BidKind(bid_kind) => bid_kind.staked_amount().unwrap_or_default(),
-                _ => {
-                    panic!(
-                        "Couldn't get delegated amount for address: {:?}",
-                        delegator.to_formatted_string()
-                    )
-                }
+            Ok(None) => U512::zero(),
+            Ok(Some(StoredValue::BidKind(bid_kind))) => {
+                bid_kind.staked_amount().unwrap_or_default()
             }
+            Ok(Some(_)) => panic!(
+                "Couldn't get delegated amount for address: {:?}",
+                delegator.to_formatted_string()
+            ),
+            Err(e) => panic!(
+                "Couldn't get delegated amount for address: {:?}: {}",
+                delegator.to_formatted_string(),
+                e.error_message()
+            )
         }
     }
 
@@ -77,11 +79,10 @@ impl super::CasperClient {
     }
 
     pub fn auction_delay(&self) -> u64 {
-        let rt = self.runtime();
-        rt.block_on(self.auction_delay_async())
+        block_on(self.auction_delay_async())
     }
 
-    async fn auction_delay_async(&self) -> u64 {
+    pub async fn auction_delay_async(&self) -> u64 {
         let chainspec = self.chainspec().await;
 
         let auction_delay = chainspec
@@ -105,11 +106,10 @@ impl super::CasperClient {
     }
 
     pub fn unbonding_delay(&self) -> u64 {
-        let rt = self.runtime();
-        rt.block_on(self.unbonding_delay_async())
+        block_on(self.unbonding_delay_async())
     }
 
-    async fn unbonding_delay_async(&self) -> u64 {
+    pub async fn unbonding_delay_async(&self) -> u64 {
         let chainspec = self.chainspec().await;
 
         let unbonding_delay = chainspec

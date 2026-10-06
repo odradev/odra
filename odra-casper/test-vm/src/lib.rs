@@ -5,6 +5,7 @@
 #![allow(unused_variables)]
 
 mod casper_host;
+mod offchain_contract_env;
 mod vm;
 
 pub use casper_host::CasperHost;

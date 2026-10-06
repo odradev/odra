@@ -5,7 +5,7 @@
 #[macro_export]
 macro_rules! single_value_storage {
     ($name:ident, $value_ty:ty, $key:expr, $err:expr) => {
-        #[odra::module]
+        #[odra::module(layout = odra::schema::StorageKind::named_key::<$value_ty>($key))]
         pub struct $name;
 
         impl $name {
@@ -21,7 +21,7 @@ macro_rules! single_value_storage {
         }
     };
     ($name:ident, $value_ty:ty, $key:expr) => {
-        #[odra::module]
+        #[odra::module(layout = odra::schema::StorageKind::named_key::<$value_ty>($key))]
         pub struct $name;
 
         impl $name {
@@ -44,7 +44,10 @@ macro_rules! single_value_storage {
 #[macro_export]
 macro_rules! key_value_storage {
     ($name:ident, $dict:expr, $value_type:ty) => {
-        #[odra::module]
+        #[odra::module(layout = odra::schema::StorageKind::dictionary::<odra::prelude::String, $value_type>(
+            $dict,
+            odra::schema::KeyEncoding::Utf8
+        ))]
         pub struct $name;
 
         impl $name {
@@ -72,7 +75,10 @@ macro_rules! key_value_storage {
 #[macro_export]
 macro_rules! base64_encoded_key_value_storage {
     ($name:ident, $dict:expr, $key:ty, $value_type:ty) => {
-        #[odra::module]
+        #[odra::module(layout = odra::schema::StorageKind::dictionary::<$key, $value_type>(
+                                                            $dict,
+                                                            odra::schema::KeyEncoding::Base64
+                                                        ))]
         pub struct $name;
 
         impl $name {
@@ -112,7 +118,10 @@ macro_rules! base64_encoded_key_value_storage {
 #[macro_export]
 macro_rules! compound_key_value_storage {
     ($name:ident, $dict:expr, $k1_type:ty, $k2_type:ty, $value_type:ty) => {
-        #[odra::module]
+        #[odra::module(layout = odra::schema::StorageKind::dictionary::<($k1_type, $k2_type), $value_type>(
+            $dict,
+            odra::schema::KeyEncoding::HexHash
+        ))]
         pub struct $name;
 
         impl $name {

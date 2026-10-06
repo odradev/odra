@@ -6,11 +6,15 @@ on:
       - 'hotfix/**'
     paths:
       - 'templates/**'
+      - 'odra-wasm-client/**'
+      - 'odra-wasm-client-builder/**'
   push:
     branches:
       - 'release/**'
     paths:
       - 'templates/**'
+      - 'odra-wasm-client/**'
+      - 'odra-wasm-client-builder/**'
 
 run-name: Running templates tests for ${{ github.head_ref }}
 
@@ -35,10 +39,12 @@ jobs:
       - name: Setup toolchain
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly-2025-01-01
+          toolchain: nightly-2026-01-01
           target: wasm32-unknown-unknown
           components: rustfmt, clippy, llvm-tools-preview
       - name: Prepare test environment
         run: just prepare-test-env
+      - name: Install wasm-pack
+        run: cargo install wasm-pack --locked
       - name: Run tests
         run: just test-templates

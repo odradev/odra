@@ -1,8 +1,12 @@
+use crate::log;
 use casper_types::bytesrepr::FromBytes;
 use casper_types::StoredValue::CLValue;
 use casper_types::{CLTyped, StoredValue};
 use odra_core::prelude::{ExecutionError, OdraError, OdraResult};
 use std::path::{self, PathBuf};
+use std::sync::LazyLock;
+use std::time::Duration;
+use tokio::runtime::{Builder, Handle, Runtime, RuntimeFlavor};
 
 use crate::error::LivenetError;
 
@@ -67,5 +71,209 @@ pub fn extract_stored_value<T: CLTyped + FromBytes>(value: StoredValue) -> T {
             .into_t()
             .unwrap_or_else(|_| panic!("Couldn't get bytes from CLValue: {:?}", value)),
         _ => panic!("Value stored in result key is not a CLValue")
+    }
+}
+
+/// Number of attempts for an RPC call rejected with HTTP 429 (Too Many Requests).
+const RATE_LIMIT_ATTEMPTS: u32 = 5;
+/// Delay before the first retry; doubled after each further 429.
+const RATE_LIMIT_BASE_DELAY: Duration = Duration::from_millis(200);
+
+/// Errors that can tell whether the node (or its sidecar) rate-limited the request.
+pub trait RateLimited {
+    fn is_rate_limited(&self) -> bool;
+}
+
+impl RateLimited for casper_client::Error {
+    fn is_rate_limited(&self) -> bool {
+        match self {
+            // The sidecar itself refuses the request.
+            casper_client::Error::ResponseIsHttpError { error, .. }
+            | casper_client::Error::FailedToGetResponse { error, .. } => {
+                error.status() == Some(reqwest::StatusCode::TOO_MANY_REQUESTS)
+            }
+            // The sidecar accepted it but the node behind it did not:
+            // {"code":-32018,"message":"Node request failure","data":"...: request was throttled by the node"}
+            casper_client::Error::ResponseIsRpcError { error, .. } => error
+                .data
+                .as_ref()
+                .is_some_and(|data| data.to_string().contains("throttled")),
+            _ => false
+        }
+    }
+}
+
+impl RateLimited for casper_client::cli::CliError {
+    fn is_rate_limited(&self) -> bool {
+        matches!(self, casper_client::cli::CliError::Core(e) if e.is_rate_limited())
+    }
+}
+
+/// The Tokio runtime every blocking client call is driven by, built on first use and shared by
+/// every [CasperClient](crate::casper_client::CasperClient) and thread in the process.
+static RUNTIME: LazyLock<Runtime> = LazyLock::new(|| {
+    Builder::new_multi_thread()
+        .enable_all()
+        .thread_name("odra-livenet")
+        .build()
+        .expect("Failed to build the Tokio runtime")
+});
+
+/// Drives `future` to completion on the current thread.
+///
+/// Outside of a Tokio runtime the future runs on a process-wide runtime, so it is safe to call from
+/// plain synchronous code and from several threads at once. Inside a multi-thread Tokio runtime
+/// (a `#[tokio::main]` program, a web service) the call yields the worker thread first, so the
+/// runtime keeps serving other tasks while this one blocks.
+///
+/// # Panics
+///
+/// Panics inside a current-thread Tokio runtime, where blocking would stall every other task: use
+/// the `*_async` methods of [CasperClient](crate::casper_client::CasperClient) there instead, or
+/// move the blocking call to `tokio::task::spawn_blocking`.
+pub fn block_on<F: core::future::Future>(future: F) -> F::Output {
+    match Handle::try_current() {
+        Ok(handle) if handle.runtime_flavor() == RuntimeFlavor::MultiThread => {
+            tokio::task::block_in_place(|| handle.block_on(future))
+        }
+        Ok(_) => panic!(
+            "Blocking Odra livenet call inside a current-thread Tokio runtime: it would stall every \
+             other task. Use the `*_async` methods of `CasperClient`, or a multi-thread runtime."
+        ),
+        Err(_) => RUNTIME.block_on(future)
+    }
+}
+
+/// Runs an RPC call, retrying with exponential backoff while the node answers HTTP 429.
+///
+/// Nodes and sidecars (NCTL, cspr.cloud) rate-limit JSON-RPC; a burst of reads from a test or a
+/// script otherwise fails on the second or third request. Any other error is returned as is.
+pub async fn retry_on_rate_limit<T, E, F, Fut>(what: &str, call: F) -> Result<T, E>
+where
+    E: RateLimited + core::fmt::Display,
+    F: Fn() -> Fut,
+    Fut: core::future::Future<Output = Result<T, E>>
+{
+    let mut delay = RATE_LIMIT_BASE_DELAY;
+    for attempt in 1..RATE_LIMIT_ATTEMPTS {
+        match call().await {
+            Err(e) if e.is_rate_limited() => {
+                log::debug(format!(
+                    "{what}: rate limited by the node (attempt {attempt}/{RATE_LIMIT_ATTEMPTS}), retrying in {delay:?}"
+                ));
+                tokio::time::sleep(delay).await;
+                delay *= 2;
+            }
+            result => return result
+        }
+    }
+    call().await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::cell::Cell;
+
+    #[derive(Debug)]
+    enum TestError {
+        RateLimited,
+        Other
+    }
+
+    impl core::fmt::Display for TestError {
+        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+            write!(f, "{self:?}")
+        }
+    }
+
+    impl RateLimited for TestError {
+        fn is_rate_limited(&self) -> bool {
+            matches!(self, TestError::RateLimited)
+        }
+    }
+
+    fn run<T>(fut: impl core::future::Future<Output = T>) -> T {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_time()
+            .build()
+            .unwrap()
+            .block_on(fut)
+    }
+
+    #[test]
+    fn block_on_works_outside_a_runtime_and_from_many_threads() {
+        assert_eq!(block_on(async { 1 + 1 }), 2);
+        let results: Vec<u32> = std::thread::scope(|scope| {
+            let handles: Vec<_> = (0..8)
+                .map(|i| {
+                    scope.spawn(move || {
+                        block_on(async move {
+                            tokio::time::sleep(Duration::from_millis(10)).await;
+                            i * 2
+                        })
+                    })
+                })
+                .collect();
+            handles.into_iter().map(|h| h.join().unwrap()).collect()
+        });
+        assert_eq!(results, (0..8).map(|i| i * 2).collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn block_on_works_inside_a_multi_thread_runtime() {
+        let runtime = Builder::new_multi_thread().enable_all().build().unwrap();
+        let result = runtime.block_on(async {
+            tokio::task::spawn(async { block_on(async { 42 }) })
+                .await
+                .unwrap()
+        });
+        assert_eq!(result, 42);
+    }
+
+    #[test]
+    #[should_panic(expected = "current-thread Tokio runtime")]
+    fn block_on_refuses_a_current_thread_runtime() {
+        run(async { block_on(async { 1 }) });
+    }
+
+    #[test]
+    fn retries_while_rate_limited() {
+        let calls = Cell::new(0);
+        let result = run(retry_on_rate_limit("test", || {
+            calls.set(calls.get() + 1);
+            let n = calls.get();
+            async move {
+                if n < 3 {
+                    Err(TestError::RateLimited)
+                } else {
+                    Ok(n)
+                }
+            }
+        }));
+        assert_eq!(result.unwrap(), 3);
+        assert_eq!(calls.get(), 3);
+    }
+
+    #[test]
+    fn gives_up_after_the_last_attempt() {
+        let calls = Cell::new(0);
+        let result: Result<(), TestError> = run(retry_on_rate_limit("test", || {
+            calls.set(calls.get() + 1);
+            async { Err(TestError::RateLimited) }
+        }));
+        assert!(matches!(result, Err(TestError::RateLimited)));
+        assert_eq!(calls.get(), RATE_LIMIT_ATTEMPTS);
+    }
+
+    #[test]
+    fn other_errors_are_not_retried() {
+        let calls = Cell::new(0);
+        let result: Result<(), TestError> = run(retry_on_rate_limit("test", || {
+            calls.set(calls.get() + 1);
+            async { Err(TestError::Other) }
+        }));
+        assert!(matches!(result, Err(TestError::Other)));
+        assert_eq!(calls.get(), 1);
     }
 }

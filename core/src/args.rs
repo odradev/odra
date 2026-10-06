@@ -167,7 +167,8 @@ impl<T: Into<casper_types::RuntimeArgs>> EntrypointArgument for BatchUpgradeArgs
         let mut args_map: BTreeMap<String, casper_types::bytesrepr::Bytes> = Default::default();
         for (contract, v) in self.0 {
             let rt: RuntimeArgs = v.into();
-            let bytes = ToBytes::to_bytes(&rt).unwrap();
+            let bytes = ToBytes::to_bytes(&rt)
+                .expect("serializing RuntimeArgs can only fail when out of memory");
             args_map.insert(
                 contract.to_string(),
                 casper_types::bytesrepr::Bytes::from(bytes)

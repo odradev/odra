@@ -350,6 +350,9 @@ mod test {
                     fn ident() -> odra::prelude::string::String {
                         Erc20::ident()
                     }
+                    fn contract_name() -> odra::prelude::string::String {
+                        <Erc20 as odra::contract_def::HasIdent>::contract_name()
+                    }
                 }
 
                 #[allow(missing_docs)]
@@ -598,6 +601,9 @@ mod test {
                 impl odra::contract_def::HasIdent for Erc20HostRef {
                     fn ident() -> odra::prelude::string::String {
                         Erc20::ident()
+                    }
+                    fn contract_name() -> odra::prelude::string::String {
+                        <Erc20 as odra::contract_def::HasIdent>::contract_name()
                     }
                 }
 

@@ -1,5 +1,6 @@
 [package]
 name = "benchmark"
+publish = false
 description = "Benchmarking contracts and tools for Odra Framework"
 
 authors = { workspace = true }

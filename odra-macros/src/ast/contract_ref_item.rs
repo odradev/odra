@@ -106,7 +106,7 @@ impl TryFrom<&'_ ModuleImplIR> for ContractRefImplItem {
             for_token,
             ref_ident: module.contract_ref_ident()?,
             functions: module
-                .functions()?
+                .onchain_functions()?
                 .iter()
                 .map(|fun| ref_utils::contract_function_item(fun, module.is_trait_impl()))
                 .collect()

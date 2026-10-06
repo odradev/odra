@@ -114,6 +114,12 @@ impl Callstack {
             .expect("Not enough elements on callstack")
     }
 
+    /// Returns the addresses of all the callstack elements, from the bottom (the account that
+    /// initiated the call) to the top (the contract being executed).
+    pub fn addresses(&self) -> Vec<Address> {
+        self.elements.iter().map(|e| *e.address()).collect()
+    }
+
     /// Returns the size of the callstack.
     pub fn size(&self) -> usize {
         self.elements.len()
@@ -231,6 +237,21 @@ mod tests {
         callstack.push(mock_contract_element());
 
         assert_eq!(callstack.previous(), &mock_account_element());
+    }
+
+    #[test]
+    fn test_addresses() {
+        let mut callstack = Callstack::default();
+        callstack.push(mock_account_element());
+        callstack.push(mock_contract_element());
+
+        assert_eq!(
+            callstack.addresses(),
+            vec![
+                *mock_account_element().address(),
+                *mock_contract_element().address()
+            ]
+        );
     }
 
     #[test]

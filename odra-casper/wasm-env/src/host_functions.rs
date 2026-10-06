@@ -574,6 +574,21 @@ pub fn caller() -> OdraResult<Address> {
     Ok(Address::from(caller))
 }
 
+/// Gets the whole call stack, from the initiating account to the current contract.
+///
+/// In a factory-created contract the frame of the factory is skipped, so the stack agrees
+/// with [`caller`].
+pub fn call_stack() -> OdraResult<Vec<Address>> {
+    let mut stack = runtime::get_call_stack()
+        .into_iter()
+        .map(|info| caller_info_to_caller(info).map(Address::from))
+        .collect::<OdraResult<Vec<Address>>>()?;
+    if unsafe { CALLER_OVERRIDE } && stack.len() >= 2 {
+        stack.remove(stack.len() - 2);
+    }
+    Ok(stack)
+}
+
 /// Calls a contract method by Address
 #[inline(always)]
 pub fn call_contract(address: Address, call_def: CallDef) -> Bytes {
@@ -945,9 +960,10 @@ fn caller_info_to_caller(info: CallerInfo) -> OdraResult<Caller> {
                 .ok_or(ExecutionError::CannotExtractCallerInfo)?;
             let contract_hash = info
                 .get_field_by_index(4)
-                .map(|val| val.to_t::<Option<ContractHash>>().unwrap_or_revert())
-                .expect("must have index 4 in fields")
-                .expect("contract hash must be some");
+                .ok_or(ExecutionError::CannotExtractCallerInfo)?
+                .to_t::<Option<ContractHash>>()
+                .map_err(|_| ExecutionError::CannotExtractCallerInfo)?
+                .ok_or(ExecutionError::CannotExtractCallerInfo)?;
             Ok(Caller::SmartContract {
                 contract_package_hash,
                 contract_hash
@@ -1079,3 +1095,14 @@ pub fn override_factory_caller() {
         CALLER_OVERRIDE = true;
     }
 }
+
+/// Prints `message` on the host through `casper_print`. Compiled in only with the `test-support`
+/// feature; a production contract has no trace of it.
+#[cfg(feature = "test-support")]
+pub fn debug(message: &str) {
+    casper_contract::contract_api::runtime::print(message);
+}
+
+/// No-op without the `test-support` feature.
+#[cfg(not(feature = "test-support"))]
+pub fn debug(_message: &str) {}
