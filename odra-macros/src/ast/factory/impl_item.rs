@@ -338,23 +338,57 @@ mod test {
                                         odra::prelude::string::String::from("value")
                                     )
                                 ]
+                            ),
+                            odra::entry_point_callback::EntryPoint::new(
+                                odra::prelude::string::String::from("upgrade_child_contract"),
+                                odra::prelude::vec![
+                                    odra::entry_point_callback::Argument::new::<odra::prelude::string::String>(
+                                        odra::prelude::string::String::from("contract_name")
+                                    )
+                                ]
+                            ),
+                            odra::entry_point_callback::EntryPoint::new(
+                                odra::prelude::string::String::from("batch_upgrade_child_contract"),
+                                odra::prelude::vec![
+                                    odra::entry_point_callback::Argument::new::<odra::args::BatchUpgradeArgs<odra::host::NoArgs>>(
+                                        odra::prelude::string::String::from("args")
+                                    )
+                                ]
                             )
                         ];
                         odra::entry_point_callback::EntryPointsCaller::new(env.clone(), entry_points, |contract_env, call_def| {
-                            if call_def.entry_point() == "new_contract" {
-                                return Err(
-                                    OdraError::VmError(
-                                        odra::VmError::Other(
-                                            odra::prelude::String::from(
-                                                "Factory is not supported for this configuration.",
-                                            ),
-                                        ),
-                                    ),
-                                );
+                            match call_def.entry_point() {
+                                "new_contract" => odra::host::factory::new_contract(
+                                    &contract_env,
+                                    &call_def,
+                                    <Erc20HostRef as odra::host::EntryPointsCallerProvider>::entry_points_caller,
+                                    |contract_name, contract_address| Erc20FactoryContractDeployed {
+                                        contract_name,
+                                        contract_address
+                                    }
+                                ),
+                                "upgrade_child_contract" => odra::host::factory::upgrade_child_contract(
+                                    &contract_env,
+                                    &call_def,
+                                    <Erc20HostRef as odra::host::EntryPointsCallerProvider>::entry_points_caller,
+                                    |contract_name, contract_address| Erc20FactoryContractDeployed {
+                                        contract_name,
+                                        contract_address
+                                    }
+                                ),
+                                "batch_upgrade_child_contract" => odra::host::factory::batch_upgrade_child_contract(
+                                    &contract_env,
+                                    &call_def,
+                                    <Erc20HostRef as odra::host::EntryPointsCallerProvider>::entry_points_caller,
+                                    |contract_name, contract_address| Erc20FactoryContractDeployed {
+                                        contract_name,
+                                        contract_address
+                                    }
+                                ),
+                                name => Err(OdraError::VmError(
+                                    odra::VmError::NoSuchMethod(odra::prelude::String::from(name))
+                                ))
                             }
-                            Err(OdraError::VmError(
-                                odra::VmError::NoSuchMethod(odra::prelude::String::from(call_def.entry_point()))
-                            ))
                         })
                     }
                 }

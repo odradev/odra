@@ -7,8 +7,11 @@ use anyhow::Result;
 use odra_core::callstack::CallstackElement;
 use odra_core::casper_types::bytesrepr::{deserialize, deserialize_from_slice, serialize};
 use odra_core::casper_types::system::auction::ValidatorBid;
-use odra_core::casper_types::{CLType, CLValue, HashAddr, PackageHash, RuntimeArgs};
-use odra_core::entry_point_callback::EntryPointsCaller;
+use odra_core::casper_types::{
+    AccessRights, CLType, CLValue, HashAddr, PackageHash, RuntimeArgs, URef
+};
+use odra_core::entry_point_callback::{EntryPointsCaller, EntryPointsCallerFn};
+use odra_core::host::HostEnv;
 use odra_core::prelude::*;
 use odra_core::validator::ValidatorInfo;
 use odra_core::CallDef;
@@ -23,12 +26,17 @@ use odra_core::{
 };
 use odra_core::{ContractContainer, ContractRegister};
 const NAMED_KEY_PREFIX: &str = "NAMED_KEY";
+/// The dictionary of a factory contract mapping the names of its children to their addresses.
+const FACTORY_CHILDREN_DICT: &str = "__odra_factory_children";
 
 /// Odra in-memory virtual machine.
 pub struct OdraVm {
     state: Rc<RefCell<OdraVmState>>,
     contract_register: Rc<RefCell<ContractRegister>>,
-    snapshot: RefCell<Option<OdraVmSnapshot>>
+    snapshot: RefCell<Option<OdraVmSnapshot>>,
+    /// The accounts that deployed the factory contracts, the only ones allowed to upgrade the
+    /// children of a factory.
+    factory_admins: RefCell<BTreeMap<Address, Address>>
 }
 
 impl Default for OdraVm {
@@ -36,7 +44,8 @@ impl Default for OdraVm {
         Self {
             state: Rc::new(RefCell::new(OdraVmState::default())),
             contract_register: Rc::new(RefCell::new(ContractRegister::default())),
-            snapshot: RefCell::new(None)
+            snapshot: RefCell::new(None),
+            factory_admins: RefCell::new(BTreeMap::new())
         }
     }
 }
@@ -105,6 +114,75 @@ impl OdraVm {
         self.contract_register.borrow_mut().post_install(&address);
     }
 
+    /// Lets `admin` upgrade the children of the factory contract at `factory`.
+    pub(crate) fn set_factory_admin(&self, factory: Address, admin: Address) {
+        self.factory_admins.borrow_mut().insert(factory, admin);
+    }
+
+    /// Deploys a child of the factory contract being executed, see
+    /// [ContractContext::new_child_contract](odra_core::ContractContext::new_child_contract).
+    pub fn new_child_contract(
+        &self,
+        name: &str,
+        init_args: RuntimeArgs,
+        entry_points_caller: EntryPointsCallerFn
+    ) -> OdraResult<(Address, URef)> {
+        let factory = self.self_address();
+        let host_env = self.host_env_of(&factory)?;
+        let mut entry_points_caller = entry_points_caller(&host_env);
+        entry_points_caller.remove_entry_point("upgrade");
+        let has_init = has_entry_point(&entry_points_caller, "init");
+
+        let address = self.new_contract(name, init_args.clone(), entry_points_caller.clone());
+        // Let the host track the events of the child.
+        host_env.register_contract(address, String::from(name), entry_points_caller);
+        self.set_dict_value(
+            FACTORY_CHILDREN_DICT,
+            name.as_bytes(),
+            CLValue::from_t(address)?
+        );
+
+        if has_init {
+            self.call_factory_child(address, CallDef::new("init", true, init_args))?;
+            self.post_install(address);
+        }
+
+        let access_uref = URef::new(address.value(), AccessRights::READ_ADD_WRITE);
+        Ok((address, access_uref))
+    }
+
+    /// Upgrades a child of the factory contract being executed, see
+    /// [ContractContext::upgrade_child_contract](odra_core::ContractContext::upgrade_child_contract).
+    pub fn upgrade_child_contract(
+        &self,
+        name: &str,
+        upgrade_args: RuntimeArgs,
+        entry_points_caller: EntryPointsCallerFn
+    ) -> OdraResult<Option<Address>> {
+        let factory = self.self_address();
+        if self.factory_admins.borrow().get(&factory) != Some(&self.caller()) {
+            return Err(OdraError::VmError(VmError::InvalidContext));
+        }
+        let Some(address) = self
+            .get_dict_value(FACTORY_CHILDREN_DICT, name.as_bytes())
+            .and_then(|bytes| deserialize_from_slice::<_, Address>(bytes).ok())
+        else {
+            return Ok(None);
+        };
+
+        let host_env = self.host_env_of(&factory)?;
+        let mut entry_points_caller = entry_points_caller(&host_env);
+        entry_points_caller.remove_entry_point("init");
+        let has_upgrade = has_entry_point(&entry_points_caller, "upgrade");
+
+        self.upgrade_contract(name, address, upgrade_args.clone(), entry_points_caller);
+        if has_upgrade {
+            self.call_factory_child(address, CallDef::new("upgrade", true, upgrade_args))?;
+            self.post_install(address);
+        }
+        Ok(Some(address))
+    }
+
     /// Calls a contract with the specified address and call definition.
     ///
     /// Returns the result of the call as [Bytes].
@@ -125,7 +203,12 @@ impl OdraVm {
                 self.revert(err);
             }
         }
-        let result = self.contract_register.borrow().call(&address, call_def);
+        // The register is not borrowed during the call, the contract may deploy another one.
+        let contract = self.contract_register.borrow().get(&address).cloned();
+        let result = match contract {
+            Some(contract) => contract.call(call_def),
+            None => Err(OdraError::VmError(VmError::InvalidContractAddress))
+        };
 
         match result {
             Err(err) => self.revert(err),
@@ -552,6 +635,13 @@ impl OdraVm {
     }
 }
 
+fn has_entry_point(entry_points_caller: &EntryPointsCaller, name: &str) -> bool {
+    entry_points_caller
+        .entry_points()
+        .iter()
+        .any(|ep| ep.name == name)
+}
+
 impl OdraVm {
     fn prepare_call(&self, contract_name: String, address: Address, call_def: &CallDef) {
         let mut state = self.state.borrow_mut();
@@ -577,6 +667,45 @@ impl OdraVm {
             state.drop_snapshot();
         }
         result
+    }
+
+    /// The host environment the contract at `address` is called in.
+    fn host_env_of(&self, address: &Address) -> OdraResult<HostEnv> {
+        self.contract_register
+            .borrow()
+            .get(address)
+            .map(|contract| contract.entry_points_caller().host_env().clone())
+            .ok_or(OdraError::VmError(VmError::InvalidContractAddress))
+    }
+
+    /// Calls the constructor or the upgrader of a child of the factory contract being executed.
+    ///
+    /// As on Casper, the frame of the factory is skipped: the child sees the caller of the
+    /// factory as its caller.
+    fn call_factory_child(&self, address: Address, call_def: CallDef) -> OdraResult<()> {
+        let contract = self
+            .contract_register
+            .borrow()
+            .get(&address)
+            .cloned()
+            .ok_or(OdraError::VmError(VmError::InvalidContractAddress))?;
+        let factory_frame = self.callstack_tip();
+        {
+            let mut state = self.state.borrow_mut();
+            state.pop_callstack_element();
+            state.push_callstack_element(CallstackElement::new_contract_call(
+                String::from(contract.name()),
+                address,
+                call_def.clone()
+            ));
+        }
+        let result = contract.call(call_def);
+        {
+            let mut state = self.state.borrow_mut();
+            state.pop_callstack_element();
+            state.push_callstack_element(factory_frame);
+        }
+        result.map(|_| ())
     }
 
     fn key_of_named_key(name: &str) -> String {

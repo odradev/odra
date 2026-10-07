@@ -7,6 +7,10 @@ use crate::call_def::CallDef;
 use crate::casper_types::bytesrepr::Bytes;
 use crate::{host::HostEnv, prelude::*, ContractEnv};
 
+/// A function building the [EntryPointsCaller] of a contract, see
+/// [EntryPointsCallerProvider::entry_points_caller](crate::host::EntryPointsCallerProvider::entry_points_caller).
+pub type EntryPointsCallerFn = fn(&HostEnv) -> EntryPointsCaller;
+
 /// A struct representing an entry point caller.
 ///
 /// The caller is used by the host environment to call entry points of a contract.
@@ -58,6 +62,11 @@ impl EntryPointsCaller {
         &self
     ) -> fn(contract_env: ContractEnv, call_def: CallDef) -> OdraResult<Bytes> {
         self.f
+    }
+
+    /// Returns the host environment the entry points are called in.
+    pub fn host_env(&self) -> &HostEnv {
+        &self.host_env
     }
 
     /// Returns a reference to the list of entry points.

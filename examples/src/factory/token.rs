@@ -92,7 +92,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "This test does not work on odra vm"]
     fn test_factory_module() {
         let env = odra_test::env();
         let owner = env.get_account(0);
@@ -113,7 +112,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "This test does not work on odra vm"]
     fn test_proxy() {
         let env = odra_test::env();
         let factory = TokenFactory::deploy(&env, NoArgs);

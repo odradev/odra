@@ -2,7 +2,8 @@ use crate::args::EntrypointArgument;
 use crate::call_def::CallDef;
 use crate::casper_types::bytesrepr::{deserialize_from_slice, Bytes, FromBytes, ToBytes};
 use crate::casper_types::crypto::PublicKey;
-use crate::casper_types::{CLTyped, CLValue, BLAKE2B_DIGEST_LENGTH, U512};
+use crate::casper_types::{CLTyped, CLValue, RuntimeArgs, URef, BLAKE2B_DIGEST_LENGTH, U512};
+use crate::entry_point_callback::EntryPointsCallerFn;
 use crate::module::Revertible;
 use crate::validator::ValidatorInfo;
 pub use crate::ContractContext;
@@ -315,6 +316,30 @@ impl ContractEnv {
         let result = event.to_bytes().map_err(ExecutionError::from);
         let bytes = result.unwrap_or_revert(self);
         backend.emit_event(&bytes.into())
+    }
+
+    /// Deploys a child contract of the current factory contract, see
+    /// [ContractContext::new_child_contract].
+    pub fn new_child_contract(
+        &self,
+        name: &str,
+        init_args: RuntimeArgs,
+        entry_points_caller: EntryPointsCallerFn
+    ) -> OdraResult<(Address, URef)> {
+        let backend = self.backend.borrow();
+        backend.new_child_contract(name, init_args, entry_points_caller)
+    }
+
+    /// Upgrades a child contract of the current factory contract, see
+    /// [ContractContext::upgrade_child_contract].
+    pub fn upgrade_child_contract(
+        &self,
+        name: &str,
+        upgrade_args: RuntimeArgs,
+        entry_points_caller: EntryPointsCallerFn
+    ) -> OdraResult<Option<Address>> {
+        let backend = self.backend.borrow();
+        backend.upgrade_child_contract(name, upgrade_args, entry_points_caller)
     }
 
     /// Prints a debug message on the host running the contract.

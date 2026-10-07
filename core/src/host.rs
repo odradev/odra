@@ -1,6 +1,7 @@
 //! A module that provides the interface for interacting with the host environment.
 
 mod deployed_contracts;
+pub mod factory;
 
 use crate::address::Addressable;
 use crate::gas_report::GasReport;

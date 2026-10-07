@@ -4,6 +4,13 @@ Changelog for `odra`.
 
 ## [Unreleased]
 ### Added
+- Factory modules (`#[odra::module(factory = on)]`) work on OdraVM: `new_contract`,
+  `upgrade_child_contract` and `batch_upgrade_child_contract` deploy and upgrade the children in the
+  in-memory VM like on Casper. The child's constructor and upgrader see the caller of the factory as
+  their caller, only the account that deployed the factory may upgrade its children, and the events of
+  the children are tracked. `ContractContext` gets `new_child_contract` and `upgrade_child_contract`,
+  with default implementations, and an OdraVM contract may now deploy or upgrade another contract
+  during a call.
 - `HostEnv::advance_block_time` and `advance_with_auctions` accept a `core::time::Duration` as well as
   a number of milliseconds (`odra::host::BlockTimeDiff`), so `Duration::from_secs(60)` says the unit
   itself. Existing calls with milliseconds keep working (#589).

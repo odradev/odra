@@ -145,6 +145,14 @@ impl HostContext for OdraVmHost {
         let address = self
             .vm
             .new_contract(name, init_args.clone(), entry_points_caller.clone());
+        // As on Casper, only the deployer of a factory may upgrade its children.
+        if entry_points_caller
+            .entry_points()
+            .iter()
+            .any(|ep| ep.name == "new_contract")
+        {
+            self.vm.set_factory_admin(address, self.caller());
+        }
 
         if entry_points_caller
             .entry_points()

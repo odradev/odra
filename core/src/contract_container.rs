@@ -48,6 +48,11 @@ impl ContractContainer {
         self.entry_points_caller.call(call_def)
     }
 
+    /// Returns the entry points caller of the contract.
+    pub fn entry_points_caller(&self) -> &EntryPointsCaller {
+        &self.entry_points_caller
+    }
+
     /// Returns the name of the contract.
     pub fn name(&self) -> &str {
         &self.contract_name
