@@ -1,0 +1,111 @@
+{
+  "version": 1,
+  "contract": "Erc20",
+  "ident": "Erc20",
+  "layout": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "decimals",
+        "index": 1,
+        "kind": "value",
+        "ty": "U8"
+      },
+      {
+        "name": "symbol",
+        "index": 2,
+        "kind": "value",
+        "ty": "String"
+      },
+      {
+        "name": "name",
+        "index": 3,
+        "kind": "value",
+        "ty": "String"
+      },
+      {
+        "name": "total_supply",
+        "index": 4,
+        "kind": "value",
+        "ty": "U256"
+      },
+      {
+        "name": "balances",
+        "index": 5,
+        "kind": "mapping",
+        "key": "Key",
+        "value": {
+          "kind": "value",
+          "ty": "U256"
+        }
+      },
+      {
+        "name": "allowances",
+        "index": 6,
+        "kind": "mapping",
+        "key": {
+          "Tuple2": [
+            "Key",
+            "Key"
+          ]
+        },
+        "value": {
+          "kind": "value",
+          "ty": "U256"
+        }
+      }
+    ]
+  },
+  "types": [
+    {
+      "struct": {
+        "name": "Approval",
+        "description": null,
+        "members": [
+          {
+            "name": "owner",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "spender",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "value",
+            "description": null,
+            "ty": "U256"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "Transfer",
+        "description": null,
+        "members": [
+          {
+            "name": "from",
+            "description": null,
+            "ty": {
+              "Option": "Key"
+            }
+          },
+          {
+            "name": "to",
+            "description": null,
+            "ty": {
+              "Option": "Key"
+            }
+          },
+          {
+            "name": "amount",
+            "description": null,
+            "ty": "U256"
+          }
+        ]
+      }
+    }
+  ]
+}

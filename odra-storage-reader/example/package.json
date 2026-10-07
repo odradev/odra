@@ -1,0 +1,18 @@
+{
+  "name": "odra-storage-reader-example",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "read": "tsx read.ts"
+  },
+  "dependencies": {
+    "casper-js-sdk": "5.1.1",
+    "odra-storage-reader": "file:../pkg-web"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.2"
+  }
+}

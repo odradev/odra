@@ -1,0 +1,8 @@
+prepare:
+    cargo install wasm-pack
+
+build:
+    wasm-pack build --target web --out-dir pkg-web .
+
+run-example:
+    cd example && npm install && npm run serve
