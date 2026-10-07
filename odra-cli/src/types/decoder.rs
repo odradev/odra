@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use odra::{
     casper_types::{
         bytesrepr::{FromBytes, RESULT_ERR_TAG, RESULT_OK_TAG},
@@ -7,7 +5,7 @@ use odra::{
     },
     schema::casper_contract_schema::{CustomType, NamedCLType, Type}
 };
-use serde_json::Value;
+use serde_json::{Map, Value};
 
 use crate::{
     cmd::args::ArgsError,
@@ -81,15 +79,13 @@ fn decode_custom_type<'a>(
 
     match matching_type {
         CustomType::Struct { members, .. } => {
-            let mut decoded = "{ ".to_string();
+            let mut object = Map::new();
             for field in members {
                 let (value, rem) = decode(bytes, &field.ty, types)?;
-                decoded.push_str(format!(" \"{}\": \"{}\",", field.name, value).as_str());
+                object.insert(field.name.clone(), json_value(&field.ty.0, value));
                 bytes = rem;
             }
-            decoded.pop();
-            decoded.push_str(" }");
-            Ok((to_json(&decoded)?, bytes))
+            Ok((to_pretty_json(&Value::Object(object))?, bytes))
         }
         CustomType::Enum { variants, .. } => {
             let ty = Type(NamedCLType::U8);
@@ -106,29 +102,42 @@ fn decode_custom_type<'a>(
     }
 }
 
+/// A decoded struct member or list item as a JSON value.
+///
+/// Nested structs (and lists of them) are already decoded to JSON, so they are embedded as
+/// objects. Everything else stays a string, e.g. a `String` member `"123"` is not a number.
+fn json_value(ty: &NamedCLType, value: String) -> Value {
+    match ty {
+        NamedCLType::Custom(_) | NamedCLType::List(box NamedCLType::Custom(_)) => {
+            // An enum decodes to its variant name, which is not JSON.
+            serde_json::from_str(&value).unwrap_or(Value::String(value))
+        }
+        _ => Value::String(value)
+    }
+}
+
 fn decode_list<'a>(
     bytes: &'a [u8],
     inner: &NamedCLType,
     types: &'a CustomTypeSet
 ) -> Result<(String, &'a [u8]), ArgsError> {
     let ty = Type(inner.clone());
-    let mut bytes = bytes;
-    let mut decoded = "[".to_string();
-
-    let (len, rem) = super::from_bytes_or_err::<u32>(bytes)?;
-    bytes = rem;
+    let (len, mut bytes) = super::from_bytes_or_err::<u32>(bytes)?;
+    let mut items = Vec::with_capacity(len as usize);
     for _ in 0..len {
         let (value, rem) = decode(bytes, &ty, types)?;
         bytes = rem;
-        decoded.push_str(format!("{},", value).as_str());
+        items.push(value);
     }
-    if len > 0 {
-        decoded.pop(); // remove trailing comma
-    }
-    decoded.push(']');
     match inner {
-        NamedCLType::Custom(_) => Ok((to_json(&decoded)?, bytes)),
-        _ => Ok((decoded, bytes))
+        NamedCLType::Custom(_) => {
+            let items = items
+                .into_iter()
+                .map(|item| json_value(inner, item))
+                .collect();
+            Ok((to_pretty_json(&Value::Array(items))?, bytes))
+        }
+        _ => Ok((format!("[{}]", items.join(",")), bytes))
     }
 }
 
@@ -240,11 +249,8 @@ fn decode_map<'a>(
     Ok((result, stream))
 }
 
-fn to_json(str: &str) -> Result<String, ArgsError> {
-    let json =
-        Value::from_str(str).map_err(|_| ArgsError::DecodingError("Invalid JSON".to_string()))?;
-    serde_json::to_string_pretty(&json)
-        .map_err(|_| ArgsError::DecodingError("Invalid JSON".to_string()))
+fn to_pretty_json(json: &Value) -> Result<String, ArgsError> {
+    serde_json::to_string_pretty(json).map_err(|e| ArgsError::DecodingError(e.to_string()))
 }
 
 fn decode_simple_type<'a>(ty: &NamedCLType, input: &'a [u8]) -> TypeResult<(String, &'a [u8])> {
@@ -292,10 +298,15 @@ mod tests {
 
     use odra::{
         casper_types::bytesrepr::{ToBytes, RESULT_ERR_TAG, RESULT_OK_TAG},
-        schema::casper_contract_schema::{NamedCLType, Type}
+        prelude::Address,
+        schema::{
+            casper_contract_schema::{NamedCLType, Type},
+            SchemaCustomTypes
+        }
     };
+    use serde_json::json;
 
-    use crate::test_utils;
+    use crate::test_utils::{self, NameMintInfo, PaymentInfo, PaymentVoucher, Status};
 
     const NAMED_TOKEN_METADATA_BYTES: [u8; 50] = [
         4, 0, 0, 0, 107, 112, 111, 98, 0, 32, 74, 169, 209, 1, 0, 0, 1, 1, 226, 74, 54, 110, 186,
@@ -487,5 +498,47 @@ mod tests {
 
         let (result, _bytes) = super::decode(&bytes, &ty, &custom_types).unwrap();
         pretty_assertions::assert_eq!(result, format!("foo:{}", NAMED_TOKEN_METADATA_JSON));
+    }
+
+    #[test]
+    fn test_decode_nested_custom_types() {
+        let custom_types = test_utils::custom_types();
+        let buyer = "account-hash-9918c11ac0ccdd67942a143985499fc7c30c1ea10e7e8d049222ae1cdcdb39d3";
+        let voucher = PaymentVoucher::new(
+            PaymentInfo::new(buyer, "say \"hi\"", "100"),
+            vec![
+                NameMintInfo::new("kpob", buyer, 1),
+                NameMintInfo::new("odra", buyer, 2),
+            ],
+            3
+        );
+        let bytes = voucher.to_bytes().unwrap();
+        let ty = Type(NamedCLType::Custom("PaymentVoucher".to_string()));
+        let (result, _bytes) = super::decode(&bytes, &ty, &custom_types).unwrap();
+
+        let owner = buyer.parse::<Address>().unwrap().as_key().to_string();
+        let expected = json!({
+            "payment": { "buyer": owner, "payment_id": "say \"hi\"", "amount": "100" },
+            "names": [
+                { "label": "kpob", "owner": owner, "token_expiration": "1" },
+                { "label": "odra", "owner": owner, "token_expiration": "2" }
+            ],
+            "voucher_expiration": "3"
+        });
+        pretty_assertions::assert_eq!(result, serde_json::to_string_pretty(&expected).unwrap());
+    }
+
+    #[test]
+    fn test_decode_list_of_enums() {
+        let custom_types = Status::schema_types().into_iter().flatten().collect();
+        let ty = Type(NamedCLType::List(Box::new(NamedCLType::Custom(
+            "Status".to_string()
+        ))));
+        let bytes = vec![Status::Active, Status::Terminated].to_bytes().unwrap();
+        let (result, _bytes) = super::decode(&bytes, &ty, &custom_types).unwrap();
+        pretty_assertions::assert_eq!(
+            result,
+            serde_json::to_string_pretty(&json!(["Active", "Terminated"])).unwrap()
+        );
     }
 }
