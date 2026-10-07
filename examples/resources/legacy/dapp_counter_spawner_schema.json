@@ -1,0 +1,75 @@
+{
+  "name": "DappCounterSpawner",
+  "events": [
+    {
+      "name": "DappRegistryChanged",
+      "args": [
+        {
+          "name": "previous_registry",
+          "ty": {
+            "Option": "Key"
+          },
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "new_registry",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ]
+    }
+  ],
+  "entrypoints": [
+    {
+      "name": "init",
+      "args": [
+        {
+          "name": "registry",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "factory",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Constructor",
+      "attributes": []
+    },
+    {
+      "name": "spawned",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "U32",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "spawn",
+      "args": [],
+      "is_mutable": true,
+      "return_ty": "Key",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "get_dapp_registry",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "Key",
+      "ty": "Public",
+      "attributes": []
+    }
+  ]
+}

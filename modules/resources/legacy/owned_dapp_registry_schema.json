@@ -1,0 +1,261 @@
+{
+  "name": "OwnedDappRegistry",
+  "events": [
+    {
+      "name": "DappMetadataChanged",
+      "args": [
+        {
+          "name": "name",
+          "ty": "String",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "description",
+          "ty": "String",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "website_url",
+          "ty": "String",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "icon_url",
+          "ty": "String",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ]
+    },
+    {
+      "name": "DappContractAdded",
+      "args": [
+        {
+          "name": "contract",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "is_factory",
+          "ty": "Bool",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "registrar",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ]
+    },
+    {
+      "name": "DappContractRemoved",
+      "args": [
+        {
+          "name": "contract",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "registrar",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ]
+    },
+    {
+      "name": "OwnershipTransferred",
+      "args": [
+        {
+          "name": "previous_owner",
+          "ty": {
+            "Option": "Key"
+          },
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "new_owner",
+          "ty": {
+            "Option": "Key"
+          },
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ]
+    }
+  ],
+  "entrypoints": [
+    {
+      "name": "init",
+      "args": [],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Constructor",
+      "attributes": []
+    },
+    {
+      "name": "set_dapp_metadata",
+      "args": [
+        {
+          "name": "metadata",
+          "ty": "Any",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "add_dapp_contract",
+      "args": [
+        {
+          "name": "dapp_contract",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "is_factory",
+          "ty": "Bool",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "remove_dapp_contract",
+      "args": [
+        {
+          "name": "dapp_contract",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "get_dapp_metadata",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "Any",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "get_dapp_contracts",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": {
+        "List": "Key"
+      },
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "is_dapp_contract",
+      "args": [
+        {
+          "name": "dapp_contract",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": false,
+      "return_ty": "Bool",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "is_dapp_factory",
+      "args": [
+        {
+          "name": "dapp_contract",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": false,
+      "return_ty": "Bool",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "get_dapp_registry",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "Key",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "get_owner",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "Key",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "transfer_ownership",
+      "args": [
+        {
+          "name": "new_owner",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "renounce_ownership",
+      "args": [],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Public",
+      "attributes": []
+    }
+  ]
+}

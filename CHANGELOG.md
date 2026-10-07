@@ -4,6 +4,12 @@ Changelog for `odra`.
 
 ## [Unreleased]
 ### Added
+- `odra_modules::dapp` groups the contracts of a dapp. `DappRegistryBase` keeps the dapp metadata and its contracts,
+  and verifies each added contract by calling its `get_dapp_registry`; `DappContractBase` stores the registry a contract
+  belongs to. Neither checks the caller, so they compose with `Ownable` or `AccessControl`; the `DappRegistry` and
+  `DappContract` external contract traits are their calling interfaces. `OwnedDappRegistry` is ready to deploy: the owner
+  manages the dapp, and a contract registered as a factory may add the contracts it spawns. The
+  `examples/src/factory/dapp.rs` example registers contracts deployed by a factory.
 - `HostEnv::advance_block_time` and `advance_with_auctions` accept a `core::time::Duration` as well as
   a number of milliseconds (`odra::host::BlockTimeDiff`), so `Duration::from_secs(60)` says the unit
   itself. Existing calls with milliseconds keep working (#589).
@@ -116,6 +122,9 @@ Changelog for `odra`.
   contracts in `Odra.toml` of `odra-modules` and `odra-examples`; their tests run on OdraVM only.
 
 ### Fixed
+- `#[odra::module(factory=on)]` no longer warns about unused variables: the generated `<Module>Factory`
+  methods copy the module's signatures but only revert, so they now allow `unused_variables`. The
+  examples crate drops its crate-wide `allow(unused_variables)`, which hid the warnings.
 - Project templates ignore the `wasm` directory where it is actually created: at the root of a
   workspace project rather than in its members, and in the `cep18` and `cep95` templates, which
   never ignored it.
