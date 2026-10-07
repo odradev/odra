@@ -122,6 +122,9 @@ Changelog for `odra`.
   contracts in `Odra.toml` of `odra-modules` and `odra-examples`; their tests run on OdraVM only.
 
 ### Fixed
+- `#[odra::module(factory=on)]` no longer warns about unused variables: the generated `<Module>Factory`
+  methods copy the module's signatures but only revert, so they now allow `unused_variables`. The
+  examples crate drops its crate-wide `allow(unused_variables)`, which hid the warnings.
 - Project templates ignore the `wasm` directory where it is actually created: at the root of a
   workspace project rather than in its members, and in the `cep18` and `cep95` templates, which
   never ignored it.

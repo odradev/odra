@@ -76,11 +76,16 @@ impl ToTokens for FactoryModuleImplItem {
                 _ => None
             })
             .map(|f| {
+                let raw = f.raw();
+                // The body only reverts, so the arguments of the copied signature go unused.
+                let mut attrs = raw.attrs.clone();
+                attrs.push(parse_quote!(#[allow(unused_variables)]));
                 syn::ImplItemFn {
+                    attrs,
                     block: parse_quote!({
                         self.env().revert(OdraError::ExecutionError(ExecutionError::FactoryModuleCall));
                     }),
-                    ..f.raw()
+                    ..raw
                 }
             })
             .collect::<Vec<_>>();
@@ -132,11 +137,13 @@ mod test {
             #[odra::factory]
             impl Erc20Factory {
                 /// Returns the total supply of the token.
+                #[allow(unused_variables)]
                 pub fn total_supply(&self) -> U256 {
                     self.env().revert(OdraError::ExecutionError(ExecutionError::FactoryModuleCall));
                 }
                 /// Pay to mint.
                 #[odra(payable)]
+                #[allow(unused_variables)]
                 pub fn pay_to_mint(&mut self) {
                     self.env().revert(OdraError::ExecutionError(ExecutionError::FactoryModuleCall));
                 }
