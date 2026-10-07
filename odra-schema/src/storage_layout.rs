@@ -9,13 +9,14 @@
 //! the exact location the value is stored under, so the state of a deployed contract can be read
 //! without calling any entry point. That is what `odra-cli storage` does under the hood.
 
+use std::collections::BTreeSet;
 use std::fmt::{self, Display, Formatter};
 use std::io::Write;
 
 use base64::prelude::{Engine, BASE64_STANDARD};
 use blake2::digest::VariableOutput;
 use blake2::Blake2bVar;
-use casper_contract_schema::{NamedCLType, Type};
+use casper_contract_schema::{CustomType, NamedCLType, Type};
 use casper_types::bytesrepr::{FromBytes, ToBytes};
 use casper_types::CLTyped;
 use num_traits::{Num, One};
@@ -24,6 +25,26 @@ use odra_core::{utils, ContractRef};
 use serde::{Deserialize, Serialize};
 
 use crate::NamedCLTyped;
+
+/// The version of the [StorageLayoutFile] format, bumped on breaking changes so readers can
+/// reject files they cannot read.
+pub const STORAGE_LAYOUT_VERSION: u8 = 1;
+
+/// The storage layout of a contract with the custom types needed to decode its values: what
+/// `odra-cli --json storage <Contract>` exports and `odra-storage-reader` reads.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct StorageLayoutFile {
+    /// The format version, [STORAGE_LAYOUT_VERSION].
+    pub version: u8,
+    /// The name the contract is registered under.
+    pub contract: String,
+    /// The name of the contract type.
+    pub ident: String,
+    /// The storage layout.
+    pub layout: StorageKind,
+    /// The custom types of the contract.
+    pub types: BTreeSet<CustomType>
+}
 
 /// A single field of a module together with its index in the module.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]

@@ -3,23 +3,12 @@
 use casper_types::{bytesrepr::Bytes, CLType, CLTyped, CLValue, Key, StoredValue};
 use odra_core::consts::STATE_KEY;
 use odra_schema::casper_contract_schema::Type;
-use odra_schema::{resolve_storage_with, StorageKind, StorageLocation};
+use odra_schema::codec::{self, CustomTypeSet, DecodeError};
+use odra_schema::{StorageKind, StorageLayoutFile, StorageLocation, STORAGE_LAYOUT_VERSION};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::{types, CustomTypeSet, Error};
-
-/// The version of the layout file format this reader supports, see `odra-cli`'s
-/// `LAYOUT_FORMAT_VERSION`.
-pub const LAYOUT_FORMAT_VERSION: u8 = 1;
-
-/// The layout file, the output of `odra-cli --json storage <Contract>`.
-#[derive(Deserialize)]
-struct LayoutFile {
-    contract: String,
-    layout: StorageKind,
-    types: CustomTypeSet
-}
+use crate::Error;
 
 /// The node's `CLValue` JSON. `casper_types::CLValue` rejects the `parsed` field the node sends
 /// unless its `json-schema` feature is on, which would bloat the wasm.
@@ -79,12 +68,12 @@ impl StorageReader {
     pub fn from_json(json: &Value) -> Result<Self, Error> {
         match json.get("version").map(|v| v.as_u64()) {
             None => return Err(Error::MissingVersion),
-            Some(Some(version)) if version == LAYOUT_FORMAT_VERSION as u64 => {}
+            Some(Some(version)) if version == STORAGE_LAYOUT_VERSION as u64 => {}
             Some(Some(version)) => return Err(Error::UnsupportedVersion(version)),
             Some(None) => return Err(Error::InvalidLayout("`version` is not a number".into()))
         }
-        let file =
-            LayoutFile::deserialize(json).map_err(|e| Error::InvalidLayout(e.to_string()))?;
+        let file = StorageLayoutFile::deserialize(json)
+            .map_err(|e| Error::InvalidLayout(e.to_string()))?;
         Ok(Self {
             contract: file.contract,
             layout: file.layout,
@@ -107,30 +96,12 @@ impl StorageReader {
     /// `keys` are the keys of the `Mapping`s, `List` items and dictionaries on the path, in path
     /// order, in the `odra-cli` text format (e.g. `account-hash-...`, `some:5`, `a:b` for a tuple).
     pub fn locate(&self, path: &str, keys: &[String]) -> Result<Location, Error> {
-        let resolve_err = |reason: String| Error::Resolve {
-            path: path.to_string(),
-            reason
-        };
-
-        let mut pending_keys = keys.iter();
-        let query = resolve_storage_with(&self.layout, path, |ty: &Type| {
-            let Some(key) = pending_keys.next() else {
-                return Ok(None);
-            };
-            types::into_bytes(&ty.0, key).map(Some).map_err(|e| {
-                format!(
-                    "cannot parse `{key}` as {}: {e}",
-                    types::format_type_hint(&ty.0)
-                )
-            })
-        })
-        .map_err(|e| resolve_err(e.to_string()))?;
-        let unused = pending_keys.count();
-        if unused > 0 {
-            return Err(resolve_err(format!(
-                "{unused} key(s) were given but not used"
-            )));
-        }
+        let query = codec::resolve_storage_from_text(&self.layout, path, keys).map_err(|e| {
+            Error::Resolve {
+                path: path.to_string(),
+                reason: e.to_string()
+            }
+        })?;
 
         Ok(match query.location {
             StorageLocation::State { key } => Location::Dictionary {
@@ -161,10 +132,15 @@ impl StorageReader {
         if raw {
             return Ok(hex::encode(&bytes));
         }
-        types::decode(&bytes, location.ty(), &self.types)
+        codec::decode(&bytes, location.ty(), &self.types)
             .map(|(value, _)| value)
             .map_err(|e| Error::Decode {
-                reason: e.to_string(),
+                reason: match e {
+                    DecodeError::UnknownType(name) => {
+                        format!("type `{name}` is not defined in the layout file")
+                    }
+                    e => e.to_string()
+                },
                 raw: hex::encode(&bytes)
             })
     }

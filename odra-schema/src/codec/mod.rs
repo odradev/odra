@@ -1,21 +1,36 @@
-// Copied from `odra-cli/src/types` - keep in sync until both share one crate.
+//! Conversions between Casper values, their bytes and a human-readable text format, driven by the
+//! [NamedCLType]s of a contract schema.
+//!
+//! - [into_bytes] parses a value written as text (e.g. `account-hash-...`, `some:5`, `a:b` for a
+//!   tuple) into its serialized bytes.
+//! - [decode] formats serialized bytes as text, structs and lists of them as JSON.
+//! - [resolve_storage_from_text] resolves a storage path with keys written as text.
+//!
+//! Used by `odra-cli` and `odra-storage-reader`; enabled by the `codec` feature.
+use std::{collections::BTreeSet, fmt::Debug, str::FromStr};
 
-use std::{fmt::Debug, str::FromStr};
-
+use casper_contract_schema::{CustomType, NamedCLType, Type};
 use casper_types::{
     bytesrepr::{
         FromBytes, ToBytes, OPTION_NONE_TAG, OPTION_SOME_TAG, RESULT_ERR_TAG, RESULT_OK_TAG
     },
-    AsymmetricType, PublicKey, URef, U128, U256, U512
+    AsymmetricType, CLType, PublicKey, URef, U128, U256, U512
 };
 use odra_core::prelude::Address;
-use odra_schema::casper_contract_schema::NamedCLType;
+
+use crate::{resolve_storage_with, StorageKind, StorageLayoutError, StorageQuery};
 
 mod decoder;
 mod error;
 
-pub(crate) use decoder::decode;
-pub(crate) use error::{ArgsError, Error, Format};
+#[cfg(test)]
+mod into_bytes;
+
+pub use decoder::{decode, decode_event};
+pub use error::{DecodeError, Error, Format};
+
+/// The custom types (structs and enums) a value may refer to.
+pub type CustomTypeSet = BTreeSet<CustomType>;
 
 const PREFIX_ERROR: &str = "err:";
 const PREFIX_OK: &str = "ok:";
@@ -43,7 +58,8 @@ macro_rules! big_int_to_bytes {
     };
 }
 
-pub(crate) fn format_type_hint(ty: &NamedCLType) -> String {
+/// A short hint of the text format of a value of type `ty`, e.g. `hash-...|account-hash-...`.
+pub fn format_type_hint(ty: &NamedCLType) -> String {
     match ty {
         NamedCLType::Bool => "true|false".into(),
         NamedCLType::I32 | NamedCLType::I64 => "INT".into(),
@@ -58,7 +74,7 @@ pub(crate) fn format_type_hint(ty: &NamedCLType) -> String {
         NamedCLType::Result { ok, err } => {
             format!("ok:{}|err:{}", format_type_hint(ok), format_type_hint(err))
         }
-        NamedCLType::List(box NamedCLType::U8) => "BYTE,BYTE,...".into(),
+        NamedCLType::List(t) if **t == NamedCLType::U8 => "BYTE,BYTE,...".into(),
         NamedCLType::List(t) => format!("{} (repeatable)", format_type_hint(t)),
         NamedCLType::Map { key, value } => {
             let k = format_type_hint(key);
@@ -81,7 +97,50 @@ pub(crate) fn format_type_hint(ty: &NamedCLType) -> String {
     }
 }
 
-pub(crate) fn into_bytes(ty: &NamedCLType, input: &str) -> TypeResult<Vec<u8>> {
+/// The [CLType] of a [NamedCLType]; custom types are [CLType::Any].
+pub fn named_cl_type_to_cl_type(ty: &NamedCLType) -> CLType {
+    match ty {
+        NamedCLType::Bool => CLType::Bool,
+        NamedCLType::I32 => CLType::I32,
+        NamedCLType::I64 => CLType::I64,
+        NamedCLType::U8 => CLType::U8,
+        NamedCLType::U32 => CLType::U32,
+        NamedCLType::U64 => CLType::U64,
+        NamedCLType::U128 => CLType::U128,
+        NamedCLType::U256 => CLType::U256,
+        NamedCLType::U512 => CLType::U512,
+        NamedCLType::String => CLType::String,
+        NamedCLType::Key => CLType::Key,
+        NamedCLType::URef => CLType::URef,
+        NamedCLType::PublicKey => CLType::PublicKey,
+        NamedCLType::Option(ty) => CLType::Option(Box::new(named_cl_type_to_cl_type(ty))),
+        NamedCLType::List(ty) => CLType::List(Box::new(named_cl_type_to_cl_type(ty))),
+        NamedCLType::ByteArray(n) => CLType::ByteArray(*n),
+        NamedCLType::Result { ok, err } => CLType::Result {
+            ok: Box::new(named_cl_type_to_cl_type(ok)),
+            err: Box::new(named_cl_type_to_cl_type(err))
+        },
+        NamedCLType::Map { key, value } => CLType::Map {
+            key: Box::new(named_cl_type_to_cl_type(key)),
+            value: Box::new(named_cl_type_to_cl_type(value))
+        },
+        NamedCLType::Tuple1(ty) => CLType::Tuple1([Box::new(named_cl_type_to_cl_type(&ty[0]))]),
+        NamedCLType::Tuple2(ty) => CLType::Tuple2([
+            Box::new(named_cl_type_to_cl_type(&ty[0])),
+            Box::new(named_cl_type_to_cl_type(&ty[1]))
+        ]),
+        NamedCLType::Tuple3(ty) => CLType::Tuple3([
+            Box::new(named_cl_type_to_cl_type(&ty[0])),
+            Box::new(named_cl_type_to_cl_type(&ty[1])),
+            Box::new(named_cl_type_to_cl_type(&ty[2]))
+        ]),
+        NamedCLType::Custom(_) => CLType::Any,
+        NamedCLType::Unit => CLType::Unit
+    }
+}
+
+/// Parses a value of type `ty` written as text (see [format_type_hint]) into its serialized bytes.
+pub fn into_bytes(ty: &NamedCLType, input: &str) -> TypeResult<Vec<u8>> {
     match ty {
         NamedCLType::Bool => call_to_bytes!(bool, input),
         NamedCLType::I32 => call_to_bytes!(i32, input),
@@ -290,13 +349,15 @@ fn parse_hex(input: &str) -> TypeResult<Vec<u8>> {
     }
 }
 
+/// Deserializes a `T`, mapping the error to [Error::Deserialization].
 #[inline]
-pub(crate) fn from_bytes_or_err<T: FromBytes>(input: &[u8]) -> TypeResult<(T, &[u8])> {
+pub fn from_bytes_or_err<T: FromBytes>(input: &[u8]) -> TypeResult<(T, &[u8])> {
     T::from_bytes(input).map_err(|_| Error::Deserialization)
 }
 
+/// Serializes a `T`, mapping the error to [Error::Serialization].
 #[inline]
-pub(crate) fn to_bytes_or_err<T: ToBytes>(input: T) -> TypeResult<Vec<u8>> {
+pub fn to_bytes_or_err<T: ToBytes>(input: T) -> TypeResult<Vec<u8>> {
     input.to_bytes().map_err(|_| Error::Serialization)
 }
 #[inline]
@@ -312,4 +373,84 @@ fn validate_byte_array_size(expected: usize, actual: usize) -> TypeResult<()> {
         }));
     }
     Ok(())
+}
+
+/// Resolves a storage `path` like [crate::resolve_storage], with the keys of the `Mapping`s,
+/// `List` items and dictionaries on the path written as text (see [into_bytes]), in path order.
+pub fn resolve_storage_from_text(
+    layout: &StorageKind,
+    path: &str,
+    keys: &[String]
+) -> Result<StorageQuery, StorageLayoutError> {
+    let mut pending_keys = keys.iter();
+    let query = resolve_storage_with(layout, path, |ty: &Type| {
+        let Some(key) = pending_keys.next() else {
+            return Ok(None);
+        };
+        into_bytes(&ty.0, key)
+            .map(Some)
+            .map_err(|e| format!("cannot parse `{key}` as {}: {e}", format_type_hint(&ty.0)))
+    })?;
+    let unused = pending_keys.count();
+    if unused > 0 {
+        return Err(StorageLayoutError::UnusedKeys { count: unused });
+    }
+    Ok(query)
+}
+
+#[cfg(test)]
+mod tests {
+    use casper_types::U256;
+    use odra_core::prelude::*;
+
+    use super::*;
+    use crate::{resolve_storage, SchemaStorageLayout, StorageField};
+
+    const ACCOUNT: &str =
+        "account-hash-9918c11ac0ccdd67942a143985499fc7c30c1ea10e7e8d049222ae1cdcdb39d3";
+
+    fn layout() -> StorageKind {
+        StorageKind::Module {
+            fields: vec![
+                StorageField::new("total_supply", 1, StorageKind::value::<U256>()),
+                StorageField::new(
+                    "allowances",
+                    2,
+                    <Mapping<(Address, Address), U256> as SchemaStorageLayout>::storage_kind()
+                ),
+            ]
+        }
+    }
+
+    fn keys(keys: &[&str]) -> Vec<String> {
+        keys.iter().map(|k| k.to_string()).collect()
+    }
+
+    #[test]
+    fn resolves_text_keys_like_serialized_keys() {
+        let owner = ACCOUNT.parse::<Address>().unwrap();
+        let bytes = (owner, owner).to_bytes().unwrap();
+        let pair = format!("{ACCOUNT}:{ACCOUNT}");
+
+        assert_eq!(
+            resolve_storage_from_text(&layout(), "allowances", &keys(&[&pair])).unwrap(),
+            resolve_storage(&layout(), "allowances", &[bytes]).unwrap()
+        );
+    }
+
+    #[test]
+    fn reports_invalid_and_unused_keys() {
+        let err =
+            resolve_storage_from_text(&layout(), "allowances", &keys(&[ACCOUNT])).unwrap_err();
+        assert!(
+            err.to_string().starts_with(
+                "Invalid key for `allowances`: cannot parse `account-hash-9918c11ac0ccdd67942a143985499fc7c30c1ea10e7e8d049222ae1cdcdb39d3` as hash-...|account-hash-...:hash-...|account-hash-..."
+            ),
+            "{err}"
+        );
+
+        let err =
+            resolve_storage_from_text(&layout(), "total_supply", &keys(&[ACCOUNT])).unwrap_err();
+        assert_eq!(err, StorageLayoutError::UnusedKeys { count: 1 });
+    }
 }

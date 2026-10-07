@@ -17,13 +17,16 @@ use odra_core::args::EntrypointArgument;
 
 const CCSV: u8 = 1;
 
+#[cfg(feature = "codec")]
+pub mod codec;
 mod custom_type;
 mod storage_layout;
 mod ty;
 
 pub use storage_layout::{
     resolve_storage, resolve_storage_with, KeyEncoding, SchemaStorageLayout, StorageField,
-    StorageKind, StorageLayoutError, StorageLocation, StorageQuery
+    StorageKind, StorageLayoutError, StorageLayoutFile, StorageLocation, StorageQuery,
+    STORAGE_LAYOUT_VERSION
 };
 pub use ty::NamedCLTyped;
 

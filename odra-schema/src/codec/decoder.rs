@@ -1,16 +1,11 @@
-// Copied from `odra-cli/src/types` - keep in sync until both share one crate.
-
+use casper_contract_schema::{CustomType, NamedCLType, Type};
 use casper_types::{
     bytesrepr::{FromBytes, RESULT_ERR_TAG, RESULT_OK_TAG},
     Key, PublicKey, URef, U128, U256, U512
 };
-use odra_schema::casper_contract_schema::{CustomType, NamedCLType, Type};
 use serde_json::{Map, Value};
 
-use crate::{
-    types::{ArgsError, Error, TypeResult, PREFIX_HEX},
-    CustomTypeSet
-};
+use super::{CustomTypeSet, DecodeError, Error, TypeResult, PREFIX_HEX};
 
 macro_rules! call_from_bytes {
     ($ty:ty, $value:ident) => {
@@ -20,11 +15,12 @@ macro_rules! call_from_bytes {
     };
 }
 
-pub(crate) fn decode<'a>(
+/// Decodes a value of type `ty` from `bytes`, returns it as text and the remaining bytes.
+pub fn decode<'a>(
     bytes: &'a [u8],
     ty: &Type,
     types: &'a CustomTypeSet
-) -> Result<(String, &'a [u8]), ArgsError> {
+) -> Result<(String, &'a [u8]), DecodeError> {
     match &ty.0 {
         NamedCLType::Custom(name) => decode_custom_type(bytes, name, types),
         NamedCLType::List(inner) => decode_list(bytes, inner, types),
@@ -38,18 +34,43 @@ pub(crate) fn decode<'a>(
     }
 }
 
+/// Decodes an Odra event (its name followed by its members) as text.
+pub fn decode_event(bytes: &[u8], types: &CustomTypeSet) -> Result<String, DecodeError> {
+    // Event name is stored as the first element in the bytes
+    let (mut name, rem): (String, _) =
+        FromBytes::from_bytes(bytes).map_err(|_| Error::InvalidEventType("Unknown".to_string()))?;
+    let mut bytes = rem;
+    // Ignore the `event_` prefix
+    let event_name = name.split_off(6);
+    let members = types
+        .iter()
+        .find_map(|ty| match ty {
+            CustomType::Struct { name, members, .. } if name.0 == event_name => Some(members),
+            _ => None
+        })
+        .ok_or_else(|| Error::InvalidEventType(event_name.clone()))?;
+
+    let mut output = format!("'{}':\n", event_name);
+    for m in members {
+        let (data, rem) = decode(bytes, &m.ty, types)?;
+        bytes = rem;
+        output.push_str(&format!("  '{}': {}\n", m.name, data));
+    }
+    Ok(output)
+}
+
 fn decode_custom_type<'a>(
     bytes: &'a [u8],
     ty_name: &str,
     types: &'a CustomTypeSet
-) -> Result<(String, &'a [u8]), ArgsError> {
+) -> Result<(String, &'a [u8]), DecodeError> {
     let matching_type = types
         .iter()
         .find(|t| match t {
             CustomType::Struct { name, .. } => name.0 == ty_name,
             CustomType::Enum { name, .. } => name.0 == ty_name
         })
-        .ok_or(ArgsError::ArgTypeNotFound(ty_name.to_owned()))?;
+        .ok_or(DecodeError::UnknownType(ty_name.to_owned()))?;
     let mut bytes = bytes;
 
     match matching_type {
@@ -70,7 +91,7 @@ fn decode_custom_type<'a>(
             let variant = variants
                 .iter()
                 .find(|v| v.discriminant == discriminant)
-                .ok_or(ArgsError::DecodingError("Variant not found".to_string()))?;
+                .ok_or(DecodeError::Decoding("Variant not found".to_string()))?;
             bytes = rem;
             Ok((variant.name.clone(), bytes))
         }
@@ -83,19 +104,24 @@ fn decode_custom_type<'a>(
 /// objects. Everything else stays a string, e.g. a `String` member `"123"` is not a number.
 fn json_value(ty: &NamedCLType, value: String) -> Value {
     match ty {
-        NamedCLType::Custom(_) | NamedCLType::List(box NamedCLType::Custom(_)) => {
-            // An enum decodes to its variant name, which is not JSON.
-            serde_json::from_str(&value).unwrap_or(Value::String(value))
+        NamedCLType::Custom(_) => from_json_or_string(value),
+        NamedCLType::List(item) if matches!(**item, NamedCLType::Custom(_)) => {
+            from_json_or_string(value)
         }
         _ => Value::String(value)
     }
+}
+
+// An enum decodes to its variant name, which is not JSON.
+fn from_json_or_string(value: String) -> Value {
+    serde_json::from_str(&value).unwrap_or(Value::String(value))
 }
 
 fn decode_list<'a>(
     bytes: &'a [u8],
     inner: &NamedCLType,
     types: &'a CustomTypeSet
-) -> Result<(String, &'a [u8]), ArgsError> {
+) -> Result<(String, &'a [u8]), DecodeError> {
     let ty = Type(inner.clone());
     let (len, mut bytes) = super::from_bytes_or_err::<u32>(bytes)?;
     let mut items = Vec::with_capacity(len as usize);
@@ -120,7 +146,7 @@ fn decode_option<'a>(
     bytes: &'a [u8],
     ty: &NamedCLType,
     types: &'a CustomTypeSet
-) -> Result<(String, &'a [u8]), ArgsError> {
+) -> Result<(String, &'a [u8]), DecodeError> {
     let (is_some, rem) = super::from_bytes_or_err::<bool>(bytes)?;
     if is_some {
         let ty = Type(ty.clone());
@@ -136,7 +162,7 @@ fn decode_result<'a>(
     ok: &NamedCLType,
     err: &NamedCLType,
     types: &'a CustomTypeSet
-) -> Result<(String, &'a [u8]), ArgsError> {
+) -> Result<(String, &'a [u8]), DecodeError> {
     let (variant, rem) = super::from_bytes_or_err::<u8>(bytes)?;
     match variant {
         RESULT_ERR_TAG => {
@@ -149,9 +175,7 @@ fn decode_result<'a>(
             let (value, rem) = decode(rem, &ty, types)?;
             Ok((format!("Ok({})", value), rem))
         }
-        _ => Err(ArgsError::DecodingError(
-            "Invalid result variant".to_string()
-        ))
+        _ => Err(DecodeError::Decoding("Invalid result variant".to_string()))
     }
 }
 
@@ -159,9 +183,9 @@ fn decode_tuple1<'a>(
     bytes: &'a [u8],
     types: &[Box<NamedCLType>],
     types_set: &'a CustomTypeSet
-) -> Result<(String, &'a [u8]), ArgsError> {
+) -> Result<(String, &'a [u8]), DecodeError> {
     if types.len() != 1 {
-        return Err(ArgsError::DecodingError("Invalid tuple length".to_string()));
+        return Err(DecodeError::Decoding("Invalid tuple length".to_string()));
     }
     let ty = Type(*types[0].clone());
     let (value, rem) = decode(bytes, &ty, types_set)?;
@@ -172,9 +196,9 @@ fn decode_tuple2<'a>(
     bytes: &'a [u8],
     types: &[Box<NamedCLType>],
     types_set: &'a CustomTypeSet
-) -> Result<(String, &'a [u8]), ArgsError> {
+) -> Result<(String, &'a [u8]), DecodeError> {
     if types.len() != 2 {
-        return Err(ArgsError::DecodingError("Invalid tuple length".to_string()));
+        return Err(DecodeError::Decoding("Invalid tuple length".to_string()));
     }
     let ty1 = Type(*types[0].clone());
     let ty2 = Type(*types[1].clone());
@@ -187,9 +211,9 @@ fn decode_tuple3<'a>(
     bytes: &'a [u8],
     types: &[Box<NamedCLType>],
     types_set: &'a CustomTypeSet
-) -> Result<(String, &'a [u8]), ArgsError> {
+) -> Result<(String, &'a [u8]), DecodeError> {
     if types.len() != 3 {
-        return Err(ArgsError::DecodingError("Invalid tuple length".to_string()));
+        return Err(DecodeError::Decoding("Invalid tuple length".to_string()));
     }
     let ty1 = Type(*types[0].clone());
     let ty2 = Type(*types[1].clone());
@@ -205,7 +229,7 @@ fn decode_map<'a>(
     key: &NamedCLType,
     value: &NamedCLType,
     types: &'a CustomTypeSet
-) -> Result<(String, &'a [u8]), ArgsError> {
+) -> Result<(String, &'a [u8]), DecodeError> {
     let (num_keys, mut stream) = super::from_bytes_or_err::<u32>(bytes)?;
     let mut result = String::new();
     for _ in 0..num_keys {
@@ -224,8 +248,8 @@ fn decode_map<'a>(
     Ok((result, stream))
 }
 
-fn to_pretty_json(json: &Value) -> Result<String, ArgsError> {
-    serde_json::to_string_pretty(json).map_err(|e| ArgsError::DecodingError(e.to_string()))
+fn to_pretty_json(json: &Value) -> Result<String, DecodeError> {
+    serde_json::to_string_pretty(json).map_err(|e| DecodeError::Decoding(e.to_string()))
 }
 
 fn decode_simple_type<'a>(ty: &NamedCLType, input: &'a [u8]) -> TypeResult<(String, &'a [u8])> {

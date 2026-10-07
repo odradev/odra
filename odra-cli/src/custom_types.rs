@@ -1,8 +1,7 @@
-use std::{collections::BTreeSet, ops::Deref};
+use std::ops::Deref;
 
-use odra::schema::{casper_contract_schema::CustomType, SchemaCustomTypes, SchemaEvents};
-
-pub(crate) type CustomTypeSet = BTreeSet<CustomType>;
+use odra::schema::{SchemaCustomTypes, SchemaEvents};
+pub(crate) use odra_schema::codec::CustomTypeSet;
 
 #[derive(Debug, Default)]
 /// CustomTypes is a struct that holds a set of custom types used in the Odra CLI.

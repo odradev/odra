@@ -12,7 +12,7 @@ version = { workspace = true }
 
 [dependencies]
 odra-core = { workspace = true }
-odra-schema = { workspace = true }
+odra-schema = { workspace = true, features = ["codec"] }
 
 casper-types = { workspace = true }
 

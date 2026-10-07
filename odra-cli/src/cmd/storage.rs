@@ -4,10 +4,11 @@ use odra::contract_def::HasIdent;
 use odra::host::HostEnv;
 use odra::schema::casper_contract_schema::Type;
 use odra::schema::{
-    resolve_storage_with, SchemaCustomTypes, SchemaEvents, SchemaStorageLayout, StorageField,
-    StorageKind, StorageLocation
+    SchemaCustomTypes, SchemaEvents, SchemaStorageLayout, StorageField, StorageKind,
+    StorageLayoutFile, StorageLocation, STORAGE_LAYOUT_VERSION
 };
 use odra::OdraContract;
+use odra_schema::codec::resolve_storage_from_text;
 use serde_derive::Serialize;
 
 use crate::cmd::{CmdOutput, STORAGE_SUBCOMMAND};
@@ -20,10 +21,6 @@ use super::OdraCommand;
 const PATH_ARG: &str = "path";
 const KEY_ARG: &str = "key";
 const RAW_ARG: &str = "raw";
-
-/// The version of the JSON layout format (`--json storage <Contract>`), bumped on breaking
-/// changes so consumers like `odra-storage-reader` can reject files they cannot read.
-const LAYOUT_FORMAT_VERSION: u8 = 1;
 
 /// Reads the storage of a deployed contract directly, without calling any entry point.
 ///
@@ -88,8 +85,8 @@ impl OdraCommand for StorageCmd {
             })?;
 
         let Some(path) = args.get_one::<String>(PATH_ARG) else {
-            return Ok(StorageReport::Layout(LayoutReport {
-                version: LAYOUT_FORMAT_VERSION,
+            return Ok(StorageReport::Layout(StorageLayoutFile {
+                version: STORAGE_LAYOUT_VERSION,
                 contract: contract.key_name.clone(),
                 ident: contract.ident.clone(),
                 layout: contract.layout.clone(),
@@ -176,23 +173,8 @@ impl StorageContract {
             .address_by_name(&self.key_name)
             .ok_or_else(|| anyhow::anyhow!("Contract '{}' is not deployed", self.key_name))?;
 
-        let mut pending_keys = keys.iter();
-        let query = resolve_storage_with(&self.layout, path, |ty: &Type| {
-            let Some(key) = pending_keys.next() else {
-                return Ok(None);
-            };
-            types::into_bytes(&ty.0, key).map(Some).map_err(|e| {
-                format!(
-                    "cannot parse `{key}` as {}: {e}",
-                    types::format_type_hint(&ty.0)
-                )
-            })
-        })
-        .map_err(|e| anyhow::anyhow!("Cannot resolve `{path}`: {e}"))?;
-        let unused = pending_keys.count();
-        if unused > 0 {
-            anyhow::bail!("Cannot resolve `{path}`: {unused} key(s) were given but not used");
-        }
+        let query = resolve_storage_from_text(&self.layout, path, keys)
+            .map_err(|e| anyhow::anyhow!("Cannot resolve `{path}`: {e}"))?;
 
         let bytes = match &query.location {
             StorageLocation::State { key } => env.get_storage_value(&address, key.as_bytes()),
@@ -228,19 +210,8 @@ impl StorageContract {
 #[derive(Serialize)]
 #[serde(untagged)]
 pub(crate) enum StorageReport {
-    Layout(LayoutReport),
+    Layout(StorageLayoutFile),
     Value(ValueReport)
-}
-
-#[derive(Serialize)]
-pub(crate) struct LayoutReport {
-    /// The version of this format, see [LAYOUT_FORMAT_VERSION].
-    version: u8,
-    contract: String,
-    ident: String,
-    layout: StorageKind,
-    /// The custom types needed to decode the stored values.
-    types: CustomTypeSet
 }
 
 #[derive(Serialize)]
@@ -465,7 +436,7 @@ mod tests {
         assert!(matches!(report, StorageReport::Layout(_)));
 
         let json = serde_json::to_value(&report).unwrap();
-        assert_eq!(json["version"], LAYOUT_FORMAT_VERSION);
+        assert_eq!(json["version"], STORAGE_LAYOUT_VERSION);
         assert_eq!(json["contract"], "TestContract");
         assert_eq!(json["layout"]["kind"], "module");
         assert!(json["types"].is_array());

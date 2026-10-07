@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::LAYOUT_FORMAT_VERSION;
+use odra_schema::STORAGE_LAYOUT_VERSION;
 
 /// Errors of the storage reader. In the wasm build they are thrown as `JsError`s.
 #[derive(Debug, Error)]
@@ -9,7 +9,7 @@ pub enum Error {
     #[error("The layout file has no `version`, export it again with `odra-cli --json storage <Contract>`")]
     MissingVersion,
     /// The layout file has a version this reader does not support.
-    #[error("Unsupported layout file version {0}, expected {LAYOUT_FORMAT_VERSION}")]
+    #[error("Unsupported layout file version {0}, expected {STORAGE_LAYOUT_VERSION}")]
     UnsupportedVersion(u64),
     /// The layout file does not match the expected format.
     #[error("Invalid layout file: {0}")]

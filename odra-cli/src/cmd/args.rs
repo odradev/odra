@@ -29,7 +29,9 @@ pub enum ArgsError {
     #[error("Arg not found: {0}")]
     ArgNotFound(String),
     #[error("Arg type not found: {0}")]
-    ArgTypeNotFound(String)
+    ArgTypeNotFound(String),
+    #[error(transparent)]
+    DecodeError(#[from] odra_schema::codec::DecodeError)
 }
 
 /// A typed command argument.

@@ -10,18 +10,11 @@
 //!
 //! The contract is described by its layout file, the output of
 //! `odra-cli --json storage <Contract>`.
-#![feature(box_patterns)]
-
-use std::collections::BTreeSet;
-
-use odra_schema::casper_contract_schema::CustomType;
 
 mod error;
 mod reader;
-mod types;
 mod wasm;
 
 pub use error::Error;
-pub use reader::{current_contract_hash, Location, StorageReader, LAYOUT_FORMAT_VERSION};
-
-pub(crate) type CustomTypeSet = BTreeSet<CustomType>;
+pub use odra_schema::STORAGE_LAYOUT_VERSION;
+pub use reader::{current_contract_hash, Location, StorageReader};
