@@ -11,14 +11,15 @@ import {
   HttpHandler,
   ParamDictionaryIdentifier,
   ParamDictionaryIdentifierContractNamedKey,
-  RpcClient,
-  RpcError
+  RpcClient
 } from "casper-js-sdk";
 import init, { StorageReader } from "odra-storage-reader";
 
 const NODE_URL = process.env.NODE_URL ?? "http://localhost:11101/rpc";
 // The node's answer for a key that was never written.
 const QUERY_FAILED = -32003;
+// casper-js-sdk throws an `HttpError` with the RPC error as `sourceErr`.
+const isNotSet = (e: any) => (e?.sourceErr?.code ?? e?.code) === QUERY_FAILED;
 
 const [layoutPath, packageHash, path, ...keys] = process.argv.slice(2);
 if (!layoutPath || !packageHash || !path) {
@@ -58,7 +59,7 @@ try {
   const clValue = result.rawJSON.stored_value.CLValue;
   console.log(`${reader.contract}.${path} = ${reader.decode(clValue, location)}`);
 } catch (e) {
-  if (e instanceof RpcError && e.code === QUERY_FAILED) {
+  if (isNotSet(e)) {
     console.log(`${reader.contract}.${path} = <not set>`);
   } else {
     throw e;

@@ -18,6 +18,7 @@ casper-types = { workspace = true }
 
 gloo-utils = { workspace = true, features = ["serde"] }
 hex = { workspace = true }
+js-sys = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true, features = ["std", "preserve_order"] }
 thiserror = { workspace = true }

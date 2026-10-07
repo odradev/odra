@@ -64,15 +64,14 @@ impl StorageReader {
         &self,
         #[wasm_bindgen(js_name = "clValue")] cl_value: JsValue,
         location: JsValue,
-        options: JsValue
+        options: Option<js_sys::Object>
     ) -> Result<String, JsError> {
         let location: Location = location
             .into_serde()
             .map_err(|e| Error::InvalidLocation(e.to_string()))?;
-        let options: DecodeOptions = if options.is_undefined() || options.is_null() {
-            DecodeOptions::default()
-        } else {
-            options.into_serde()?
+        let options: DecodeOptions = match options {
+            Some(options) => JsValue::from(options).into_serde()?,
+            _ => DecodeOptions::default()
         };
         Ok(self.0.decode(&to_json(cl_value)?, &location, options.raw)?)
     }

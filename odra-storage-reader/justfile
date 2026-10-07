@@ -4,5 +4,29 @@ prepare:
 build:
     wasm-pack build --target web --out-dir pkg-web .
 
-run-example:
+# Exports the layout of every contract in resources/casper-net-1-contracts.toml with the
+# examples' odra-cli, for the storage explorer. The node settings come from <repo>/.env.nctl.
+export-layouts:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd ..
+    set -a; [ -f .env.nctl ] && . ./.env.nctl; set +a
+    out=odra-storage-reader/example/layouts
+    mkdir -p "$out"
+    for name in $(grep '^name = ' resources/casper-net-1-contracts.toml | cut -d'"' -f2); do
+        if cargo run -q --manifest-path examples/Cargo.toml --bin odra_cli --features livenet -- \
+            --json storage "$name" > "$out/$name.json" 2>/dev/null; then
+            echo "exported $name"
+        else
+            rm -f "$out/$name.json"
+            echo "skipped $name (not registered in the CLI)"
+        fi
+    done
+
+# Reads a value from the command line, see example/read.ts.
+read *args:
+    cd example && npm install && npm run read -- {{args}}
+
+# The storage explorer on http://localhost:3000.
+serve:
     cd example && npm install && npm run serve

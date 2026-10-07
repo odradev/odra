@@ -4,13 +4,18 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "read": "tsx read.ts"
+    "read": "tsx read.ts",
+    "build": "tsc -p tsconfig.web.json",
+    "serve": "npm run build && tsx server.ts"
   },
   "dependencies": {
     "casper-js-sdk": "5.1.1",
+    "express": "^5.0.3",
+    "http-proxy-middleware": "^3.0.0",
     "odra-storage-reader": "file:../pkg-web"
   },
   "devDependencies": {
+    "@types/express": "^5.0.3",
     "@types/node": "^24.3.0",
     "tsx": "^4.20.0",
     "typescript": "^5.9.2"

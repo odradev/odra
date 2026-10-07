@@ -47,15 +47,29 @@ reader.decode(item.rawJSON.stored_value.CLValue, location);   // "10000"
 - **Unwritten keys:** for a key that was never written, the node answers `-32003 Query failed`.
 - **Errors:** errors are thrown as `JsError`s, with the same messages as `odra-cli`.
 
-[`example/read.ts`](example/read.ts) shows the full flow against a node.
-
-## Build
+## Examples
 
 ```sh
 just prepare   # installs wasm-pack
 just build     # pkg-web/
-cd example && npm install
-npm run read -- ../tests/fixtures/erc20_layout.json <package-hash> balances <account-hash>
+```
+
+**Storage explorer** ([`example/app.ts`](example/app.ts)): a web page listing the contracts
+deployed with the examples' `odra-cli`. Click a contract to see its fields and read any of them.
+
+```sh
+just export-layouts   # example/layouts/<Contract>.json, node settings from <repo>/.env.nctl
+just serve            # http://localhost:3000
+```
+
+The server reads the contract list from `<repo>/resources/casper-net-1-contracts.toml`. It also
+proxies the node RPC, because the node sends no CORS headers. Set `NODE_URL`, `CONTRACTS_FILE`
+or `PORT` to change the defaults.
+
+**Command line** ([`example/read.ts`](example/read.ts)): the same flow in one script.
+
+```sh
+just read layouts/Erc20.json <package-hash> balances <account-hash>
 ```
 
 ## Limitations
