@@ -30,6 +30,7 @@ use odra_examples::factory::counter::{
     BetterCounterFactory, BetterCounterUpgradeArgs, Counter, CounterFactory
 };
 use odra_examples::features::events::{NativePartyStarted, PartyContract};
+use odra_examples::features::module_nesting::{NestedOdraTypesContract, ResultsStorage};
 use odra_examples::features::offchain::BalanceBook;
 use odra_examples::features::storage::variable::{DogContract, DogContractInitArgs};
 use odra_modules::cep18_token::{Cep18, Cep18InitArgs};
@@ -79,6 +80,7 @@ impl DeployScript for DeployScriptForExamples {
             container,
             cspr!(300)
         )?;
+        NestedOdraTypesContract::load_or_deploy(env, NoArgs, container, cspr!(300))?;
         Ok(())
     }
 }
@@ -531,6 +533,7 @@ pub fn main() {
         .contract::<Cep18>()
         .contract::<TimeLockWallet>()
         .contract::<BalanceBook>()
+        .contract::<NestedOdraTypesContract>()
         .scenario(DogCheckScenario)
         .scenario(Erc20TransferScenario)
         .scenario(Cep18TransferScenario)
