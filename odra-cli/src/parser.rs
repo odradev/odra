@@ -31,11 +31,13 @@ impl TypedValueParser for CLTypedParser {
         let value = value
             .to_str()
             .ok_or_else(|| Error::new(ErrorKind::InvalidUtf8).with_cmd(cmd))?;
-        let bytes = types::into_bytes(&self.ty, value).map_err(|e| match e {
-            types::Error::Other(msg) => Error::raw(ErrorKind::InvalidValue, msg).with_cmd(cmd),
+        let bytes = odra_schema::codec::into_bytes(&self.ty, value).map_err(|e| match e {
+            odra_schema::codec::Error::Other(msg) => {
+                Error::raw(ErrorKind::InvalidValue, msg).with_cmd(cmd)
+            }
             _ => make_parse_error(cmd, arg, value, &self.ty)
         })?;
-        let cl_type = types::named_cl_type_to_cl_type(&self.ty);
+        let cl_type = odra_schema::codec::named_cl_type_to_cl_type(&self.ty);
         Ok(CLValue::from_components(cl_type, bytes))
     }
 }
@@ -142,7 +144,7 @@ fn make_parse_error(cmd: &Command, arg: Option<&Arg>, value: &str, ty: &NamedCLT
         "Failed to parse --{}\n  Value:    '{}'\n  Expected: {}\n",
         get_arg_long(arg),
         value,
-        types::format_type_hint(ty),
+        odra_schema::codec::format_type_hint(ty),
     );
     Error::raw(ErrorKind::InvalidValue, message).with_cmd(cmd)
 }

@@ -1,7 +1,7 @@
 use std::ops::Deref;
 
 use odra::schema::{SchemaCustomTypes, SchemaEvents};
-pub(crate) use odra_schema::codec::CustomTypeSet;
+use odra_schema::codec::CustomTypeSet;
 
 #[derive(Debug, Default)]
 /// CustomTypes is a struct that holds a set of custom types used in the Odra CLI.

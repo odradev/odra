@@ -30,7 +30,7 @@ use odra_examples::factory::counter::{
     BetterCounterFactory, BetterCounterUpgradeArgs, Counter, CounterFactory
 };
 use odra_examples::features::events::{NativePartyStarted, PartyContract};
-use odra_examples::features::module_nesting::{NestedOdraTypesContract, ResultsStorage};
+use odra_examples::features::module_nesting::NestedOdraTypesContract;
 use odra_examples::features::offchain::BalanceBook;
 use odra_examples::features::storage::variable::{DogContract, DogContractInitArgs};
 use odra_modules::cep18_token::{Cep18, Cep18InitArgs};

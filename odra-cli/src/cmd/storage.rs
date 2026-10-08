@@ -8,13 +8,12 @@ use odra::schema::{
     StorageLayoutFile, StorageLocation, STORAGE_LAYOUT_VERSION
 };
 use odra::OdraContract;
-use odra_schema::codec::resolve_storage_from_text;
+use odra_schema::codec::{resolve_storage_from_text, CustomTypeSet};
 use serde_derive::Serialize;
 
 use crate::cmd::{CmdOutput, STORAGE_SUBCOMMAND};
 use crate::container::ContractProvider;
-use crate::custom_types::CustomTypeSet;
-use crate::{log, types, DeployedContractsContainer};
+use crate::{log, DeployedContractsContainer};
 
 use super::OdraCommand;
 
@@ -188,8 +187,9 @@ impl StorageContract {
             None => (None, None),
             Some(bytes) if raw => (None, Some(hex::encode(&bytes))),
             Some(bytes) => {
-                let (decoded, _) = types::decode(&bytes, &query.ty, &self.custom_types)
-                    .map_err(|e| anyhow::anyhow!("Cannot decode the stored value: {e}"))?;
+                let (decoded, _) =
+                    odra_schema::codec::decode(&bytes, &query.ty, &self.custom_types)
+                        .map_err(|e| anyhow::anyhow!("Cannot decode the stored value: {e}"))?;
                 (Some(decoded), None)
             }
         };
@@ -198,7 +198,7 @@ impl StorageContract {
             contract: self.key_name.clone(),
             path: path.to_string(),
             keys: keys.to_vec(),
-            ty: types::format_type_hint(&query.ty.0),
+            ty: odra_schema::codec::format_type_hint(&query.ty.0),
             location: query.location,
             value,
             raw: raw_value
@@ -281,7 +281,7 @@ pub(crate) fn print_fields(fields: &[StorageField], depth: usize) {
 
 /// Describes a storage kind in one line and returns the nested fields to print below, if any.
 fn describe(kind: &StorageKind) -> (String, Option<&[StorageField]>) {
-    let ty = |t: &Type| types::format_type_hint(&t.0);
+    let ty = |t: &Type| odra_schema::codec::format_type_hint(&t.0);
     match kind {
         StorageKind::Value { ty: t } => (format!(": {}", ty(t)), None),
         StorageKind::List { item } => (format!(": List<{}>", ty(item)), None),

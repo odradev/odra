@@ -23,7 +23,7 @@ pub const DEPLOY_MODE_ARCHIVE: &str = "archive";
 #[derive(Debug, thiserror::Error)]
 pub enum ArgsError {
     #[error("Invalid arg value: {0}")]
-    TypesError(#[from] crate::types::Error),
+    TypesError(#[from] odra_schema::codec::Error),
     #[error("Decoding error: {0}")]
     DecodingError(String),
     #[error("Arg not found: {0}")]
@@ -100,7 +100,7 @@ impl From<CommandArg> for clap::Arg {
         let value_hint = if let Some(ref variants) = enum_variants {
             types::format_variant_list(variants)
         } else {
-            types::format_type_hint(&ty)
+            odra_schema::codec::format_type_hint(&ty)
         };
 
         let base = clap::Arg::new(&name)
