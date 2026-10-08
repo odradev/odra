@@ -689,12 +689,14 @@ mod test {
                         "init",
                         "",
                         true,
+                        false,
                         odra::prelude::vec![]
                     ),
                     odra::schema::entry_point::<(odra::prelude::Address, odra::casper_types::URef)>(
                         "new_contract",
                         "", 
                         true, 
+                        false, 
                         odra::prelude::vec![
                             odra::schema::argument::<odra::prelude::string::String>("contract_name"),
                             odra::schema::argument::<u32>("value")
@@ -704,6 +706,7 @@ mod test {
                         "upgrade_child_contract",
                         "", 
                         true, 
+                        false, 
                         odra::prelude::vec![
                             odra::schema::argument::<odra::prelude::string::String>("contract_name")
                         ]
@@ -712,6 +715,7 @@ mod test {
                         "batch_upgrade_child_contract",
                         "", 
                         true, 
+                        false, 
                         odra::prelude::vec![
                             odra::schema::argument::<odra::casper_types::bytesrepr::Bytes>("args")
                         ]
