@@ -4,6 +4,7 @@ use std::time::Duration;
 use odra::casper_types::{U256, U512};
 use odra::host::{Deployer, HostEnv, HostRef, HostRefLoader, InstallConfig, NoArgs};
 use odra::prelude::*;
+use odra_examples::features::call_stack::{CallStackProbe, CallStackRelay, CallStackRelayInitArgs};
 use odra_examples::features::livenet::Error::EmptyStack;
 use odra_examples::features::livenet::{
     LivenetContract, LivenetContractHostRef, LivenetContractInitArgs
@@ -71,6 +72,26 @@ fn main() {
     assert_eq!(contract.peek(), 2);
     assert_eq!(contract.nested_peek(), 2);
     assert_eq!(contract.pop_from_stack(), 2);
+
+    // - a getter sees the account as its caller, a nested one the calling contract
+    env.set_gas(500_000_000_000u64);
+    let probe = CallStackProbe::deploy(&env, NoArgs);
+    let relay = CallStackRelay::deploy(
+        &env,
+        CallStackRelayInitArgs {
+            probe: probe.address()
+        }
+    );
+    assert_eq!(probe.inspect(), (owner, None, vec![owner, probe.address()]));
+    assert_eq!(
+        relay.relay(),
+        (
+            relay.address(),
+            Some(owner),
+            vec![owner, relay.address(), probe.address()]
+        )
+    );
+    env.set_gas(10_000_000_000u64);
 
     // By querying livenet storage
     // - we can also test the events

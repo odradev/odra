@@ -75,7 +75,7 @@ impl ContractContext for LivenetContractEnv {
     }
 
     fn caller(&self) -> Address {
-        *self.callstack.borrow().first().address()
+        *self.callstack.borrow().previous().address()
     }
 
     fn call_stack(&self) -> Vec<Address> {
@@ -228,7 +228,7 @@ impl LivenetContractEnv {
 
 /// Executes a non-mutable entry point on this machine, reading the state from the node.
 ///
-/// The contract runs one frame deeper on the call stack. The frame is popped when the call
+/// The contract runs one frame deeper on the call stack, above its caller. The frame is popped when the call
 /// returns and when a revert unwinds it.
 pub(crate) fn call_locally(
     callstack: &Rc<RefCell<Callstack>>,
@@ -244,19 +244,27 @@ pub(crate) fn call_locally(
     let Some(contract) = contract else {
         return Err(OdraError::VmError(VmError::InvalidContractAddress));
     };
-    callstack
-        .borrow_mut()
-        .push(CallstackElement::new_contract_call(
+    let _frame = CallFrame::push(
+        callstack,
+        CallstackElement::new_contract_call(
             String::from(contract.name()),
             *address,
             call_def.clone()
-        ));
-    let _frame = CallFrame(callstack.clone());
+        )
+    );
     contract.call(call_def)
 }
 
-/// Pops the top frame of the call stack when dropped.
-struct CallFrame(Rc<RefCell<Callstack>>);
+/// A frame on the call stack, popped when dropped.
+pub(crate) struct CallFrame(Rc<RefCell<Callstack>>);
+
+impl CallFrame {
+    /// Pushes `element` on the call stack.
+    pub(crate) fn push(callstack: &Rc<RefCell<Callstack>>, element: CallstackElement) -> Self {
+        callstack.borrow_mut().push(element);
+        Self(callstack.clone())
+    }
+}
 
 impl Drop for CallFrame {
     fn drop(&mut self) {

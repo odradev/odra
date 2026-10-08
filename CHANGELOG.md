@@ -129,6 +129,9 @@ Changelog for `odra`.
   stack of the local execution is unwound with it, so a call after a caught revert (e.g. in
   `HostEnv::concurrently`) no longer sees a stale frame. The revert is logged as an error instead of
   printed as a panic.
+- On livenet a getter or `#[odra(offchain)]` function sees the calling account (the `HostEnv` caller)
+  as `caller()`, and a getter it calls sees the calling contract, like on OdraVM and CasperVM;
+  `call_stack()` and `nth_caller` start with that account. It used to see its own address.
 - OdraVM rolls back contract code with the state, like Casper: a reverted `init` or `upgrade` (also of
   a factory child) leaves no new contract or version behind, so a failed `try_upgrade` keeps the old
   code running, and `HostEnv::restore_snapshot` brings back the code, the factory admins and the

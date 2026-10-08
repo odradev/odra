@@ -1,14 +1,14 @@
 //! Livenet implementation of HostContext for HostEnv.
 
 use crate::error;
-use crate::livenet_contract_env::{call_locally, LivenetContractEnv};
+use crate::livenet_contract_env::{call_locally, CallFrame, LivenetContractEnv};
 use crate::panic_hook;
 use odra_casper_rpc_client::casper_client::configuration::CasperClientConfiguration;
 use odra_casper_rpc_client::casper_client::CasperClient;
 use odra_casper_rpc_client::error::LivenetError;
 use odra_casper_rpc_client::log::info;
 use odra_casper_rpc_client::utils::find_wasm_file_path;
-use odra_core::callstack::Callstack;
+use odra_core::callstack::{Callstack, CallstackElement};
 use odra_core::casper_types::Timestamp;
 use odra_core::entry_point_callback::EntryPointsCaller;
 use odra_core::{
@@ -70,11 +70,14 @@ impl LivenetHost {
         }
     }
 
-    /// Runs a non-mutable entry point on this machine. A revert unwinds the call with a panic,
-    /// it is caught here and returned as the error the contract reverted with.
+    /// Runs a non-mutable entry point on this machine, called by the caller of this host like a
+    /// transaction would. A revert unwinds the call with a panic, it is caught here and returned
+    /// as the error the contract reverted with.
     fn execute_locally(&self, address: &Address, call_def: CallDef) -> OdraResult<Bytes> {
         panic_hook::set_livenet_panic_hook();
         *self.error.borrow_mut() = None;
+        let caller = CallstackElement::new_account(self.caller());
+        let _caller_frame = CallFrame::push(&self.callstack, caller);
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             call_locally(&self.callstack, &self.contract_register, address, call_def)
         }));
@@ -396,27 +399,52 @@ mod tests {
     const ADDRESS: Address = Address::Contract(ContractPackageHash::new([1; 32]));
 
     #[test]
+    fn getter_is_called_by_the_account() {
+        let (host, env) = setup();
+        let account = env.caller();
+        assert_eq!(call(&env, "probe"), Ok((account, vec![account, ADDRESS])));
+        assert!(host.callstack.borrow().is_empty());
+    }
+
+    #[test]
+    fn nested_getter_is_called_by_the_contract() {
+        let (host, env) = setup();
+        let account = env.caller();
+        assert_eq!(
+            call(&env, "nested_probe"),
+            Ok((ADDRESS, vec![account, ADDRESS, ADDRESS]))
+        );
+        assert!(host.callstack.borrow().is_empty());
+    }
+
+    #[test]
     fn reverting_getter_returns_the_error() {
         let (host, env) = setup();
+        let account = env.caller();
         assert_eq!(call(&env, "fail"), Err(OdraError::user(7, "Boom")));
         assert!(host.callstack.borrow().is_empty());
-        assert_eq!(call(&env, "depth"), Ok(1));
+        assert_eq!(call(&env, "probe"), Ok((account, vec![account, ADDRESS])));
     }
 
     #[test]
     fn revert_in_a_nested_getter_returns_the_error() {
         let (host, env) = setup();
+        let account = env.caller();
         assert_eq!(call(&env, "nested_fail"), Err(OdraError::user(7, "Boom")));
         assert!(host.callstack.borrow().is_empty());
-        assert_eq!(call(&env, "nested_depth"), Ok(2));
+        assert_eq!(
+            call(&env, "nested_probe"),
+            Ok((ADDRESS, vec![account, ADDRESS, ADDRESS]))
+        );
     }
 
     #[test]
     fn panicking_getter_returns_a_vm_error() {
         let (host, env) = setup();
+        let account = env.caller();
         assert_eq!(call(&env, "panic"), Err(OdraError::VmError(VmError::Panic)));
         assert!(host.callstack.borrow().is_empty());
-        assert_eq!(call(&env, "depth"), Ok(1));
+        assert_eq!(call(&env, "probe"), Ok((account, vec![account, ADDRESS])));
     }
 
     #[test]
@@ -483,10 +511,10 @@ mod tests {
         let host = Rc::new(LivenetHost::with_configuration(configuration));
         let env = HostEnv::new(host.clone());
         let entry_points = [
-            "depth",
+            "probe",
             "fail",
             "panic",
-            "nested_depth",
+            "nested_probe",
             "nested_fail",
             "nested_unknown"
         ]
@@ -498,7 +526,10 @@ mod tests {
         (host, env)
     }
 
-    fn call(env: &HostEnv, entry_point: &str) -> OdraResult<u32> {
+    /// The caller and the call stack seen by the called contract.
+    type Probe = (Address, Vec<Address>);
+
+    fn call(env: &HostEnv, entry_point: &str) -> OdraResult<Probe> {
         env.call_contract(
             ADDRESS,
             CallDef::new(entry_point, false, RuntimeArgs::new())
@@ -507,18 +538,18 @@ mod tests {
 
     fn entry_point(env: ContractEnv, call_def: CallDef) -> OdraResult<Bytes> {
         let nested = |entry_point: &str| {
-            env.call_contract::<u32>(
+            env.call_contract::<Probe>(
                 env.self_address(),
                 CallDef::new(entry_point, false, RuntimeArgs::new())
             )
         };
-        let result: u32 = match call_def.entry_point() {
+        let result: Probe = match call_def.entry_point() {
             "fail" => env.revert(OdraError::user(7, "Boom")),
             "panic" => panic!("boom"),
-            "nested_depth" => nested("depth"),
+            "nested_probe" => nested("probe"),
             "nested_fail" => nested("fail"),
             "nested_unknown" => nested("unknown"),
-            _ => env.call_stack().len() as u32
+            _ => (env.caller(), env.call_stack())
         };
         Ok(Bytes::from(result.to_bytes().unwrap()))
     }
