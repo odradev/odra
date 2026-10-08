@@ -158,6 +158,7 @@ impl OdraVm {
         }
         drop(state);
 
+        crate::panic_hook::mark_revert();
         panic!("Revert: {:?} - {}", error, revert_msg);
     }
 

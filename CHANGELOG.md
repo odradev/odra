@@ -164,6 +164,11 @@ Changelog for `odra`.
   arguments are also reported as-is now, instead of the generic "Struct or impl block expected".
 - `odra-test` no longer declares `#![no_std]`; it depends on std crates and the attribute broke
   `no_std` builds of dependents.
+- OdraVM no longer silences panics: its panic hook replaced the process-wide hook on every contract call
+  and printed only reverts and assertion failures, so after the first OdraVM call any other panic in the
+  test binary (`unwrap`, `expect`, `panic!`, failed tests on CasperVM) printed nothing, not even with
+  `RUST_BACKTRACE`, and a hook installed by the user was dropped. The hook is installed once now,
+  prints reverts as before and passes every other panic to the hook installed before it.
 
 ## [2.9.1] - 2026-08-04
 ### Fixed
