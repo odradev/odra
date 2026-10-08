@@ -163,12 +163,12 @@ mod test {
                             odra::prelude::string::String::from("balance_of"),
                             false,
                             {
-                                let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
                                 if self.attached_value > odra::casper_types::U512::zero() {
-                                    let _ = named_args.insert("amount", self.attached_value);
+                                    let _ = __odra_named_args.insert("amount", self.attached_value);
                                 }
-                                odra::args::EntrypointArgument::insert_runtime_arg(owner, "owner", &mut named_args);
-                                named_args
+                                odra::args::EntrypointArgument::insert_runtime_arg(owner, "owner", &mut __odra_named_args);
+                                __odra_named_args
                             }
                         )
                         .with_amount(self.attached_value),
@@ -192,12 +192,12 @@ mod test {
                             odra::prelude::string::String::from("balance_of"),
                             false,
                             {
-                                let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
                                 if self.attached_value > odra::casper_types::U512::zero() {
-                                    let _ = named_args.insert("amount", self.attached_value);
+                                    let _ = __odra_named_args.insert("amount", self.attached_value);
                                 }
-                                odra::args::EntrypointArgument::insert_runtime_arg(owner, "owner", &mut named_args);
-                                named_args
+                                odra::args::EntrypointArgument::insert_runtime_arg(owner, "owner", &mut __odra_named_args);
+                                __odra_named_args
                             }
                         )
                         .with_amount(self.attached_value),
@@ -269,12 +269,12 @@ mod test {
                                 odra::prelude::string::String::from("balance_of"),
                                 false,
                                 {
-                                    let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                    let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
                                     if self.attached_value > odra::casper_types::U512::zero() {
-                                        let _ = named_args.insert("amount", self.attached_value);
+                                        let _ = __odra_named_args.insert("amount", self.attached_value);
                                     }
-                                    odra::args::EntrypointArgument::insert_runtime_arg(owner, "owner", &mut named_args);
-                                    named_args
+                                    odra::args::EntrypointArgument::insert_runtime_arg(owner, "owner", &mut __odra_named_args);
+                                    __odra_named_args
                                 }
                             ).with_amount(self.attached_value),
                         )

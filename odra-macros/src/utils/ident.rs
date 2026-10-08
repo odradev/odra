@@ -1,11 +1,15 @@
 use quote::format_ident;
 
+// The generated code binds each argument of an entry point to a local named exactly like the
+// argument. Its own locals (and parameters) that share a scope with these are prefixed with
+// `__odra_`, so that no argument name can shadow them or be shadowed by them.
+
 pub fn named_args() -> syn::Ident {
-    format_ident!("named_args")
+    format_ident!("__odra_named_args")
 }
 
 pub fn contract_env() -> syn::Ident {
-    format_ident!("contract_env")
+    format_ident!("__odra_contract_env")
 }
 
 pub fn result() -> syn::Ident {
@@ -13,11 +17,21 @@ pub fn result() -> syn::Ident {
 }
 
 pub fn call_def() -> syn::Ident {
-    format_ident!("call_def")
+    format_ident!("__odra_call_def")
 }
 
 pub fn env() -> syn::Ident {
     format_ident!("env")
+}
+
+/// The `ContractEnv` parameter of a generated `execute_*` function.
+pub fn exec_fn_env() -> syn::Ident {
+    format_ident!("__odra_env")
+}
+
+/// The value returned by an entry point in the code that calls it.
+pub fn exec_result() -> syn::Ident {
+    format_ident!("__odra_result")
 }
 
 pub fn underscored_env() -> syn::Ident {
@@ -25,7 +39,7 @@ pub fn underscored_env() -> syn::Ident {
 }
 
 pub fn exec_env() -> syn::Ident {
-    format_ident!("exec_env")
+    format_ident!("__odra_exec_env")
 }
 
 pub fn epc() -> syn::Ident {
@@ -61,11 +75,11 @@ pub fn schemas() -> syn::Ident {
 }
 
 pub fn contract() -> syn::Ident {
-    format_ident!("contract")
+    format_ident!("__odra_contract")
 }
 
 pub fn env_rc() -> syn::Ident {
-    format_ident!("env_rc")
+    format_ident!("__odra_env_rc")
 }
 
 pub fn events() -> syn::Ident {

@@ -145,14 +145,14 @@ impl TryFrom<(&'_ ModuleImplIR, &'_ FnIR)> for FunctionCallBranch {
             arrow_token: Default::default(),
             brace_token: Default::default(),
             call_stmt: Self::call_stmt(module, func)?,
-            result_expr: utils::expr::parse_bytes(&utils::ident::result())
+            result_expr: utils::expr::parse_bytes(&utils::ident::exec_result())
         })
     }
 }
 
 impl<'a> FunctionCallBranch {
     fn call_stmt(module: &'a ModuleImplIR, func: &'a FnIR) -> syn::Result<syn::Stmt> {
-        let result_ident = utils::ident::result();
+        let result_ident = utils::ident::exec_result();
         let function_ident = func.execute_name();
         let contract_env_ident = utils::ident::contract_env();
         let exec_parts_ident = module.exec_parts_mod_ident()?;

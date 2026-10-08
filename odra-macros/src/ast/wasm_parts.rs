@@ -222,7 +222,7 @@ impl TryFrom<(&'_ ModuleImplIR, &'_ FnIR)> for NoMangleFnItem<ModuleContext> {
     fn try_from(value: (&'_ ModuleImplIR, &'_ FnIR)) -> Result<Self, Self::Error> {
         let (module, func) = value;
         let fn_ident = func.name();
-        let result_ident = utils::ident::result();
+        let result_ident = utils::ident::exec_result();
         let exec_parts_ident = module.exec_parts_mod_ident()?;
         let exec_fn = func.execute_name();
         let new_env = utils::expr::new_wasm_contract_env();
@@ -377,28 +377,28 @@ mod test {
                     };
                     let is_upgrade = exec_env.get_named_arg::<bool>("odra_cfg_is_upgrade");
 
-                    let named_args = if is_upgrade {
+                    let __odra_named_args = if is_upgrade {
                         {
                             Some({
-                                let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
                                 odra::args::EntrypointArgument::insert_runtime_arg(
                                     exec_env.get_named_arg::<Option<U256>>("total_supply"),
                                     "total_supply",
-                                    &mut named_args,
+                                    &mut __odra_named_args,
                                 );
-                                named_args
+                                __odra_named_args
                             })
                         }
                     } else {
                         {
                             Some({
-                                let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
                                 odra::args::EntrypointArgument::insert_runtime_arg(
                                     exec_env.get_named_arg::<Option<U256>>("total_supply"),
                                     "total_supply",
-                                    &mut named_args,
+                                    &mut __odra_named_args,
                                 );
-                                named_args
+                                __odra_named_args
                             })
                         }
                     };
@@ -406,7 +406,7 @@ mod test {
                     odra::odra_casper_wasm_env::host_functions::install_or_upgrade(
                         entry_points(),
                         schemas,
-                        named_args
+                        __odra_named_args
                     );
                 }
 
@@ -422,10 +422,10 @@ mod test {
 
                 #[no_mangle]
                 fn total_supply() {
-                    let result = __erc20_exec_parts::execute_total_supply(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
+                    let __odra_result = __erc20_exec_parts::execute_total_supply(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                     odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
                         odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
-                            odra::casper_types::CLValue::from_t(result)
+                            odra::casper_types::CLValue::from_t(__odra_result)
                         )
                     );
                 }
@@ -447,10 +447,10 @@ mod test {
 
                 #[no_mangle]
                 fn swap() {
-                    let result = __erc20_exec_parts::execute_swap(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
+                    let __odra_result = __erc20_exec_parts::execute_swap(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                     odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
                         odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
-                            odra::casper_types::CLValue::from_t(result)
+                            odra::casper_types::CLValue::from_t(__odra_result)
                         )
                     );
                 }
@@ -511,7 +511,7 @@ mod test {
                         odra::ExecutionEnv::new(env_rc)
                     };
                     let is_upgrade = exec_env.get_named_arg::<bool>("odra_cfg_is_upgrade");
-                    let named_args = if is_upgrade {
+                    let __odra_named_args = if is_upgrade {
                         Option::<odra::casper_types::RuntimeArgs>::None
                     } else {
                         Option::<odra::casper_types::RuntimeArgs>::None
@@ -519,26 +519,26 @@ mod test {
                     odra::odra_casper_wasm_env::host_functions::install_or_upgrade(
                         entry_points(),
                         schemas,
-                        named_args
+                        __odra_named_args
                     );
                 }
 
                 #[no_mangle]
                 fn total_supply() {
-                    let result = __erc20_exec_parts::execute_total_supply(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
+                    let __odra_result = __erc20_exec_parts::execute_total_supply(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                     odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
                         odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
-                            odra::casper_types::CLValue::from_t(result)
+                            odra::casper_types::CLValue::from_t(__odra_result)
                         )
                     );
                 }
 
                 #[no_mangle]
                 fn set_total_supply() {
-                    let result = __erc20_exec_parts::execute_set_total_supply(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
+                    let __odra_result = __erc20_exec_parts::execute_set_total_supply(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                     odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
                         odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
-                            odra::casper_types::CLValue::from_t(result)
+                            odra::casper_types::CLValue::from_t(__odra_result)
                         )
                     );
                 }
@@ -618,7 +618,7 @@ mod test {
                         odra::ExecutionEnv::new(env_rc)
                     };
                     let is_upgrade = exec_env.get_named_arg::<bool>("odra_cfg_is_upgrade");
-                    let named_args = if is_upgrade {
+                    let __odra_named_args = if is_upgrade {
                         Option::<odra::casper_types::RuntimeArgs>::None
                     } else {
                         Option::<odra::casper_types::RuntimeArgs>::None
@@ -626,28 +626,28 @@ mod test {
                     odra::odra_casper_wasm_env::host_functions::install_or_upgrade(
                         entry_points(),
                         schemas,
-                        named_args
+                        __odra_named_args
                     );
                 }
 
                 #[no_mangle]
                 fn total_supply() {
-                    let result = __erc20_exec_parts::execute_total_supply(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
+                    let __odra_result = __erc20_exec_parts::execute_total_supply(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                     odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
                         odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
-                            odra::casper_types::CLValue::from_t(result)
+                            odra::casper_types::CLValue::from_t(__odra_result)
                         )
                     );
                 }
 
                 #[no_mangle]
                 fn get_owner() {
-                    let result = __erc20_exec_parts::execute_get_owner(
+                    let __odra_result = __erc20_exec_parts::execute_get_owner(
                         odra::odra_casper_wasm_env::WasmContractEnv::new_env(),
                     );
                     odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
                         odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
-                            odra::casper_types::CLValue::from_t(result),
+                            odra::casper_types::CLValue::from_t(__odra_result),
                         ),
                     );
                 }
@@ -659,24 +659,24 @@ mod test {
 
                 #[no_mangle]
                 fn name() {
-                    let result = __erc20_exec_parts::execute_name(
+                    let __odra_result = __erc20_exec_parts::execute_name(
                         odra::odra_casper_wasm_env::WasmContractEnv::new_env(),
                     );
                     odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
                         odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
-                            odra::casper_types::CLValue::from_t(result),
+                            odra::casper_types::CLValue::from_t(__odra_result),
                         ),
                     );
                 }
 
                 #[no_mangle]
                 fn symbol() {
-                    let result = __erc20_exec_parts::execute_symbol(
+                    let __odra_result = __erc20_exec_parts::execute_symbol(
                         odra::odra_casper_wasm_env::WasmContractEnv::new_env(),
                     );
                     odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
                         odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
-                            odra::casper_types::CLValue::from_t(result),
+                            odra::casper_types::CLValue::from_t(__odra_result),
                         ),
                     );
                 }

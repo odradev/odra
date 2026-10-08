@@ -485,12 +485,12 @@ mod ref_item_tests {
                                 odra::prelude::string::String::from("init"),
                                 true,
                                 {
-                                    let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                    let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
                                     if self.attached_value > odra::casper_types::U512::zero() {
-                                        let _ = named_args.insert("amount", self.attached_value);
+                                        let _ = __odra_named_args.insert("amount", self.attached_value);
                                     }
-                                    odra::args::EntrypointArgument::insert_runtime_arg(total_supply, "total_supply", &mut named_args);
-                                    named_args
+                                    odra::args::EntrypointArgument::insert_runtime_arg(total_supply, "total_supply", &mut __odra_named_args);
+                                    __odra_named_args
                                 },
                             )
                             .with_amount(self.attached_value),
@@ -507,12 +507,12 @@ mod ref_item_tests {
                                 odra::prelude::string::String::from("upgrade"),
                                 true,
                                 {
-                                    let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                    let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
                                     if self.attached_value > odra::casper_types::U512::zero() {
-                                        let _ = named_args.insert("amount", self.attached_value);
+                                        let _ = __odra_named_args.insert("amount", self.attached_value);
                                     }
-                                    odra::args::EntrypointArgument::insert_runtime_arg(total_supply, "total_supply", &mut named_args);
-                                    named_args
+                                    odra::args::EntrypointArgument::insert_runtime_arg(total_supply, "total_supply", &mut __odra_named_args);
+                                    __odra_named_args
                                 },
                             )
                             .with_amount(self.attached_value),
@@ -528,11 +528,11 @@ mod ref_item_tests {
                             odra::prelude::string::String::from("total_supply"),
                             false,
                             {
-                                let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
                                 if self.attached_value > odra::casper_types::U512::zero() {
-                                    let _ = named_args.insert("amount", self.attached_value);
+                                    let _ = __odra_named_args.insert("amount", self.attached_value);
                                 }
-                                named_args
+                                __odra_named_args
                             }
                         ).with_amount(self.attached_value),
                     )
@@ -547,11 +547,11 @@ mod ref_item_tests {
                                     odra::prelude::string::String::from("pay_to_mint"),
                                     true,
                                     {
-                                        let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                        let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
                                         if self.attached_value > odra::casper_types::U512::zero() {
-                                            let _ = named_args.insert("amount", self.attached_value);
+                                            let _ = __odra_named_args.insert("amount", self.attached_value);
                                         }
-                                        named_args
+                                        __odra_named_args
                                     },
                                 )
                                 .with_amount(self.attached_value),
@@ -572,14 +572,14 @@ mod ref_item_tests {
                                     odra::prelude::string::String::from("approve"),
                                     true,
                                     {
-                                        let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                        let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
                                         if self.attached_value > odra::casper_types::U512::zero() {
-                                            let _ = named_args.insert("amount", self.attached_value);
+                                            let _ = __odra_named_args.insert("amount", self.attached_value);
                                         }
-                                        odra::args::EntrypointArgument::insert_runtime_arg(to, "to", &mut named_args);
-                                        odra::args::EntrypointArgument::insert_runtime_arg(amount, "amount", &mut named_args);
-                                        odra::args::EntrypointArgument::insert_runtime_arg(msg, "msg", &mut named_args);
-                                        named_args
+                                        odra::args::EntrypointArgument::insert_runtime_arg(to, "to", &mut __odra_named_args);
+                                        odra::args::EntrypointArgument::insert_runtime_arg(amount, "amount", &mut __odra_named_args);
+                                        odra::args::EntrypointArgument::insert_runtime_arg(msg, "msg", &mut __odra_named_args);
+                                        __odra_named_args
                                     },
                                 )
                                 .with_amount(self.attached_value),
@@ -594,13 +594,13 @@ mod ref_item_tests {
                             odra::prelude::string::String::from("airdrop"),
                             false,
                             {
-                                let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
                                 if self.attached_value > odra::casper_types::U512::zero() {
-                                    let _ = named_args.insert("amount", self.attached_value);
+                                    let _ = __odra_named_args.insert("amount", self.attached_value);
                                 }
-                                odra::args::EntrypointArgument::insert_runtime_arg(to, "to", &mut named_args);
-                                odra::args::EntrypointArgument::insert_runtime_arg(amount, "amount", &mut named_args);
-                                named_args
+                                odra::args::EntrypointArgument::insert_runtime_arg(to, "to", &mut __odra_named_args);
+                                odra::args::EntrypointArgument::insert_runtime_arg(amount, "amount", &mut __odra_named_args);
+                                __odra_named_args
                             }
                         ).with_amount(self.attached_value),
                     )
@@ -616,21 +616,21 @@ mod ref_item_tests {
                                 odra::prelude::string::String::from("swap"),
                                 true,
                                 {
-                                    let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                    let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
                                     if self.attached_value > odra::casper_types::U512::zero() {
-                                        let _ = named_args.insert("amount", self.attached_value);
+                                        let _ = __odra_named_args.insert("amount", self.attached_value);
                                     }
                                     odra::args::EntrypointArgument::insert_runtime_arg(
                                         to,
                                         "to",
-                                        &mut named_args,
+                                        &mut __odra_named_args,
                                     );
                                     odra::args::EntrypointArgument::insert_runtime_arg(
                                         amount,
                                         "amount",
-                                        &mut named_args,
+                                        &mut __odra_named_args,
                                     );
-                                    named_args
+                                    __odra_named_args
                                 },
                             )
                             .with_amount(self.attached_value),
@@ -655,21 +655,21 @@ mod ref_item_tests {
                                 odra::prelude::string::String::from("swap"),
                                 true,
                                 {
-                                    let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                    let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
                                     if self.attached_value > odra::casper_types::U512::zero() {
-                                        let _ = named_args.insert("amount", self.attached_value);
+                                        let _ = __odra_named_args.insert("amount", self.attached_value);
                                     }
                                     odra::args::EntrypointArgument::insert_runtime_arg(
                                         to,
                                         "to",
-                                        &mut named_args,
+                                        &mut __odra_named_args,
                                     );
                                     odra::args::EntrypointArgument::insert_runtime_arg(
                                         amount,
                                         "amount",
-                                        &mut named_args,
+                                        &mut __odra_named_args,
                                     );
-                                    named_args
+                                    __odra_named_args
                                 },
                             )
                             .with_amount(self.attached_value),
@@ -750,11 +750,11 @@ mod ref_item_tests {
                             odra::prelude::string::String::from("total_supply"),
                             false,
                             {
-                                let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
                                 if self.attached_value > odra::casper_types::U512::zero() {
-                                    let _ = named_args.insert("amount", self.attached_value);
+                                    let _ = __odra_named_args.insert("amount", self.attached_value);
                                 }
-                                named_args
+                                __odra_named_args
                             }
                         ).with_amount(self.attached_value),
                     )
@@ -768,11 +768,11 @@ mod ref_item_tests {
                             odra::prelude::string::String::from("set_total_supply"),
                             true,
                             {
-                                let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
                                 if self.attached_value > odra::casper_types::U512::zero() {
-                                    let _ = named_args.insert("amount", self.attached_value);
+                                    let _ = __odra_named_args.insert("amount", self.attached_value);
                                 }
-                                named_args
+                                __odra_named_args
                             }
                         ).with_amount(self.attached_value),
                     )
@@ -787,11 +787,11 @@ mod ref_item_tests {
                                     odra::prelude::string::String::from("pay_to_mint"),
                                     true,
                                     {
-                                        let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                        let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
                                         if self.attached_value > odra::casper_types::U512::zero() {
-                                            let _ = named_args.insert("amount", self.attached_value);
+                                            let _ = __odra_named_args.insert("amount", self.attached_value);
                                         }
-                                        named_args
+                                        __odra_named_args
                                     },
                                 )
                                 .with_amount(self.attached_value),
@@ -813,11 +813,11 @@ mod ref_item_tests {
                             odra::prelude::string::String::from("set_total_supply"),
                             true,
                             {
-                                let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
                                 if self.attached_value > odra::casper_types::U512::zero() {
-                                    let _ = named_args.insert("amount", self.attached_value);
+                                    let _ = __odra_named_args.insert("amount", self.attached_value);
                                 }
-                                named_args
+                                __odra_named_args
                             }
                         ).with_amount(self.attached_value),
                     )
@@ -913,11 +913,11 @@ mod ref_item_tests {
                             odra::prelude::string::String::from("total_supply"),
                             false,
                             {
-                                let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
                                 if self.attached_value > odra::casper_types::U512::zero() {
-                                    let _ = named_args.insert("amount", self.attached_value);
+                                    let _ = __odra_named_args.insert("amount", self.attached_value);
                                 }
-                                named_args
+                                __odra_named_args
                             }
                         ).with_amount(self.attached_value),
                     )
@@ -933,11 +933,11 @@ mod ref_item_tests {
                                     odra::prelude::string::String::from("get_owner"),
                                     false,
                                     {
-                                        let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                        let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
                                         if self.attached_value > odra::casper_types::U512::zero() {
-                                            let _ = named_args.insert("amount", self.attached_value);
+                                            let _ = __odra_named_args.insert("amount", self.attached_value);
                                         }
-                                        named_args
+                                        __odra_named_args
                                     },
                                 )
                                 .with_amount(self.attached_value),
@@ -954,12 +954,12 @@ mod ref_item_tests {
                                     odra::prelude::string::String::from("set_owner"),
                                     true,
                                     {
-                                        let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                        let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
                                         if self.attached_value > odra::casper_types::U512::zero() {
-                                            let _ = named_args.insert("amount", self.attached_value);
+                                            let _ = __odra_named_args.insert("amount", self.attached_value);
                                         }
-                                        odra::args::EntrypointArgument::insert_runtime_arg(new_owner, "new_owner", &mut named_args);
-                                        named_args
+                                        odra::args::EntrypointArgument::insert_runtime_arg(new_owner, "new_owner", &mut __odra_named_args);
+                                        __odra_named_args
                                     },
                                 )
                                 .with_amount(self.attached_value),
@@ -976,11 +976,11 @@ mod ref_item_tests {
                                     odra::prelude::string::String::from("name"),
                                     false,
                                     {
-                                        let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                        let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
                                         if self.attached_value > odra::casper_types::U512::zero() {
-                                            let _ = named_args.insert("amount", self.attached_value);
+                                            let _ = __odra_named_args.insert("amount", self.attached_value);
                                         }
-                                        named_args
+                                        __odra_named_args
                                     },
                                 )
                                 .with_amount(self.attached_value),
@@ -997,11 +997,11 @@ mod ref_item_tests {
                                     odra::prelude::string::String::from("symbol"),
                                     false,
                                     {
-                                        let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                        let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
                                         if self.attached_value > odra::casper_types::U512::zero() {
-                                            let _ = named_args.insert("amount", self.attached_value);
+                                            let _ = __odra_named_args.insert("amount", self.attached_value);
                                         }
-                                        named_args
+                                        __odra_named_args
                                     },
                                 )
                                 .with_amount(self.attached_value),
