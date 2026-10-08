@@ -1,6 +1,5 @@
 use crate::{
     cmd::{CmdOutput, WHOAMI_SUBCOMMAND},
-    custom_types::CustomTypeSet,
     log,
     parser::motes_to_cspr,
     DeployedContractsContainer
@@ -8,6 +7,7 @@ use crate::{
 use anyhow::{Ok, Result};
 use clap::{ArgMatches, Command};
 use odra::host::HostEnv;
+use odra_schema::codec::CustomTypeSet;
 use serde_derive::Serialize;
 
 use super::OdraCommand;

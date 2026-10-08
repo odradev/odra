@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Odra Storage Explorer</title>
+  <script type="importmap">
+    { "imports": { "odra-storage-reader": "./node_modules/odra-storage-reader/odra_storage_reader.js" } }
+  </script>
+  <!-- Defines the casper-js-sdk classes as globals. -->
+  <script src="node_modules/casper-js-sdk/dist/lib.web.js"></script>
+  <script type="module" src="dist/app.js"></script>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --surface: #ffffff;
+      --border: #e2e5ea;
+      --text: #1b1f24;
+      --muted: #69707a;
+      --accent: #3d5afe;
+      --accent-soft: #eef1ff;
+      --error: #c62828;
+      --error-soft: #fdecec;
+      color-scheme: light;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #111317;
+        --surface: #1a1d23;
+        --border: #2c3038;
+        --text: #e6e8eb;
+        --muted: #9097a1;
+        --accent: #8c9eff;
+        --accent-soft: #23283a;
+        --error: #ff8a80;
+        --error-soft: #3a1f1f;
+        color-scheme: dark;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    code, pre, input, .path { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 13px; }
+    main { max-width: 1100px; margin: 0 auto; padding: 32px 16px 64px; }
+    .brand { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 24px; }
+    header { margin-bottom: 24px; }
+    h1 { font-size: 26px; margin: 0 0 4px; }
+    h2 { font-size: 18px; margin: 0 0 4px; }
+    .muted { color: var(--muted); margin: 0; }
+    a { color: var(--accent); text-decoration: none; }
+    .back { display: inline-block; margin-bottom: 16px; }
+    dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 16px; margin: 12px 0 0; }
+    dt { color: var(--muted); }
+    dd { margin: 0; overflow-wrap: anywhere; }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+    .card {
+      display: flex; flex-direction: column; gap: 6px;
+      padding: 16px; border: 1px solid var(--border); border-radius: 10px;
+      background: var(--surface); color: var(--text);
+      transition: border-color .15s, transform .15s;
+    }
+    a.card:hover { border-color: var(--accent); transform: translateY(-1px); }
+    .card .name { font-weight: 600; font-size: 16px; }
+    .card code { color: var(--muted); }
+    .card.disabled { opacity: .6; }
+    .badge {
+      align-self: flex-start; padding: 1px 8px; border-radius: 999px;
+      background: var(--accent-soft); color: var(--accent); font-size: 12px; white-space: nowrap;
+    }
+
+    .reader { display: grid; grid-template-columns: minmax(220px, 320px) minmax(0, 1fr); gap: 16px; align-items: start; }
+    @media (max-width: 720px) { .reader { grid-template-columns: minmax(0, 1fr); } }
+    .fields, .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+    .fields { display: flex; flex-direction: column; padding: 6px; }
+    .field {
+      display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 8px;
+      padding: 8px 10px; border: 0; border-radius: 6px; background: none; color: inherit;
+      text-align: left; cursor: pointer; font: inherit;
+    }
+    .field:hover { background: var(--bg); }
+    .field.selected { background: var(--accent-soft); }
+    .field .path { overflow-wrap: anywhere; }
+    .field .type { grid-column: 1; color: var(--muted); font-size: 13px; }
+    .field .badge { grid-row: 1 / span 2; grid-column: 2; align-self: center; }
+    .panel { padding: 20px; min-width: 0; }
+
+    form { display: flex; flex-direction: column; gap: 12px; margin: 16px 0; }
+    label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+    label.check { flex-direction: row; align-items: center; gap: 8px; }
+    input:not([type]) {
+      padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px;
+      background: var(--bg); color: var(--text); width: 100%;
+    }
+    input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+    button.primary {
+      align-self: flex-start; padding: 8px 20px; border: 0; border-radius: 6px;
+      background: var(--accent); color: var(--surface); font: inherit; font-weight: 600; cursor: pointer;
+    }
+    .result dl { padding-top: 16px; border-top: 1px solid var(--border); }
+    .value {
+      margin: 12px 0 0; padding: 12px; border-radius: 6px; background: var(--bg);
+      white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px;
+    }
+    .value.unset { color: var(--muted); font-style: italic; }
+    .error { padding: 12px; border-radius: 6px; background: var(--error-soft); color: var(--error); white-space: pre-wrap; overflow-wrap: anywhere; }
+    .error-text { color: var(--error); }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="brand">Odra Storage Explorer</div>
+    <div id="app"><p class="muted">Loading…</p></div>
+  </main>
+</body>
+</html>

@@ -4,12 +4,12 @@ use crate::{
         DEPLOY_SUBCOMMAND
     },
     container::ContractError,
-    custom_types::CustomTypeSet,
     DeployedContractsContainer
 };
 use anyhow::Result;
 use clap::{ArgMatches, Command};
 use odra::{host::HostEnv, prelude::OdraError};
+use odra_schema::codec::CustomTypeSet;
 use thiserror::Error;
 
 use super::MutableCommand;

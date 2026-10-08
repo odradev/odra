@@ -1,0 +1,15 @@
+{
+  "stored_value": {
+    "CLValue": {
+      "cl_type": {
+        "List": "U8"
+      },
+      "bytes": "03000000021027",
+      "parsed": [
+        2,
+        16,
+        39
+      ]
+    }
+  }
+}

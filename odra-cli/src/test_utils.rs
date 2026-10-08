@@ -13,11 +13,11 @@ use odra::{
     },
     CallDef, EventError, GasReport
 };
+use odra_schema::codec::CustomTypeSet;
 
 use crate::{
     cmd::args::CommandArg,
     container::{ContractError, ContractStorage, ContractStorageSource, ContractsData},
-    custom_types::CustomTypeSet,
     DeployedContractsContainer
 };
 

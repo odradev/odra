@@ -1,6 +1,6 @@
-use odra::schema::casper_contract_schema::NamedCLType;
+use casper_contract_schema::NamedCLType;
 
-use crate::types::{into_bytes, Error, Format};
+use crate::codec::{into_bytes, Error, Format};
 
 #[test]
 fn test_bool() {

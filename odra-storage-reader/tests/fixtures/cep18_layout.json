@@ -1,0 +1,229 @@
+{
+  "version": 1,
+  "contract": "Cep18",
+  "ident": "Cep18",
+  "layout": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "decimals",
+        "index": 1,
+        "kind": "named_key",
+        "key_name": "decimals",
+        "ty": "U8"
+      },
+      {
+        "name": "symbol",
+        "index": 2,
+        "kind": "named_key",
+        "key_name": "symbol",
+        "ty": "String"
+      },
+      {
+        "name": "name",
+        "index": 3,
+        "kind": "named_key",
+        "key_name": "name",
+        "ty": "String"
+      },
+      {
+        "name": "total_supply",
+        "index": 4,
+        "kind": "named_key",
+        "key_name": "total_supply",
+        "ty": "U256"
+      },
+      {
+        "name": "balances",
+        "index": 5,
+        "kind": "dictionary",
+        "dictionary_name": "balances",
+        "key": "Key",
+        "key_encoding": "base64",
+        "value": "U256"
+      },
+      {
+        "name": "allowances",
+        "index": 6,
+        "kind": "dictionary",
+        "dictionary_name": "allowances",
+        "key": {
+          "Tuple2": [
+            "Key",
+            "Key"
+          ]
+        },
+        "key_encoding": "hex_hash",
+        "value": "U256"
+      }
+    ]
+  },
+  "types": [
+    {
+      "struct": {
+        "name": "Burn",
+        "description": null,
+        "members": [
+          {
+            "name": "owner",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "amount",
+            "description": null,
+            "ty": "U256"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "DecreaseAllowance",
+        "description": null,
+        "members": [
+          {
+            "name": "owner",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "spender",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "allowance",
+            "description": null,
+            "ty": "U256"
+          },
+          {
+            "name": "decr_by",
+            "description": null,
+            "ty": "U256"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "IncreaseAllowance",
+        "description": null,
+        "members": [
+          {
+            "name": "owner",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "spender",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "allowance",
+            "description": null,
+            "ty": "U256"
+          },
+          {
+            "name": "inc_by",
+            "description": null,
+            "ty": "U256"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "Mint",
+        "description": null,
+        "members": [
+          {
+            "name": "recipient",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "amount",
+            "description": null,
+            "ty": "U256"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "SetAllowance",
+        "description": null,
+        "members": [
+          {
+            "name": "owner",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "spender",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "allowance",
+            "description": null,
+            "ty": "U256"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "Transfer",
+        "description": null,
+        "members": [
+          {
+            "name": "sender",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "recipient",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "amount",
+            "description": null,
+            "ty": "U256"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "TransferFrom",
+        "description": null,
+        "members": [
+          {
+            "name": "spender",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "owner",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "recipient",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "amount",
+            "description": null,
+            "ty": "U256"
+          }
+        ]
+      }
+    }
+  ]
+}
