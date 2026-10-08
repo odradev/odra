@@ -4,8 +4,10 @@ use std::time::Duration;
 use odra::casper_types::{U256, U512};
 use odra::host::{Deployer, HostEnv, HostRef, HostRefLoader, InstallConfig, NoArgs};
 use odra::prelude::*;
+use odra_examples::contracts::tlw::Error::CannotLockTwice;
+use odra_examples::contracts::tlw::{TimeLockWallet, TimeLockWalletInitArgs};
 use odra_examples::features::call_stack::{CallStackProbe, CallStackRelay, CallStackRelayInitArgs};
-use odra_examples::features::livenet::Error::EmptyStack;
+use odra_examples::features::livenet::Error::{EmptyStack, SillyError};
 use odra_examples::features::livenet::{
     LivenetContract, LivenetContractHostRef, LivenetContractInitArgs
 };
@@ -42,12 +44,23 @@ fn main() {
 
     // Errors can be handled
     env.set_gas(10_000_000_000u64);
-    let r = contract.try_function_that_reverts();
-    assert!(r.is_err());
-    // TODO: we should be able to assert the error type here, but currently we can't because of the way errors are handled in Livenet environment.
-    // The current error matching logic in Livenet env is based on error codes, which are not unique across contracts.
-    // In a real project the codes are rather uniqe, but in `examples` we have a lot of contracts with small error codes, so the matching is not working as expected.
-    // assert_eq!(r.unwrap_err(), SillyError.into());
+    // The error is named after the schema of the called contract, other contracts use code 1 too.
+    assert_eq!(contract.try_function_that_reverts(), Err(SillyError.into()));
+    // OwnedContract uses code 2 as well, the wallet's error is still found.
+    env.set_gas(500_000_000_000u64);
+    let wallet = TimeLockWallet::deploy(
+        &env,
+        TimeLockWalletInitArgs {
+            lock_duration: 60 * 60 * 1000
+        }
+    );
+    let deposit = U512::from(1_000_000_000u64);
+    wallet.with_tokens(deposit).deposit();
+    assert_eq!(
+        wallet.with_tokens(deposit).try_deposit(),
+        Err(CannotLockTwice.into())
+    );
+    env.set_gas(10_000_000_000u64);
 
     // There are three ways contract endpoints can be called in Livenet environment:
     // 1. If the endpoint is mutable and does not return anything, it can be called directly:

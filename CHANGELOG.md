@@ -123,6 +123,13 @@ Changelog for `odra`.
   contracts in `Odra.toml` of `odra-modules` and `odra-examples`; their tests run on OdraVM only.
 
 ### Fixed
+- Livenet names a user error after the schema of the contract that was called: contracts reuse
+  small codes, and the first schema with the code used to win, so a revert could come back as another
+  contract's error. If the called contract has no such error (a contract it called reverted, the code
+  alone does not tell which), all the schemas are searched as before.
+- Livenet no longer panics on an Odra error code it does not know (a contract built with a newer
+  Odra); the error comes back as `VmError::Other` with the message of the node. The codes are decoded
+  by the new `ExecutionError::from_code` instead of a separate table that had to be kept in sync.
 - A getter or `#[odra(offchain)]` function that reverts on livenet returns the error, so its `try_*`
   call gets `Err` like on OdraVM and CasperVM instead of panicking; a revert in a nested getter
   returns the error of the inner contract, and any other panic returns `VmError::Panic`. The call

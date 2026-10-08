@@ -255,16 +255,11 @@ impl HostContext for LivenetHost {
         }
         let timestamp = Timestamp::now();
         let client = self.casper_client.borrow_mut();
-        match use_proxy {
-            true => client
-                .deploy_entrypoint_call_with_proxy(*address, call_def, timestamp)
-                .map_err(|e| e.error_message())
-                .map_err(Self::error_msg_to_odra_error),
-            false => client
-                .deploy_entrypoint_call(*address, call_def, timestamp)
-                .map_err(|e| e.error_message())
-                .map_err(Self::error_msg_to_odra_error)
-        }
+        let result = match use_proxy {
+            true => client.deploy_entrypoint_call_with_proxy(*address, call_def, timestamp),
+            false => client.deploy_entrypoint_call(*address, call_def, timestamp)
+        };
+        result.map_err(|e| self.error_msg_to_odra_error(e.error_message(), Some(address)))
     }
 
     fn new_contract(
@@ -358,14 +353,20 @@ impl HostContext for LivenetHost {
         client
             .transfer(to, amount, timestamp)
             .map(|_| ())
-            .map_err(|e| e.error_message())
-            .map_err(Self::error_msg_to_odra_error)
+            .map_err(|e| self.error_msg_to_odra_error(e.error_message(), None))
     }
 }
 
 impl LivenetHost {
-    fn error_msg_to_odra_error(error_msg: String) -> OdraError {
-        match error::find(&error_msg) {
+    /// Decodes the error of a transaction, sent to the contract at `address` if any. A user error
+    /// is named after the schema of that contract.
+    fn error_msg_to_odra_error(&self, error_msg: String, address: Option<&Address>) -> OdraError {
+        let register = self
+            .contract_register
+            .read()
+            .expect("Couldn't read contract register.");
+        let contract_name = address.and_then(|address| register.get_name(address));
+        match error::find(&error_msg, contract_name) {
             Ok(err) => err,
             _ => OdraError::VmError(VmError::Other(error_msg))
         }
