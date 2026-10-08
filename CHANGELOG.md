@@ -128,6 +128,11 @@ Changelog for `odra`.
   contracts in `Odra.toml` of `odra-modules` and `odra-examples`; their tests run on OdraVM only.
 
 ### Fixed
+- An entry point argument named `contract`, `env_rc` or `named_args` (or `exec_env` followed by
+  another argument, or on a payable or non-reentrant entry point), and an external contract argument
+  named `named_args`, is reported as a reserved name. The generated code shadowed them, which failed
+  with a type error pointing at the user's code (`expected Address, found Vault`). Only names that
+  never compiled are rejected.
 - Livenet names a user error after the schema of the contract that was called: contracts reuse
   small codes, and the first schema with the code used to win, so a revert could come back as another
   contract's error. If the called contract has no such error (a contract it called reverted, the code
