@@ -123,6 +123,12 @@ Changelog for `odra`.
   contracts in `Odra.toml` of `odra-modules` and `odra-examples`; their tests run on OdraVM only.
 
 ### Fixed
+- A getter or `#[odra(offchain)]` function that reverts on livenet returns the error, so its `try_*`
+  call gets `Err` like on OdraVM and CasperVM instead of panicking; a revert in a nested getter
+  returns the error of the inner contract, and any other panic returns `VmError::Panic`. The call
+  stack of the local execution is unwound with it, so a call after a caught revert (e.g. in
+  `HostEnv::concurrently`) no longer sees a stale frame. The revert is logged as an error instead of
+  printed as a panic.
 - OdraVM rolls back contract code with the state, like Casper: a reverted `init` or `upgrade` (also of
   a factory child) leaves no new contract or version behind, so a failed `try_upgrade` keeps the old
   code running, and `HostEnv::restore_snapshot` brings back the code, the factory admins and the

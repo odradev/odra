@@ -4,6 +4,7 @@ use std::time::Duration;
 use odra::casper_types::{U256, U512};
 use odra::host::{Deployer, HostEnv, HostRef, HostRefLoader, InstallConfig, NoArgs};
 use odra::prelude::*;
+use odra_examples::features::livenet::Error::EmptyStack;
 use odra_examples::features::livenet::{
     LivenetContract, LivenetContractHostRef, LivenetContractInitArgs
 };
@@ -58,6 +59,18 @@ fn main() {
 
     // 3. If the endpoint is immutable, it can be called locally, querying only storage from livenet:
     assert_eq!(contract.owner(), owner);
+
+    // - a getter that reverts locally returns the error, also from a nested call,
+    //   and leaves the call stack as it was
+    let call_stack_depth = contract.call_stack_depth();
+    assert_eq!(contract.try_peek(), Err(EmptyStack.into()));
+    assert_eq!(contract.try_nested_peek(), Err(EmptyStack.into()));
+    assert_eq!(contract.call_stack_depth(), call_stack_depth);
+    assert_eq!(contract.owner(), owner);
+    contract.push_on_stack(2);
+    assert_eq!(contract.peek(), 2);
+    assert_eq!(contract.nested_peek(), 2);
+    assert_eq!(contract.pop_from_stack(), 2);
 
     // By querying livenet storage
     // - we can also test the events

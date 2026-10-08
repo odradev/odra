@@ -1,5 +1,5 @@
 //! This is an example contract used to showcase and test Livenet Environment.
-use crate::features::livenet::Error::SillyError;
+use crate::features::livenet::Error::{EmptyStack, SillyError};
 use odra::casper_types::U256;
 use odra::module::Revertible;
 use odra::prelude::*;
@@ -51,6 +51,24 @@ impl LivenetContract {
         self.stack.len()
     }
 
+    /// Returns the value on top of the stack, reverts if the stack is empty.
+    pub fn peek(&self) -> u64 {
+        match self.stack.len() {
+            0 => self.revert(EmptyStack),
+            len => self.stack.get(len - 1).unwrap_or_revert(self)
+        }
+    }
+
+    /// Calls [peek](Self::peek) of this contract as another contract would.
+    pub fn nested_peek(&self) -> u64 {
+        LivenetContractContractRef::new(self.env(), self.env().self_address()).peek()
+    }
+
+    /// Returns the number of frames on the call stack.
+    pub fn call_stack_depth(&self) -> u32 {
+        self.env().call_stack().len() as u32
+    }
+
     /// Returns the total supply of the ERC20 contract. This is an example of an immutable cross-contract call.
     pub fn immutable_cross_call(&self) -> U256 {
         Erc20ContractRef::new(
@@ -89,11 +107,14 @@ impl LivenetContract {
 #[odra::odra_error]
 pub enum Error {
     /// Silly error.
-    SillyError = 1
+    SillyError = 1,
+    /// The stack is empty.
+    EmptyStack = 2
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::features::livenet::Error::EmptyStack;
     use crate::features::livenet::{LivenetContract, LivenetContractInitArgs};
     use alloc::string::ToString;
     use odra::host::Deployer;
@@ -124,5 +145,34 @@ mod tests {
         livenet_contract.push_on_stack(1);
         assert_eq!(livenet_contract.pop_from_stack(), 1);
         livenet_contract.mutable_cross_call();
+    }
+
+    #[test]
+    fn reverting_getter_returns_the_error() {
+        let test_env = odra_test::env();
+        let erc20 = Erc20::deploy(
+            &test_env,
+            Erc20InitArgs {
+                name: "TestToken".to_string(),
+                symbol: "TT".to_string(),
+                decimals: 18,
+                initial_supply: None
+            }
+        );
+        let mut livenet_contract = LivenetContract::deploy(
+            &test_env,
+            LivenetContractInitArgs {
+                erc20_address: erc20.address()
+            }
+        );
+
+        let depth = livenet_contract.call_stack_depth();
+        assert_eq!(livenet_contract.try_peek(), Err(EmptyStack.into()));
+        assert_eq!(livenet_contract.try_nested_peek(), Err(EmptyStack.into()));
+        assert_eq!(livenet_contract.call_stack_depth(), depth);
+
+        livenet_contract.push_on_stack(7);
+        assert_eq!(livenet_contract.peek(), 7);
+        assert_eq!(livenet_contract.nested_peek(), 7);
     }
 }

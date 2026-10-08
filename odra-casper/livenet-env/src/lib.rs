@@ -2,6 +2,7 @@
 mod error;
 mod livenet_contract_env;
 mod livenet_host;
+mod panic_hook;
 
 use livenet_host::LivenetHost;
 pub use odra_casper_rpc_client::error::LivenetError;

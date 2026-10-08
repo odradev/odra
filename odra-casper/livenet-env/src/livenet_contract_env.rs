@@ -1,13 +1,15 @@
 //! Livenet contract environment.
 use crate::livenet_host::read_failed;
+use crate::panic_hook;
 use blake2::digest::VariableOutput;
 use blake2::Blake2bVar;
 use odra_casper_rpc_client::casper_client::CasperClient;
+use odra_casper_rpc_client::log;
 use odra_core::callstack::{Callstack, CallstackElement};
 use odra_core::casper_types::{bytesrepr::Bytes, crypto, CLValue, PublicKey, Signature, U512};
 use odra_core::prelude::*;
 use odra_core::validator::ValidatorInfo;
-use odra_core::{CallDef, ContractContext, ContractRegister};
+use odra_core::{CallDef, ContractContext, ContractRegister, VmError};
 use std::io::Write;
 use std::sync::RwLock;
 
@@ -15,7 +17,9 @@ use std::sync::RwLock;
 pub struct LivenetContractEnv {
     casper_client: Rc<RefCell<CasperClient>>,
     callstack: Rc<RefCell<Callstack>>,
-    contract_register: Rc<RwLock<ContractRegister>>
+    contract_register: Rc<RwLock<ContractRegister>>,
+    /// The error of the last revert, read by the host after the panic unwinds.
+    error: Rc<RefCell<Option<OdraError>>>
 }
 
 impl ContractContext for LivenetContractEnv {
@@ -86,29 +90,8 @@ impl ContractContext for LivenetContractEnv {
         if call_def.is_mut() {
             panic!("Cannot cross call mutable entrypoint from non-mutable entrypoint")
         }
-
-        let contract_name = self
-            .contract_register
-            .read()
-            .unwrap()
-            .get(&address)
-            .map(|c| String::from(c.name()))
-            .unwrap_or(String::from("UnknownContractName"));
-
-        self.callstack
-            .borrow_mut()
-            .push(CallstackElement::new_contract_call(
-                contract_name,
-                address,
-                call_def.clone()
-            ));
-        let result = self
-            .contract_register
-            .read()
-            .unwrap()
-            .call(&address, call_def);
-        self.callstack.borrow_mut().pop();
-        result.unwrap()
+        call_locally(&self.callstack, &self.contract_register, &address, call_def)
+            .unwrap_or_else(|e| self.revert(e))
     }
 
     fn get_block_time(&self) -> u64 {
@@ -148,7 +131,9 @@ impl ContractContext for LivenetContractEnv {
         {
             revert_msg = format!("{:?}::{}", address, call_def.entry_point());
         }
-
+        log::error(format!("Revert: {:?} - {}", error, revert_msg));
+        *self.error.borrow_mut() = Some(error.clone());
+        panic_hook::mark_revert();
         panic!("Revert: {:?} - {}", error, revert_msg);
     }
 
@@ -229,12 +214,52 @@ impl LivenetContractEnv {
     pub fn new(
         casper_client: Rc<RefCell<CasperClient>>,
         callstack: Rc<RefCell<Callstack>>,
-        contract_register: Rc<RwLock<ContractRegister>>
+        contract_register: Rc<RwLock<ContractRegister>>,
+        error: Rc<RefCell<Option<OdraError>>>
     ) -> Rc<RefCell<Self>> {
         Rc::new(RefCell::new(Self {
             casper_client,
             callstack,
-            contract_register
+            contract_register,
+            error
         }))
+    }
+}
+
+/// Executes a non-mutable entry point on this machine, reading the state from the node.
+///
+/// The contract runs one frame deeper on the call stack. The frame is popped when the call
+/// returns and when a revert unwinds it.
+pub(crate) fn call_locally(
+    callstack: &Rc<RefCell<Callstack>>,
+    contract_register: &RwLock<ContractRegister>,
+    address: &Address,
+    call_def: CallDef
+) -> OdraResult<Bytes> {
+    let contract = contract_register
+        .read()
+        .expect("Couldn't read contract register.")
+        .get(address)
+        .cloned();
+    let Some(contract) = contract else {
+        return Err(OdraError::VmError(VmError::InvalidContractAddress));
+    };
+    callstack
+        .borrow_mut()
+        .push(CallstackElement::new_contract_call(
+            String::from(contract.name()),
+            *address,
+            call_def.clone()
+        ));
+    let _frame = CallFrame(callstack.clone());
+    contract.call(call_def)
+}
+
+/// Pops the top frame of the call stack when dropped.
+struct CallFrame(Rc<RefCell<Callstack>>);
+
+impl Drop for CallFrame {
+    fn drop(&mut self) {
+        self.0.borrow_mut().pop();
     }
 }

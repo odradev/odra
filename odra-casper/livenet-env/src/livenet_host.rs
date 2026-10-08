@@ -1,13 +1,14 @@
 //! Livenet implementation of HostContext for HostEnv.
 
 use crate::error;
-use crate::livenet_contract_env::LivenetContractEnv;
+use crate::livenet_contract_env::{call_locally, LivenetContractEnv};
+use crate::panic_hook;
 use odra_casper_rpc_client::casper_client::configuration::CasperClientConfiguration;
 use odra_casper_rpc_client::casper_client::CasperClient;
 use odra_casper_rpc_client::error::LivenetError;
 use odra_casper_rpc_client::log::info;
 use odra_casper_rpc_client::utils::find_wasm_file_path;
-use odra_core::callstack::{Callstack, CallstackElement};
+use odra_core::callstack::Callstack;
 use odra_core::casper_types::Timestamp;
 use odra_core::entry_point_callback::EntryPointsCaller;
 use odra_core::{
@@ -26,7 +27,9 @@ pub struct LivenetHost {
     casper_client: Rc<RefCell<CasperClient>>,
     contract_register: Rc<RwLock<ContractRegister>>,
     contract_env: Rc<ContractEnv>,
-    callstack: Rc<RefCell<Callstack>>
+    callstack: Rc<RefCell<Callstack>>,
+    /// The error of the last revert of a locally executed call.
+    error: Rc<RefCell<Option<OdraError>>>
 }
 
 impl LivenetHost {
@@ -42,22 +45,46 @@ impl LivenetHost {
 
     fn new_instance() -> Result<Self, LivenetError> {
         let configuration = CasperClientConfiguration::from_env()?;
+        Ok(Self::with_configuration(configuration))
+    }
+
+    fn with_configuration(configuration: CasperClientConfiguration) -> Self {
         let casper_client: Rc<RefCell<CasperClient>> =
             Rc::new(RefCell::new(CasperClient::new(configuration)));
         let callstack: Rc<RefCell<Callstack>> = Default::default();
         let contract_register = Rc::new(RwLock::new(Default::default()));
+        let error: Rc<RefCell<Option<OdraError>>> = Default::default();
         let livenet_contract_env = LivenetContractEnv::new(
             casper_client.clone(),
             callstack.clone(),
-            contract_register.clone()
+            contract_register.clone(),
+            error.clone()
         );
         let contract_env = Rc::new(ContractEnv::new(livenet_contract_env));
-        Ok(Self {
+        Self {
             casper_client,
             contract_register,
             contract_env,
-            callstack
-        })
+            callstack,
+            error
+        }
+    }
+
+    /// Runs a non-mutable entry point on this machine. A revert unwinds the call with a panic,
+    /// it is caught here and returned as the error the contract reverted with.
+    fn execute_locally(&self, address: &Address, call_def: CallDef) -> OdraResult<Bytes> {
+        panic_hook::set_livenet_panic_hook();
+        *self.error.borrow_mut() = None;
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            call_locally(&self.callstack, &self.contract_register, address, call_def)
+        }));
+        match result {
+            Ok(result) => result,
+            Err(_) => {
+                let error = self.error.borrow_mut().take();
+                Err(error.unwrap_or(OdraError::VmError(VmError::Panic)))
+            }
+        }
     }
 }
 
@@ -221,28 +248,7 @@ impl HostContext for LivenetHost {
         use_proxy: bool
     ) -> OdraResult<Bytes> {
         if !call_def.is_mut() {
-            let contract_name = self
-                .contract_register
-                .read()
-                .expect("Couldn't read contract register.")
-                .get(address)
-                .map(|c| String::from(c.name()))
-                .unwrap_or(String::from("UnknownContractName"));
-
-            self.callstack
-                .borrow_mut()
-                .push(CallstackElement::new_contract_call(
-                    contract_name,
-                    *address,
-                    call_def.clone()
-                ));
-            let result = self
-                .contract_register
-                .read()
-                .expect("Couldn't read contract register.")
-                .call(address, call_def);
-            self.callstack.borrow_mut().pop();
-            return result;
+            return self.execute_locally(address, call_def);
         }
         let timestamp = Timestamp::now();
         let client = self.casper_client.borrow_mut();
@@ -371,4 +377,149 @@ pub(crate) fn read_failed(what: &str, address: &Address, e: LivenetError) -> ! {
         address.to_formatted_string(),
         e.error_message()
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::LivenetHost;
+    use odra_casper_rpc_client::casper_client::configuration::CasperClientConfiguration;
+    use odra_core::casper_types::bytesrepr::{Bytes, ToBytes};
+    use odra_core::casper_types::contracts::ContractPackageHash;
+    use odra_core::casper_types::{RuntimeArgs, SecretKey};
+    use odra_core::entry_point_callback::{EntryPoint, EntryPointsCaller};
+    use odra_core::host::{HostContext, HostEnv};
+    use odra_core::prelude::*;
+    use odra_core::{CallDef, ContractEnv, VmError};
+    use std::process::Command;
+
+    const SCENARIO_ENV: &str = "ODRA_LIVENET_PANIC_SCENARIO";
+    const ADDRESS: Address = Address::Contract(ContractPackageHash::new([1; 32]));
+
+    #[test]
+    fn reverting_getter_returns_the_error() {
+        let (host, env) = setup();
+        assert_eq!(call(&env, "fail"), Err(OdraError::user(7, "Boom")));
+        assert!(host.callstack.borrow().is_empty());
+        assert_eq!(call(&env, "depth"), Ok(1));
+    }
+
+    #[test]
+    fn revert_in_a_nested_getter_returns_the_error() {
+        let (host, env) = setup();
+        assert_eq!(call(&env, "nested_fail"), Err(OdraError::user(7, "Boom")));
+        assert!(host.callstack.borrow().is_empty());
+        assert_eq!(call(&env, "nested_depth"), Ok(2));
+    }
+
+    #[test]
+    fn panicking_getter_returns_a_vm_error() {
+        let (host, env) = setup();
+        assert_eq!(call(&env, "panic"), Err(OdraError::VmError(VmError::Panic)));
+        assert!(host.callstack.borrow().is_empty());
+        assert_eq!(call(&env, "depth"), Ok(1));
+    }
+
+    #[test]
+    fn unknown_getter_returns_an_error() {
+        let (host, env) = setup();
+        assert_eq!(
+            call(&env, "nested_unknown"),
+            Err(OdraError::VmError(VmError::NoSuchMethod("unknown".into())))
+        );
+        assert!(host.callstack.borrow().is_empty());
+    }
+
+    #[test]
+    fn revert_does_not_print_a_panic() {
+        let stderr = run_child("revert");
+        assert!(!stderr.contains("panicked at"), "{stderr}");
+    }
+
+    #[test]
+    fn other_panic_prints_the_standard_message() {
+        let stderr = run_child("panic");
+        assert!(stderr.contains("panicked at"), "{stderr}");
+        assert!(stderr.contains("boom"), "{stderr}");
+    }
+
+    /// Runs a scenario when started by [run_child], does nothing in a regular test run.
+    #[test]
+    fn child() {
+        let Ok(scenario) = std::env::var(SCENARIO_ENV) else {
+            return;
+        };
+        let (_, env) = setup();
+        match scenario.as_str() {
+            "revert" => assert!(call(&env, "nested_fail").is_err()),
+            "panic" => assert!(call(&env, "panic").is_err()),
+            _ => panic!("unknown scenario {scenario}")
+        }
+    }
+
+    fn run_child(scenario: &str) -> String {
+        let output = Command::new(std::env::current_exe().unwrap())
+            .args(["--exact", "livenet_host::tests::child", "--nocapture"])
+            .env(SCENARIO_ENV, scenario)
+            .env_remove("RUST_BACKTRACE")
+            .output()
+            .unwrap();
+        assert!(output.status.success());
+        String::from_utf8_lossy(&output.stderr).into_owned()
+    }
+
+    /// A host with one registered contract; nothing in the scenarios reaches the node.
+    fn setup() -> (Rc<LivenetHost>, HostEnv) {
+        let configuration = CasperClientConfiguration {
+            node_address: String::from("http://localhost:1"),
+            events_url: String::from("http://localhost:1/events"),
+            chain_name: String::from("casper-test"),
+            secret_keys: vec![SecretKey::ed25519_from_bytes([1; 32]).unwrap()],
+            secret_key_paths: vec![],
+            cspr_cloud_auth_token: None,
+            gas_price_tolerance: 1,
+            ttl: 60,
+            state_root_hash: None
+        };
+        let host = Rc::new(LivenetHost::with_configuration(configuration));
+        let env = HostEnv::new(host.clone());
+        let entry_points = [
+            "depth",
+            "fail",
+            "panic",
+            "nested_depth",
+            "nested_fail",
+            "nested_unknown"
+        ]
+        .into_iter()
+        .map(|name| EntryPoint::new(String::from(name), vec![]))
+        .collect();
+        let caller = EntryPointsCaller::new(env.clone(), entry_points, entry_point);
+        host.register_contract(ADDRESS, String::from("Contract"), caller);
+        (host, env)
+    }
+
+    fn call(env: &HostEnv, entry_point: &str) -> OdraResult<u32> {
+        env.call_contract(
+            ADDRESS,
+            CallDef::new(entry_point, false, RuntimeArgs::new())
+        )
+    }
+
+    fn entry_point(env: ContractEnv, call_def: CallDef) -> OdraResult<Bytes> {
+        let nested = |entry_point: &str| {
+            env.call_contract::<u32>(
+                env.self_address(),
+                CallDef::new(entry_point, false, RuntimeArgs::new())
+            )
+        };
+        let result: u32 = match call_def.entry_point() {
+            "fail" => env.revert(OdraError::user(7, "Boom")),
+            "panic" => panic!("boom"),
+            "nested_depth" => nested("depth"),
+            "nested_fail" => nested("fail"),
+            "nested_unknown" => nested("unknown"),
+            _ => env.call_stack().len() as u32
+        };
+        Ok(Bytes::from(result.to_bytes().unwrap()))
+    }
 }
