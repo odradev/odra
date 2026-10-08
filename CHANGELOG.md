@@ -132,6 +132,11 @@ Changelog for `odra`.
 - On livenet a getter or `#[odra(offchain)]` function sees the calling account (the `HostEnv` caller)
   as `caller()`, and a getter it calls sees the calling contract, like on OdraVM and CasperVM;
   `call_stack()` and `nth_caller` start with that account. It used to see its own address.
+- On CasperVM a getter called by an `#[odra(offchain)]` function runs on the host too, like on livenet,
+  so it sees the offchain function's contract as its caller and the whole call stack (it was executed
+  by the VM as if the account called it), and its revert returns the error instead of
+  `VmError::Panic`. A nested offchain call sees the calling contract as `caller()` instead of the
+  account, like on OdraVM. A call with tokens attached still goes to the VM.
 - OdraVM rolls back contract code with the state, like Casper: a reverted `init` or `upgrade` (also of
   a factory child) leaves no new contract or version behind, so a failed `try_upgrade` keeps the old
   code running, and `HostEnv::restore_snapshot` brings back the code, the factory admins and the

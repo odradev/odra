@@ -64,6 +64,12 @@ impl LivenetContract {
         LivenetContractContractRef::new(self.env(), self.env().self_address()).peek()
     }
 
+    /// [nested_peek](Self::nested_peek) executed on the host instead of deployed.
+    #[odra(offchain)]
+    pub fn offchain_peek(&self) -> u64 {
+        self.nested_peek()
+    }
+
     /// Returns the number of frames on the call stack.
     pub fn call_stack_depth(&self) -> u32 {
         self.env().call_stack().len() as u32
@@ -169,10 +175,12 @@ mod tests {
         let depth = livenet_contract.call_stack_depth();
         assert_eq!(livenet_contract.try_peek(), Err(EmptyStack.into()));
         assert_eq!(livenet_contract.try_nested_peek(), Err(EmptyStack.into()));
+        assert_eq!(livenet_contract.try_offchain_peek(), Err(EmptyStack.into()));
         assert_eq!(livenet_contract.call_stack_depth(), depth);
 
         livenet_contract.push_on_stack(7);
         assert_eq!(livenet_contract.peek(), 7);
         assert_eq!(livenet_contract.nested_peek(), 7);
+        assert_eq!(livenet_contract.offchain_peek(), 7);
     }
 }
