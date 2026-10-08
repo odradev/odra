@@ -3,6 +3,7 @@ use crate::prelude::*;
 use crate::ContractContainer;
 use crate::{casper_types::bytesrepr::Bytes, VmError};
 
+/// The version of a contract at an address, counted from 0.
 pub type ContractVersion = u32;
 
 /// A struct representing a contract register that maps an address to a contract.
@@ -64,6 +65,20 @@ impl ContractRegister {
     pub fn get_mut(&mut self, addr: &Address) -> Option<&mut ContractContainer> {
         let latest_version = self.versions_count.get(addr).unwrap_or(&0);
         self.contracts.get_mut(&(*addr, *latest_version))
+    }
+
+    /// Returns the latest version of every contract, for [revert_to](Self::revert_to).
+    pub fn versions(&self) -> BTreeMap<Address, ContractVersion> {
+        self.versions_count.clone()
+    }
+
+    /// Forgets the contracts and versions added since `versions` was taken by
+    /// [versions](Self::versions).
+    pub fn revert_to(&mut self, versions: &BTreeMap<Address, ContractVersion>) {
+        self.contracts.retain(|(addr, version), _| {
+            versions.get(addr).is_some_and(|latest| version <= latest)
+        });
+        self.versions_count = versions.clone();
     }
 
     /// Post install hook.

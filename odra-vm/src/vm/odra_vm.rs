@@ -24,7 +24,7 @@ use odra_core::{
         PublicKey, SecretKey, U512
     }
 };
-use odra_core::{ContractContainer, ContractRegister};
+use odra_core::{ContractContainer, ContractRegister, ContractVersion};
 const NAMED_KEY_PREFIX: &str = "NAMED_KEY";
 /// The dictionary of a factory contract mapping the names of its children to their addresses.
 const FACTORY_CHILDREN_DICT: &str = "__odra_factory_children";
@@ -33,10 +33,24 @@ const FACTORY_CHILDREN_DICT: &str = "__odra_factory_children";
 pub struct OdraVm {
     state: Rc<RefCell<OdraVmState>>,
     contract_register: Rc<RefCell<ContractRegister>>,
-    snapshot: RefCell<Option<OdraVmSnapshot>>,
+    snapshot: RefCell<Option<(OdraVmSnapshot, CodeSnapshot)>>,
+    /// The code before the outermost call, brought back if the call reverts.
+    call_snapshot: RefCell<Option<CodeSnapshot>>,
     /// The accounts that deployed the factory contracts, the only ones allowed to upgrade the
     /// children of a factory.
     factory_admins: RefCell<BTreeMap<Address, Address>>
+}
+
+/// What a revert undoes on top of [OdraVmState]: the contracts deployed or upgraded, and the
+/// factory admins.
+///
+/// Only the latest version of each contract is kept, the versions added later are dropped. The
+/// kept versions need no other care: a version is post-installed right after it is added, by
+/// the same deploy or upgrade.
+#[derive(Clone)]
+struct CodeSnapshot {
+    versions: BTreeMap<Address, ContractVersion>,
+    factory_admins: BTreeMap<Address, Address>
 }
 
 impl Default for OdraVm {
@@ -45,6 +59,7 @@ impl Default for OdraVm {
             state: Rc::new(RefCell::new(OdraVmState::default())),
             contract_register: Rc::new(RefCell::new(ContractRegister::default())),
             snapshot: RefCell::new(None),
+            call_snapshot: RefCell::new(None),
             factory_admins: RefCell::new(BTreeMap::new())
         }
     }
@@ -112,6 +127,19 @@ impl OdraVm {
 
     pub(crate) fn post_install(&self, address: Address) {
         self.contract_register.borrow_mut().post_install(&address);
+    }
+
+    /// Runs `f`, a deploy or an upgrade, and forgets the code it registered if it fails.
+    ///
+    /// The code is registered before the constructor or the upgrader is called, so a revert of
+    /// that call alone would leave it behind.
+    pub(crate) fn install<T>(&self, f: impl FnOnce() -> OdraResult<T>) -> OdraResult<T> {
+        let code = self.code_snapshot();
+        let result = f();
+        if result.is_err() {
+            self.restore_code(&code);
+        }
+        result
     }
 
     /// Lets `admin` upgrade the children of the factory contract at `factory`.
@@ -238,6 +266,9 @@ impl OdraVm {
         state.clear_callstack();
         if state.is_in_caller_context() {
             state.restore_snapshot();
+            if let Some(code) = self.call_snapshot.take() {
+                self.restore_code(&code);
+            }
         }
         drop(state);
 
@@ -269,7 +300,7 @@ impl OdraVm {
     /// Remembers the current state, replacing any previous snapshot.
     pub fn take_snapshot(&self) {
         let snapshot = self.state.borrow().snapshot();
-        *self.snapshot.borrow_mut() = Some(snapshot);
+        *self.snapshot.borrow_mut() = Some((snapshot, self.code_snapshot()));
     }
 
     /// Brings back the state remembered by [`take_snapshot`](Self::take_snapshot). The snapshot
@@ -280,10 +311,11 @@ impl OdraVm {
     /// Panics if no snapshot has been taken.
     pub fn restore_snapshot(&self) {
         let snapshot = self.snapshot.borrow();
-        let snapshot = snapshot
+        let (snapshot, code) = snapshot
             .as_ref()
             .expect("No snapshot to restore: call `take_snapshot` first");
         self.state.borrow_mut().restore(snapshot);
+        self.restore_code(code);
     }
 
     /// Retrieves the callstack record.
@@ -649,6 +681,7 @@ impl OdraVm {
         if state.is_in_caller_context() {
             state.take_snapshot();
             state.clear_error();
+            *self.call_snapshot.borrow_mut() = Some(self.code_snapshot());
         }
         // Put the address on stack.
 
@@ -665,8 +698,23 @@ impl OdraVm {
         // If only one address on the call_stack, drop the snapshot
         if state.is_in_caller_context() {
             state.drop_snapshot();
+            self.call_snapshot.take();
         }
         result
+    }
+
+    fn code_snapshot(&self) -> CodeSnapshot {
+        CodeSnapshot {
+            versions: self.contract_register.borrow().versions(),
+            factory_admins: self.factory_admins.borrow().clone()
+        }
+    }
+
+    fn restore_code(&self, code: &CodeSnapshot) {
+        self.contract_register
+            .borrow_mut()
+            .revert_to(&code.versions);
+        *self.factory_admins.borrow_mut() = code.factory_admins.clone();
     }
 
     /// The host environment the contract at `address` is called in.
@@ -724,6 +772,7 @@ mod tests {
     };
 
     use std::collections::BTreeMap;
+    use std::rc::Rc;
 
     use odra_core::casper_types::bytesrepr::FromBytes;
     use odra_core::casper_types::{CLValue, RuntimeArgs, U512};
@@ -1023,6 +1072,121 @@ mod tests {
         let call_def = CallDef::new(TEST_ENTRY_POINT, false, RuntimeArgs::new())
             .with_amount(caller_balance + 1);
         instance.call_contract(contract_address, call_def);
+    }
+
+    #[test]
+    fn reverted_init_leaves_no_contract() {
+        // given a factory whose `init` reverts
+        let (vm, env) = setup_env();
+
+        // when deploying it
+        let result = env.new_contract("Factory", RuntimeArgs::new(), reverting_factory(&env));
+
+        // then the deploy fails and leaves nothing behind
+        assert_eq!(result, Err(OdraError::user(1, "Init")));
+        let address = utils::contract_address_from_u32(1);
+        assert!(vm.contract_register.borrow().get(&address).is_none());
+        assert!(vm.factory_admins.borrow().is_empty());
+    }
+
+    #[test]
+    fn reverted_child_init_leaves_no_child() {
+        // given a factory
+        let (vm, env) = setup_env();
+        let factory = env
+            .new_contract("Factory", RuntimeArgs::new(), test_factory(&env))
+            .unwrap();
+
+        // when deploying a child whose `init` reverts
+        let call_def = CallDef::new("new_contract", true, RuntimeArgs::new());
+        let result = env.raw_call_contract(factory, call_def, false);
+
+        // then the call fails and the child is not registered
+        assert_eq!(result, Err(OdraError::user(1, "Init")));
+        let child = utils::contract_address_from_u32(2);
+        assert!(vm.contract_register.borrow().get(&child).is_none());
+        assert!(vm.contract_register.borrow().get(&factory).is_some());
+    }
+
+    #[test]
+    fn restoring_a_snapshot_forgets_newer_contracts() {
+        // given a snapshot taken with one contract deployed
+        let (vm, env) = setup_env();
+        let factory = env
+            .new_contract("Factory", RuntimeArgs::new(), test_factory(&env))
+            .unwrap();
+        vm.take_snapshot();
+
+        // when another contract is deployed, the first one upgraded and the snapshot restored
+        let other = env
+            .new_contract("Other", RuntimeArgs::new(), test_factory(&env))
+            .unwrap();
+        env.upgrade_contract("Upgraded", factory, RuntimeArgs::new(), test_factory(&env))
+            .unwrap();
+        vm.restore_snapshot();
+
+        // then only the first version of the first contract is left
+        let register = vm.contract_register.borrow();
+        assert_eq!(register.get(&factory).map(|c| c.name()), Some("Factory"));
+        assert!(register.get(&other).is_none());
+        assert_eq!(vm.factory_admins.borrow().len(), 1);
+    }
+
+    #[test]
+    fn reverted_child_init_emits_nothing() {
+        // given a factory
+        let (vm, env) = setup_env();
+        let factory = env
+            .new_contract("Factory", RuntimeArgs::new(), test_factory(&env))
+            .unwrap();
+
+        // when deploying a child that emits events in its `init` and reverts
+        let call_def = CallDef::new("new_contract", true, RuntimeArgs::new());
+        let result = env.raw_call_contract(factory, call_def, false);
+
+        // then the events are gone with the child
+        assert_eq!(result, Err(OdraError::user(1, "Init")));
+        let child = utils::contract_address_from_u32(2);
+        assert!(vm.get_events_count(&child).is_err());
+        assert!(vm.get_native_events_count(&child).is_err());
+    }
+
+    thread_local! {
+        static VM: RefCell<Option<Rc<OdraVm>>> = const { RefCell::new(None) };
+    }
+
+    fn setup_env() -> (Rc<OdraVm>, HostEnv) {
+        let vm = OdraVm::new();
+        let env = HostEnv::new(OdraVmHost::new(vm.clone()));
+        // Lets the entry points below reach the VM.
+        VM.with(|cell| *cell.borrow_mut() = Some(vm.clone()));
+        (vm, env)
+    }
+
+    /// A factory whose `new_contract` deploys a child with a reverting `init`.
+    fn test_factory(env: &HostEnv) -> EntryPointsCaller {
+        let entry_point = EntryPoint::new(String::from("new_contract"), vec![]);
+        EntryPointsCaller::new(env.clone(), vec![entry_point], |env, _| {
+            env.new_child_contract("Child", RuntimeArgs::new(), reverting_factory)?;
+            Ok(Bytes::new())
+        })
+    }
+
+    /// A factory with an `init` that emits events and reverts.
+    fn reverting_factory(env: &HostEnv) -> EntryPointsCaller {
+        let entry_points = vec![
+            EntryPoint::new(String::from("init"), vec![]),
+            EntryPoint::new(String::from("new_contract"), vec![]),
+        ];
+        EntryPointsCaller::new(env.clone(), entry_points, |_, _| {
+            VM.with(|cell| {
+                let vm = cell.borrow();
+                let vm = vm.as_ref().unwrap();
+                vm.emit_event(&Bytes::from(vec![1]));
+                vm.emit_native_event(&Bytes::from(vec![2]));
+            });
+            Err(OdraError::user(1, "Init"))
+        })
     }
 
     fn push_address(vm: &OdraVm, address: &Address) {

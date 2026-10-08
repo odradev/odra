@@ -500,6 +500,8 @@ pub struct HostEnv {
     backend: Rc<dyn HostContext>,
     last_call_result: Rc<RefCell<Option<CallResult>>>,
     deployed_contracts: Rc<RefCell<BTreeMap<Address, DeployedContract>>>,
+    /// The deployed contracts remembered by [take_snapshot](Self::take_snapshot).
+    deployed_contracts_snapshot: Rc<RefCell<Option<BTreeMap<Address, DeployedContract>>>>,
     captures_events: Rc<RefCell<bool>>
 }
 
@@ -510,6 +512,7 @@ impl HostEnv {
             backend,
             last_call_result: RefCell::new(None).into(),
             deployed_contracts: RefCell::new(Default::default()).into(),
+            deployed_contracts_snapshot: RefCell::new(None).into(),
             captures_events: Rc::new(RefCell::new(true))
         }
     }
@@ -616,8 +619,8 @@ impl HostEnv {
         backend.block_time() / 1000
     }
 
-    /// Remembers the current state of the test VM: contract storage, CSPR balances, events and
-    /// the block time.
+    /// Remembers the current state of the test VM: deployed contracts and their code, contract
+    /// storage, CSPR balances, events and the block time.
     ///
     /// [`restore_snapshot`](Self::restore_snapshot) brings that state back, as many times as
     /// needed, so several scenarios can branch off one expensive setup. Only the last snapshot
@@ -638,7 +641,9 @@ impl HostEnv {
     /// ```
     pub fn take_snapshot(&self) {
         let backend = self.backend.as_ref();
-        backend.take_snapshot()
+        backend.take_snapshot();
+        let deployed_contracts = self.deployed_contracts.borrow().clone();
+        *self.deployed_contracts_snapshot.borrow_mut() = Some(deployed_contracts);
     }
 
     /// Brings the test VM back to the state remembered by the last
@@ -649,7 +654,11 @@ impl HostEnv {
     /// Panics if no snapshot has been taken.
     pub fn restore_snapshot(&self) {
         let backend = self.backend.as_ref();
-        backend.restore_snapshot()
+        backend.restore_snapshot();
+        // The contracts deployed since are gone, the versions and event counts are back.
+        if let Some(deployed_contracts) = self.deployed_contracts_snapshot.borrow().as_ref() {
+            *self.deployed_contracts.borrow_mut() = deployed_contracts.clone();
+        }
     }
 
     /// Runs `f` once per item and returns the results in the order of the items.
@@ -819,10 +828,18 @@ impl HostEnv {
         call_def: CallDef,
         use_proxy: bool
     ) -> OdraResult<Bytes> {
+        let deployed_before: BTreeSet<Address> =
+            self.deployed_contracts.borrow().keys().copied().collect();
         let call_result = {
             let backend = self.backend.as_ref();
             backend.call_contract(&address, call_def, use_proxy)
         };
+        // The contracts a failed call deployed (factory children) were reverted with it.
+        if call_result.is_err() {
+            self.deployed_contracts
+                .borrow_mut()
+                .retain(|address, _| deployed_before.contains(address));
+        }
 
         let mut events_map: BTreeMap<Address, Vec<Bytes>> = BTreeMap::new();
         let mut native_events_map: BTreeMap<Address, Vec<Bytes>> = BTreeMap::new();

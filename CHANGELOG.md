@@ -123,6 +123,13 @@ Changelog for `odra`.
   contracts in `Odra.toml` of `odra-modules` and `odra-examples`; their tests run on OdraVM only.
 
 ### Fixed
+- OdraVM rolls back contract code with the state, like Casper: a reverted `init` or `upgrade` (also of
+  a factory child) leaves no new contract or version behind, so a failed `try_upgrade` keeps the old
+  code running, and `HostEnv::restore_snapshot` brings back the code, the factory admins and the
+  host's record of deployed contracts and their events from the time of the snapshot.
+- OdraVM drops the events and native events emitted during a call that reverts, also those of
+  nested calls and of factory children, like Casper: event counts, `get_event` indices and
+  `last_call()` no longer see them.
 - Project templates ignore the `wasm` directory where it is actually created: at the root of a
   workspace project rather than in its members, and in the `cep18` and `cep95` templates, which
   never ignored it.

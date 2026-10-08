@@ -87,10 +87,41 @@ impl CounterV2 {
     }
 }
 
+/// Errors of [CounterV3].
+#[odra::odra_error]
+pub enum UpgradeError {
+    /// The upgrade was asked to fail.
+    Refused = 1
+}
+
+/// A Contract that counts in tens, version 3. Its upgrade fails on request.
+#[odra::module(errors = UpgradeError)]
+pub struct CounterV3 {
+    counter: Var<u32>
+}
+
+#[odra::module]
+impl CounterV3 {
+    pub fn upgrade(&mut self, fail: bool) {
+        if fail {
+            self.env().revert(UpgradeError::Refused)
+        }
+    }
+
+    pub fn increment(&mut self) {
+        self.counter.set(self.counter.get_or_default() + 10);
+    }
+
+    pub fn get(&self) -> u32 {
+        self.counter.get_or_default()
+    }
+}
+
 #[cfg(test)]
 mod test {
     use crate::features::upgrade::{
-        CounterV1, CounterV2, CounterV2UpgradeArgs, IncrementEvent, IncrementEventV2
+        CounterV1, CounterV2, CounterV2UpgradeArgs, CounterV3, CounterV3UpgradeArgs,
+        IncrementEvent, IncrementEventV2, UpgradeError
     };
     use odra::casper_types::U256;
     use odra::host::{Deployer, HostRef, InstallConfig, NoArgs, UpgradeConfig};
@@ -185,5 +216,69 @@ mod test {
         // Same package, state kept.
         assert_eq!(counter2.address(), counter.address());
         assert_eq!(counter2.get(), U256::one());
+    }
+
+    #[test]
+    fn reverted_upgrade_keeps_the_old_code() {
+        let test_env = odra_test::env();
+        let mut counter =
+            CounterV1::deploy_with_cfg(&test_env, NoArgs, InstallConfig::upgradable::<CounterV1>());
+        counter.increment();
+
+        let result = CounterV3::try_upgrade(
+            &test_env,
+            counter.address(),
+            CounterV3UpgradeArgs { fail: true }
+        );
+        assert_eq!(result.err(), Some(UpgradeError::Refused.into()));
+
+        // Still version 1: it counts in ones.
+        counter.increment();
+        assert_eq!(counter.get(), 2);
+
+        let mut counter = CounterV3::try_upgrade(
+            &test_env,
+            counter.address(),
+            CounterV3UpgradeArgs { fail: false }
+        )
+        .unwrap();
+        counter.increment();
+        assert_eq!(counter.get(), 12);
+    }
+
+    #[test]
+    fn restoring_a_snapshot_brings_back_the_old_code() {
+        let test_env = odra_test::env();
+        let mut counter =
+            CounterV1::deploy_with_cfg(&test_env, NoArgs, InstallConfig::upgradable::<CounterV1>());
+        counter.increment();
+        test_env.take_snapshot();
+
+        counter.increment();
+        let mut upgraded = CounterV3::try_upgrade(
+            &test_env,
+            counter.address(),
+            CounterV3UpgradeArgs { fail: false }
+        )
+        .unwrap();
+        upgraded.increment();
+        assert_eq!(upgraded.get(), 12);
+        let mut deployed = CounterV1::deploy(&test_env, NoArgs);
+        deployed.increment();
+        deployed.increment();
+
+        test_env.restore_snapshot();
+
+        // Version 1 again, and its events are still tracked.
+        counter.increment();
+        assert!(counter
+            .last_call()
+            .emitted_event(IncrementEvent { value: 2 }));
+        assert_eq!(counter.get(), 2);
+
+        // A contract deployed after the restore starts clean.
+        let mut fresh = CounterV3::deploy(&test_env, NoArgs);
+        fresh.increment();
+        assert_eq!(fresh.get(), 10);
     }
 }

@@ -46,6 +46,45 @@ impl BetterCounter {
     }
 }
 
+/// Errors of [TenCounter].
+#[odra::odra_error]
+pub enum CounterError {
+    /// A counter cannot start from zero.
+    ZeroValue = 1
+}
+
+#[odra::module(factory=on, errors = CounterError)]
+pub struct TenCounter {
+    /// The initial value for the counter.
+    value: Var<u32>
+}
+
+#[odra::module(factory=on)]
+impl TenCounter {
+    pub fn init(&mut self, value: u32) {
+        self.set_value(value);
+    }
+
+    pub fn increment(&mut self) {
+        self.value.set(self.value.get_or_default() + 10);
+    }
+
+    pub fn value(&self) -> u32 {
+        self.value.get_or_default()
+    }
+
+    pub fn upgrade(&mut self, new_value: u32) {
+        self.set_value(new_value);
+    }
+
+    fn set_value(&mut self, value: u32) {
+        if value == 0 {
+            self.env().revert(CounterError::ZeroValue)
+        }
+        self.value.set(value);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use odra::{
@@ -54,7 +93,10 @@ mod tests {
         VmError
     };
 
-    use crate::factory::counter::{BetterCounterFactory, BetterCounterUpgradeArgs};
+    use crate::factory::counter::{
+        BetterCounterFactory, BetterCounterUpgradeArgs, CounterError, TenCounterFactory,
+        TenCounterFactoryContractDeployed, TenCounterHostRef
+    };
 
     use super::{
         Counter, CounterFactory, CounterFactoryContractDeployed, CounterHostRef, CounterInitArgs
@@ -206,5 +248,52 @@ mod tests {
             upgrade_result,
             Err(OdraError::ExecutionError(ExecutionError::MissingArg))
         );
+    }
+
+    #[test]
+    fn test_reverted_child_upgrade_keeps_the_old_code() {
+        let env = odra_test::env();
+        let mut factory = CounterFactory::deploy_with_cfg(
+            &env,
+            NoArgs,
+            InstallConfig::upgradable::<CounterFactory>()
+        );
+        let (address, _) = factory.new_contract(String::from("Counter"), 1);
+        let mut factory = TenCounterFactory::try_upgrade(&env, factory.address(), NoArgs).unwrap();
+
+        let result = factory.try_upgrade_child_contract(String::from("Counter"), 0);
+        assert_eq!(result, Err(CounterError::ZeroValue.into()));
+
+        // Still a `Counter`: it counts in ones.
+        let mut counter = CounterHostRef::new(address, env.clone());
+        counter.increment();
+        assert_eq!(counter.value(), 2);
+
+        factory.upgrade_child_contract(String::from("Counter"), 5);
+        let mut counter = TenCounterHostRef::new(address, env.clone());
+        counter.increment();
+        assert_eq!(counter.value(), 15);
+    }
+
+    #[test]
+    fn test_reverted_child_init_deploys_nothing() {
+        let env = odra_test::env();
+        let mut factory = TenCounterFactory::deploy(&env, NoArgs);
+
+        let result = factory.try_new_contract(String::from("Counter"), 0);
+        assert_eq!(result, Err(CounterError::ZeroValue.into()));
+
+        // The name is still free.
+        let (address, _) = factory.new_contract(String::from("Counter"), 3);
+        assert!(factory
+            .last_call()
+            .emitted_event(TenCounterFactoryContractDeployed {
+                contract_address: address,
+                contract_name: String::from("Counter")
+            }));
+        let mut counter = TenCounterHostRef::new(address, env.clone());
+        counter.increment();
+        assert_eq!(counter.value(), 13);
+        assert_ne!(address, factory.address());
     }
 }
