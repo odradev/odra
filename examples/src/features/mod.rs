@@ -6,6 +6,7 @@ pub mod collecting_events;
 pub mod cross_calls;
 pub mod custom_types;
 pub mod events;
+pub mod field_names;
 pub mod handling_errors;
 pub mod host_functions;
 pub mod livenet;

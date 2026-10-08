@@ -107,9 +107,9 @@ impl TryFrom<(&'_ ModuleImplIR, &'_ FnIR)> for ExecutableFnBodyItem {
     fn try_from(value: (&'_ ModuleImplIR, &'_ FnIR)) -> Result<Self, Self::Error> {
         let (module, func) = value;
         let fn_ident = func.name();
-        let result_ident = utils::ident::exec_result();
+        let result_ident = utils::ident::result();
         let env_rc_ident = utils::ident::env_rc();
-        let env_ident = utils::ident::exec_fn_env();
+        let env_ident = utils::ident::prefixed_env();
         let exec_env_ident = utils::ident::exec_env();
         let exec_env_stmt =
             (func.is_payable() || func.is_non_reentrant() || func.has_args() || func.is_upgrader())
@@ -197,7 +197,7 @@ impl TryInto<syn::Signature> for ExecFnSignature {
 impl ToTokens for ExecFnSignature {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let ident = &self.ident;
-        let env_ident = utils::ident::exec_fn_env();
+        let env_ident = utils::ident::prefixed_env();
         let env_type = utils::ty::contract_env();
         let ret_ty = &self.ret_ty;
 

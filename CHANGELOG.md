@@ -133,6 +133,12 @@ Changelog for `odra`.
   names for its own locals, so such an argument was shadowed and failed with a type error pointing at
   the user's code (`expected Address, found Vault`). The locals of the generated code are prefixed
   with `__odra_` now.
+- The same for fields: a module field may be named `env` (it was also left out of the field
+  indices), an `#[odra::odra_type]` struct or enum variant field and an `#[odra::event]` field may be
+  named `bytes`, and an enum variant field named `result` no longer serializes the wrong value.
+  `#[odra::event]` implements the `casper_event_standard` traits itself instead of deriving
+  `odra::Event`, with the same bytes and schema. The hidden env field of a module is `__odra_env`
+  (was `__env`). Storage keys and serialized layouts are unchanged.
 - Livenet names a user error after the schema of the contract that was called: contracts reuse
   small codes, and the first schema with the code used to win, so a revert could come back as another
   contract's error. If the called contract has no such error (a contract it called reverted, the code

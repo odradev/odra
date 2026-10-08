@@ -184,15 +184,6 @@ fn new_entry_point_arg(arg: &syn::PatType) -> syn::Expr {
 pub fn into_arg(ty: syn::Type, ident: String) -> syn::Expr {
     parse_quote!(odra::args::odra_argument::<#ty>(#ident))
 }
-pub trait IntoExpr {
-    fn into_expr(self) -> syn::Expr;
-}
-
-impl IntoExpr for syn::Ident {
-    fn into_expr(self) -> syn::Expr {
-        parse_quote!(#self)
-    }
-}
 
 pub fn constructor_ep(args_expr: syn::Expr) -> syn::Expr {
     parse_quote!(odra::entry_point::EntryPoint::Constructor {

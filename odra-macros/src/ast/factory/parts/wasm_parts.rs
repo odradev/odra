@@ -19,7 +19,7 @@ impl TryFrom<(&'_ ModuleImplIR, &'_ FnIR)> for NoMangleFnItem<FactoryContext> {
     fn try_from(value: (&'_ ModuleImplIR, &'_ FnIR)) -> Result<Self, Self::Error> {
         let (module, func) = value;
         let fn_ident = func.name();
-        let result_ident = utils::ident::exec_result();
+        let result_ident = utils::ident::result();
         let exec_parts_ident = module.exec_parts_mod_ident()?;
         let exec_fn = func.execute_name();
         let new_env = utils::expr::new_wasm_contract_env();
