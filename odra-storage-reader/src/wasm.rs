@@ -1,18 +1,10 @@
 //! The JavaScript bindings.
 
 use gloo_utils::format::JsValueSerdeExt;
-use serde::Deserialize;
 use serde_json::Value;
 use wasm_bindgen::prelude::*;
 
 use crate::{reader, Error, Location};
-
-/// Options of [StorageReader::decode].
-#[derive(Deserialize, Default)]
-struct DecodeOptions {
-    #[serde(default)]
-    raw: bool
-}
 
 /// Reads the storage of a deployed Odra contract, see the crate docs.
 #[wasm_bindgen]
@@ -43,6 +35,13 @@ impl StorageReader {
         Ok(JsValue::from_serde(self.0.layout())?)
     }
 
+    /// Every value that can be read: `{ path, keys, type, storage }`, with the path and the key
+    /// types as `locate` takes them.
+    #[wasm_bindgen(js_name = "readableFields")]
+    pub fn readable_fields(&self) -> Result<JsValue, JsError> {
+        Ok(JsValue::from_serde(&self.0.layout().readable_fields())?)
+    }
+
     /// The hash (`hash-...`) of the current version of a contract package, from the
     /// `rawJSON.stored_value` of `queryLatestGlobalState(packageHash, [])`.
     #[wasm_bindgen(js_name = "currentContractHash")]
@@ -58,25 +57,37 @@ impl StorageReader {
     }
 
     /// Decodes the value read from `location` (the result of `locate`). `clValue` is the
-    /// `rawJSON.stored_value.CLValue` of the RPC result. `{ raw: true }` returns the hex-encoded
-    /// stored bytes instead.
+    /// `rawJSON.stored_value.CLValue` of the RPC result.
     pub fn decode(
         &self,
         #[wasm_bindgen(js_name = "clValue")] cl_value: JsValue,
-        location: JsValue,
-        options: Option<js_sys::Object>
+        location: JsValue
     ) -> Result<String, JsError> {
-        let location: Location = location
-            .into_serde()
-            .map_err(|e| Error::InvalidLocation(e.to_string()))?;
-        let options: DecodeOptions = match options {
-            Some(options) => JsValue::from(options).into_serde()?,
-            _ => DecodeOptions::default()
-        };
-        Ok(self.0.decode(&to_json(cl_value)?, &location, options.raw)?)
+        Ok(self
+            .0
+            .decode(&to_json(cl_value)?, &to_location(location)?)?)
+    }
+
+    /// The hex-encoded bytes of the value read from `location`, without decoding them, e.g. for a
+    /// type that is not in the layout file. Takes the same arguments as `decode`.
+    #[wasm_bindgen(js_name = "decodeRaw")]
+    pub fn decode_raw(
+        &self,
+        #[wasm_bindgen(js_name = "clValue")] cl_value: JsValue,
+        location: JsValue
+    ) -> Result<String, JsError> {
+        Ok(self
+            .0
+            .decode_raw(&to_json(cl_value)?, &to_location(location)?)?)
     }
 }
 
 fn to_json(value: JsValue) -> Result<Value, JsError> {
     Ok(value.into_serde::<Value>()?)
+}
+
+fn to_location(location: JsValue) -> Result<Location, Error> {
+    location
+        .into_serde()
+        .map_err(|e| Error::InvalidLocation(e.to_string()))
 }

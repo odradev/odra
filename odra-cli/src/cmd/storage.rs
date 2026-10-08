@@ -4,7 +4,7 @@ use odra::contract_def::HasIdent;
 use odra::host::HostEnv;
 use odra::schema::casper_contract_schema::Type;
 use odra::schema::{
-    SchemaCustomTypes, SchemaEvents, SchemaStorageLayout, StorageField, StorageKind,
+    ReadableField, SchemaCustomTypes, SchemaEvents, SchemaStorageLayout, StorageField, StorageKind,
     StorageLayoutFile, StorageLocation, STORAGE_LAYOUT_VERSION
 };
 use odra::OdraContract;
@@ -240,6 +240,13 @@ impl CmdOutput for StorageReport {
                     report.contract, report.ident
                 ));
                 print_fields(report.layout.fields(), 1);
+                log(format!(
+                    "Read with `storage {} <path> [-k <key>]...`:",
+                    report.contract
+                ));
+                for field in report.layout.readable_fields() {
+                    log(format!("  {}", format_readable_field(&field)));
+                }
             }
             StorageReport::Value(report) => {
                 log(format!("Contract: {}", report.contract));
@@ -265,6 +272,17 @@ fn format_location(location: &StorageLocation) -> String {
         StorageLocation::NamedKey { name } => format!("named key `{name}`"),
         StorageLocation::Dictionary { name, key } => format!("dictionary `{name}`[{key}]")
     }
+}
+
+/// A readable field as the arguments to read it, e.g. `balances -k <hash-...|account-hash-...>: DECIMAL`.
+fn format_readable_field(field: &ReadableField) -> String {
+    let hint = |t: &Type| odra_schema::codec::format_type_hint(&t.0);
+    let keys: String = field
+        .keys
+        .iter()
+        .map(|key| format!(" -k <{}>", hint(key)))
+        .collect();
+    format!("{}{keys}: {}", field.path, hint(&field.ty))
 }
 
 /// Prints the fields of a module as an indented tree.
@@ -417,6 +435,51 @@ mod tests {
             assert_eq!(desc, expected);
             assert_eq!(nested.is_some(), has_nested);
         }
+    }
+
+    #[test]
+    fn formats_readable_fields() {
+        use odra::schema::casper_contract_schema::NamedCLType;
+
+        let layout = StorageKind::Module {
+            fields: vec![
+                StorageField::new("decimals", 1, StorageKind::value::<u8>()),
+                StorageField::new(
+                    "allowances",
+                    2,
+                    StorageKind::Mapping {
+                        key: Type(NamedCLType::Tuple2([
+                            Box::new(NamedCLType::Key),
+                            Box::new(NamedCLType::Key)
+                        ])),
+                        value: Box::new(StorageKind::Value {
+                            ty: Type(NamedCLType::U256)
+                        })
+                    }
+                ),
+                StorageField::new(
+                    "holders",
+                    3,
+                    StorageKind::List {
+                        item: Type(NamedCLType::Key)
+                    }
+                ),
+            ]
+        };
+        let lines: Vec<_> = layout
+            .readable_fields()
+            .iter()
+            .map(format_readable_field)
+            .collect();
+        assert_eq!(
+            lines,
+            vec![
+                "decimals: 0-255|0x00|0b00000000",
+                "allowances -k <hash-...|account-hash-...:hash-...|account-hash-...>: DECIMAL",
+                "holders -k <UINT>: hash-...|account-hash-...",
+                "holders.len: UINT",
+            ]
+        );
     }
 
     #[test]

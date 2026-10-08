@@ -24,9 +24,9 @@ mod storage_layout;
 mod ty;
 
 pub use storage_layout::{
-    resolve_storage, resolve_storage_with, KeyEncoding, SchemaStorageLayout, StorageField,
-    StorageKind, StorageLayoutError, StorageLayoutFile, StorageLocation, StorageQuery,
-    STORAGE_LAYOUT_VERSION
+    resolve_storage, resolve_storage_with, FieldStorage, KeyEncoding, ReadableField,
+    SchemaStorageLayout, StorageField, StorageKind, StorageLayoutError, StorageLayoutFile,
+    StorageLocation, StorageQuery, STORAGE_LAYOUT_VERSION
 };
 pub use ty::NamedCLTyped;
 

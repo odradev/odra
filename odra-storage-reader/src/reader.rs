@@ -121,17 +121,8 @@ impl StorageReader {
     /// Decodes the value read from `location`.
     ///
     /// `cl_value` is the node's `CLValue` JSON as is (`stored_value.CLValue` of the RPC result).
-    /// With `raw`, returns the hex-encoded stored bytes instead of decoding them.
-    pub fn decode(
-        &self,
-        cl_value: &Value,
-        location: &Location,
-        raw: bool
-    ) -> Result<String, Error> {
+    pub fn decode(&self, cl_value: &Value, location: &Location) -> Result<String, Error> {
         let bytes = stored_bytes(cl_value, location)?;
-        if raw {
-            return Ok(hex::encode(&bytes));
-        }
         codec::decode(&bytes, location.ty(), &self.types)
             .map(|(value, _)| value)
             .map_err(|e| Error::Decode {
@@ -143,6 +134,14 @@ impl StorageReader {
                 },
                 raw: hex::encode(&bytes)
             })
+    }
+
+    /// The hex-encoded bytes of the value read from `location`, without decoding them, e.g. for
+    /// a type that is not in the layout file.
+    ///
+    /// `cl_value` is the node's `CLValue` JSON as is (`stored_value.CLValue` of the RPC result).
+    pub fn decode_raw(&self, cl_value: &Value, location: &Location) -> Result<String, Error> {
+        stored_bytes(cl_value, location).map(hex::encode)
     }
 }
 

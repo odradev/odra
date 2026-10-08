@@ -172,6 +172,135 @@ impl StorageKind {
             _ => &[]
         }
     }
+
+    /// Every value that can be read from this layout: its path and the types of the keys it
+    /// needs, as [resolve_storage] takes them.
+    ///
+    /// A `Mapping` is not a value itself, its key is added to the values under it. A `List` gives
+    /// its items and, unless it is the value of a `Mapping`, its `len`.
+    pub fn readable_fields(&self) -> Vec<ReadableField> {
+        let mut fields = Vec::new();
+        collect_readable_fields(self, "", &[], true, &mut fields);
+        fields
+    }
+}
+
+/// How a [ReadableField] is stored.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum FieldStorage {
+    /// A single value (`Var`, `External`, or the value of a `Mapping`).
+    Value,
+    /// An item of a `List`, its index is the last key.
+    ListItem,
+    /// The number of items of a `List`.
+    ListLength,
+    /// The value of a `Sequence`.
+    Sequence,
+    /// A named key of the contract.
+    NamedKey {
+        /// The name of the named key.
+        name: String
+    },
+    /// An item of a Casper dictionary, its key is the last key.
+    Dictionary {
+        /// The name of the dictionary.
+        name: String
+    }
+}
+
+/// A value that can be read from a storage layout, see [StorageKind::readable_fields].
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct ReadableField {
+    /// The dotted path, e.g. `erc20.balances`.
+    pub path: String,
+    /// The types of the keys the path needs, in path order.
+    pub keys: Vec<Type>,
+    /// The type of the value.
+    #[serde(rename = "type")]
+    pub ty: Type,
+    /// How the value is stored.
+    pub storage: FieldStorage
+}
+
+/// `parent.name`, or `name` at the root.
+fn child_path(parent: &str, name: &str) -> String {
+    if parent.is_empty() {
+        name.to_string()
+    } else {
+        format!("{parent}.{name}")
+    }
+}
+
+/// Walks the layout like [Resolver] does. `direct` is false for the value of a `Mapping`, whose
+/// `List` has no `len` (the resolver unwraps the mapping before it sees the list).
+fn collect_readable_fields(
+    kind: &StorageKind,
+    path: &str,
+    keys: &[Type],
+    direct: bool,
+    out: &mut Vec<ReadableField>
+) {
+    let mut push = |path: String, keys: Vec<Type>, ty: &Type, storage: FieldStorage| {
+        out.push(ReadableField {
+            path,
+            keys,
+            ty: ty.clone(),
+            storage
+        })
+    };
+    let with_key = |key: &Type| [keys, std::slice::from_ref(key)].concat();
+    match kind {
+        StorageKind::Module { fields } => {
+            for field in fields {
+                collect_readable_fields(
+                    &field.kind,
+                    &child_path(path, &field.name),
+                    keys,
+                    true,
+                    out
+                );
+            }
+        }
+        StorageKind::Mapping { key, value } => {
+            collect_readable_fields(value, path, &with_key(key), false, out)
+        }
+        StorageKind::Value { ty } => push(path.to_string(), keys.to_vec(), ty, FieldStorage::Value),
+        StorageKind::List { item } => {
+            let index = Type(NamedCLType::U32);
+            push(
+                path.to_string(),
+                with_key(&index),
+                item,
+                FieldStorage::ListItem
+            );
+            if direct {
+                push(
+                    child_path(path, LIST_LENGTH_FIELD),
+                    keys.to_vec(),
+                    &index,
+                    FieldStorage::ListLength
+                );
+            }
+        }
+        StorageKind::Sequence { ty } => {
+            push(path.to_string(), keys.to_vec(), ty, FieldStorage::Sequence)
+        }
+        StorageKind::NamedKey { name, ty } => push(
+            path.to_string(),
+            keys.to_vec(),
+            ty,
+            FieldStorage::NamedKey { name: name.clone() }
+        ),
+        StorageKind::Dictionary {
+            name, key, value, ..
+        } => push(
+            path.to_string(),
+            with_key(key),
+            value,
+            FieldStorage::Dictionary { name: name.clone() }
+        )
+    }
 }
 
 /// Describes the storage layout of a module element.
@@ -703,6 +832,125 @@ mod tests {
         assert_eq!(json["fields"][2]["name"], "decimals");
         assert_eq!(json["fields"][2]["key_name"], "decimals");
         assert_eq!(json["fields"][3]["dictionary_name"], "allowances");
+    }
+
+    fn nested() -> StorageKind {
+        let account = StorageKind::Module {
+            fields: vec![
+                StorageField::new("owner", 1, StorageKind::value::<Address>()),
+                StorageField::new(
+                    "history",
+                    2,
+                    <List<U256> as SchemaStorageLayout>::storage_kind()
+                ),
+            ]
+        };
+        StorageKind::Module {
+            fields: vec![
+                StorageField::new(
+                    "accounts",
+                    1,
+                    StorageKind::Mapping {
+                        key: Type(NamedCLType::Key),
+                        value: Box::new(account)
+                    }
+                ),
+                StorageField::new(
+                    "scores",
+                    2,
+                    StorageKind::Mapping {
+                        key: Type(NamedCLType::U8),
+                        value: Box::new(<List<u32> as SchemaStorageLayout>::storage_kind())
+                    }
+                ),
+            ]
+        }
+    }
+
+    #[test]
+    fn lists_readable_fields() {
+        let listed = |layout: StorageKind| {
+            layout
+                .readable_fields()
+                .into_iter()
+                .map(|f| {
+                    let keys: Vec<_> = f.keys.iter().map(|k| format!("{:?}", k.0)).collect();
+                    format!(
+                        "{} [{}] {:?} {:?}",
+                        f.path,
+                        keys.join(", "),
+                        f.ty.0,
+                        f.storage
+                    )
+                })
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(
+            listed(token()),
+            vec![
+                "name [] String Value",
+                "balances [Key] U256 Value",
+                "holders [U32] Key ListItem",
+                "holders.len [] U32 ListLength",
+                "ids [] U32 Sequence",
+            ]
+        );
+        let loans = listed(loans());
+        assert_eq!(loans[0], "lenders.name [] String Value");
+        assert_eq!(loans[5], "borrowers.name [] String Value");
+        assert_eq!(
+            loans[10..],
+            [
+                r#"decimals [] U8 NamedKey { name: "decimals" }"#,
+                r#"allowances [String] U256 Dictionary { name: "allowances" }"#
+            ]
+        );
+        assert_eq!(
+            listed(nested()),
+            vec![
+                "accounts.owner [Key] Key Value",
+                "accounts.history [Key, U32] U256 ListItem",
+                "accounts.history.len [Key] U32 ListLength",
+                // No `scores.len`: the list is the value of a mapping.
+                "scores [U8, U32] U32 ListItem",
+            ]
+        );
+    }
+
+    #[test]
+    fn every_readable_field_resolves() {
+        for layout in [token(), loans(), nested()] {
+            for field in layout.readable_fields() {
+                // Any key of the right type: a UTF-8 dictionary needs a serialized string.
+                let keys: Vec<Vec<u8>> = field
+                    .keys
+                    .iter()
+                    .map(|key| match key.0 {
+                        NamedCLType::String => String::new().to_bytes().unwrap(),
+                        _ => vec![0]
+                    })
+                    .collect();
+                let query = resolve_storage(&layout, &field.path, &keys)
+                    .unwrap_or_else(|e| panic!("`{}` does not resolve: {e}", field.path));
+                assert_eq!(query.ty, field.ty, "{}", field.path);
+            }
+        }
+        // Why there is no `scores.len`.
+        assert!(resolve_storage(&nested(), "scores.len", &[vec![0]]).is_err());
+    }
+
+    #[test]
+    fn serializes_readable_field() {
+        let field = &loans().readable_fields()[10];
+        assert_eq!(
+            serde_json::to_value(field).unwrap(),
+            serde_json::json!({
+                "path": "decimals",
+                "keys": [],
+                "type": "U8",
+                "storage": { "kind": "named_key", "name": "decimals" }
+            })
+        );
     }
 
     #[test]

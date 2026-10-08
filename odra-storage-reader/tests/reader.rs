@@ -59,8 +59,8 @@ fn reads_erc20_balance_from_state() {
 
     // Stored as `List<U8>` (`03000000` + U256 `021027`).
     let value = cl_value("erc20_balance_item");
-    assert_eq!(reader.decode(&value, &location, false).unwrap(), "10000");
-    assert_eq!(reader.decode(&value, &location, true).unwrap(), "021027");
+    assert_eq!(reader.decode(&value, &location).unwrap(), "10000");
+    assert_eq!(reader.decode_raw(&value, &location).unwrap(), "021027");
 }
 
 #[test]
@@ -77,7 +77,7 @@ fn reads_cep18_named_key_and_dictionary() {
     );
     assert_eq!(
         reader
-            .decode(&cl_value("cep18_decimals"), &location, false)
+            .decode(&cl_value("cep18_decimals"), &location)
             .unwrap(),
         "2"
     );
@@ -94,7 +94,7 @@ fn reads_cep18_named_key_and_dictionary() {
     );
     assert_eq!(
         reader
-            .decode(&cl_value("cep18_balance_item"), &location, false)
+            .decode(&cl_value("cep18_balance_item"), &location)
             .unwrap(),
         "10000"
     );
@@ -105,10 +105,7 @@ fn decode_accepts_the_whole_stored_value() {
     let reader = reader("erc20_layout");
     let location = reader.locate("balances", &keys(&[ACCOUNT])).unwrap();
     let stored_value = fixture("erc20_balance_item")["stored_value"].clone();
-    assert_eq!(
-        reader.decode(&stored_value, &location, false).unwrap(),
-        "10000"
-    );
+    assert_eq!(reader.decode(&stored_value, &location).unwrap(), "10000");
 }
 
 #[test]
@@ -259,12 +256,12 @@ fn reports_a_type_missing_from_the_layout_file() {
     let location = reader.locate("config", &[]).unwrap();
     let value = json!({ "cl_type": { "List": "U8" }, "bytes": "020000000102", "parsed": [1, 2] });
 
-    let err = reader.decode(&value, &location, false).unwrap_err();
+    let err = reader.decode(&value, &location).unwrap_err();
     assert_eq!(
         err.to_string(),
         "Cannot decode the stored value: type `Config` is not defined in the layout file (raw: 0x0102)"
     );
-    assert_eq!(reader.decode(&value, &location, true).unwrap(), "0102");
+    assert_eq!(reader.decode_raw(&value, &location).unwrap(), "0102");
 }
 
 #[test]
@@ -272,7 +269,7 @@ fn rejects_an_invalid_cl_value() {
     let reader = reader("erc20_layout");
     let location = reader.locate("total_supply", &[]).unwrap();
     let err = reader
-        .decode(&json!({ "bytes": "00" }), &location, false)
+        .decode(&json!({ "bytes": "00" }), &location)
         .unwrap_err();
     assert!(matches!(err, Error::InvalidClValue(_)), "{err}");
 }
@@ -347,7 +344,30 @@ fn decodes_a_struct_to_json() {
         "kinds": ["Free", "Pro"]
     });
     assert_eq!(
-        reader.decode(&value, &location, false).unwrap(),
+        reader.decode(&value, &location).unwrap(),
         serde_json::to_string_pretty(&expected).unwrap()
     );
+}
+
+#[test]
+fn every_readable_field_locates() {
+    // A key in the odra-cli text format for each key type of the fixtures.
+    let text_key = |ty: &Type| match &ty.0 {
+        NamedCLType::Key => ACCOUNT.to_string(),
+        NamedCLType::U32 => "0".to_string(),
+        NamedCLType::Tuple2(_) => format!("{ACCOUNT}:{ACCOUNT}"),
+        other => panic!("no sample key for {other:?}")
+    };
+    for name in ["erc20_layout", "cep18_layout", "nested_odra_types_layout"] {
+        let reader = reader(name);
+        let fields = reader.layout().readable_fields();
+        assert!(!fields.is_empty(), "{name}");
+        for field in fields {
+            let keys: Vec<_> = field.keys.iter().map(text_key).collect();
+            let location = reader
+                .locate(&field.path, &keys)
+                .unwrap_or_else(|e| panic!("{name}: {e}"));
+            assert_eq!(location.ty(), &field.ty, "{name}: {}", field.path);
+        }
+    }
 }
