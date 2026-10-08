@@ -91,10 +91,12 @@ impl CounterV2 {
 #[odra::odra_error]
 pub enum UpgradeError {
     /// The upgrade was asked to fail.
-    Refused = 1
+    Refused = 1,
+    /// The installation was asked to fail.
+    InstallRefused = 2
 }
 
-/// A Contract that counts in tens, version 3. Its upgrade fails on request.
+/// A Contract that counts in tens, version 3. Its installation and upgrade fail on request.
 #[odra::module(errors = UpgradeError)]
 pub struct CounterV3 {
     counter: Var<u32>
@@ -102,6 +104,12 @@ pub struct CounterV3 {
 
 #[odra::module]
 impl CounterV3 {
+    pub fn init(&mut self, fail: bool) {
+        if fail {
+            self.env().revert(UpgradeError::InstallRefused)
+        }
+    }
+
     pub fn upgrade(&mut self, fail: bool) {
         if fail {
             self.env().revert(UpgradeError::Refused)
@@ -120,8 +128,8 @@ impl CounterV3 {
 #[cfg(test)]
 mod test {
     use crate::features::upgrade::{
-        CounterV1, CounterV2, CounterV2UpgradeArgs, CounterV3, CounterV3UpgradeArgs,
-        IncrementEvent, IncrementEventV2, UpgradeError
+        CounterV1, CounterV2, CounterV2UpgradeArgs, CounterV3, CounterV3InitArgs,
+        CounterV3UpgradeArgs, IncrementEvent, IncrementEventV2, UpgradeError
     };
     use odra::casper_types::U256;
     use odra::host::{Deployer, HostRef, InstallConfig, NoArgs, UpgradeConfig};
@@ -219,6 +227,17 @@ mod test {
     }
 
     #[test]
+    fn reverted_install_returns_the_error() {
+        let test_env = odra_test::env();
+        let result = CounterV3::try_deploy(&test_env, CounterV3InitArgs { fail: true });
+        assert_eq!(result.err(), Some(UpgradeError::InstallRefused.into()));
+
+        let mut counter = CounterV3::deploy(&test_env, CounterV3InitArgs { fail: false });
+        counter.increment();
+        assert_eq!(counter.get(), 10);
+    }
+
+    #[test]
     fn reverted_upgrade_keeps_the_old_code() {
         let test_env = odra_test::env();
         let mut counter =
@@ -277,7 +296,7 @@ mod test {
         assert_eq!(counter.get(), 2);
 
         // A contract deployed after the restore starts clean.
-        let mut fresh = CounterV3::deploy(&test_env, NoArgs);
+        let mut fresh = CounterV3::deploy(&test_env, CounterV3InitArgs { fail: false });
         fresh.increment();
         assert_eq!(fresh.get(), 10);
     }

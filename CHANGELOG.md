@@ -77,6 +77,11 @@ Changelog for `odra`.
   examples build `Erc20` and `Cep18` this way instead of copying them from `modules/wasm` (#617).
 
 ### Changed
+- On livenet a deployment or upgrade whose constructor or upgrade function reverts returns the
+  contract's error, like OdraVM and CasperVM, named after the schema of the deployed contract; it used
+  to be `ContractDeploymentError("Livenet execution error")`. Running out of gas returns `OutOfGas`.
+  `ContractDeploymentError` is left for a deployment that did not get to run the contract (wasm not
+  found, gas not set, the node not reachable).
 - The wasm parts of a module are gated by `cfg(any(odra_module = "<Struct>", odra_module = "<crate>::<Struct>"))`;
   `cargo odra` passes the crate-qualified form, so two crates defining the same struct name no longer both
   compile their entry points into one wasm. A bare `ODRA_MODULE=<Struct>` still works (#321).

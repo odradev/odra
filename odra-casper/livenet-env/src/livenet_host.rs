@@ -277,7 +277,7 @@ impl HostContext for LivenetHost {
                 Ok(addr) => addr,
                 Err(e) => {
                     log::error!("Error deploying contract: {}", e);
-                    return Err(ExecutionError::ContractDeploymentError(e.to_string()).into());
+                    return Err(deployment_error(e, name));
                 }
             }
         };
@@ -300,7 +300,7 @@ impl HostContext for LivenetHost {
             Ok(_) => {}
             Err(e) => {
                 log::error!("Error deploying contract: {}", e);
-                return Err(ExecutionError::ContractDeploymentError(e.to_string()).into());
+                return Err(deployment_error(e, name));
             }
         }
         self.register_contract(contract_to_upgrade, name.to_string(), entry_points_caller);
@@ -373,6 +373,18 @@ impl LivenetHost {
     }
 }
 
+/// The error of a failed deployment of the contract `contract_name`. A revert of its constructor
+/// or upgrade, or running out of gas, is decoded like the error of an entry point call; any other
+/// failure did not get to run the contract and is a deployment error.
+fn deployment_error(e: LivenetError, contract_name: &str) -> OdraError {
+    if let LivenetError::ExecutionError(error_msg) = &e {
+        if let Ok(error) = error::find(error_msg, Some(contract_name)) {
+            return error;
+        }
+    }
+    ExecutionError::ContractDeploymentError(e.to_string()).into()
+}
+
 /// A read could not be served by the node. `None` would be mistaken for "value not set" by the
 /// contract code, so stop with the real reason instead.
 pub(crate) fn read_failed(what: &str, address: &Address, e: LivenetError) -> ! {
@@ -385,8 +397,9 @@ pub(crate) fn read_failed(what: &str, address: &Address, e: LivenetError) -> ! {
 
 #[cfg(test)]
 mod tests {
-    use super::LivenetHost;
+    use super::{deployment_error, LivenetHost};
     use odra_casper_rpc_client::casper_client::configuration::CasperClientConfiguration;
+    use odra_casper_rpc_client::error::LivenetError;
     use odra_core::casper_types::bytesrepr::{Bytes, ToBytes};
     use odra_core::casper_types::contracts::ContractPackageHash;
     use odra_core::casper_types::{RuntimeArgs, SecretKey};
@@ -456,6 +469,39 @@ mod tests {
             Err(OdraError::VmError(VmError::NoSuchMethod("unknown".into())))
         );
         assert!(host.callstack.borrow().is_empty());
+    }
+
+    #[test]
+    fn reverted_deployment_returns_the_contract_error() {
+        let revert = LivenetError::ExecutionError(String::from("User error: 1"));
+        assert_eq!(
+            deployment_error(revert, "Second"),
+            OdraError::user(1, "SecondError")
+        );
+        let out_of_gas = LivenetError::ExecutionError(String::from("Out of gas error"));
+        assert_eq!(
+            deployment_error(out_of_gas, "Second"),
+            ExecutionError::OutOfGas.into()
+        );
+    }
+
+    #[test]
+    fn failed_deployment_is_a_deployment_error() {
+        let deployment_failed = |e: LivenetError| {
+            let message = e.to_string();
+            assert_eq!(
+                deployment_error(e, "Second"),
+                ExecutionError::ContractDeploymentError(message).into()
+            );
+        };
+        deployment_failed(LivenetError::GasNotSet);
+        deployment_failed(LivenetError::RpcCommunicationFailure);
+        deployment_failed(LivenetError::ExecutionError(String::from(
+            "Missing required argument: odra_cfg_package_hash_key_name"
+        )));
+        deployment_failed(LivenetError::ExecutionError(String::from(
+            "Casper Engine error"
+        )));
     }
 
     #[test]

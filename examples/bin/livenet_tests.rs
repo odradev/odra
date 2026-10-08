@@ -11,7 +11,10 @@ use odra_examples::features::livenet::Error::{EmptyStack, SillyError};
 use odra_examples::features::livenet::{
     LivenetContract, LivenetContractHostRef, LivenetContractInitArgs
 };
-use odra_examples::features::upgrade::{CounterV1, CounterV2, CounterV2UpgradeArgs};
+use odra_examples::features::upgrade::UpgradeError::{InstallRefused, Refused};
+use odra_examples::features::upgrade::{
+    CounterV1, CounterV2, CounterV2UpgradeArgs, CounterV3, CounterV3InitArgs, CounterV3UpgradeArgs
+};
 use odra_modules::access::events::OwnershipTransferred;
 use odra_modules::erc20::{Erc20, Erc20HostRef, Erc20InitArgs};
 
@@ -149,6 +152,16 @@ fn main() {
 
     assert_eq!(counter2.get(), U256::one());
     assert_eq!(counter2.get_old(), 1);
+
+    // A revert in the constructor or in the upgrade returns the contract's error
+    let result = CounterV3::try_deploy(&env, CounterV3InitArgs { fail: true });
+    assert_eq!(result.err(), Some(InstallRefused.into()));
+    let result = CounterV3::try_upgrade(
+        &env,
+        counter.contract_address(),
+        CounterV3UpgradeArgs { fail: true }
+    );
+    assert_eq!(result.err(), Some(Refused.into()));
 }
 
 fn deploy_new(env: &HostEnv) -> (LivenetContractHostRef, Erc20HostRef) {
