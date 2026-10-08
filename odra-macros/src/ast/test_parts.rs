@@ -436,6 +436,10 @@ mod test {
                             }
                         })
                     }
+
+                    fn contract_events() -> odra::prelude::vec::Vec<odra::contract_def::Event> {
+                        <Erc20 as odra::contract_def::HasEvents>::events()
+                    }
                 }
             }
         };
@@ -633,6 +637,10 @@ mod test {
                                 ))
                             }
                         })
+                    }
+
+                    fn contract_events() -> odra::prelude::vec::Vec<odra::contract_def::Event> {
+                        <Erc20 as odra::contract_def::HasEvents>::events()
                     }
                 }
             }

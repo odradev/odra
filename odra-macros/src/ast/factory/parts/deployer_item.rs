@@ -5,6 +5,7 @@ use crate::{ast::deployer_utils::EpcSignature, utils, ModuleImplIR};
 
 pub struct FactoryDeployImplItem {
     ident: syn::Ident,
+    module_ident: syn::Ident,
     epc_fn: FactoryContractEpcFn,
 }
 
@@ -15,6 +16,7 @@ impl TryFrom<&'_ ModuleImplIR> for FactoryDeployImplItem {
        
         Ok(Self {
             ident: module.host_ref_ident()?,
+            module_ident: module.module_ident()?,
             epc_fn: module.try_into()?,
         })
     }
@@ -25,10 +27,20 @@ impl ToTokens for FactoryDeployImplItem {
         let epc_ty = utils::ty::entry_point_caller_provider();
         let ident = &self.ident;
         let epc_fn = &self.epc_fn;
+        let module_ident = &self.module_ident;
+        let module_str = module_ident.to_string();
+        let child_ident = format_ident!("{}", module_str.strip_suffix("Factory").unwrap_or(&module_str));
 
         tokens.append_all(quote::quote! {
             impl #epc_ty for #ident {
                 #epc_fn
+
+                fn contract_events() -> odra::prelude::vec::Vec<odra::contract_def::Event> {
+                    <#module_ident as odra::contract_def::HasEvents>::events()
+                        .into_iter()
+                        .chain(<#child_ident as odra::contract_def::HasEvents>::events())
+                        .collect()
+                }
             }
         });
     }

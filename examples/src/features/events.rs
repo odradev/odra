@@ -211,3 +211,60 @@ mod tests {
         assert_eq!(test_env.events_count(&party), 3);
     }
 }
+
+/// An event with a field of an `#[odra::odra_type]` struct cannot be emitted: its CLType is
+/// `Any`, which casper-event-standard rejects. Such a contract is test-only here (it is not in
+/// `Odra.toml`): it fails when it is deployed, and its schema would fail to generate.
+#[cfg(test)]
+mod unemittable_events {
+    use odra::casper_types::U256;
+    use odra::host::{Deployer, NoArgs};
+    use odra::prelude::*;
+
+    #[odra::odra_type]
+    pub struct Price {
+        pub amount: U256,
+        pub currency: String
+    }
+
+    #[odra::odra_type]
+    pub enum Side {
+        Buy,
+        Sell
+    }
+
+    #[odra::event]
+    pub struct Traded {
+        pub side: Side,
+        pub price: Option<Price>
+    }
+
+    #[odra::module(events = [Traded])]
+    pub struct Exchange;
+
+    #[odra::module]
+    impl Exchange {
+        pub fn trade(&mut self) {
+            self.env().emit_event(Traded {
+                side: Side::Buy,
+                price: None
+            });
+        }
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "Contract `Exchange`: event `Traded`: field `price` has no concrete CLType"
+    )]
+    fn deploying_a_contract_with_an_unemittable_event_panics() {
+        Exchange::deploy(&odra_test::env(), NoArgs);
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "Contract `Exchange`: event `Traded`: field `price` has no concrete CLType"
+    )]
+    fn try_deploy_panics_too() {
+        let _ = Exchange::try_deploy(&odra_test::env(), NoArgs);
+    }
+}

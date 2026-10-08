@@ -8,6 +8,7 @@ use super::deployer_utils::{EntrypointCallerExpr, EntrypointsInitExpr, EpcSignat
 
 pub struct DeployImplItem {
     ident: syn::Ident,
+    module_ident: syn::Ident,
     epc_fn: ContractEpcFn
 }
 
@@ -17,6 +18,7 @@ impl TryFrom<&'_ ModuleImplIR> for DeployImplItem {
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
             ident: module.host_ref_ident()?,
+            module_ident: module.module_ident()?,
             epc_fn: module.try_into()?
         })
     }
@@ -27,10 +29,15 @@ impl ToTokens for DeployImplItem {
         let epc_ty = utils::ty::entry_point_caller_provider();
         let ident = &self.ident;
         let epc_fn = &self.epc_fn;
+        let module_ident = &self.module_ident;
 
         tokens.append_all(quote::quote! {
             impl #epc_ty for #ident {
                 #epc_fn
+
+                fn contract_events() -> odra::prelude::vec::Vec<odra::contract_def::Event> {
+                    <#module_ident as odra::contract_def::HasEvents>::events()
+                }
             }
         });
     }
@@ -373,6 +380,10 @@ mod deployer_impl {
                         }
                     })
                 }
+
+                fn contract_events() -> odra::prelude::vec::Vec<odra::contract_def::Event> {
+                    <Erc20 as odra::contract_def::HasEvents>::events()
+                }
             }
         };
         let deployer_item = DeployerItem::try_from(&module).unwrap();
@@ -409,6 +420,10 @@ mod deployer_impl {
                             ))
                         }
                     })
+                }
+
+                fn contract_events() -> odra::prelude::vec::Vec<odra::contract_def::Event> {
+                    <Erc20 as odra::contract_def::HasEvents>::events()
                 }
             }
         };
@@ -458,6 +473,10 @@ mod deployer_impl {
                             ))
                         }
                     })
+                }
+
+                fn contract_events() -> odra::prelude::vec::Vec<odra::contract_def::Event> {
+                    <Erc20 as odra::contract_def::HasEvents>::events()
                 }
             }
         };

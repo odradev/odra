@@ -314,6 +314,7 @@ impl ContractEnv {
     pub fn emit_event<T: ToBytes + EventInstance>(&self, event: T) {
         let backend = self.backend.borrow();
         let result = event.to_bytes().map_err(ExecutionError::from);
+        explain_event_error::<T>(&result);
         let bytes = result.unwrap_or_revert(self);
         backend.emit_event(&bytes.into())
     }
@@ -364,6 +365,7 @@ impl ContractEnv {
     pub fn emit_native_event<T: ToBytes + EventInstance>(&self, event: T) {
         let backend = self.backend.borrow();
         let result = event.to_bytes().map_err(ExecutionError::from);
+        explain_event_error::<T>(&result);
         let bytes = result.unwrap_or_revert(self);
         backend.emit_native_event(&bytes.into())
     }
@@ -586,6 +588,20 @@ impl ExecutionEnv {
     pub fn emit_event<T: ToBytes + EventInstance>(&self, event: T) {
         self.env.emit_event(event);
     }
+}
+
+/// In wasm a failed `emit_event` reverts with the bare error code; on the host it also says why,
+/// if the event cannot be emitted at all (see [crate::contract_def::Event::validate]).
+fn explain_event_error<T: EventInstance>(result: &Result<Vec<u8>, ExecutionError>) {
+    #[cfg(not(target_arch = "wasm32"))]
+    if result.is_err() {
+        let event = <T as crate::contract_def::IntoEvent>::into_event();
+        if let Err(reason) = event.validate() {
+            std::eprintln!("Emitting an event failed: {}", reason);
+        }
+    }
+    #[cfg(target_arch = "wasm32")]
+    let _ = result;
 }
 
 #[cfg(test)]

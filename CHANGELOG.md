@@ -128,6 +128,15 @@ Changelog for `odra`.
   contracts in `Odra.toml` of `odra-modules` and `odra-examples`; their tests run on OdraVM only.
 
 ### Fixed
+- An event with a field whose `CLType` is or contains `Any` (an `#[odra::odra_type]` struct or
+  data-carrying enum, also in an `Option`, `Vec`, map, `Result` or tuple) compiled and deployed, and
+  every `emit_event` of it reverted with a bare `ExecutionError::Formatting`. Deploying or upgrading
+  such a contract from the host (OdraVM, CasperVM, livenet before the transaction is sent) and
+  generating its schema now panic with a message naming the event and the field
+  (``Contract `Exchange`: event `Traded`: field `price` has no concrete CLType ...``), and a failed
+  emit on the host prints the reason. `Event::has_any` now looks into compound types, like
+  casper-event-standard does; `Event::validate`, `contract_def::cl_type_has_any` and
+  `EntryPointsCallerProvider::contract_events` (with a default) are new.
 - An entry point argument may be named `contract`, `env_rc`, `exec_env`, `named_args`, `result`,
   `env`, `call_def` or `contract_env`, also in an external contract. The generated code used these
   names for its own locals, so such an argument was shadowed and failed with a type error pointing at
