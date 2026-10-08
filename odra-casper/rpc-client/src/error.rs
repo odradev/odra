@@ -7,7 +7,7 @@ pub enum LivenetError {
     RpcCommunicationFailure,
     #[error("RPC request error {0}: {1}")]
     RpcRequestError(String, String),
-    #[error("Livenet execution error")]
+    #[error("Livenet execution error {0}")]
     ExecutionError(String),
     #[error("Serialization error")]
     SerializationError,

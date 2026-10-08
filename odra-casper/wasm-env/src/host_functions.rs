@@ -7,7 +7,7 @@
 //!
 //! Build on top of the [casper_contract] crate.
 
-use crate::consts::{self, FACTORY_GROUP_NAME};
+use crate::consts::{self, CONTRACT_SCHEMA_ARG, FACTORY_GROUP_NAME, MIGRATE_CONTRACT_SCHEMA_EP};
 use crate::consts::{CONSTRUCTOR_GROUP_NAME, NATIVE_EVENT_TOPIC, UPGRADER_GROUP_NAME};
 use casper_contract::contract_api::runtime::{emit_message, get_immediate_caller};
 use casper_contract::contract_api::storage;
@@ -73,17 +73,19 @@ lazy_static::lazy_static! {
 pub(crate) static mut ATTACHED_VALUE: U512 = U512::zero();
 static mut CALLER_OVERRIDE: bool = false;
 
-/// Installs or upgrades a contract based on the provided entry points, events, and initialization arguments.
+/// Installs or upgrades a contract based on the provided entry points, events, contract schema
+/// and initialization arguments.
 pub fn install_or_upgrade(
     entry_points: EntryPoints,
     events: Schemas,
+    contract_schema: Option<&str>,
     init_args: Option<RuntimeArgs>
 ) -> ContractPackageHash {
     let is_upgrade = runtime::try_get_named_arg(IS_UPGRADE_ARG).unwrap_or_default();
     if is_upgrade {
-        upgrade_contract(entry_points, events, init_args)
+        upgrade_contract(entry_points, events, contract_schema, init_args)
     } else {
-        install_new_contract(entry_points, events, init_args).0
+        install_new_contract(entry_points, events, contract_schema, init_args).0
     }
 }
 
@@ -95,10 +97,12 @@ pub fn install_or_upgrade(
 /// If a contract with the same name already exists, it may be overriden depending on the value of `odra_cfg_allow_key_override`
 /// argument.
 ///
-/// Along with the contract, named keys with events and state are created.
+/// Along with the contract, named keys with events, state and the contract schema (if provided)
+/// are created.
 pub fn install_new_contract(
     entry_points: EntryPoints,
     events: Schemas,
+    contract_schema: Option<&str>,
     init_args: Option<RuntimeArgs>
 ) -> (ContractPackageHash, URef) {
     // Extract named arguments, variables and check if the contract is upgradable.
@@ -117,7 +121,7 @@ pub fn install_new_contract(
     let is_factory = entry_points.has_entry_point("new_contract");
 
     // Prepare named keys.
-    let named_keys = initial_named_keys(events);
+    let named_keys = initial_named_keys(events, contract_schema);
 
     // Prepare message topic
     let mut message_topics = BTreeMap::new();
@@ -193,6 +197,7 @@ pub fn install_new_contract(
 pub fn upgrade_contract(
     entry_points: EntryPoints,
     events: Schemas,
+    contract_schema: Option<&str>,
     upgrade_args: Option<RuntimeArgs>
 ) -> ContractPackageHash {
     // Add `migrate_events` entry point to the contract. It is run during the every upgrade.
@@ -205,6 +210,18 @@ pub fn upgrade_contract(
         EntryPointType::Called,
         EntryPointPayment::Caller
     ));
+    // The previous version's named keys take precedence over the new ones, so the contract schema
+    // must be written from within the contract by `migrate_contract_schema`.
+    if contract_schema.is_some() {
+        entry_points.add_entry_point(EntityEntryPoint::new(
+            MIGRATE_CONTRACT_SCHEMA_EP,
+            Parameters::from([Parameter::new(CONTRACT_SCHEMA_ARG, CLType::String)]),
+            CLType::Unit,
+            EntryPointAccess::Groups(vec![Group::new(UPGRADER_GROUP_NAME)]),
+            EntryPointType::Called,
+            EntryPointPayment::Caller
+        ));
+    }
 
     let args = upgrade_args.unwrap_or_default();
     // Get named arguments.
@@ -245,7 +262,7 @@ pub fn upgrade_contract(
     }
 
     // Prepare named keys.
-    let named_keys = initial_named_keys(events.clone());
+    let named_keys = initial_named_keys(events.clone(), None);
 
     let contract_package_hash = ContractPackageHash::new(package_hash_to_upgrade);
     let previous_contract_hash = get_latest_contract_hash(contract_package_hash);
@@ -273,7 +290,7 @@ pub fn upgrade_contract(
         .unwrap_or_revert();
     }
 
-    // We enable access to upgrader functions ("upgrade" and "migrate_events");
+    // We enable access to upgrader functions ("upgrade", "migrate_events" and "migrate_contract_schema");
     let new_uref =
         storage::provision_contract_user_group_uref(contract_package_hash, UPGRADER_GROUP_NAME)
             .unwrap_or_revert();
@@ -287,6 +304,18 @@ pub fn upgrade_contract(
             "schemas" => events.0
         }
     );
+
+    // Call "migrate_contract_schema".
+    if let Some(contract_schema) = contract_schema {
+        let _: () = runtime::call_versioned_contract(
+            contract_package_hash,
+            None,
+            MIGRATE_CONTRACT_SCHEMA_EP,
+            runtime_args! {
+                CONTRACT_SCHEMA_ARG => String::from(contract_schema)
+            }
+        );
+    }
 
     // Call "upgrade".
     if has_upgrade {
@@ -725,7 +754,7 @@ pub fn get_main_purse() -> Option<URef> {
     runtime::get_key(consts::CONTRACT_MAIN_PURSE).and_then(|key| key.as_uref().cloned())
 }
 
-fn initial_named_keys(schemas: Schemas) -> NamedKeys {
+fn initial_named_keys(schemas: Schemas, contract_schema: Option<&str>) -> NamedKeys {
     let mut named_keys = NamedKeys::new();
     named_keys.insert(
         String::from(consts::STATE_KEY),
@@ -747,6 +776,12 @@ fn initial_named_keys(schemas: Schemas) -> NamedKeys {
         String::from(casper_event_standard::EVENTS_SCHEMA),
         Key::URef(storage::new_uref(schemas))
     );
+    if let Some(contract_schema) = contract_schema {
+        named_keys.insert(
+            String::from(consts::CONTRACT_SCHEMA),
+            Key::URef(storage::new_uref(String::from(contract_schema)))
+        );
+    }
 
     named_keys
 }

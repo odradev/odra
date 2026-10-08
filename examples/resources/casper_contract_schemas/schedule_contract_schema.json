@@ -1,0 +1,117 @@
+{
+  "casper_contract_schema_version": 1,
+  "toolchain": "rustc 1.94.0-nightly (8d670b93d 2025-12-31)",
+  "toolkit": {
+    "name": "Odra",
+    "version": "2.9.1"
+  },
+  "authors": [
+    "Jakub Płaskonka <kuba@odra.dev>",
+    "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
+    "Maciej Zieliński <maciej@odra.dev>"
+  ],
+  "repository": "https://github.com/odradev/odra",
+  "homepage": "https://odra.dev/docs",
+  "contract_name": "ScheduleContract",
+  "contract_version": "2.9.1",
+  "types": [],
+  "errors": [],
+  "entry_points": [
+    {
+      "name": "add_task",
+      "description": "Adds a task id to the caller's schedule.",
+      "is_mutable": true,
+      "is_payable": false,
+      "arguments": [
+        {
+          "name": "owner",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "id",
+          "description": null,
+          "ty": "U32",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "task_count",
+      "description": "Returns the number of tasks scheduled for the given address.",
+      "is_mutable": false,
+      "is_payable": false,
+      "arguments": [
+        {
+          "name": "owner",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        }
+      ],
+      "return_ty": "U32",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "task_at",
+      "description": "Returns the n-th task id scheduled for the given address.",
+      "is_mutable": false,
+      "is_payable": false,
+      "arguments": [
+        {
+          "name": "owner",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "index",
+          "description": null,
+          "ty": "U32",
+          "optional": false
+        }
+      ],
+      "return_ty": {
+        "Option": "U32"
+      },
+      "is_contract_context": true,
+      "access": "public"
+    }
+  ],
+  "events": [],
+  "call": {
+    "wasm_file_name": "ScheduleContract.wasm",
+    "description": null,
+    "arguments": [
+      {
+        "name": "odra_cfg_package_hash_key_name",
+        "description": "The arg name for the package hash key name.",
+        "ty": "String",
+        "optional": false
+      },
+      {
+        "name": "odra_cfg_allow_key_override",
+        "description": "If true and the key specified in odra_cfg_package_hash_key_name already exists, it will be overwritten.",
+        "ty": "Bool",
+        "optional": false
+      },
+      {
+        "name": "odra_cfg_is_upgradable",
+        "description": "The arg name for the contract upgradeability setting.",
+        "ty": "Bool",
+        "optional": false
+      },
+      {
+        "name": "odra_cfg_is_upgrade",
+        "description": "The arg name for telling the installer that the contract is being upgraded.",
+        "ty": "Bool",
+        "optional": false
+      }
+    ]
+  }
+}

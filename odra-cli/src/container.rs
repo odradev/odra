@@ -186,8 +186,7 @@ impl DeployedContractsContainer {
                 log("Contracts configuration has been overridden");
             }
             DEPLOY_MODE_ARCHIVE => {
-                let storage = self.storage.borrow_mut();
-                storage.backup()?;
+                self.storage.borrow().backup()?;
                 self.data.borrow_mut().contracts.clear();
                 let data = self.data.borrow();
                 let mut storage = self.storage.borrow_mut();

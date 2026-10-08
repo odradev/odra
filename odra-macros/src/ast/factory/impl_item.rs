@@ -505,6 +505,13 @@ mod test {
                     odra::odra_casper_wasm_env::host_functions::install_or_upgrade(
                         entry_points(),
                         schemas,
+                        {
+                            #[cfg(odra_contract_schema)]
+                            let contract_schema = Some(include_str!(env!("ODRA_CONTRACT_SCHEMA_PATH")));
+                            #[cfg(not(odra_contract_schema))]
+                            let contract_schema: Option<&'static str> = None;
+                            contract_schema
+                        },
                         Option::<odra::casper_types::RuntimeArgs>::None
                     );
                 }
@@ -531,6 +538,7 @@ mod test {
                     let (contract_package_hash, access_uref) = odra::odra_casper_wasm_env::host_functions::install_new_contract(
                         child_contract_entry_points(),
                         schemas,
+                        None,
                         Some(named_args)
                     );
                     let address: odra::prelude::Address = contract_package_hash.into();
@@ -576,6 +584,7 @@ mod test {
                     let contract_package_hash = odra::odra_casper_wasm_env::host_functions::upgrade_contract(
                         child_contract_entry_points(),
                         schemas,
+                        None,
                         Some(named_args)
                     );
 
@@ -610,6 +619,7 @@ mod test {
                             let contract_package_hash = odra::odra_casper_wasm_env::host_functions::upgrade_contract(
                                 child_contract_entry_points(),
                                 schemas.clone(),
+                                None,
                                 Some(named_args)
                             );
                             let address: odra::prelude::Address = contract_package_hash.into();
@@ -679,12 +689,14 @@ mod test {
                         "init",
                         "",
                         true,
+                        false,
                         odra::prelude::vec![]
                     ),
                     odra::schema::entry_point::<(odra::prelude::Address, odra::casper_types::URef)>(
                         "new_contract",
                         "", 
                         true, 
+                        false, 
                         odra::prelude::vec![
                             odra::schema::argument::<odra::prelude::string::String>("contract_name"),
                             odra::schema::argument::<u32>("value")
@@ -694,6 +706,7 @@ mod test {
                         "upgrade_child_contract",
                         "", 
                         true, 
+                        false, 
                         odra::prelude::vec![
                             odra::schema::argument::<odra::prelude::string::String>("contract_name")
                         ]
@@ -702,6 +715,7 @@ mod test {
                         "batch_upgrade_child_contract",
                         "", 
                         true, 
+                        false, 
                         odra::prelude::vec![
                             odra::schema::argument::<odra::casper_types::bytesrepr::Bytes>("args")
                         ]

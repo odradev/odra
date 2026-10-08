@@ -77,6 +77,7 @@ impl ToTokens for SchemaEntrypointsItem {
                     syn::ReturnType::Type(_, t) => quote::quote! { #t }
                 };
                 let is_mut = f.is_mut();
+                let is_payable = f.is_payable();
                 let mut args = if f.fn_type() == FnType::FactoryBatchUpgrader {
                     let ty_bytes = utils::ty::bytes();
                     vec![quote::quote!(odra::schema::argument::<#ty_bytes>("args"))]
@@ -93,6 +94,7 @@ impl ToTokens for SchemaEntrypointsItem {
                         #name,
                         #desc,
                         #is_mut,
+                        #is_payable,
                         odra::prelude::vec![ #(#args),* ]
                     )
                 }
@@ -156,6 +158,7 @@ mod test {
                             "init",
                             "Initializes the contract with the given parameters.",
                             true,
+                            false,
                             odra::prelude::vec![odra::schema::argument::<Option<U256> >(
                                 "total_supply"
                             )]
@@ -164,6 +167,7 @@ mod test {
                             "upgrade",
                             "Upgrades the contract with the given parameters.",
                             true,
+                            false,
                             odra::prelude::vec![odra::schema::argument::<Option<U256> >(
                                 "total_supply"
                             )]
@@ -172,11 +176,13 @@ mod test {
                             "total_supply",
                             "Returns the total supply of the token.",
                             false,
+                            false,
                             odra::prelude::vec![]
                         ),
                         odra::schema::entry_point::<()>(
                             "pay_to_mint",
                             "Pay to mint.",
+                            true,
                             true,
                             odra::prelude::vec![
                                 odra::schema::argument::<odra::casper_types::URef>("__cargo_purse")
@@ -186,6 +192,7 @@ mod test {
                             "approve",
                             "Approve.",
                             true,
+                            false,
                             odra::prelude::vec![
                                 odra::schema::argument::<Address>("to"),
                                 odra::schema::argument::<U256>("amount"),
@@ -196,6 +203,7 @@ mod test {
                             "airdrop",
                             "Airdrops the given amount to the given addresses.",
                             false,
+                            false,
                             odra::prelude::vec![
                                 odra::schema::argument::<odra::prelude::vec::Vec<Address> >("to"),
                                 odra::schema::argument::<U256>("amount")
@@ -205,6 +213,7 @@ mod test {
                             "swap",
                             "Swaps the given amount to the given addresses.",
                             true,
+                            false,
                             odra::prelude::vec![
                                 odra::schema::argument::<Address>("to"),
                                 odra::schema::argument::<U256>("amount")
@@ -233,17 +242,20 @@ mod test {
                             "total_supply",
                             "",
                             false,
+                            false,
                             odra::prelude::vec![]
                         ),
                         odra::schema::entry_point::<U256>(
                             "set_total_supply",
                             "",
                             true,
+                            false,
                             odra::prelude::vec![]
                         ),
                         odra::schema::entry_point::<()>(
                             "pay_to_mint",
                             "",
+                            true,
                             true,
                             odra::prelude::vec![
                                 odra::schema::argument::<odra::casper_types::URef>("__cargo_purse")
@@ -272,11 +284,13 @@ mod test {
                             "total_supply",
                             "Returns the total supply of the token.",
                             false,
+                            false,
                             odra::prelude::vec![]
                         ),
                         odra::schema::entry_point::<Address>(
                             "get_owner",
                             "Returns the owner of the contract.",
+                            false,
                             false,
                             odra::prelude::vec![]
                         ),
@@ -284,17 +298,20 @@ mod test {
                             "set_owner",
                             "Sets the owner of the contract.",
                             true,
+                            false,
                             odra::prelude::vec![odra::schema::argument::<Address>("new_owner")]
                         ),
                         odra::schema::entry_point::<String>(
                             "name",
                             "Returns the name of the token.",
                             false,
+                            false,
                             odra::prelude::vec![]
                         ),
                         odra::schema::entry_point::<String>(
                             "symbol",
                             "Delegated. See `self.metadata.symbol()` for details.",
+                            false,
                             false,
                             odra::prelude::vec![]
                         )
@@ -317,7 +334,7 @@ mod test {
                 ) -> odra::prelude::vec::Vec<odra::schema::casper_contract_schema::Entrypoint>
                 {
                     odra::prelude::vec![
-                        odra::schema::entry_point::<()>("init", "", true, odra::prelude::vec![]),
+                        odra::schema::entry_point::<()>("init", "", true, false, odra::prelude::vec![]),
                         odra::schema::entry_point::<(
                             odra::prelude::Address,
                             odra::casper_types::URef
@@ -325,6 +342,7 @@ mod test {
                             "new_contract",
                             "",
                             true,
+                            false,
                             odra::prelude::vec![
                                 odra::schema::argument::<odra::prelude::string::String>(
                                     "contract_name"
@@ -336,6 +354,7 @@ mod test {
                             "upgrade_child_contract",
                             "",
                             true,
+                            false,
                             odra::prelude::vec![odra::schema::argument::<
                                 odra::prelude::string::String
                             >("contract_name")]
@@ -344,6 +363,7 @@ mod test {
                             "batch_upgrade_child_contract",
                             "",
                             true,
+                            false,
                             odra::prelude::vec![odra::schema::argument::<
                                 odra::casper_types::bytesrepr::Bytes
                             >("args")]

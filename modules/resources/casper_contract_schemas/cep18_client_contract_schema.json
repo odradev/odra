@@ -1,6 +1,10 @@
 {
   "casper_contract_schema_version": 1,
-  "toolchain": "rustc 1.85.0-nightly (d117b7f21 2024-12-31)",
+  "toolchain": "rustc 1.94.0-nightly (8d670b93d 2025-12-31)",
+  "toolkit": {
+    "name": "Odra",
+    "version": "2.9.1"
+  },
   "authors": [
     "Jakub Płaskonka <kuba@odra.dev>",
     "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
@@ -9,7 +13,7 @@
   "repository": "https://github.com/odradev/odra",
   "homepage": "https://odra.dev/docs",
   "contract_name": "Cep18ClientContract",
-  "contract_version": "2.5.0",
+  "contract_version": "2.9.1",
   "types": [],
   "errors": [],
   "entry_points": [
@@ -17,6 +21,7 @@
       "name": "check_total_supply",
       "description": "Calls total_supply method of the token contract at the given address.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "address",
@@ -33,6 +38,7 @@
       "name": "check_balance_of",
       "description": "Calls balance_of method of the token contract at the given address.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "address",
@@ -55,6 +61,7 @@
       "name": "check_allowance_of",
       "description": "Calls allowance method of the token contract at the given address.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "address",
@@ -83,6 +90,7 @@
       "name": "transfer_as_stored_contract",
       "description": "Calls transfer method of the token contract at the given address.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "address",
@@ -111,6 +119,7 @@
       "name": "transfer_from_as_stored_contract",
       "description": "Calls transfer_from method of the token contract at the given address.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "address",
@@ -145,6 +154,7 @@
       "name": "approve_as_stored_contract",
       "description": "Calls approve method of the token contract at the given address.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "address",

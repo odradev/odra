@@ -1,0 +1,1067 @@
+{
+  "name": "GaslessCep18",
+  "events": [
+    {
+      "name": "Mint",
+      "args": [
+        {
+          "name": "recipient",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "amount",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ]
+    },
+    {
+      "name": "Burn",
+      "args": [
+        {
+          "name": "owner",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "amount",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ]
+    },
+    {
+      "name": "SetAllowance",
+      "args": [
+        {
+          "name": "owner",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "spender",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "allowance",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ]
+    },
+    {
+      "name": "IncreaseAllowance",
+      "args": [
+        {
+          "name": "owner",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "spender",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "allowance",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "inc_by",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ]
+    },
+    {
+      "name": "DecreaseAllowance",
+      "args": [
+        {
+          "name": "owner",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "spender",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "allowance",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "decr_by",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ]
+    },
+    {
+      "name": "Transfer",
+      "args": [
+        {
+          "name": "sender",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "recipient",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "amount",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ]
+    },
+    {
+      "name": "TransferFrom",
+      "args": [
+        {
+          "name": "spender",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "owner",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "recipient",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "amount",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ]
+    },
+    {
+      "name": "AuthorizationUsed",
+      "args": [
+        {
+          "name": "authorizer",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "nonce",
+          "ty": {
+            "List": "U8"
+          },
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ]
+    },
+    {
+      "name": "AuthorizationCanceled",
+      "args": [
+        {
+          "name": "authorizer",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "nonce",
+          "ty": {
+            "List": "U8"
+          },
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ]
+    },
+    {
+      "name": "Transfer",
+      "args": [
+        {
+          "name": "sender",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "recipient",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "amount",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ]
+    },
+    {
+      "name": "Mint",
+      "args": [
+        {
+          "name": "recipient",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "amount",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ]
+    },
+    {
+      "name": "Burn",
+      "args": [
+        {
+          "name": "owner",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "amount",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ]
+    },
+    {
+      "name": "SetAllowance",
+      "args": [
+        {
+          "name": "owner",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "spender",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "allowance",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ]
+    },
+    {
+      "name": "IncreaseAllowance",
+      "args": [
+        {
+          "name": "owner",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "spender",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "allowance",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "inc_by",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ]
+    },
+    {
+      "name": "DecreaseAllowance",
+      "args": [
+        {
+          "name": "owner",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "spender",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "allowance",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "decr_by",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ]
+    },
+    {
+      "name": "Transfer",
+      "args": [
+        {
+          "name": "sender",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "recipient",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "amount",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ]
+    },
+    {
+      "name": "TransferFrom",
+      "args": [
+        {
+          "name": "spender",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "owner",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "recipient",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "amount",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ]
+    },
+    {
+      "name": "Mint",
+      "args": [
+        {
+          "name": "recipient",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "amount",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ]
+    },
+    {
+      "name": "Burn",
+      "args": [
+        {
+          "name": "owner",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "amount",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ]
+    },
+    {
+      "name": "SetAllowance",
+      "args": [
+        {
+          "name": "owner",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "spender",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "allowance",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ]
+    },
+    {
+      "name": "IncreaseAllowance",
+      "args": [
+        {
+          "name": "owner",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "spender",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "allowance",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "inc_by",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ]
+    },
+    {
+      "name": "DecreaseAllowance",
+      "args": [
+        {
+          "name": "owner",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "spender",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "allowance",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "decr_by",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ]
+    },
+    {
+      "name": "Transfer",
+      "args": [
+        {
+          "name": "sender",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "recipient",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "amount",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ]
+    },
+    {
+      "name": "TransferFrom",
+      "args": [
+        {
+          "name": "spender",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "owner",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "recipient",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "amount",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ]
+    }
+  ],
+  "entrypoints": [
+    {
+      "name": "init",
+      "args": [
+        {
+          "name": "chain_name",
+          "ty": "String",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Constructor",
+      "attributes": []
+    },
+    {
+      "name": "name",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "String",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "symbol",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "String",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "decimals",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "U8",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "total_supply",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "U256",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "balance_of",
+      "args": [
+        {
+          "name": "owner",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": false,
+      "return_ty": "U256",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "transfer",
+      "args": [
+        {
+          "name": "to",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "amount",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "approve",
+      "args": [
+        {
+          "name": "spender",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "amount",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "allowance",
+      "args": [
+        {
+          "name": "owner",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "spender",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": false,
+      "return_ty": "U256",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "transfer_from",
+      "args": [
+        {
+          "name": "owner",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "recipient",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "amount",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "decrease_allowance",
+      "args": [
+        {
+          "name": "spender",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "decr_by",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "increase_allowance",
+      "args": [
+        {
+          "name": "spender",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "inc_by",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "authorization_state",
+      "args": [
+        {
+          "name": "authorizer",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "nonce",
+          "ty": {
+            "List": "U8"
+          },
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": false,
+      "return_ty": "Bool",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "transfer_with_authorization",
+      "args": [
+        {
+          "name": "from",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "to",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "amount",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "valid_after",
+          "ty": "U64",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "valid_before",
+          "ty": "U64",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "nonce",
+          "ty": {
+            "List": "U8"
+          },
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "public_key",
+          "ty": "PublicKey",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "signature",
+          "ty": {
+            "List": "U8"
+          },
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "receive_with_authorization",
+      "args": [
+        {
+          "name": "from",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "to",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "amount",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "valid_after",
+          "ty": "U64",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "valid_before",
+          "ty": "U64",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "nonce",
+          "ty": {
+            "List": "U8"
+          },
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "public_key",
+          "ty": "PublicKey",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "signature",
+          "ty": {
+            "List": "U8"
+          },
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "permit",
+      "args": [
+        {
+          "name": "owner",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "spender",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "value",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "deadline",
+          "ty": "U64",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "public_key",
+          "ty": "PublicKey",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "signature",
+          "ty": {
+            "List": "U8"
+          },
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Public",
+      "attributes": []
+    }
+  ]
+}

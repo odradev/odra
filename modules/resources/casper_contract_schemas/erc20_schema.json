@@ -1,6 +1,10 @@
 {
   "casper_contract_schema_version": 1,
-  "toolchain": "rustc 1.85.0-nightly (d117b7f21 2024-12-31)",
+  "toolchain": "rustc 1.94.0-nightly (8d670b93d 2025-12-31)",
+  "toolkit": {
+    "name": "Odra",
+    "version": "2.9.1"
+  },
   "authors": [
     "Jakub Płaskonka <kuba@odra.dev>",
     "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
@@ -9,7 +13,7 @@
   "repository": "https://github.com/odradev/odra",
   "homepage": "https://odra.dev/docs",
   "contract_name": "Erc20",
-  "contract_version": "2.5.0",
+  "contract_version": "2.9.1",
   "types": [
     {
       "struct": {
@@ -94,6 +98,7 @@
       "name": "transfer",
       "description": "Transfers tokens from the caller to the recipient.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "recipient",
@@ -116,6 +121,7 @@
       "name": "transfer_from",
       "description": "Transfers tokens from the owner to the recipient using the spender's allowance.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "owner",
@@ -144,6 +150,7 @@
       "name": "approve",
       "description": "Approves the spender to spend the given amount of tokens on behalf of the caller.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "spender",
@@ -166,6 +173,7 @@
       "name": "name",
       "description": "Returns the name of the token.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "String",
       "is_contract_context": true,
@@ -175,6 +183,7 @@
       "name": "symbol",
       "description": "Returns the symbol of the token.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "String",
       "is_contract_context": true,
@@ -184,6 +193,7 @@
       "name": "decimals",
       "description": "Returns the number of decimals the token uses.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "U8",
       "is_contract_context": true,
@@ -193,6 +203,7 @@
       "name": "total_supply",
       "description": "Returns the total supply of the token.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "U256",
       "is_contract_context": true,
@@ -202,6 +213,7 @@
       "name": "balance_of",
       "description": "Returns the balance of the given address.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "address",
@@ -218,6 +230,7 @@
       "name": "allowance",
       "description": "Returns the amount of tokens the owner has allowed the spender to spend.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "owner",
@@ -240,6 +253,7 @@
       "name": "mint",
       "description": "Mints new tokens and assigns them to the given address.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "address",
@@ -262,6 +276,7 @@
       "name": "burn",
       "description": "Burns the given amount of tokens from the given address.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "address",

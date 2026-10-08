@@ -1,0 +1,84 @@
+{
+  "casper_contract_schema_version": 1,
+  "toolchain": "rustc 1.94.0-nightly (8d670b93d 2025-12-31)",
+  "toolkit": {
+    "name": "Odra",
+    "version": "2.9.1"
+  },
+  "authors": [
+    "Jakub Płaskonka <kuba@odra.dev>",
+    "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
+    "Maciej Zieliński <maciej@odra.dev>"
+  ],
+  "repository": "https://github.com/odradev/odra",
+  "homepage": "https://odra.dev/docs",
+  "contract_name": "MockDex",
+  "contract_version": "2.9.1",
+  "types": [],
+  "errors": [],
+  "entry_points": [
+    {
+      "name": "get_reserves",
+      "description": "",
+      "is_mutable": false,
+      "is_payable": false,
+      "arguments": [],
+      "return_ty": {
+        "Tuple2": [
+          "U256",
+          "U256"
+        ]
+      },
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "swap",
+      "description": "",
+      "is_mutable": true,
+      "is_payable": false,
+      "arguments": [
+        {
+          "name": "amount_in",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        }
+      ],
+      "return_ty": "U256",
+      "is_contract_context": true,
+      "access": "public"
+    }
+  ],
+  "events": [],
+  "call": {
+    "wasm_file_name": "MockDex.wasm",
+    "description": "Initializes the contract with the given parameters.",
+    "arguments": [
+      {
+        "name": "odra_cfg_package_hash_key_name",
+        "description": "The arg name for the package hash key name.",
+        "ty": "String",
+        "optional": false
+      },
+      {
+        "name": "odra_cfg_allow_key_override",
+        "description": "If true and the key specified in odra_cfg_package_hash_key_name already exists, it will be overwritten.",
+        "ty": "Bool",
+        "optional": false
+      },
+      {
+        "name": "odra_cfg_is_upgradable",
+        "description": "The arg name for the contract upgradeability setting.",
+        "ty": "Bool",
+        "optional": false
+      },
+      {
+        "name": "odra_cfg_is_upgrade",
+        "description": "The arg name for telling the installer that the contract is being upgraded.",
+        "ty": "Bool",
+        "optional": false
+      }
+    ]
+  }
+}
