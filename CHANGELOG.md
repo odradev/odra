@@ -144,6 +144,14 @@ Changelog for `odra`.
   contracts in `Odra.toml` of `odra-modules` and `odra-examples`; their tests run on OdraVM only.
 
 ### Fixed
+- odra-cli no longer needs a livenet configuration before it can parse its arguments: `--help` and
+  `--version` (top-level and of any subcommand), usage errors and `completions` work without any
+  `ODRA_CASPER_LIVENET_*` variable, and `config` reports what is set and what is missing (the caller
+  address as unavailable, with the reason) instead of prompting or failing. Before, `OdraCli::new()`
+  created the host environment up front, so all of these prompted for the node address and secret key
+  on a terminal and exited with an error elsewhere. The environment is now created after the
+  arguments are parsed, once, and only for the commands that talk to the network, with the same
+  prompts and error messages as before.
 - A livenet getter reading a named argument while the account is the current frame gets `None`
   (`MissingArg` for a required one), like on CasperVM, instead of panicking with `todo!`.
 - `XxxHostRef::new(address, env)` works like `Xxx::load(&env, address)`: the generated `new` registers
