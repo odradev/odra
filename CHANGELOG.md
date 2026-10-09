@@ -142,6 +142,8 @@ Changelog for `odra`.
   in a wrapping module that adds its own access control.
 - `Ownable`, `Ownable2Step`, `MockModerated` and `PauseableCounter` are no longer registered as
   contracts in `Odra.toml` of `odra-modules` and `odra-examples`; their tests run on OdraVM only.
+- `cargo-odra` branch bumped to `release/0.2.0` (contracts from dependency crates, wasm written
+  once at the project root, workspace-inherited package fields).
 
 ### Fixed
 - odra-cli no longer needs a livenet configuration before it can parse its arguments: `--help` and
