@@ -29,6 +29,9 @@ const MAX_CONCURRENT_THREADS: usize = 8;
 /// A host side reference to a contract.
 pub trait HostRef {
     /// Creates a new host side reference to a contract.
+    ///
+    /// A generated host ref registers the contract at `address` in `env`, like
+    /// [HostRefLoader::load] does, see [HostEnv::register_contract_ref].
     fn new(address: Address, env: HostEnv) -> Self;
     /// Creates a new host reference with attached tokens, based on the current instance.
     ///
@@ -464,12 +467,22 @@ pub trait HostContext {
     ) -> OdraResult<Address>;
 
     /// Registers an existing contract with the specified address, name, and entry points caller.
+    ///
+    /// Registering the contract again under the same name must change nothing: host refs
+    /// register the contract they are made for (see [HostEnv::register_contract_ref]).
     fn register_contract(
         &self,
         address: Address,
         contract_name: String,
         entry_points_caller: EntryPointsCaller
     );
+
+    /// Tells if `address` holds a contract on the backend, see [HostEnv::register_contract_ref].
+    ///
+    /// The default says yes: the backend cannot tell cheaply.
+    fn has_contract(&self, _address: &Address) -> bool {
+        true
+    }
 
     /// Hands over the contracts deployed by other contracts (factory children) since the last
     /// call of this function, for [HostEnv] to track their events.
@@ -774,9 +787,10 @@ impl HostEnv {
         self.track_child_contracts(result.is_ok());
         let contract_address = result?;
 
-        self.deployed_contracts
-            .borrow_mut()
-            .insert(contract_address, DeployedContract::new(contract_address));
+        self.deployed_contracts.borrow_mut().insert(
+            contract_address,
+            DeployedContract::with_name(contract_address, name)
+        );
         // The events of `init` belong to the deploy, not to the first call after it.
         if *self.captures_events.borrow() {
             self.init_events(&contract_address);
@@ -805,6 +819,7 @@ impl HostEnv {
         let mut contracts = self.deployed_contracts.borrow_mut();
         let contract = contracts.get_mut(&upgraded_contract).unwrap();
         contract.current_version += 1;
+        contract.name = Some(String::from(name));
         // CES events are intact, but native events are connected to a contract, not a package.
         contract.native_events_count = 0;
         Ok(upgraded_contract)
@@ -812,6 +827,9 @@ impl HostEnv {
 
     /// Registers an existing contract with the specified address, name and entry points caller.
     /// Similar to `new_contract`, but skips the deployment phase.
+    ///
+    /// Registering a contract this environment already knows keeps its events: the events
+    /// emitted so far still belong to the calls that emitted them.
     pub fn register_contract(
         &self,
         address: Address,
@@ -819,13 +837,40 @@ impl HostEnv {
         entry_points_caller: EntryPointsCaller
     ) {
         let backend = self.backend.as_ref();
-        backend.register_contract(address, contract_name, entry_points_caller);
+        backend.register_contract(address, contract_name.clone(), entry_points_caller);
         self.deployed_contracts
             .borrow_mut()
-            .insert(address, DeployedContract::new(address));
+            .entry(address)
+            .or_insert_with(|| DeployedContract::new(address))
+            .name = Some(contract_name);
         // Events emitted before the contract was loaded belong to nobody's `last_call`.
         if *self.captures_events.borrow() {
             self.init_events(&address);
+        }
+    }
+
+    /// Registers the contract a host ref is made for with [HostRef::new], so that a host ref
+    /// made from a bare address (e.g. of a contract deployed by a factory) works like one made
+    /// by [HostRefLoader::load]. On livenet, the non-mutable calls run on the host and need the
+    /// contract code.
+    ///
+    /// Does nothing if the contract is already registered under `contract_name`, and nothing
+    /// for an address that holds no contract on the backend (see
+    /// [HostContext::has_contract]): a host ref to a made-up address does not make up a
+    /// contract, its calls fail.
+    pub fn register_contract_ref(
+        &self,
+        address: Address,
+        contract_name: String,
+        entry_points_caller: impl FnOnce() -> EntryPointsCaller
+    ) {
+        let known = match self.deployed_contracts.borrow().get(&address) {
+            Some(contract) if contract.name.as_ref() == Some(&contract_name) => return,
+            Some(_) => true,
+            None => false
+        };
+        if known || self.backend.has_contract(&address) {
+            self.register_contract(address, contract_name, entry_points_caller());
         }
     }
 
@@ -1639,5 +1684,90 @@ mod test {
         let env = HostEnv::new(Rc::new(ctx));
         assert!(env.emitted(&addr, "TestEv"));
         assert!(!env.emitted(&addr, "AnotherEvent"));
+    }
+
+    fn no_entry_points() -> EntryPointsCaller {
+        EntryPointsCaller::new(vec![], |_, _| Ok(Bytes::default()))
+    }
+
+    #[test]
+    fn register_contract_ref_skips_an_address_without_a_contract() {
+        let mut ctx = MockHostContext::new();
+        ctx.expect_has_contract().times(1).returning(|_| false);
+        ctx.expect_register_contract().never();
+        let env = HostEnv::new(Rc::new(ctx));
+        let address = Address::Contract(ContractPackageHash::new([1; 32]));
+
+        env.register_contract_ref(address, "TestRef".to_string(), no_entry_points);
+        assert!(env.deployed_contracts.borrow().is_empty());
+    }
+
+    #[test]
+    fn register_contract_ref_registers_once_per_name() {
+        let mut ctx = MockHostContext::new();
+        ctx.expect_has_contract().times(1).returning(|_| true);
+        ctx.expect_register_contract()
+            .with(
+                predicate::always(),
+                predicate::eq("TestRef".to_string()),
+                predicate::always()
+            )
+            .times(1)
+            .returning(|_, _, _| ());
+        // A host ref of another type for the same address brings its code.
+        ctx.expect_register_contract()
+            .with(
+                predicate::always(),
+                predicate::eq("OtherRef".to_string()),
+                predicate::always()
+            )
+            .times(1)
+            .returning(|_, _, _| ());
+        ctx.expect_get_events_count().times(1).returning(|_| Ok(3));
+        ctx.expect_get_native_events_count()
+            .times(1)
+            .returning(|_| Ok(1));
+        let env = HostEnv::new(Rc::new(ctx));
+        let address = Address::Contract(ContractPackageHash::new([1; 32]));
+
+        env.register_contract_ref(address, "TestRef".to_string(), no_entry_points);
+        env.register_contract_ref(address, "TestRef".to_string(), || {
+            panic!("the entry points of a registered contract are not needed")
+        });
+        env.register_contract_ref(address, "OtherRef".to_string(), no_entry_points);
+
+        let contracts = env.deployed_contracts.borrow();
+        let contract = contracts.get(&address).unwrap();
+        assert_eq!(contract.name.as_deref(), Some("OtherRef"));
+        assert_eq!(contract.events_count, 3);
+        assert_eq!(contract.native_events_count, 1);
+    }
+
+    #[test]
+    fn registering_a_known_contract_keeps_its_events() {
+        let mut ctx = MockHostContext::new();
+        ctx.expect_register_contract()
+            .times(2)
+            .returning(|_, _, _| ());
+        // Read once, by the first registration.
+        ctx.expect_get_events_count().times(1).returning(|_| Ok(2));
+        ctx.expect_get_native_events_count()
+            .times(1)
+            .returning(|_| Ok(0));
+        let env = HostEnv::new(Rc::new(ctx));
+        let address = Address::Contract(ContractPackageHash::new([1; 32]));
+
+        env.register_contract(address, "TestRef".to_string(), no_entry_points());
+        env.deployed_contracts
+            .borrow_mut()
+            .get_mut(&address)
+            .unwrap()
+            .current_version = 1;
+        env.register_contract(address, "TestRef".to_string(), no_entry_points());
+
+        let contracts = env.deployed_contracts.borrow();
+        let contract = contracts.get(&address).unwrap();
+        assert_eq!(contract.events_count, 2);
+        assert_eq!(contract.current_version, 1);
     }
 }

@@ -80,6 +80,11 @@ mod test {
 
                 impl odra::host::HostRef for Erc20FactoryHostRef {
                     fn new(address: odra::prelude::Address, env: odra::host::HostEnv) -> Self {
+                        env.register_contract_ref(
+                            address,
+                            <Self as odra::contract_def::HasIdent>::ident(),
+                            <Self as odra::host::EntryPointsCallerProvider>::entry_points_caller
+                        );
                         Self {
                             address,
                             env,

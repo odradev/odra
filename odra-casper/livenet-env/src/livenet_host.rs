@@ -312,7 +312,14 @@ impl HostContext for LivenetHost {
                 return Err(deployment_error(e, name));
             }
         }
-        self.register_contract(contract_to_upgrade, name.to_string(), entry_points_caller);
+        // The new code, even if registered under the same name.
+        self.contract_register
+            .write()
+            .expect("Couldn't write contract register.")
+            .add(
+                contract_to_upgrade,
+                ContractContainer::new(name, entry_points_caller)
+            );
         Ok(contract_to_upgrade)
     }
 
@@ -322,13 +329,18 @@ impl HostContext for LivenetHost {
         contract_name: String,
         entry_points_caller: EntryPointsCaller
     ) {
-        self.contract_register
+        let mut register = self
+            .contract_register
             .write()
-            .expect("Couldn't write contract register.")
-            .add(
-                address,
-                ContractContainer::new(&contract_name, entry_points_caller)
-            );
+            .expect("Couldn't write contract register.");
+        // Every host ref registers its contract; the code is there already.
+        if register.get_name(&address) == Some(contract_name.as_str()) {
+            return;
+        }
+        register.add(
+            address,
+            ContractContainer::new(&contract_name, entry_points_caller)
+        );
     }
 
     fn contract_env(&self) -> ContractEnv {
@@ -407,6 +419,7 @@ pub(crate) fn read_failed(what: &str, address: &Address, e: LivenetError) -> ! {
 #[cfg(test)]
 mod tests {
     use super::{deployment_error, LivenetHost};
+    use crate::livenet_contract_env::unregistered_contract_message;
     use odra_casper_rpc_client::casper_client::configuration::CasperClientConfiguration;
     use odra_casper_rpc_client::error::LivenetError;
     use odra_core::casper_types::bytesrepr::{Bytes, ToBytes};
@@ -490,6 +503,39 @@ mod tests {
             Err(OdraError::VmError(VmError::NoSuchMethod("unknown".into())))
         );
         assert!(host.callstack.borrow().is_empty());
+    }
+
+    #[test]
+    fn registering_a_contract_again_keeps_its_code() {
+        let (host, _env) = setup();
+        let version = || host.contract_register.read().unwrap().versions()[&ADDRESS];
+        host.register_contract(ADDRESS, String::from("Contract"), no_entry_points());
+        assert_eq!(version(), 0);
+        // A host ref of another contract type brings its code.
+        host.register_contract(ADDRESS, String::from("Other"), no_entry_points());
+        assert_eq!(version(), 1);
+        assert_eq!(
+            host.contract_register.read().unwrap().get_name(&ADDRESS),
+            Some("Other")
+        );
+    }
+
+    #[test]
+    fn getter_of_an_unregistered_contract_says_how_to_register_it() {
+        let (_host, env) = setup();
+        let unknown = Address::Contract(ContractPackageHash::new([2; 32]));
+        let result: OdraResult<Probe> =
+            env.call_contract(unknown, CallDef::new("probe", false, RuntimeArgs::new()));
+        assert_eq!(
+            result,
+            Err(OdraError::VmError(VmError::InvalidContractAddress))
+        );
+        let message = unregistered_contract_message(&unknown);
+        assert!(
+            message.contains(&unknown.to_formatted_string()),
+            "{message}"
+        );
+        assert!(message.contains("::load(&env, address)"), "{message}");
     }
 
     #[test]
@@ -592,6 +638,10 @@ mod tests {
         let caller = EntryPointsCaller::new(entry_points, entry_point);
         host.register_contract(ADDRESS, String::from("Contract"), caller);
         (host, env)
+    }
+
+    fn no_entry_points() -> EntryPointsCaller {
+        EntryPointsCaller::new(vec![], entry_point)
     }
 
     /// The caller and the call stack seen by the called contract.

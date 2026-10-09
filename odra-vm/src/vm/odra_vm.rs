@@ -122,6 +122,11 @@ impl OdraVm {
         self.state.borrow_mut().set_balance(address, U512::zero());
     }
 
+    /// Whether a contract is deployed (or registered) under `address`.
+    pub fn has_contract(&self, address: &Address) -> bool {
+        self.contract_register.borrow().get(address).is_some()
+    }
+
     /// Upgrades an existing contract.
     pub fn upgrade_contract(
         &self,

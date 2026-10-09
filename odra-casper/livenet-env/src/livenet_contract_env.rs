@@ -265,6 +265,7 @@ pub(crate) fn call_locally(
         .get(address)
         .cloned();
     let Some(contract) = contract else {
+        log::error(unregistered_contract_message(address));
         return Err(OdraError::VmError(VmError::InvalidContractAddress));
     };
     let _frame = CallFrame::push(
@@ -276,6 +277,20 @@ pub(crate) fn call_locally(
         )
     );
     contract.call(contract_env, call_def)
+}
+
+/// Explains why a non-mutable call to `address` cannot run: livenet runs it on this machine and
+/// has no code for the contract.
+pub(crate) fn unregistered_contract_message(address: &Address) -> String {
+    format!(
+        "No contract code registered for {}: livenet runs non-mutable calls (getters) on this \
+         machine and needs the code of the called contract. Register it with \
+         `Contract::load(&env, address)` (or `ContractHostRef::new(address, env)`), also when \
+         it is called only by the getter of another contract. A contract known only by its \
+         interface (`#[odra::external_contract]`) can be called only with transactions \
+         (mutable calls).",
+        address.to_formatted_string()
+    )
 }
 
 /// A frame on the call stack, popped when dropped.

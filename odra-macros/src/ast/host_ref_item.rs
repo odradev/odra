@@ -111,7 +111,10 @@ impl TryFrom<&'_ ModuleImplIR> for HostRefTraitImplItem {
             for_token: Default::default(),
             ref_ident: module.host_ref_ident()?,
             brace_token: Default::default(),
-            new_fn: NewFnItem,
+            // An external contract (a trait) has no code to register.
+            new_fn: NewFnItem {
+                register: matches!(module, ModuleImplIR::Impl(_))
+            },
             with_tokens_fn: WithTokensFnItem,
             address_fn: AddressFnItem,
             env_fn: EnvFnItem,
@@ -218,7 +221,11 @@ impl TryFrom<&'_ ModuleImplIR> for HostRefTryImplItem {
         })
     }
 }
-struct NewFnItem;
+/// `HostRef::new`; registers the contract in the host env if `register`, see
+/// `HostEnv::register_contract_ref`.
+struct NewFnItem {
+    register: bool
+}
 
 impl ToTokens for NewFnItem {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
@@ -229,9 +236,22 @@ impl ToTokens for NewFnItem {
         let attached_value = utils::ident::attached_value();
         let default = utils::expr::default();
         let ty_self = utils::ty::_Self();
+        let ty_has_ident = utils::ty::has_ident();
+        let ty_caller_provider = utils::ty::entry_point_caller_provider();
+
+        let register = self.register.then(|| {
+            quote!(
+                #env.register_contract_ref(
+                    #address,
+                    <#ty_self as #ty_has_ident>::ident(),
+                    <#ty_self as #ty_caller_provider>::entry_points_caller
+                );
+            )
+        });
 
         tokens.extend(quote!(
             fn new(#address: #ty_address, #env: #ty_env) -> #ty_self {
+                #register
                 #ty_self {
                     #address,
                     #env,
@@ -402,6 +422,11 @@ mod ref_item_tests {
 
             impl odra::host::HostRef for Erc20HostRef {
                 fn new(address: odra::prelude::Address, env: odra::host::HostEnv) -> Self {
+                    env.register_contract_ref(
+                        address,
+                        <Self as odra::contract_def::HasIdent>::ident(),
+                        <Self as odra::host::EntryPointsCallerProvider>::entry_points_caller
+                    );
                     Self {
                         address,
                         env,
@@ -694,6 +719,11 @@ mod ref_item_tests {
 
             impl odra::host::HostRef for Erc20HostRef {
                 fn new(address: odra::prelude::Address, env: odra::host::HostEnv) -> Self {
+                    env.register_contract_ref(
+                        address,
+                        <Self as odra::contract_def::HasIdent>::ident(),
+                        <Self as odra::host::EntryPointsCallerProvider>::entry_points_caller
+                    );
                     Self {
                         address,
                         env,
@@ -841,6 +871,11 @@ mod ref_item_tests {
 
             impl odra::host::HostRef for Erc20HostRef {
                 fn new(address: odra::prelude::Address, env: odra::host::HostEnv) -> Self {
+                    env.register_contract_ref(
+                        address,
+                        <Self as odra::contract_def::HasIdent>::ident(),
+                        <Self as odra::host::EntryPointsCallerProvider>::entry_points_caller
+                    );
                     Self {
                         address,
                         env,

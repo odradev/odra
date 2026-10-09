@@ -6,6 +6,7 @@ use odra::host::{Deployer, HostEnv, HostRef, HostRefLoader, InstallConfig, NoArg
 use odra::prelude::*;
 use odra_examples::contracts::tlw::Error::CannotLockTwice;
 use odra_examples::contracts::tlw::{TimeLockWallet, TimeLockWalletInitArgs};
+use odra_examples::factory::counter::{CounterFactory, CounterHostRef};
 use odra_examples::features::call_stack::{CallStackProbe, CallStackRelay, CallStackRelayInitArgs};
 use odra_examples::features::livenet::Error::{EmptyStack, SillyError};
 use odra_examples::features::livenet::{
@@ -162,6 +163,22 @@ fn main() {
         CounterV3UpgradeArgs { fail: true }
     );
     assert_eq!(result.err(), Some(Refused.into()));
+
+    factory_child_by_address(&env);
+}
+
+/// A host ref made with `new` from the bare address of a factory child works like a loaded one:
+/// its getters run on this machine and need the child's code.
+fn factory_child_by_address(env: &HostEnv) {
+    env.set_gas(480_000_000_000u64);
+    let mut factory = CounterFactory::deploy(env, NoArgs);
+    env.set_gas(270_000_000_000u64);
+    let (child, _) = factory.new_contract(String::from("LivenetCounter"), 10);
+    let mut counter = CounterHostRef::new(child, env.clone());
+    assert_eq!(counter.value(), 10);
+    env.set_gas(10_000_000_000u64);
+    counter.increment();
+    assert_eq!(counter.value(), 11);
 }
 
 fn deploy_new(env: &HostEnv) -> (LivenetContractHostRef, Erc20HostRef) {

@@ -137,6 +137,15 @@ Changelog for `odra`.
   contracts in `Odra.toml` of `odra-modules` and `odra-examples`; their tests run on OdraVM only.
 
 ### Fixed
+- `XxxHostRef::new(address, env)` works like `Xxx::load(&env, address)`: the generated `new` registers
+  the contract in the environment. Before, on livenet the getters of a contract known only by its
+  address (e.g. a factory child) failed with a bare `InvalidContractAddress`, as they run locally and
+  need the contract code, while its transactions worked; on CasperVM its offchain functions failed
+  and its events were missing from `last_call()`. Registering a contract the environment already
+  knows changes nothing (the events of earlier calls stay theirs, livenet keeps the code version),
+  and a host ref to an address holding no contract on OdraVM or CasperVM registers nothing, so its
+  calls still fail. A livenet getter of an unregistered contract (e.g. an
+  `#[odra::external_contract]`) now logs which address lacks code and how to register it.
 - A `HostEnv` that deployed or loaded a contract never freed its backend: the `EntryPointsCaller`
   kept by the backend held the `HostEnv`, which holds the backend. Dropping the environment now
   drops the OdraVM (with the children of factories, after snapshots and `HostRefLoader::load`) and the
