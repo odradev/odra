@@ -1,6 +1,6 @@
 //! Deploys an example Validators contract and tests its functionality.
 use core::time::Duration;
-use odra::casper_types::{PublicKey, U512};
+use odra::casper_types::{PublicKey, SecretKey, U512};
 use odra::host::{Deployer, HostEnv, HostRef};
 use odra::prelude::*;
 use odra_examples::features::validators::{
@@ -16,6 +16,17 @@ fn main() {
     println!(
         "Validators address: {}",
         validators_contract.address().to_string()
+    );
+
+    // The validator's bid is read from the chain; an unknown validator has none.
+    let minimum_delegation_amount = validators_contract.get_minimum_delegation_amount();
+    println!("Minimum delegation amount: {minimum_delegation_amount}");
+    let unknown = PublicKey::from(&SecretKey::ed25519_from_bytes([7u8; 32]).unwrap());
+    let unknown_validator_contract =
+        ValidatorsContract::deploy(&env, ValidatorsContractInitArgs { validator: unknown });
+    assert_eq!(
+        unknown_validator_contract.try_get_minimum_delegation_amount(),
+        Err(ExecutionError::UnwrapError.into())
     );
 
     // Stake some amount

@@ -4,6 +4,7 @@ use std::time::Duration;
 use odra::casper_types::{U256, U512};
 use odra::host::{Deployer, HostEnv, HostRef, HostRefLoader, InstallConfig, NoArgs};
 use odra::prelude::*;
+use odra::DeployReport;
 use odra_examples::contracts::tlw::Error::CannotLockTwice;
 use odra_examples::contracts::tlw::{TimeLockWallet, TimeLockWalletInitArgs};
 use odra_examples::factory::counter::{CounterFactory, CounterHostRef};
@@ -40,7 +41,7 @@ fn main() {
     env.set_gas(500_000_000_000u64);
     println!("Balance of user: {}", env.balance_of(&owner));
 
-    deploy_erc20(&env);
+    gas_is_reported(&env);
     let (contract, erc20) = deploy_new(&env);
 
     // Contract can be loaded
@@ -165,6 +166,42 @@ fn main() {
     assert_eq!(result.err(), Some(Refused.into()));
 
     factory_child_by_address(&env);
+}
+
+/// The gas consumed by every deploy and call this environment sent is reported, like on CasperVM.
+fn gas_is_reported(env: &HostEnv) {
+    let reported = env.gas_report().iter().count();
+    let mut erc20 = deploy_erc20(env);
+    erc20.transfer(&env.get_account(1), &1.into());
+    let report = env.gas_report();
+    println!("Gas report:\n{report}");
+    let entries: Vec<DeployReport> = report.into_iter().skip(reported).collect();
+    let [deploy, call] = entries.as_slice() else {
+        panic!("Expected a deploy and a call in the gas report, got {entries:?}");
+    };
+    match deploy {
+        DeployReport::WasmDeploy { gas, file_name } => {
+            assert!(!gas.is_zero());
+            assert_eq!(file_name, "Erc20.wasm");
+        }
+        other => panic!("Expected a wasm deploy, got {other:?}")
+    }
+    let DeployReport::ContractCall {
+        gas,
+        contract_address,
+        call_def
+    } = call
+    else {
+        panic!("Expected a contract call, got {call:?}");
+    };
+    assert!(!gas.is_zero());
+    assert_eq!(*contract_address, erc20.address());
+    assert_eq!(call_def.entry_point(), "transfer");
+    let last_call_gas = env
+        .last_call_result(erc20.address())
+        .callee_contract_gas_used();
+    println!("Last call gas: {last_call_gas}");
+    assert_eq!(U512::from(last_call_gas), *gas);
 }
 
 /// A host ref made with `new` from the bare address of a factory child works like a loaded one:

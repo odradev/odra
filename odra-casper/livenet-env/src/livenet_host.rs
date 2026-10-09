@@ -348,13 +348,12 @@ impl HostContext for LivenetHost {
     }
 
     fn gas_report(&self) -> GasReport {
-        println!("Gas report is unavailable for livenet");
-        todo!()
+        // The transactions sent by this host's client; a `concurrently` worker has its own.
+        self.casper_client.borrow().gas_report()
     }
 
     fn last_call_gas_cost(&self) -> u64 {
-        // Todo: implement
-        0
+        self.casper_client.borrow().last_transaction_gas().as_u64()
     }
 
     fn sign_message(&self, message: &Bytes, address: &Address) -> Bytes {
@@ -419,15 +418,17 @@ pub(crate) fn read_failed(what: &str, address: &Address, e: LivenetError) -> ! {
 #[cfg(test)]
 mod tests {
     use super::{deployment_error, LivenetHost};
-    use crate::livenet_contract_env::unregistered_contract_message;
+    use crate::livenet_contract_env::{unregistered_contract_message, LivenetContractEnv};
     use odra_casper_rpc_client::casper_client::configuration::CasperClientConfiguration;
     use odra_casper_rpc_client::error::LivenetError;
+    use odra_core::callstack::CallstackElement;
     use odra_core::casper_types::bytesrepr::{Bytes, ToBytes};
     use odra_core::casper_types::contracts::ContractPackageHash;
     use odra_core::casper_types::{RuntimeArgs, SecretKey};
     use odra_core::entry_point_callback::{EntryPoint, EntryPointsCaller};
     use odra_core::host::{HostContext, HostEnv};
     use odra_core::prelude::*;
+    use odra_core::ContractContext;
     use odra_core::{CallDef, ContractEnv, VmError};
     use std::process::Command;
 
@@ -536,6 +537,33 @@ mod tests {
             "{message}"
         );
         assert!(message.contains("::load(&env, address)"), "{message}");
+    }
+
+    #[test]
+    fn named_arg_of_an_account_frame_is_missing() {
+        let (host, env) = setup();
+        let context = LivenetContractEnv::new(
+            host.casper_client.clone(),
+            host.callstack.clone(),
+            host.contract_register.clone(),
+            host.error.clone()
+        );
+        host.callstack
+            .borrow_mut()
+            .push(CallstackElement::Account(env.caller()));
+        let context = context.borrow();
+        assert_eq!(context.get_opt_named_arg_bytes("amount"), None);
+        assert_eq!(
+            context.get_named_arg_bytes("amount"),
+            Err(ExecutionError::MissingArg.into())
+        );
+    }
+
+    #[test]
+    fn gas_is_empty_before_the_first_transaction() {
+        let (host, env) = setup();
+        assert_eq!(env.gas_report().iter().count(), 0);
+        assert_eq!(host.last_call_gas_cost(), 0);
     }
 
     #[test]

@@ -159,7 +159,8 @@ impl ContractContext for LivenetContractEnv {
 
     fn get_opt_named_arg_bytes(&self, name: &str) -> Option<Bytes> {
         match self.callstack.borrow().current() {
-            CallstackElement::Account(_) => todo!("get_named_arg_bytes"),
+            // An account frame has no entry point call, so no arguments; as on CasperVM.
+            CallstackElement::Account(_) => None,
             CallstackElement::ContractCall { call_def, .. } => call_def
                 .args()
                 .get(name)
@@ -203,8 +204,11 @@ impl ContractContext for LivenetContractEnv {
         client.delegated_amount(address, _validator)
     }
 
-    fn get_validator_info(&self, _validator: PublicKey) -> Option<ValidatorInfo> {
-        todo!()
+    fn get_validator_info(&self, validator: PublicKey) -> Option<ValidatorInfo> {
+        self.casper_client
+            .borrow()
+            .get_validator_info(validator)
+            .map(|bid| ValidatorInfo::new(bid.staked_amount(), bid.minimum_delegation_amount()))
     }
 
     fn pseudorandom_bytes(&self) -> [u8; 32] {

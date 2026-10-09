@@ -2,8 +2,8 @@
 
 use crate::utils::block_on;
 use casper_client::get_auction_info;
-use casper_types::system::auction::BidAddr;
 use casper_types::system::auction::ValidatorBid;
+use casper_types::system::auction::{BidAddr, BidKind};
 use casper_types::{Key, PublicKey, StoredValue, U512};
 use odra_core::prelude::*;
 
@@ -74,8 +74,25 @@ impl super::CasperClient {
         }
     }
 
-    pub async fn get_validator_info(&self, _validator: PublicKey) -> Option<ValidatorBid> {
-        todo!("Implement get_validator_info")
+    /// The bid of `validator`, `None` if it has no validator bid, read like the wasm
+    /// environment reads it (the `BidAddr::Validator` key).
+    pub fn get_validator_info(&self, validator: PublicKey) -> Option<ValidatorBid> {
+        block_on(self.get_validator_info_async(validator))
+    }
+
+    /// The bid of `validator`, `None` if it has no validator bid, read like the wasm
+    /// environment reads it (the `BidAddr::Validator` key).
+    pub async fn get_validator_info_async(&self, validator: PublicKey) -> Option<ValidatorBid> {
+        let key = Key::BidAddr(BidAddr::Validator(validator.to_account_hash()));
+        match self.query_global_state_maybe(key, None).await {
+            Ok(Some(StoredValue::BidKind(BidKind::Validator(bid)))) => Some(*bid),
+            Ok(_) => None,
+            Err(e) => panic!(
+                "Couldn't get validator info for {}: {}",
+                validator.to_hex_string(),
+                e.error_message()
+            )
+        }
     }
 
     pub fn auction_delay(&self) -> u64 {

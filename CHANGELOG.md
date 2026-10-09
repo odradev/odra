@@ -4,6 +4,13 @@ Changelog for `odra`.
 
 ## [Unreleased]
 ### Added
+- Gas on livenet: `HostEnv::gas_report()` lists every wasm deploy (`Name.wasm`) and contract call
+  the environment sent, failed ones included, with the gas the node reports as consumed (gas units,
+  like CasperVM), and the last call result carries the gas of the last transaction, a transfer
+  included. A `concurrently` worker reports its own transactions. Before, `gas_report()` panicked and
+  the gas of a call was 0.
+- `ContractEnv::get_validator_info` on livenet reads the validator's bid from the chain, `None` for a
+  key without a validator bid; it used to panic.
 - Factory modules (`#[odra::module(factory = on)]`) work on OdraVM: `new_contract`,
   `upgrade_child_contract` and `batch_upgrade_child_contract` deploy and upgrade the children in the
   in-memory VM like on Casper. The child's constructor and upgrader see the caller of the factory as
@@ -137,6 +144,8 @@ Changelog for `odra`.
   contracts in `Odra.toml` of `odra-modules` and `odra-examples`; their tests run on OdraVM only.
 
 ### Fixed
+- A livenet getter reading a named argument while the account is the current frame gets `None`
+  (`MissingArg` for a required one), like on CasperVM, instead of panicking with `todo!`.
 - `XxxHostRef::new(address, env)` works like `Xxx::load(&env, address)`: the generated `new` registers
   the contract in the environment. Before, on livenet the getters of a contract known only by its
   address (e.g. a factory child) failed with a bare `InvalidContractAddress`, as they run locally and
