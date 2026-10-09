@@ -167,6 +167,10 @@ impl HostContext for OdraVmHost {
             .register_contract(address, &contract_name, entry_points_caller);
     }
 
+    fn take_child_contracts(&self) -> Vec<Address> {
+        self.vm.take_child_contracts()
+    }
+
     fn contract_env(&self) -> ContractEnv {
         (*self.contract_env).clone()
     }

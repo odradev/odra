@@ -16,9 +16,6 @@ use std::collections::BTreeMap;
 use std::rc::{Rc, Weak};
 
 /// What the host keeps about a deployed contract to run its offchain functions.
-///
-/// Deliberately not the `EntryPointsCaller` itself: that one holds a `HostEnv`, and a host that
-/// keeps it would own itself and never drop its VM.
 pub(crate) struct OffchainContract {
     name: String,
     entry_points: Vec<EntryPoint>,

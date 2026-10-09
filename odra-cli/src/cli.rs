@@ -108,7 +108,7 @@ impl OdraCli {
     ) -> Self {
         self.callers.insert(
             (T::HostRef::ident(), T::HostRef::ident()),
-            T::HostRef::entry_points_caller(&self.host_env)
+            T::HostRef::entry_points_caller()
         );
         self.custom_types.register::<T>();
         self.contracts_cmd.add_contract::<T>();
@@ -131,7 +131,7 @@ impl OdraCli {
     ) -> Self {
         self.callers.insert(
             (T::HostRef::ident(), name.clone()),
-            T::HostRef::entry_points_caller(&self.host_env)
+            T::HostRef::entry_points_caller()
         );
         self.custom_types.register::<T>();
         self.contracts_cmd.add_contract_named::<T>(name.clone());

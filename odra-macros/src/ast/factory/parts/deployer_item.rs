@@ -124,7 +124,6 @@ impl TryFrom<&'_ ModuleImplIR> for FactoryEntrypointCallerExpr {
 
 impl FactoryEntrypointCallerExpr {
     fn entrypoint_caller(module: &ModuleImplIR) -> syn::Result<syn::Expr> {
-        let env_ident = utils::ident::env();
         let entry_points_ident = utils::ident::entry_points();
         let contract_env_ident = utils::ident::contract_env();
         let call_def_ident = utils::ident::call_def();
@@ -161,7 +160,7 @@ impl FactoryEntrypointCallerExpr {
         .collect::<proc_macro2::TokenStream>();
 
         Ok(parse_quote!(
-            #ty_caller::new(#env_ident.clone(), #entry_points_ident, |#contract_env_ident, #call_def_ident| {
+            #ty_caller::new(#entry_points_ident, |#contract_env_ident, #call_def_ident| {
                 match #call_def_ident.entry_point() {
                     #branches
                     name => Err(OdraError::VmError(

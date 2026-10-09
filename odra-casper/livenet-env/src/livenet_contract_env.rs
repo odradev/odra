@@ -9,8 +9,9 @@ use odra_core::callstack::{Callstack, CallstackElement};
 use odra_core::casper_types::{bytesrepr::Bytes, crypto, CLValue, PublicKey, Signature, U512};
 use odra_core::prelude::*;
 use odra_core::validator::ValidatorInfo;
-use odra_core::{CallDef, ContractContext, ContractRegister, VmError};
+use odra_core::{CallDef, ContractContext, ContractEnv, ContractRegister, VmError};
 use std::io::Write;
+use std::rc::Weak;
 use std::sync::RwLock;
 
 /// Livenet contract environment struct.
@@ -18,6 +19,9 @@ pub struct LivenetContractEnv {
     casper_client: Rc<RefCell<CasperClient>>,
     callstack: Rc<RefCell<Callstack>>,
     contract_register: Rc<RwLock<ContractRegister>>,
+    /// The environment wrapping this context, handed to nested calls. Weak, so that the host
+    /// stays the only owner of the environment.
+    contract_env: RefCell<Weak<ContractEnv>>,
     /// The error of the last revert, read by the host after the panic unwinds.
     error: Rc<RefCell<Option<OdraError>>>
 }
@@ -90,8 +94,19 @@ impl ContractContext for LivenetContractEnv {
         if call_def.is_mut() {
             panic!("Cannot cross call mutable entrypoint from non-mutable entrypoint")
         }
-        call_locally(&self.callstack, &self.contract_register, &address, call_def)
-            .unwrap_or_else(|e| self.revert(e))
+        let contract_env = self
+            .contract_env
+            .borrow()
+            .upgrade()
+            .expect("the host owns the livenet contract env");
+        call_locally(
+            &self.callstack,
+            &self.contract_register,
+            (*contract_env).clone(),
+            &address,
+            call_def
+        )
+        .unwrap_or_else(|e| self.revert(e))
     }
 
     fn get_block_time(&self) -> u64 {
@@ -221,18 +236,26 @@ impl LivenetContractEnv {
             casper_client,
             callstack,
             contract_register,
+            contract_env: RefCell::new(Weak::new()),
             error
         }))
     }
+
+    /// Tells the context which environment wraps it.
+    pub(crate) fn set_contract_env(&self, contract_env: &Rc<ContractEnv>) {
+        *self.contract_env.borrow_mut() = Rc::downgrade(contract_env);
+    }
 }
 
-/// Executes a non-mutable entry point on this machine, reading the state from the node.
+/// Executes a non-mutable entry point on this machine in `contract_env`, reading the state
+/// from the node.
 ///
 /// The contract runs one frame deeper on the call stack, above its caller. The frame is popped when the call
 /// returns and when a revert unwinds it.
 pub(crate) fn call_locally(
     callstack: &Rc<RefCell<Callstack>>,
     contract_register: &RwLock<ContractRegister>,
+    contract_env: ContractEnv,
     address: &Address,
     call_def: CallDef
 ) -> OdraResult<Bytes> {
@@ -252,7 +275,7 @@ pub(crate) fn call_locally(
             call_def.clone()
         )
     );
-    contract.call(call_def)
+    contract.call(contract_env, call_def)
 }
 
 /// A frame on the call stack, popped when dropped.

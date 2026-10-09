@@ -1,6 +1,6 @@
 use crate::entry_point_callback::EntryPointsCaller;
 use crate::prelude::*;
-use crate::{CallDef, VmError};
+use crate::{CallDef, ContractEnv, VmError};
 use casper_types::bytesrepr::Bytes;
 use casper_types::U512;
 
@@ -28,8 +28,8 @@ impl ContractContainer {
         self.ctx = ExecutionContext::Runtime;
     }
 
-    /// Calls the entry point with the given call definition.
-    pub fn call(&self, call_def: CallDef) -> OdraResult<Bytes> {
+    /// Calls the entry point with the given call definition in the given contract environment.
+    pub fn call(&self, contract_env: ContractEnv, call_def: CallDef) -> OdraResult<Bytes> {
         // find the entry point
         let ep = self
             .entry_points_caller
@@ -45,7 +45,7 @@ impl ContractContainer {
         if ep.name == "init" && self.ctx == ExecutionContext::Runtime {
             return Err(OdraError::VmError(VmError::InvalidContext));
         }
-        self.entry_points_caller.call(call_def)
+        self.entry_points_caller.call(contract_env, call_def)
     }
 
     /// Returns the entry points caller of the contract.
@@ -70,11 +70,14 @@ mod tests {
     use super::{ContractContainer, ExecutionContext};
     use crate::contract_context::MockContractContext;
     use crate::entry_point_callback::{Argument, EntryPoint, EntryPointsCaller};
-    use crate::host::{HostEnv, MockHostContext};
     use crate::{casper_types::RuntimeArgs, VmError};
     use crate::{prelude::*, CallDef, ContractEnv};
 
     const TEST_ENTRYPOINT: &str = "ep";
+
+    fn test_env() -> ContractEnv {
+        ContractEnv::new(Rc::new(RefCell::new(MockContractContext::new())))
+    }
 
     #[test]
     fn test_call_wrong_entrypoint() {
@@ -83,7 +86,7 @@ mod tests {
 
         // When call some entrypoint.
         let call_def = CallDef::new(TEST_ENTRYPOINT, false, RuntimeArgs::new());
-        let result = instance.call(call_def);
+        let result = instance.call(test_env(), call_def);
 
         // Then an error occurs.
         assert!(result.is_err());
@@ -96,7 +99,7 @@ mod tests {
 
         // When call the registered entrypoint.
         let call_def = CallDef::new(TEST_ENTRYPOINT, false, RuntimeArgs::new());
-        let result = instance.call(call_def);
+        let result = instance.call(test_env(), call_def);
 
         // Then teh call succeeds.
         assert!(result.is_ok());
@@ -104,9 +107,7 @@ mod tests {
 
     impl ContractContainer {
         fn empty() -> Self {
-            let ctx = Rc::new(MockHostContext::new());
-            let env = HostEnv::new(ctx);
-            let entry_points_caller = EntryPointsCaller::new(env, vec![], |_, call_def| {
+            let entry_points_caller = EntryPointsCaller::new(vec![], |_, call_def| {
                 Err(OdraError::VmError(VmError::NoSuchMethod(
                     call_def.entry_point().to_string()
                 )))
@@ -125,12 +126,7 @@ mod tests {
                     .map(|name| Argument::new::<u32>(String::from(*name)))
                     .collect()
             )];
-            let mut ctx = MockHostContext::new();
-            ctx.expect_contract_env()
-                .returning(|| ContractEnv::new(Rc::new(RefCell::new(MockContractContext::new()))));
-            let env = HostEnv::new(Rc::new(ctx));
-
-            let entry_points_caller = EntryPointsCaller::new(env, entry_points, |_, call_def| {
+            let entry_points_caller = EntryPointsCaller::new(entry_points, |_, call_def| {
                 if call_def.entry_point() == TEST_ENTRYPOINT {
                     Ok(vec![1, 2, 3].into())
                 } else {

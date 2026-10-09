@@ -304,7 +304,7 @@ mod deployer_impl {
             }
 
             impl odra::host::EntryPointsCallerProvider for Erc20HostRef {
-                fn entry_points_caller(env: &odra::host::HostEnv) -> odra::entry_point_callback::EntryPointsCaller {
+                fn entry_points_caller() -> odra::entry_point_callback::EntryPointsCaller {
                     let entry_points = odra::prelude::vec![
                         odra::entry_point_callback::EntryPoint::new(
                             odra::prelude::string::String::from("init"),
@@ -344,7 +344,7 @@ mod deployer_impl {
                         )
                     ];
 
-                    odra::entry_point_callback::EntryPointsCaller::new(env.clone(), entry_points, |__odra_contract_env, __odra_call_def| {
+                    odra::entry_point_callback::EntryPointsCaller::new(entry_points, |__odra_contract_env, __odra_call_def| {
                         match __odra_call_def.entry_point() {
                             "init" => {
                                 let __odra_result = __erc20_exec_parts::execute_init(__odra_contract_env);
@@ -395,13 +395,13 @@ mod deployer_impl {
         let module = test_utils::mock::module_trait_impl();
         let expected = quote! {
             impl odra::host::EntryPointsCallerProvider for Erc20HostRef {
-                fn entry_points_caller(env: &odra::host::HostEnv) -> odra::entry_point_callback::EntryPointsCaller {
+                fn entry_points_caller() -> odra::entry_point_callback::EntryPointsCaller {
                     let entry_points = odra::prelude::vec![
                         odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("total_supply"), odra::prelude::vec![]),
                         odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("set_total_supply"), odra::prelude::vec![]),
                         odra::entry_point_callback::EntryPoint::new_payable(odra::prelude::string::String::from("pay_to_mint"), odra::prelude::vec![])
                     ];
-                    odra::entry_point_callback::EntryPointsCaller::new(env.clone(), entry_points, |__odra_contract_env, __odra_call_def| {
+                    odra::entry_point_callback::EntryPointsCaller::new(entry_points, |__odra_contract_env, __odra_call_def| {
                         match __odra_call_def.entry_point() {
                             "total_supply" => {
                                 let __odra_result = __erc20_exec_parts::execute_total_supply(__odra_contract_env);
@@ -436,7 +436,7 @@ mod deployer_impl {
         let module = test_utils::mock::module_delegation();
         let expected = quote! {
             impl odra::host::EntryPointsCallerProvider for Erc20HostRef {
-                fn entry_points_caller(env: &odra::host::HostEnv) -> odra::entry_point_callback::EntryPointsCaller {
+                fn entry_points_caller() -> odra::entry_point_callback::EntryPointsCaller {
                     let entry_points = odra::prelude::vec![
                         odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("total_supply"), odra::prelude::vec![]),
                         odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("get_owner"), odra::prelude::vec![]),
@@ -446,7 +446,7 @@ mod deployer_impl {
                         odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("name"), odra::prelude::vec![]),
                         odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("symbol"), odra::prelude::vec![])
                     ];
-                    odra::entry_point_callback::EntryPointsCaller::new(env.clone(), entry_points, |__odra_contract_env, __odra_call_def| {
+                    odra::entry_point_callback::EntryPointsCaller::new(entry_points, |__odra_contract_env, __odra_call_def| {
                         match __odra_call_def.entry_point() {
                             "total_supply" => {
                                 let __odra_result = __erc20_exec_parts::execute_total_supply(__odra_contract_env);

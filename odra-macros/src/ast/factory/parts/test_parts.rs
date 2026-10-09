@@ -217,7 +217,7 @@ mod test {
                 }
 
                 impl odra::host::EntryPointsCallerProvider for Erc20FactoryHostRef {
-                    fn entry_points_caller(env: &odra::host::HostEnv) -> odra::entry_point_callback::EntryPointsCaller {
+                    fn entry_points_caller() -> odra::entry_point_callback::EntryPointsCaller {
                         let entry_points = odra::prelude::vec![
                             odra::entry_point_callback::EntryPoint::new(
                                 odra::prelude::string::String::from("new_contract"),
@@ -247,7 +247,7 @@ mod test {
                                 ]
                             )
                         ];
-                        odra::entry_point_callback::EntryPointsCaller::new(env.clone(), entry_points, |__odra_contract_env, __odra_call_def| {
+                        odra::entry_point_callback::EntryPointsCaller::new(entry_points, |__odra_contract_env, __odra_call_def| {
                             match __odra_call_def.entry_point() {
                                 "new_contract" => odra::host::factory::new_contract(
                                     &__odra_contract_env,

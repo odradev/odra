@@ -50,8 +50,6 @@ pub struct EpcSignature {
     epc_token: syn::Ident,
     #[syn(parenthesized)]
     paren_token: syn::token::Paren,
-    #[syn(in = paren_token)]
-    input: syn::FnArg,
     output: syn::ReturnType
 }
 
@@ -60,16 +58,11 @@ impl TryFrom<&'_ ModuleImplIR> for EpcSignature {
 
     fn try_from(_: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         let epc_ident = utils::ty::entry_points_caller();
-        let ty_host_env = utils::ty::host_env();
-        let env = utils::ident::env();
-
-        let input = parse_quote!(#env: &#ty_host_env);
 
         Ok(Self {
             fn_token: Default::default(),
             epc_token: utils::ident::epc(),
             paren_token: Default::default(),
-            input,
             output: utils::misc::ret_ty(&epc_ident)
         })
     }
@@ -92,7 +85,6 @@ impl TryFrom<&'_ ModuleImplIR> for EntrypointCallerExpr {
 
 impl EntrypointCallerExpr {
     fn entrypoint_caller(module: &ModuleImplIR) -> syn::Result<syn::Expr> {
-        let env_ident = utils::ident::env();
         let entry_points_ident = utils::ident::entry_points();
         let contract_env_ident = utils::ident::contract_env();
         let call_def_ident = utils::ident::call_def();
@@ -107,7 +99,7 @@ impl EntrypointCallerExpr {
         branches.push(CallerBranch::Default(DefaultBranch));
 
         Ok(parse_quote!(
-            #ty_caller::new(#env_ident.clone(), #entry_points_ident, |#contract_env_ident, #call_def_ident| {
+            #ty_caller::new(#entry_points_ident, |#contract_env_ident, #call_def_ident| {
                 match #call_def_ident.entry_point() {
                     #(#branches)*
                 }

@@ -102,7 +102,7 @@ fn test_env() -> (HostEnv, Address) {
         .into_iter()
         .map(|name| EntryPoint::new(String::from(name), vec![]))
         .collect();
-    let caller = EntryPointsCaller::new(env.clone(), entry_points, entry_point);
+    let caller = EntryPointsCaller::new(entry_points, entry_point);
     let address = env
         .new_contract("Contract", RuntimeArgs::new(), caller)
         .unwrap();

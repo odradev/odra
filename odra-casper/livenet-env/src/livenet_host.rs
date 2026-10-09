@@ -60,7 +60,10 @@ impl LivenetHost {
             contract_register.clone(),
             error.clone()
         );
-        let contract_env = Rc::new(ContractEnv::new(livenet_contract_env));
+        let contract_env = Rc::new(ContractEnv::new(livenet_contract_env.clone()));
+        livenet_contract_env
+            .borrow()
+            .set_contract_env(&contract_env);
         Self {
             casper_client,
             contract_register,
@@ -79,7 +82,13 @@ impl LivenetHost {
         let caller = CallstackElement::new_account(self.caller());
         let _caller_frame = CallFrame::push(&self.callstack, caller);
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            call_locally(&self.callstack, &self.contract_register, address, call_def)
+            call_locally(
+                &self.callstack,
+                &self.contract_register,
+                (*self.contract_env).clone(),
+                address,
+                call_def
+            )
         }));
         match result {
             Ok(result) => result,
@@ -413,6 +422,18 @@ mod tests {
     const ADDRESS: Address = Address::Contract(ContractPackageHash::new([1; 32]));
 
     #[test]
+    fn registered_contract_does_not_keep_the_host_alive() {
+        let (host, env) = setup();
+        call(&env, "nested_probe").unwrap();
+        let weak = Rc::downgrade(&host);
+        drop((host, env));
+        assert!(
+            weak.upgrade().is_none(),
+            "the host outlived its environment"
+        );
+    }
+
+    #[test]
     fn getter_is_called_by_the_account() {
         let (host, env) = setup();
         let account = env.caller();
@@ -568,7 +589,7 @@ mod tests {
         .into_iter()
         .map(|name| EntryPoint::new(String::from(name), vec![]))
         .collect();
-        let caller = EntryPointsCaller::new(env.clone(), entry_points, entry_point);
+        let caller = EntryPointsCaller::new(entry_points, entry_point);
         host.register_contract(ADDRESS, String::from("Contract"), caller);
         (host, env)
     }

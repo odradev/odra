@@ -65,8 +65,8 @@ pub trait HostRefLoader<T: HostRef> {
 
 /// A type which can provide an [EntryPointsCaller].
 pub trait EntryPointsCallerProvider {
-    /// Returns an [EntryPointsCaller] for the given host environment.
-    fn entry_points_caller(env: &HostEnv) -> EntryPointsCaller;
+    /// Returns the [EntryPointsCaller] of the contract.
+    fn entry_points_caller() -> EntryPointsCaller;
 
     /// The events the contract may emit, including those of its submodules (and, for a factory,
     /// of the contracts it creates). Checked when the contract is deployed or upgraded.
@@ -269,7 +269,7 @@ impl<R: OdraContract> Deployer<R> for R {
             &contract_ident,
             &R::HostRef::contract_events()
         );
-        let caller = R::HostRef::entry_points_caller(env);
+        let caller = R::HostRef::entry_points_caller();
 
         let mut init_args = init_args.into();
         init_args.insert(consts::IS_UPGRADABLE_ARG, cfg.is_upgradable)?;
@@ -320,7 +320,7 @@ impl<R: OdraContract> Deployer<R> for R {
             &contract_ident,
             &R::HostRef::contract_events()
         );
-        let entry_points_caller = R::HostRef::entry_points_caller(env);
+        let entry_points_caller = R::HostRef::entry_points_caller();
 
         let address = env.upgrade_contract(
             &contract_ident,
@@ -335,7 +335,7 @@ impl<R: OdraContract> Deployer<R> for R {
 #[cfg(not(target_arch = "wasm32"))]
 impl<T: OdraContract> HostRefLoader<T::HostRef> for T {
     fn load(env: &HostEnv, address: Address) -> T::HostRef {
-        let caller = T::HostRef::entry_points_caller(env);
+        let caller = T::HostRef::entry_points_caller();
         let contract_name = T::HostRef::ident();
         env.register_contract(address, contract_name, caller);
         T::HostRef::new(address, env.clone())
@@ -470,6 +470,14 @@ pub trait HostContext {
         contract_name: String,
         entry_points_caller: EntryPointsCaller
     );
+
+    /// Hands over the contracts deployed by other contracts (factory children) since the last
+    /// call of this function, for [HostEnv] to track their events.
+    ///
+    /// The default returns none: the backend does not report them.
+    fn take_child_contracts(&self) -> Vec<Address> {
+        Vec::new()
+    }
 
     /// Returns the contract environment.
     fn contract_env(&self) -> ContractEnv;
@@ -762,7 +770,9 @@ impl HostEnv {
         entry_points_caller.remove_entry_point("upgrade");
 
         let backend = self.backend.as_ref();
-        let contract_address = backend.new_contract(name, init_args, entry_points_caller)?;
+        let result = backend.new_contract(name, init_args, entry_points_caller);
+        self.track_child_contracts(result.is_ok());
+        let contract_address = result?;
 
         self.deployed_contracts
             .borrow_mut()
@@ -788,12 +798,10 @@ impl HostEnv {
         entry_points_caller.remove_entry_point("init");
 
         let backend = self.backend.as_ref();
-        let upgraded_contract = backend.upgrade_contract(
-            name,
-            contract_to_upgrade,
-            upgrade_args,
-            entry_points_caller
-        )?;
+        let result =
+            backend.upgrade_contract(name, contract_to_upgrade, upgrade_args, entry_points_caller);
+        self.track_child_contracts(result.is_ok());
+        let upgraded_contract = result?;
         let mut contracts = self.deployed_contracts.borrow_mut();
         let contract = contracts.get_mut(&upgraded_contract).unwrap();
         contract.current_version += 1;
@@ -844,18 +852,11 @@ impl HostEnv {
         call_def: CallDef,
         use_proxy: bool
     ) -> OdraResult<Bytes> {
-        let deployed_before: BTreeSet<Address> =
-            self.deployed_contracts.borrow().keys().copied().collect();
         let call_result = {
             let backend = self.backend.as_ref();
             backend.call_contract(&address, call_def, use_proxy)
         };
-        // The contracts a failed call deployed (factory children) were reverted with it.
-        if call_result.is_err() {
-            self.deployed_contracts
-                .borrow_mut()
-                .retain(|address, _| deployed_before.contains(address));
-        }
+        self.track_child_contracts(call_result.is_ok());
 
         let mut events_map: BTreeMap<Address, Vec<Bytes>> = BTreeMap::new();
         let mut native_events_map: BTreeMap<Address, Vec<Bytes>> = BTreeMap::new();
@@ -1227,6 +1228,23 @@ impl HostEnv {
         events
     }
 
+    /// Starts tracking the contracts the backend deployed from other contracts (factory
+    /// children), unless the operation that deployed them failed and reverted them.
+    fn track_child_contracts(&self, succeeded: bool) {
+        let children = self.backend.take_child_contracts();
+        if !succeeded {
+            return;
+        }
+        let captures_events = *self.captures_events.borrow();
+        let mut contracts = self.deployed_contracts.borrow_mut();
+        for address in children {
+            // The contract is new, all its events belong to the operation that deployed it.
+            let mut contract = DeployedContract::new(address);
+            contract.events_initialized = captures_events;
+            contracts.insert(address, contract);
+        }
+    }
+
     fn init_events(&self, contract_address: &Address) {
         // First, check if initialization is needed and get event counts
         let needs_init = {
@@ -1296,7 +1314,7 @@ mod test {
             fn ident() -> String;
         }
         impl EntryPointsCallerProvider for TestRef {
-            fn entry_points_caller(env: &HostEnv) -> EntryPointsCaller;
+            fn entry_points_caller() -> EntryPointsCaller;
         }
         impl HostRef for TestRef {
             fn new(address: Address, env: HostEnv) -> Self;
@@ -1402,7 +1420,7 @@ mod test {
         let epc_ctx = MockTestRef::entry_points_caller_context();
         epc_ctx
             .expect()
-            .returning(|h| EntryPointsCaller::new(h.clone(), vec![], |_, _| Ok(Bytes::default())));
+            .returning(|| EntryPointsCaller::new(vec![], |_, _| Ok(Bytes::default())));
 
         // check if TestRef::new() is called exactly once
         let instance_ctx = MockTestRef::new_context();
@@ -1414,6 +1432,7 @@ mod test {
         let mut ctx = MockHostContext::new();
         ctx.expect_new_contract()
             .returning(|_, _, _| Ok(Address::Account(AccountHash::new([0; 32]))));
+        ctx.expect_take_child_contracts().returning(Vec::new);
         // The event baseline of the new contract is read right after the deploy.
         ctx.expect_get_events_count().returning(|_| Ok(0));
         ctx.expect_get_native_events_count().returning(|_| Ok(0));
@@ -1434,7 +1453,7 @@ mod test {
         let epc_ctx = MockTestRef::entry_points_caller_context();
         epc_ctx
             .expect()
-            .returning(|h| EntryPointsCaller::new(h.clone(), vec![], |_, _| Ok(Bytes::default())));
+            .returning(|| EntryPointsCaller::new(vec![], |_, _| Ok(Bytes::default())));
         let indent_ctx = MockTestRef::ident_context();
         indent_ctx.expect().returning(|| "TestRef".to_string());
 
@@ -1460,6 +1479,7 @@ mod test {
         let mut ctx = MockHostContext::new();
         ctx.expect_new_contract()
             .returning(|_, _, _| Ok(Address::Account(AccountHash::new([0; 32]))));
+        ctx.expect_take_child_contracts().returning(Vec::new);
         ctx.expect_caller()
             .returning(|| Address::Account(AccountHash::new([2; 32])))
             .times(1);

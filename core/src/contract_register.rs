@@ -1,7 +1,7 @@
 use crate::call_def::CallDef;
 use crate::prelude::*;
-use crate::ContractContainer;
 use crate::{casper_types::bytesrepr::Bytes, VmError};
+use crate::{ContractContainer, ContractEnv};
 
 /// The version of a contract at an address, counted from 0.
 pub type ContractVersion = u32;
@@ -27,13 +27,18 @@ impl ContractRegister {
         self.versions_count.insert(addr, new_version);
     }
 
-    /// Calls the entry point with the given call definition.
+    /// Calls the entry point with the given call definition in the given contract environment.
     ///
     /// Returns bytes representing the result of the call or an error if the address
     /// is not present in the register.
-    pub fn call(&self, addr: &Address, call_def: CallDef) -> OdraResult<Bytes> {
+    pub fn call(
+        &self,
+        addr: &Address,
+        contract_env: ContractEnv,
+        call_def: CallDef
+    ) -> OdraResult<Bytes> {
         if let Some(contract) = self.get(addr) {
-            return contract.call(call_def);
+            return contract.call(contract_env, call_def);
         }
         Err(OdraError::VmError(VmError::InvalidContractAddress))
     }
