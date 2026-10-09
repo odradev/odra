@@ -63,8 +63,8 @@ mod tests {
     use alloc::string::ToString;
     use odra::{
         casper_types::U256,
-        host::{Deployer, HostRef, NoArgs},
-        prelude::Addressable
+        host::{Deployer, HostRef, HostRefLoader, NoArgs},
+        prelude::{vec, Addressable}
     };
 
     use crate::factory::token::{
@@ -92,7 +92,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "This test does not work on odra vm"]
     fn test_factory_module() {
         let env = odra_test::env();
         let owner = env.get_account(0);
@@ -113,7 +112,46 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "This test does not work on odra vm"]
+    fn host_refs_made_with_new_or_load_keep_the_events() {
+        let env = odra_test::env();
+        let alice = env.get_account(1);
+        let mut factory = TokenFactory::deploy(&env, NoArgs);
+        let (child, _) = factory.new_contract(
+            "TokenContract".to_string(),
+            "Token".to_string(),
+            "TTK".to_string(),
+            18,
+            U256::from(500u64)
+        );
+        let token = Token::deploy(
+            &env,
+            TokenInitArgs {
+                name: "MyToken".to_string(),
+                symbol: "MTK".to_string(),
+                decimals: 18,
+                initial_supply: U256::from(1000u64)
+            }
+        );
+
+        for addr in [child, token.address()] {
+            let events_count = env.events_count(&addr);
+            let mut token = FTokenHostRef::new(addr, env.clone());
+            token.transfer(&alice, &U256::from(10));
+            assert_eq!(token.last_call().event_names(), vec!["Transfer"]);
+
+            // Another host ref, made either way, does not take the events of the calls made
+            // before it, nor starts counting them again.
+            let mut again = FTokenHostRef::new(addr, env.clone());
+            let loaded = Token::load(&env, addr);
+            assert_eq!(loaded.last_call().event_names(), vec!["Transfer"]);
+            again.transfer(&alice, &U256::from(10));
+            assert_eq!(loaded.last_call().event_names(), vec!["Transfer"]);
+            assert_eq!(token.balance_of(&alice), U256::from(20));
+            assert_eq!(env.events_count(&addr), events_count + 2);
+        }
+    }
+
+    #[test]
     fn test_proxy() {
         let env = odra_test::env();
         let factory = TokenFactory::deploy(&env, NoArgs);

@@ -232,13 +232,13 @@ mod test {
                 }
 
                 fn event_schemas() -> odra::prelude::BTreeMap<odra::prelude::string::String, odra::casper_event_standard::Schema> {
-                    let result = odra::prelude::BTreeMap::from_iter(
+                    let __odra_result = odra::prelude::BTreeMap::from_iter(
                         odra::prelude::vec![
                             (<OnTransfer as odra::casper_event_standard::EventInstance>::name(), <OnTransfer as odra::casper_event_standard::EventInstance>::schema()),
                             (<OnApprove as odra::casper_event_standard::EventInstance>::name(), <OnApprove as odra::casper_event_standard::EventInstance>::schema())
                         ]
                     );
-                    result
+                    __odra_result
                         .into_iter()
                         .chain(<Mapping<u8, Counter> as odra::contract_def::HasEvents>::event_schemas())
                         .chain(<SubModule<Counter> as odra::contract_def::HasEvents>::event_schemas())

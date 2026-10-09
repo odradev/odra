@@ -13,6 +13,12 @@ impl CallStackProbe {
         let env = self.env();
         (env.caller(), env.nth_caller(1), env.call_stack())
     }
+
+    /// The same as [inspect](Self::inspect), executed on the host instead of deployed.
+    #[odra(offchain)]
+    pub fn inspect_offchain(&self) -> (Address, Option<Address>, Vec<Address>) {
+        self.inspect()
+    }
 }
 
 /// Puts one more contract frame between the account and the probe.
@@ -30,6 +36,12 @@ impl CallStackRelay {
 
     /// Calls the probe and passes its answer through.
     pub fn relay(&self) -> (Address, Option<Address>, Vec<Address>) {
+        self.probe.inspect()
+    }
+
+    /// Calls the probe from the host, like [relay](Self::relay) does on chain.
+    #[odra(offchain)]
+    pub fn relay_offchain(&self) -> (Address, Option<Address>, Vec<Address>) {
         self.probe.inspect()
     }
 }
@@ -59,6 +71,33 @@ mod tests {
         // Called through the relay: the relay is the caller, the account is behind it.
         assert_eq!(
             relay.relay(),
+            (
+                relay.address(),
+                Some(alice),
+                vec![alice, relay.address(), probe.address()]
+            )
+        );
+    }
+
+    #[test]
+    fn offchain_functions_see_the_same_call_stack() {
+        let env = odra_test::env();
+        let probe = CallStackProbe::deploy(&env, NoArgs);
+        let relay = CallStackRelay::deploy(
+            &env,
+            CallStackRelayInitArgs {
+                probe: probe.address()
+            }
+        );
+        let alice = env.get_account(1);
+        env.set_caller(alice);
+
+        assert_eq!(
+            probe.inspect_offchain(),
+            (alice, None, vec![alice, probe.address()])
+        );
+        assert_eq!(
+            relay.relay_offchain(),
             (
                 relay.address(),
                 Some(alice),

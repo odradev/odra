@@ -92,6 +92,11 @@ mod test {
 
                 impl odra::host::HostRef for Erc20HostRef {
                     fn new(address: odra::prelude::Address, env: odra::host::HostEnv) -> Self {
+                        env.register_contract_ref(
+                            address,
+                            <Self as odra::contract_def::HasIdent>::ident(),
+                            <Self as odra::host::EntryPointsCallerProvider>::entry_points_caller
+                        );
                         Self {
                             address,
                             env,
@@ -175,12 +180,12 @@ mod test {
                                     odra::prelude::string::String::from("init"),
                                     true,
                                     {
-                                        let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                        let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
                                         if self.attached_value > odra::casper_types::U512::zero() {
-                                            let _ = named_args.insert("amount", self.attached_value);
+                                            let _ = __odra_named_args.insert("amount", self.attached_value);
                                         }
-                                        odra::args::EntrypointArgument::insert_runtime_arg(total_supply, "total_supply", &mut named_args);
-                                        named_args
+                                        odra::args::EntrypointArgument::insert_runtime_arg(total_supply, "total_supply", &mut __odra_named_args);
+                                        __odra_named_args
                                     },
                                 )
                                 .with_amount(self.attached_value),
@@ -196,12 +201,12 @@ mod test {
                                     odra::prelude::string::String::from("upgrade"),
                                     true,
                                     {
-                                        let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                        let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
                                         if self.attached_value > odra::casper_types::U512::zero() {
-                                            let _ = named_args.insert("amount", self.attached_value);
+                                            let _ = __odra_named_args.insert("amount", self.attached_value);
                                         }
-                                        odra::args::EntrypointArgument::insert_runtime_arg(total_supply, "total_supply", &mut named_args);
-                                        named_args
+                                        odra::args::EntrypointArgument::insert_runtime_arg(total_supply, "total_supply", &mut __odra_named_args);
+                                        __odra_named_args
                                     },
                                 )
                                 .with_amount(self.attached_value),
@@ -218,11 +223,11 @@ mod test {
                                 odra::prelude::string::String::from("total_supply"),
                                 false,
                                 {
-                                    let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                    let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
                                     if self.attached_value > odra::casper_types::U512::zero() {
-                                        let _ = named_args.insert("amount", self.attached_value);
+                                        let _ = __odra_named_args.insert("amount", self.attached_value);
                                     }
-                                    named_args
+                                    __odra_named_args
                                 }
                             ).with_amount(self.attached_value),
                         )
@@ -237,11 +242,11 @@ mod test {
                                         odra::prelude::string::String::from("pay_to_mint"),
                                         true,
                                         {
-                                            let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                            let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
                                             if self.attached_value > odra::casper_types::U512::zero() {
-                                                let _ = named_args.insert("amount", self.attached_value);
+                                                let _ = __odra_named_args.insert("amount", self.attached_value);
                                             }
-                                            named_args
+                                            __odra_named_args
                                         },
                                     )
                                     .with_amount(self.attached_value),
@@ -262,14 +267,14 @@ mod test {
                                         odra::prelude::string::String::from("approve"),
                                         true,
                                         {
-                                            let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                            let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
                                             if self.attached_value > odra::casper_types::U512::zero() {
-                                                let _ = named_args.insert("amount", self.attached_value);
+                                                let _ = __odra_named_args.insert("amount", self.attached_value);
                                             }
-                                            odra::args::EntrypointArgument::insert_runtime_arg(to, "to", &mut named_args);
-                                            odra::args::EntrypointArgument::insert_runtime_arg(amount, "amount", &mut named_args);
-                                            odra::args::EntrypointArgument::insert_runtime_arg(msg, "msg", &mut named_args);
-                                            named_args
+                                            odra::args::EntrypointArgument::insert_runtime_arg(to, "to", &mut __odra_named_args);
+                                            odra::args::EntrypointArgument::insert_runtime_arg(amount, "amount", &mut __odra_named_args);
+                                            odra::args::EntrypointArgument::insert_runtime_arg(msg, "msg", &mut __odra_named_args);
+                                            __odra_named_args
                                         },
                                     )
                                     .with_amount(self.attached_value),
@@ -284,13 +289,13 @@ mod test {
                                 odra::prelude::string::String::from("airdrop"),
                                 false,
                                 {
-                                    let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                    let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
                                     if self.attached_value > odra::casper_types::U512::zero() {
-                                        let _ = named_args.insert("amount", self.attached_value);
+                                        let _ = __odra_named_args.insert("amount", self.attached_value);
                                     }
-                                    odra::args::EntrypointArgument::insert_runtime_arg(to, "to", &mut named_args);
-                                    odra::args::EntrypointArgument::insert_runtime_arg(amount, "amount", &mut named_args);
-                                    named_args
+                                    odra::args::EntrypointArgument::insert_runtime_arg(to, "to", &mut __odra_named_args);
+                                    odra::args::EntrypointArgument::insert_runtime_arg(amount, "amount", &mut __odra_named_args);
+                                    __odra_named_args
                                 }
                             ).with_amount(self.attached_value),
                         )
@@ -305,13 +310,13 @@ mod test {
                                 odra::prelude::string::String::from("swap"),
                                 true,
                                 {
-                                    let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                    let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
                                     if self.attached_value > odra::casper_types::U512::zero() {
-                                        let _ = named_args.insert("amount", self.attached_value);
+                                        let _ = __odra_named_args.insert("amount", self.attached_value);
                                     }
-                                    odra::args::EntrypointArgument::insert_runtime_arg(to, "to", &mut named_args);
-                                    odra::args::EntrypointArgument::insert_runtime_arg(amount, "amount", &mut named_args);
-                                    named_args
+                                    odra::args::EntrypointArgument::insert_runtime_arg(to, "to", &mut __odra_named_args);
+                                    odra::args::EntrypointArgument::insert_runtime_arg(amount, "amount", &mut __odra_named_args);
+                                    __odra_named_args
                                 }
                             ).with_amount(self.attached_value),
                         )
@@ -333,13 +338,13 @@ mod test {
                                 odra::prelude::string::String::from("swap"),
                                 true,
                                 {
-                                    let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                    let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
                                     if self.attached_value > odra::casper_types::U512::zero() {
-                                        let _ = named_args.insert("amount", self.attached_value);
+                                        let _ = __odra_named_args.insert("amount", self.attached_value);
                                     }
-                                    odra::args::EntrypointArgument::insert_runtime_arg(to, "to", &mut named_args);
-                                    odra::args::EntrypointArgument::insert_runtime_arg(amount, "amount", &mut named_args);
-                                    named_args
+                                    odra::args::EntrypointArgument::insert_runtime_arg(to, "to", &mut __odra_named_args);
+                                    odra::args::EntrypointArgument::insert_runtime_arg(amount, "amount", &mut __odra_named_args);
+                                    __odra_named_args
                                 }
                             ).with_amount(self.attached_value),
                         )
@@ -376,7 +381,7 @@ mod test {
                 }
 
                 impl odra::host::EntryPointsCallerProvider for Erc20HostRef {
-                    fn entry_points_caller(env: &odra::host::HostEnv) -> odra::entry_point_callback::EntryPointsCaller {
+                    fn entry_points_caller() -> odra::entry_point_callback::EntryPointsCaller {
                         let entry_points = odra::prelude::vec![
                             odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("init"), odra::prelude::vec![
                                 odra::entry_point_callback::Argument::new::<Option<U256> >(odra::prelude::string::String::from("total_supply"))
@@ -400,41 +405,45 @@ mod test {
                                 odra::entry_point_callback::Argument::new::<U256>(odra::prelude::string::String::from("amount"))
                             ])
                         ];
-                        odra::entry_point_callback::EntryPointsCaller::new(env.clone(), entry_points, |contract_env, call_def| {
-                            match call_def.entry_point() {
+                        odra::entry_point_callback::EntryPointsCaller::new(entry_points, |__odra_contract_env, __odra_call_def| {
+                            match __odra_call_def.entry_point() {
                                 "init" => {
-                                    let result = __erc20_exec_parts::execute_init(contract_env);
-                                    odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
+                                    let __odra_result = __erc20_exec_parts::execute_init(__odra_contract_env);
+                                    odra::casper_types::bytesrepr::ToBytes::to_bytes(&__odra_result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
                                 }
                                 "upgrade" => {
-                                    let result = __erc20_exec_parts::execute_upgrade(contract_env);
-                                    odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
+                                    let __odra_result = __erc20_exec_parts::execute_upgrade(__odra_contract_env);
+                                    odra::casper_types::bytesrepr::ToBytes::to_bytes(&__odra_result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
                                 }
                                 "total_supply" => {
-                                    let result = __erc20_exec_parts::execute_total_supply(contract_env);
-                                    odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
+                                    let __odra_result = __erc20_exec_parts::execute_total_supply(__odra_contract_env);
+                                    odra::casper_types::bytesrepr::ToBytes::to_bytes(&__odra_result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
                                 }
                                 "pay_to_mint" => {
-                                    let result = __erc20_exec_parts::execute_pay_to_mint(contract_env);
-                                    odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
+                                    let __odra_result = __erc20_exec_parts::execute_pay_to_mint(__odra_contract_env);
+                                    odra::casper_types::bytesrepr::ToBytes::to_bytes(&__odra_result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
                                 }
                                 "approve" => {
-                                    let result = __erc20_exec_parts::execute_approve(contract_env);
-                                    odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
+                                    let __odra_result = __erc20_exec_parts::execute_approve(__odra_contract_env);
+                                    odra::casper_types::bytesrepr::ToBytes::to_bytes(&__odra_result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
                                 }
                                 "airdrop" => {
-                                    let result = __erc20_exec_parts::execute_airdrop(contract_env);
-                                    odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
+                                    let __odra_result = __erc20_exec_parts::execute_airdrop(__odra_contract_env);
+                                    odra::casper_types::bytesrepr::ToBytes::to_bytes(&__odra_result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
                                 }
                                 "swap" => {
-                                    let result = __erc20_exec_parts::execute_swap(contract_env);
-                                    odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
+                                    let __odra_result = __erc20_exec_parts::execute_swap(__odra_contract_env);
+                                    odra::casper_types::bytesrepr::ToBytes::to_bytes(&__odra_result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
                                 }
                                 name => Err(OdraError::VmError(
                                     odra::VmError::NoSuchMethod(odra::prelude::String::from(name))
                                 ))
                             }
                         })
+                    }
+
+                    fn contract_events() -> odra::prelude::vec::Vec<odra::contract_def::Event> {
+                        <Erc20 as odra::contract_def::HasEvents>::events()
                     }
                 }
             }
@@ -463,6 +472,11 @@ mod test {
 
                 impl odra::host::HostRef for Erc20HostRef {
                     fn new(address: odra::prelude::Address, env: odra::host::HostEnv) -> Self {
+                        env.register_contract_ref(
+                            address,
+                            <Self as odra::contract_def::HasIdent>::ident(),
+                            <Self as odra::host::EntryPointsCallerProvider>::entry_points_caller
+                        );
                         Self {
                             address,
                             env,
@@ -522,11 +536,11 @@ mod test {
                                 odra::prelude::string::String::from("total_supply"),
                                 false,
                                 {
-                                    let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                    let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
                                     if self.attached_value > odra::casper_types::U512::zero() {
-                                        let _ = named_args.insert("amount", self.attached_value);
+                                        let _ = __odra_named_args.insert("amount", self.attached_value);
                                     }
-                                    named_args
+                                    __odra_named_args
                                 }
                             ).with_amount(self.attached_value),
                         )
@@ -541,11 +555,11 @@ mod test {
                                     odra::prelude::string::String::from("set_total_supply"),
                                     true,
                                     {
-                                        let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                        let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
                                         if self.attached_value > odra::casper_types::U512::zero() {
-                                            let _ = named_args.insert("amount", self.attached_value);
+                                            let _ = __odra_named_args.insert("amount", self.attached_value);
                                         }
-                                        named_args
+                                        __odra_named_args
                                     }
                                 ).with_amount(self.attached_value),
                             )
@@ -560,11 +574,11 @@ mod test {
                                     odra::prelude::string::String::from("pay_to_mint"),
                                     true,
                                     {
-                                        let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                        let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
                                         if self.attached_value > odra::casper_types::U512::zero() {
-                                            let _ = named_args.insert("amount", self.attached_value);
+                                            let _ = __odra_named_args.insert("amount", self.attached_value);
                                         }
-                                        named_args
+                                        __odra_named_args
                                     },
                                 )
                                 .with_amount(self.attached_value),
@@ -587,11 +601,11 @@ mod test {
                                     odra::prelude::string::String::from("set_total_supply"),
                                     true,
                                     {
-                                        let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                        let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
                                         if self.attached_value > odra::casper_types::U512::zero() {
-                                            let _ = named_args.insert("amount", self.attached_value);
+                                            let _ = __odra_named_args.insert("amount", self.attached_value);
                                         }
-                                        named_args
+                                        __odra_named_args
                                     }
                                 ).with_amount(self.attached_value),
                             )
@@ -608,31 +622,35 @@ mod test {
                 }
 
                 impl odra::host::EntryPointsCallerProvider for Erc20HostRef {
-                    fn entry_points_caller(env: &odra::host::HostEnv) -> odra::entry_point_callback::EntryPointsCaller {
+                    fn entry_points_caller() -> odra::entry_point_callback::EntryPointsCaller {
                         let entry_points = odra::prelude::vec![
                             odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("total_supply"), odra::prelude::vec![]),
                             odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("set_total_supply"), odra::prelude::vec![]),
                             odra::entry_point_callback::EntryPoint::new_payable(odra::prelude::string::String::from("pay_to_mint"), odra::prelude::vec![])
                         ];
-                        odra::entry_point_callback::EntryPointsCaller::new(env.clone(), entry_points, |contract_env, call_def| {
-                            match call_def.entry_point() {
+                        odra::entry_point_callback::EntryPointsCaller::new(entry_points, |__odra_contract_env, __odra_call_def| {
+                            match __odra_call_def.entry_point() {
                                 "total_supply" => {
-                                    let result = __erc20_exec_parts::execute_total_supply(contract_env);
-                                    odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
+                                    let __odra_result = __erc20_exec_parts::execute_total_supply(__odra_contract_env);
+                                    odra::casper_types::bytesrepr::ToBytes::to_bytes(&__odra_result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
                                 }
                                 "set_total_supply" => {
-                                    let result = __erc20_exec_parts::execute_set_total_supply(contract_env);
-                                    odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
+                                    let __odra_result = __erc20_exec_parts::execute_set_total_supply(__odra_contract_env);
+                                    odra::casper_types::bytesrepr::ToBytes::to_bytes(&__odra_result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
                                 }
                                 "pay_to_mint" => {
-                                    let result = __erc20_exec_parts::execute_pay_to_mint(contract_env);
-                                    odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
+                                    let __odra_result = __erc20_exec_parts::execute_pay_to_mint(__odra_contract_env);
+                                    odra::casper_types::bytesrepr::ToBytes::to_bytes(&__odra_result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
                                 }
                                 name => Err(OdraError::VmError(
                                     odra::VmError::NoSuchMethod(odra::prelude::String::from(name)),
                                 ))
                             }
                         })
+                    }
+
+                    fn contract_events() -> odra::prelude::vec::Vec<odra::contract_def::Event> {
+                        <Erc20 as odra::contract_def::HasEvents>::events()
                     }
                 }
             }

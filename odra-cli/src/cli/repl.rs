@@ -117,7 +117,7 @@ pub(super) fn run(cli: &OdraCli, container: &mut DeployedContractsContainer) -> 
 
 /// Prints a short banner showing which network and account the session is bound to.
 fn print_banner(cli: &OdraCli) {
-    let caller = cli.host_env.caller();
+    let caller = cli.host_env().caller();
     prettycli::info(&format!("Odra CLI interactive session — {}", chain_label()));
     prettycli::info(&format!("Caller: {}", caller.to_string()));
     prettycli::info("Type `help` for available commands, `exit` or Ctrl-D to quit.");
@@ -131,7 +131,7 @@ fn print_status_line(cli: &OdraCli, container: &DeployedContractsContainer) {
         Ok(name) if !name.is_empty() => name,
         _ => "no chain".to_string()
     };
-    let caller = short_address(&cli.host_env.caller().to_string());
+    let caller = short_address(&cli.host_env().caller().to_string());
     let file = contracts_file_name(container);
     let count = container.all_contracts().len();
     let contracts = format!(

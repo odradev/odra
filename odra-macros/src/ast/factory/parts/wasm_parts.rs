@@ -653,17 +653,17 @@ mod test {
                         odra::ExecutionEnv::new(env_rc)
                     };
 
-                    let mut named_args = odra::casper_types::RuntimeArgs::new();
+                    let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
                     odra::args::EntrypointArgument::insert_runtime_arg(
                         exec_env.get_named_arg::<u32>("value"),
                         "value",
-                        &mut named_args
+                        &mut __odra_named_args
                     );
 
                     let (contract_package_hash, access_uref) = odra::odra_casper_wasm_env::host_functions::install_new_contract(
                         child_contract_entry_points(),
                         schemas,
-                        Some(named_args)
+                        Some(__odra_named_args)
                     );
                     let address: odra::prelude::Address = contract_package_hash.into();
 
@@ -761,10 +761,10 @@ mod test {
 
                 #[no_mangle]
                 fn total_supply() {
-                    let result = __erc20_factory_exec_parts::execute_total_supply(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
+                    let __odra_result = __erc20_factory_exec_parts::execute_total_supply(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                     odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
                         odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
-                            odra::casper_types::CLValue::from_t(result)
+                            odra::casper_types::CLValue::from_t(__odra_result)
                         )
                     );
                 }

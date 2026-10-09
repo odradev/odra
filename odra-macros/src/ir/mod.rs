@@ -92,13 +92,7 @@ impl ModuleStructIR {
     }
 
     pub fn typed_fields(&self) -> syn::Result<Vec<EnumeratedTypedField>> {
-        let fields = utils::syn::struct_typed_fields(&self.code)?;
-        let fields = fields
-            .iter()
-            .filter(|(i, _)| i != &utils::ident::env())
-            .collect::<Vec<_>>();
-
-        fields
+        utils::syn::struct_typed_fields(&self.code)?
             .iter()
             .enumerate()
             .map(|(idx, (ident, ty))| {
@@ -180,12 +174,7 @@ impl ModuleStructIR {
             }
         }
         let fields = utils::syn::struct_typed_fields(&self.code)?;
-        let set = HashSet::<syn::Type>::from_iter(
-            fields
-                .iter()
-                .filter(|(i, _)| i != &utils::ident::env())
-                .map(|(_, ty)| ty.clone())
-        );
+        let set = HashSet::<syn::Type>::from_iter(fields.iter().map(|(_, ty)| ty.clone()));
         let mut fields = set.into_iter().map(OrdType).collect::<Vec<_>>();
         fields.sort();
 

@@ -50,9 +50,85 @@ pub struct Event {
 }
 
 impl Event {
-    /// Returns `true` if the event has any argument of `CLType::Any` type.
+    /// Returns `true` if the type of any argument is or contains `CLType::Any` (an
+    /// `#[odra::odra_type]` struct or data-carrying enum, also inside an `Option`, a `Vec`, a map,
+    /// a `Result` or a tuple). Such an event cannot be emitted: casper-event-standard rejects it.
     pub fn has_any(&self) -> bool {
-        self.args.iter().any(|arg| arg.ty == CLType::Any)
+        self.args.iter().any(|arg| cl_type_has_any(&arg.ty))
+    }
+
+    /// Checks that the event can be emitted, see [Event::has_any]. The error names the event,
+    /// each offending field and what to do about it.
+    pub fn validate(&self) -> Result<(), String> {
+        let fields = self
+            .args
+            .iter()
+            .filter(|arg| cl_type_has_any(&arg.ty))
+            .map(|arg| format!("`{}`", arg.name))
+            .collect::<Vec<_>>();
+        if fields.is_empty() {
+            return Ok(());
+        }
+        let (noun, verb) = match fields.len() {
+            1 => ("field", "has"),
+            _ => ("fields", "have")
+        };
+        Err(format!(
+            "event `{}`: {} {} {} no concrete CLType (it is or contains an #[odra::odra_type] \
+             struct or data-carrying enum, whose CLType is `Any`), so emitting it fails with \
+             `Formatting`; casper-event-standard events need plain types: flatten the fields \
+             into the event or use a unit enum",
+            self.name,
+            noun,
+            fields.join(", "),
+            verb
+        ))
+    }
+}
+
+/// Returns `true` if `ty` is or contains `CLType::Any`; the same check casper-event-standard
+/// makes before it serializes an event field.
+pub fn cl_type_has_any(ty: &CLType) -> bool {
+    match ty {
+        CLType::Any => true,
+        CLType::Bool
+        | CLType::I32
+        | CLType::I64
+        | CLType::U8
+        | CLType::U32
+        | CLType::U64
+        | CLType::U128
+        | CLType::U256
+        | CLType::U512
+        | CLType::Unit
+        | CLType::String
+        | CLType::Key
+        | CLType::URef
+        | CLType::PublicKey
+        | CLType::ByteArray(_) => false,
+        CLType::Option(ty) | CLType::List(ty) => cl_type_has_any(ty),
+        CLType::Result { ok, err } => cl_type_has_any(ok) || cl_type_has_any(err),
+        CLType::Map { key, value } => cl_type_has_any(key) || cl_type_has_any(value),
+        CLType::Tuple1([ty]) => cl_type_has_any(ty),
+        CLType::Tuple2([ty1, ty2]) => cl_type_has_any(ty1) || cl_type_has_any(ty2),
+        CLType::Tuple3([ty1, ty2, ty3]) => {
+            cl_type_has_any(ty1) || cl_type_has_any(ty2) || cl_type_has_any(ty3)
+        }
+    }
+}
+
+/// Panics if an event of contract `contract` cannot be emitted, see [Event::validate].
+///
+/// Called when a contract is deployed or upgraded on the host and when its schema is generated:
+/// such an event compiles and deploys, and only its `emit_event` would revert, with a bare
+/// `Formatting` error.
+pub fn assert_events_can_be_emitted(contract: &str, events: &[Event]) {
+    let errors = events
+        .iter()
+        .filter_map(|event| event.validate().err())
+        .collect::<Vec<_>>();
+    if !errors.is_empty() {
+        panic!("Contract `{}`: {}", contract, errors.join("; "));
     }
 }
 
@@ -132,7 +208,12 @@ impl ContractBlueprint {
     ///
     /// A new instance of `ContractBlueprint` with the name, events, and entrypoints
     /// obtained from the type `T`.
+    ///
+    /// # Panics
+    ///
+    /// If an event of the contract cannot be emitted, see [assert_events_can_be_emitted].
     pub fn new<T: HasIdent + HasEvents + HasEntrypoints>() -> Self {
+        assert_events_can_be_emitted(&T::ident(), &T::events());
         Self {
             name: T::ident(),
             events: T::events(),
@@ -248,5 +329,119 @@ impl<T1: ToBytes + FromBytes, T2: ToBytes + FromBytes, T3: ToBytes + FromBytes> 
 {
     fn events() -> Vec<Event> {
         vec![]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn arg(name: &str, ty: CLType) -> Argument {
+        Argument {
+            name: String::from(name),
+            ty,
+            is_ref: false,
+            is_slice: false,
+            is_required: true
+        }
+    }
+
+    fn event(args: Vec<Argument>) -> Event {
+        Event {
+            name: String::from("Traded"),
+            args
+        }
+    }
+
+    #[test]
+    fn cl_type_has_any_looks_into_compound_types() {
+        let any = || Box::new(CLType::Any);
+        let u8 = || Box::new(CLType::U8);
+        assert!(cl_type_has_any(&CLType::Any));
+        assert!(cl_type_has_any(&CLType::Option(any())));
+        assert!(cl_type_has_any(&CLType::List(any())));
+        assert!(cl_type_has_any(&CLType::Map {
+            key: CLType::String.into(),
+            value: any()
+        }));
+        assert!(cl_type_has_any(&CLType::Map {
+            key: any(),
+            value: u8()
+        }));
+        assert!(cl_type_has_any(&CLType::Result {
+            ok: u8(),
+            err: any()
+        }));
+        assert!(cl_type_has_any(&CLType::Tuple1([any()])));
+        assert!(cl_type_has_any(&CLType::Tuple2([u8(), any()])));
+        assert!(cl_type_has_any(&CLType::Tuple3([u8(), u8(), any()])));
+        assert!(cl_type_has_any(&CLType::Option(Box::new(CLType::List(
+            Box::new(CLType::Tuple2([u8(), any()]))
+        )))));
+
+        assert!(!cl_type_has_any(&CLType::U8));
+        assert!(!cl_type_has_any(&CLType::ByteArray(32)));
+        assert!(!cl_type_has_any(&CLType::Option(Box::new(CLType::List(
+            Box::new(CLType::Map {
+                key: CLType::String.into(),
+                value: CLType::Tuple3([u8(), CLType::Key.into(), CLType::U256.into()]).into()
+            })
+        )))));
+    }
+
+    #[test]
+    fn an_event_with_any_cannot_be_emitted() {
+        let ok = event(vec![arg("side", CLType::U8), arg("amount", CLType::U256)]);
+        assert!(!ok.has_any());
+        assert_eq!(ok.validate(), Ok(()));
+
+        let one = event(vec![
+            arg("side", CLType::U8),
+            arg("price", CLType::Option(Box::new(CLType::Any))),
+        ]);
+        assert!(one.has_any());
+        let err = one.validate().unwrap_err();
+        assert!(
+            err.starts_with("event `Traded`: field `price` has no concrete CLType"),
+            "{err}"
+        );
+        assert!(err.contains("flatten the fields into the event or use a unit enum"));
+
+        let two = event(vec![
+            arg("price", CLType::Any),
+            arg("prices", CLType::List(Box::new(CLType::Any))),
+        ]);
+        assert!(two
+            .validate()
+            .unwrap_err()
+            .starts_with("event `Traded`: fields `price`, `prices` have no concrete CLType"));
+    }
+
+    struct Exchange;
+
+    impl HasIdent for Exchange {
+        fn ident() -> String {
+            String::from("Exchange")
+        }
+    }
+
+    impl HasEvents for Exchange {
+        fn events() -> Vec<Event> {
+            vec![event(vec![arg("price", CLType::Any)])]
+        }
+    }
+
+    impl HasEntrypoints for Exchange {
+        fn entrypoints() -> Vec<Entrypoint> {
+            vec![]
+        }
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "Contract `Exchange`: event `Traded`: field `price` has no concrete CLType"
+    )]
+    fn the_schema_of_a_contract_with_such_an_event_is_not_generated() {
+        ContractBlueprint::new::<Exchange>();
     }
 }

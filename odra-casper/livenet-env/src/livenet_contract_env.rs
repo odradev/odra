@@ -1,21 +1,29 @@
 //! Livenet contract environment.
 use crate::livenet_host::read_failed;
+use crate::panic_hook;
 use blake2::digest::VariableOutput;
 use blake2::Blake2bVar;
 use odra_casper_rpc_client::casper_client::CasperClient;
+use odra_casper_rpc_client::log;
 use odra_core::callstack::{Callstack, CallstackElement};
 use odra_core::casper_types::{bytesrepr::Bytes, crypto, CLValue, PublicKey, Signature, U512};
 use odra_core::prelude::*;
 use odra_core::validator::ValidatorInfo;
-use odra_core::{CallDef, ContractContext, ContractRegister};
+use odra_core::{CallDef, ContractContext, ContractEnv, ContractRegister, VmError};
 use std::io::Write;
+use std::rc::Weak;
 use std::sync::RwLock;
 
 /// Livenet contract environment struct.
 pub struct LivenetContractEnv {
     casper_client: Rc<RefCell<CasperClient>>,
     callstack: Rc<RefCell<Callstack>>,
-    contract_register: Rc<RwLock<ContractRegister>>
+    contract_register: Rc<RwLock<ContractRegister>>,
+    /// The environment wrapping this context, handed to nested calls. Weak, so that the host
+    /// stays the only owner of the environment.
+    contract_env: RefCell<Weak<ContractEnv>>,
+    /// The error of the last revert, read by the host after the panic unwinds.
+    error: Rc<RefCell<Option<OdraError>>>
 }
 
 impl ContractContext for LivenetContractEnv {
@@ -71,7 +79,7 @@ impl ContractContext for LivenetContractEnv {
     }
 
     fn caller(&self) -> Address {
-        *self.callstack.borrow().first().address()
+        *self.callstack.borrow().previous().address()
     }
 
     fn call_stack(&self) -> Vec<Address> {
@@ -86,29 +94,19 @@ impl ContractContext for LivenetContractEnv {
         if call_def.is_mut() {
             panic!("Cannot cross call mutable entrypoint from non-mutable entrypoint")
         }
-
-        let contract_name = self
-            .contract_register
-            .read()
-            .unwrap()
-            .get(&address)
-            .map(|c| String::from(c.name()))
-            .unwrap_or(String::from("UnknownContractName"));
-
-        self.callstack
-            .borrow_mut()
-            .push(CallstackElement::new_contract_call(
-                contract_name,
-                address,
-                call_def.clone()
-            ));
-        let result = self
-            .contract_register
-            .read()
-            .unwrap()
-            .call(&address, call_def);
-        self.callstack.borrow_mut().pop();
-        result.unwrap()
+        let contract_env = self
+            .contract_env
+            .borrow()
+            .upgrade()
+            .expect("the host owns the livenet contract env");
+        call_locally(
+            &self.callstack,
+            &self.contract_register,
+            (*contract_env).clone(),
+            &address,
+            call_def
+        )
+        .unwrap_or_else(|e| self.revert(e))
     }
 
     fn get_block_time(&self) -> u64 {
@@ -148,7 +146,9 @@ impl ContractContext for LivenetContractEnv {
         {
             revert_msg = format!("{:?}::{}", address, call_def.entry_point());
         }
-
+        log::error(format!("Revert: {:?} - {}", error, revert_msg));
+        *self.error.borrow_mut() = Some(error.clone());
+        panic_hook::mark_revert();
         panic!("Revert: {:?} - {}", error, revert_msg);
     }
 
@@ -159,7 +159,8 @@ impl ContractContext for LivenetContractEnv {
 
     fn get_opt_named_arg_bytes(&self, name: &str) -> Option<Bytes> {
         match self.callstack.borrow().current() {
-            CallstackElement::Account(_) => todo!("get_named_arg_bytes"),
+            // An account frame has no entry point call, so no arguments; as on CasperVM.
+            CallstackElement::Account(_) => None,
             CallstackElement::ContractCall { call_def, .. } => call_def
                 .args()
                 .get(name)
@@ -203,8 +204,11 @@ impl ContractContext for LivenetContractEnv {
         client.delegated_amount(address, _validator)
     }
 
-    fn get_validator_info(&self, _validator: PublicKey) -> Option<ValidatorInfo> {
-        todo!()
+    fn get_validator_info(&self, validator: PublicKey) -> Option<ValidatorInfo> {
+        self.casper_client
+            .borrow()
+            .get_validator_info(validator)
+            .map(|bid| ValidatorInfo::new(bid.staked_amount(), bid.minimum_delegation_amount()))
     }
 
     fn pseudorandom_bytes(&self) -> [u8; 32] {
@@ -229,12 +233,83 @@ impl LivenetContractEnv {
     pub fn new(
         casper_client: Rc<RefCell<CasperClient>>,
         callstack: Rc<RefCell<Callstack>>,
-        contract_register: Rc<RwLock<ContractRegister>>
+        contract_register: Rc<RwLock<ContractRegister>>,
+        error: Rc<RefCell<Option<OdraError>>>
     ) -> Rc<RefCell<Self>> {
         Rc::new(RefCell::new(Self {
             casper_client,
             callstack,
-            contract_register
+            contract_register,
+            contract_env: RefCell::new(Weak::new()),
+            error
         }))
+    }
+
+    /// Tells the context which environment wraps it.
+    pub(crate) fn set_contract_env(&self, contract_env: &Rc<ContractEnv>) {
+        *self.contract_env.borrow_mut() = Rc::downgrade(contract_env);
+    }
+}
+
+/// Executes a non-mutable entry point on this machine in `contract_env`, reading the state
+/// from the node.
+///
+/// The contract runs one frame deeper on the call stack, above its caller. The frame is popped when the call
+/// returns and when a revert unwinds it.
+pub(crate) fn call_locally(
+    callstack: &Rc<RefCell<Callstack>>,
+    contract_register: &RwLock<ContractRegister>,
+    contract_env: ContractEnv,
+    address: &Address,
+    call_def: CallDef
+) -> OdraResult<Bytes> {
+    let contract = contract_register
+        .read()
+        .expect("Couldn't read contract register.")
+        .get(address)
+        .cloned();
+    let Some(contract) = contract else {
+        log::error(unregistered_contract_message(address));
+        return Err(OdraError::VmError(VmError::InvalidContractAddress));
+    };
+    let _frame = CallFrame::push(
+        callstack,
+        CallstackElement::new_contract_call(
+            String::from(contract.name()),
+            *address,
+            call_def.clone()
+        )
+    );
+    contract.call(contract_env, call_def)
+}
+
+/// Explains why a non-mutable call to `address` cannot run: livenet runs it on this machine and
+/// has no code for the contract.
+pub(crate) fn unregistered_contract_message(address: &Address) -> String {
+    format!(
+        "No contract code registered for {}: livenet runs non-mutable calls (getters) on this \
+         machine and needs the code of the called contract. Register it with \
+         `Contract::load(&env, address)` (or `ContractHostRef::new(address, env)`), also when \
+         it is called only by the getter of another contract. A contract known only by its \
+         interface (`#[odra::external_contract]`) can be called only with transactions \
+         (mutable calls).",
+        address.to_formatted_string()
+    )
+}
+
+/// A frame on the call stack, popped when dropped.
+pub(crate) struct CallFrame(Rc<RefCell<Callstack>>);
+
+impl CallFrame {
+    /// Pushes `element` on the call stack.
+    pub(crate) fn push(callstack: &Rc<RefCell<Callstack>>, element: CallstackElement) -> Self {
+        callstack.borrow_mut().push(element);
+        Self(callstack.clone())
+    }
+}
+
+impl Drop for CallFrame {
+    fn drop(&mut self) {
+        self.0.borrow_mut().pop();
     }
 }

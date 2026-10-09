@@ -4,10 +4,19 @@ use std::time::Duration;
 use odra::casper_types::{U256, U512};
 use odra::host::{Deployer, HostEnv, HostRef, HostRefLoader, InstallConfig, NoArgs};
 use odra::prelude::*;
+use odra::DeployReport;
+use odra_examples::contracts::tlw::Error::CannotLockTwice;
+use odra_examples::contracts::tlw::{TimeLockWallet, TimeLockWalletInitArgs};
+use odra_examples::factory::counter::{CounterFactory, CounterHostRef};
+use odra_examples::features::call_stack::{CallStackProbe, CallStackRelay, CallStackRelayInitArgs};
+use odra_examples::features::livenet::Error::{EmptyStack, SillyError};
 use odra_examples::features::livenet::{
     LivenetContract, LivenetContractHostRef, LivenetContractInitArgs
 };
-use odra_examples::features::upgrade::{CounterV1, CounterV2, CounterV2UpgradeArgs};
+use odra_examples::features::upgrade::UpgradeError::{InstallRefused, Refused};
+use odra_examples::features::upgrade::{
+    CounterV1, CounterV2, CounterV2UpgradeArgs, CounterV3, CounterV3InitArgs, CounterV3UpgradeArgs
+};
 use odra_modules::access::events::OwnershipTransferred;
 use odra_modules::erc20::{Erc20, Erc20HostRef, Erc20InitArgs};
 
@@ -32,7 +41,7 @@ fn main() {
     env.set_gas(500_000_000_000u64);
     println!("Balance of user: {}", env.balance_of(&owner));
 
-    deploy_erc20(&env);
+    gas_is_reported(&env);
     let (contract, erc20) = deploy_new(&env);
 
     // Contract can be loaded
@@ -40,12 +49,23 @@ fn main() {
 
     // Errors can be handled
     env.set_gas(10_000_000_000u64);
-    let r = contract.try_function_that_reverts();
-    assert!(r.is_err());
-    // TODO: we should be able to assert the error type here, but currently we can't because of the way errors are handled in Livenet environment.
-    // The current error matching logic in Livenet env is based on error codes, which are not unique across contracts.
-    // In a real project the codes are rather uniqe, but in `examples` we have a lot of contracts with small error codes, so the matching is not working as expected.
-    // assert_eq!(r.unwrap_err(), SillyError.into());
+    // The error is named after the schema of the called contract, other contracts use code 1 too.
+    assert_eq!(contract.try_function_that_reverts(), Err(SillyError.into()));
+    // OwnedContract uses code 2 as well, the wallet's error is still found.
+    env.set_gas(500_000_000_000u64);
+    let wallet = TimeLockWallet::deploy(
+        &env,
+        TimeLockWalletInitArgs {
+            lock_duration: 60 * 60 * 1000
+        }
+    );
+    let deposit = U512::from(1_000_000_000u64);
+    wallet.with_tokens(deposit).deposit();
+    assert_eq!(
+        wallet.with_tokens(deposit).try_deposit(),
+        Err(CannotLockTwice.into())
+    );
+    env.set_gas(10_000_000_000u64);
 
     // There are three ways contract endpoints can be called in Livenet environment:
     // 1. If the endpoint is mutable and does not return anything, it can be called directly:
@@ -58,6 +78,38 @@ fn main() {
 
     // 3. If the endpoint is immutable, it can be called locally, querying only storage from livenet:
     assert_eq!(contract.owner(), owner);
+
+    // - a getter that reverts locally returns the error, also from a nested call,
+    //   and leaves the call stack as it was
+    let call_stack_depth = contract.call_stack_depth();
+    assert_eq!(contract.try_peek(), Err(EmptyStack.into()));
+    assert_eq!(contract.try_nested_peek(), Err(EmptyStack.into()));
+    assert_eq!(contract.call_stack_depth(), call_stack_depth);
+    assert_eq!(contract.owner(), owner);
+    contract.push_on_stack(2);
+    assert_eq!(contract.peek(), 2);
+    assert_eq!(contract.nested_peek(), 2);
+    assert_eq!(contract.pop_from_stack(), 2);
+
+    // - a getter sees the account as its caller, a nested one the calling contract
+    env.set_gas(500_000_000_000u64);
+    let probe = CallStackProbe::deploy(&env, NoArgs);
+    let relay = CallStackRelay::deploy(
+        &env,
+        CallStackRelayInitArgs {
+            probe: probe.address()
+        }
+    );
+    assert_eq!(probe.inspect(), (owner, None, vec![owner, probe.address()]));
+    assert_eq!(
+        relay.relay(),
+        (
+            relay.address(),
+            Some(owner),
+            vec![owner, relay.address(), probe.address()]
+        )
+    );
+    env.set_gas(10_000_000_000u64);
 
     // By querying livenet storage
     // - we can also test the events
@@ -102,6 +154,68 @@ fn main() {
 
     assert_eq!(counter2.get(), U256::one());
     assert_eq!(counter2.get_old(), 1);
+
+    // A revert in the constructor or in the upgrade returns the contract's error
+    let result = CounterV3::try_deploy(&env, CounterV3InitArgs { fail: true });
+    assert_eq!(result.err(), Some(InstallRefused.into()));
+    let result = CounterV3::try_upgrade(
+        &env,
+        counter.contract_address(),
+        CounterV3UpgradeArgs { fail: true }
+    );
+    assert_eq!(result.err(), Some(Refused.into()));
+
+    factory_child_by_address(&env);
+}
+
+/// The gas consumed by every deploy and call this environment sent is reported, like on CasperVM.
+fn gas_is_reported(env: &HostEnv) {
+    let reported = env.gas_report().iter().count();
+    let mut erc20 = deploy_erc20(env);
+    erc20.transfer(&env.get_account(1), &1.into());
+    let report = env.gas_report();
+    println!("Gas report:\n{report}");
+    let entries: Vec<DeployReport> = report.into_iter().skip(reported).collect();
+    let [deploy, call] = entries.as_slice() else {
+        panic!("Expected a deploy and a call in the gas report, got {entries:?}");
+    };
+    match deploy {
+        DeployReport::WasmDeploy { gas, file_name } => {
+            assert!(!gas.is_zero());
+            assert_eq!(file_name, "Erc20.wasm");
+        }
+        other => panic!("Expected a wasm deploy, got {other:?}")
+    }
+    let DeployReport::ContractCall {
+        gas,
+        contract_address,
+        call_def
+    } = call
+    else {
+        panic!("Expected a contract call, got {call:?}");
+    };
+    assert!(!gas.is_zero());
+    assert_eq!(*contract_address, erc20.address());
+    assert_eq!(call_def.entry_point(), "transfer");
+    let last_call_gas = env
+        .last_call_result(erc20.address())
+        .callee_contract_gas_used();
+    println!("Last call gas: {last_call_gas}");
+    assert_eq!(U512::from(last_call_gas), *gas);
+}
+
+/// A host ref made with `new` from the bare address of a factory child works like a loaded one:
+/// its getters run on this machine and need the child's code.
+fn factory_child_by_address(env: &HostEnv) {
+    env.set_gas(480_000_000_000u64);
+    let mut factory = CounterFactory::deploy(env, NoArgs);
+    env.set_gas(270_000_000_000u64);
+    let (child, _) = factory.new_contract(String::from("LivenetCounter"), 10);
+    let mut counter = CounterHostRef::new(child, env.clone());
+    assert_eq!(counter.value(), 10);
+    env.set_gas(10_000_000_000u64);
+    counter.increment();
+    assert_eq!(counter.value(), 11);
 }
 
 fn deploy_new(env: &HostEnv) -> (LivenetContractHostRef, Erc20HostRef) {

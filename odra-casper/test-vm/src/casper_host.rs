@@ -245,6 +245,10 @@ impl HostContext for CasperHost {
         self.register(address, &contract_name, entry_points_caller);
     }
 
+    fn has_contract(&self, address: &Address) -> bool {
+        self.vm.borrow().has_contract(address)
+    }
+
     fn contract_env(&self) -> ContractEnv {
         (*self.contract_env).clone()
     }

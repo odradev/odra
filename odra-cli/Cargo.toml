@@ -30,5 +30,9 @@ serde_json = { workspace = true, default-features = false }
 thiserror = { workspace = true }
 toml = { workspace = true }
 
+[[test]]
+name = "offline_commands"
+harness = false
+
 [build-dependencies]
 odra-build = { path = "../odra-build", version = "2.10.0", default-features = false }

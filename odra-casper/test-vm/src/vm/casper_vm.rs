@@ -352,6 +352,13 @@ impl CasperVm {
         Ok(messages.len() as u32)
     }
 
+    /// Whether a contract package exists under `address`.
+    pub fn has_contract(&self, address: &Address) -> bool {
+        address
+            .as_package_hash()
+            .is_some_and(|package_hash| self.context.get_package(package_hash).is_some())
+    }
+
     /// Attaches a value to the next call.
     pub fn attach_value(&mut self, amount: U512) {
         self.attached_value = amount;

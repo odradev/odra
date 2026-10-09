@@ -3,7 +3,7 @@ name = "ourcoin"
 publish = false
 edition = "2021"
 version = "0.1.0"
-license = "MIT"
+license = { workspace = true }
 
 [dependencies]
 odra = { path = "../../odra", default-features = false }

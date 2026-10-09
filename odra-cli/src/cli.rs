@@ -1,4 +1,5 @@
 use std::{
+    cell::OnceCell,
     collections::HashMap,
     path::{Path, PathBuf}
 };
@@ -47,7 +48,9 @@ pub struct OdraCli {
     transfer_cmd: TransferCmd,
     completions_cmd: CompletionsCmd,
     custom_types: CustomTypes,
-    host_env: HostEnv,
+    /// The livenet host environment, created on first use by a command that talks to the network
+    /// (see [`OdraCli::host_env`]), so `--help`, `completions` and `config` work without one.
+    host_env: OnceCell<HostEnv>,
     callers: HashMap<(String, String), EntryPointsCaller>,
     default_contract_path: Option<PathBuf>
 }
@@ -60,9 +63,10 @@ impl Default for OdraCli {
 
 impl OdraCli {
     /// Creates a new empty instance of the Odra CLI.
+    ///
+    /// The livenet host environment is not created here: it is created lazily, after the
+    /// arguments are parsed, and only for the commands that need it.
     pub fn new() -> Self {
-        env_setup::apply_state_root_hash_arg(std::env::args());
-        let host_env = env_setup::create_host_env();
         Self {
             main_cmd: MainCmd::default(),
             deploy_cmd: None,
@@ -76,7 +80,7 @@ impl OdraCli {
             config_cmd: ConfigCmd,
             transfer_cmd: TransferCmd,
             completions_cmd: CompletionsCmd,
-            host_env,
+            host_env: OnceCell::new(),
             custom_types: CustomTypes::default(),
             callers: HashMap::default(),
             default_contract_path: None
@@ -108,7 +112,7 @@ impl OdraCli {
     ) -> Self {
         self.callers.insert(
             (T::HostRef::ident(), T::HostRef::ident()),
-            T::HostRef::entry_points_caller(&self.host_env)
+            T::HostRef::entry_points_caller()
         );
         self.custom_types.register::<T>();
         self.contracts_cmd.add_contract::<T>();
@@ -131,7 +135,7 @@ impl OdraCli {
     ) -> Self {
         self.callers.insert(
             (T::HostRef::ident(), name.clone()),
-            T::HostRef::entry_points_caller(&self.host_env)
+            T::HostRef::entry_points_caller()
         );
         self.custom_types.register::<T>();
         self.contracts_cmd.add_contract_named::<T>(name.clone());
@@ -182,8 +186,31 @@ impl OdraCli {
     }
 
     /// Runs the CLI once, parsing the input from the process arguments and exiting on error.
+    ///
+    /// The arguments are parsed first, so help, version and usage errors never need a livenet
+    /// connection. The host environment is created only for commands that use it.
     pub fn run(self) {
         let (cmd, args, contracts_path) = self.main_cmd.get_matches();
+
+        // Commands that never touch the network run without a host environment or a container.
+        if matches!(cmd.as_str(), COMPLETIONS_SUBCOMMAND | CONFIG_SUBCOMMAND) {
+            let result = match cmd.as_str() {
+                COMPLETIONS_SUBCOMMAND => self
+                    .completions_cmd
+                    .generate(&args, self.main_cmd.to_command(&[])),
+                _ => self.run_config(&args)
+            };
+            if let Err(err) = result {
+                prettycli::error(&format!("{err:#}"));
+                std::process::exit(1);
+            }
+            return;
+        }
+
+        // Create the host environment before resolving the contracts file: it loads the `.env`
+        // file, which may set the chain name the default contracts file is derived from.
+        self.host_env();
+
         let contracts_path = match contracts_path {
             Some(path) => Some(path),
             None => self.default_contract_path.clone()
@@ -244,7 +271,7 @@ impl OdraCli {
                     )
                 })?
                 .clone();
-            self.host_env.register_contract(
+            self.host_env().register_contract(
                 deployed_contract.address(),
                 deployed_contract.key_name(),
                 caller
@@ -270,7 +297,7 @@ impl OdraCli {
                 .ok_or_else(|| {
                     anyhow::anyhow!("Deploy command not found. Did you forget to add it?")
                 })?
-                .run(&self.host_env, args, &self.custom_types, container),
+                .run(self.host_env(), args, &self.custom_types, container),
             CONTRACTS_SUBCOMMAND => self.run_command(&self.contracts_cmd, args, container),
             PRINT_EVENTS_SUBCOMMAND => self.run_command(&self.print_events_cmd, args, container),
             SCENARIOS_SUBCOMMAND => self.run_command(&self.scenarios_cmd, args, container),
@@ -278,7 +305,7 @@ impl OdraCli {
             STATUS_SUBCOMMAND => self.run_command(&self.status_cmd, args, container),
             INSPECT_SUBCOMMAND => self.run_command(&self.inspect_cmd, args, container),
             STORAGE_SUBCOMMAND => self.run_command(&self.storage_cmd, args, container),
-            CONFIG_SUBCOMMAND => self.run_command(&self.config_cmd, args, container),
+            CONFIG_SUBCOMMAND => self.run_config(args),
             TRANSFER_SUBCOMMAND => self.run_command(&self.transfer_cmd, args, container),
             COMPLETIONS_SUBCOMMAND => self
                 .completions_cmd
@@ -294,6 +321,38 @@ impl OdraCli {
         args: &ArgMatches,
         container: &DeployedContractsContainer
     ) -> Result<()> {
-        cmd.run(&self.host_env, args, &self.custom_types, container)
+        cmd.run(self.host_env(), args, &self.custom_types, container)
+    }
+
+    /// Prints the resolved livenet configuration without prompting for anything.
+    ///
+    /// Uses the host environment if it already exists (e.g. in the REPL), otherwise tries to build
+    /// one non-interactively just to resolve the caller; a misconfiguration is reported, not fatal.
+    fn run_config(&self, args: &ArgMatches) -> Result<()> {
+        let caller = self.try_host_env().map(|env| env.caller().to_string());
+        self.config_cmd.run(caller, args)
+    }
+
+    /// The livenet host environment, created on first use.
+    ///
+    /// Prompts for missing configuration on a TTY and exits the process when it can't be completed
+    /// (see [`env_setup::create_host_env`]). Created at most once, so the REPL keeps it warm.
+    fn host_env(&self) -> &HostEnv {
+        self.host_env.get_or_init(|| {
+            env_setup::apply_state_root_hash_arg(std::env::args());
+            env_setup::create_host_env()
+        })
+    }
+
+    /// The livenet host environment, created on first use without prompting or exiting.
+    ///
+    /// Returns the configuration error instead, so `config` can report it.
+    fn try_host_env(&self) -> Result<&HostEnv, String> {
+        if let Some(env) = self.host_env.get() {
+            return Ok(env);
+        }
+        env_setup::apply_state_root_hash_arg(std::env::args());
+        let env = env_setup::try_create_host_env()?;
+        Ok(self.host_env.get_or_init(|| env))
     }
 }

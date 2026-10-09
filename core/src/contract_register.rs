@@ -1,8 +1,9 @@
 use crate::call_def::CallDef;
 use crate::prelude::*;
-use crate::ContractContainer;
 use crate::{casper_types::bytesrepr::Bytes, VmError};
+use crate::{ContractContainer, ContractEnv};
 
+/// The version of a contract at an address, counted from 0.
 pub type ContractVersion = u32;
 
 /// A struct representing a contract register that maps an address to a contract.
@@ -26,13 +27,18 @@ impl ContractRegister {
         self.versions_count.insert(addr, new_version);
     }
 
-    /// Calls the entry point with the given call definition.
+    /// Calls the entry point with the given call definition in the given contract environment.
     ///
     /// Returns bytes representing the result of the call or an error if the address
     /// is not present in the register.
-    pub fn call(&self, addr: &Address, call_def: CallDef) -> OdraResult<Bytes> {
+    pub fn call(
+        &self,
+        addr: &Address,
+        contract_env: ContractEnv,
+        call_def: CallDef
+    ) -> OdraResult<Bytes> {
         if let Some(contract) = self.get(addr) {
-            return contract.call(call_def);
+            return contract.call(contract_env, call_def);
         }
         Err(OdraError::VmError(VmError::InvalidContractAddress))
     }
@@ -64,6 +70,20 @@ impl ContractRegister {
     pub fn get_mut(&mut self, addr: &Address) -> Option<&mut ContractContainer> {
         let latest_version = self.versions_count.get(addr).unwrap_or(&0);
         self.contracts.get_mut(&(*addr, *latest_version))
+    }
+
+    /// Returns the latest version of every contract, for [revert_to](Self::revert_to).
+    pub fn versions(&self) -> BTreeMap<Address, ContractVersion> {
+        self.versions_count.clone()
+    }
+
+    /// Forgets the contracts and versions added since `versions` was taken by
+    /// [versions](Self::versions).
+    pub fn revert_to(&mut self, versions: &BTreeMap<Address, ContractVersion>) {
+        self.contracts.retain(|(addr, version), _| {
+            versions.get(addr).is_some_and(|latest| version <= latest)
+        });
+        self.versions_count = versions.clone();
     }
 
     /// Post install hook.

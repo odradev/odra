@@ -4,9 +4,10 @@ use blake2::{Blake2b, Blake2b512, Blake2bVar, Blake2s256, Digest};
 use odra_core::casper_types::system::auction::ValidatorBid;
 use odra_core::casper_types::{
     bytesrepr::{Bytes, ToBytes},
-    CLValue, PublicKey, Signature, U512
+    CLValue, PublicKey, RuntimeArgs, Signature, URef, U512
 };
 use odra_core::consts::RANDOM_BYTES_COUNT;
+use odra_core::entry_point_callback::EntryPointsCallerFn;
 use odra_core::prelude::*;
 use odra_core::validator::ValidatorInfo;
 use odra_core::{casper_types, CallDef, ContractContext};
@@ -159,6 +160,26 @@ impl ContractContext for OdraVmContractEnv {
         public_key: &PublicKey
     ) -> bool {
         casper_types::crypto::verify(message, signature, public_key).is_ok()
+    }
+
+    fn new_child_contract(
+        &self,
+        name: &str,
+        init_args: RuntimeArgs,
+        entry_points_caller: EntryPointsCallerFn
+    ) -> OdraResult<(Address, URef)> {
+        self.vm
+            .new_child_contract(name, init_args, entry_points_caller)
+    }
+
+    fn upgrade_child_contract(
+        &self,
+        name: &str,
+        upgrade_args: RuntimeArgs,
+        entry_points_caller: EntryPointsCallerFn
+    ) -> OdraResult<Option<Address>> {
+        self.vm
+            .upgrade_child_contract(name, upgrade_args, entry_points_caller)
     }
 }
 

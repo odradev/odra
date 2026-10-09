@@ -142,24 +142,8 @@ impl HostContext for OdraVmHost {
         init_args: RuntimeArgs,
         entry_points_caller: EntryPointsCaller
     ) -> OdraResult<Address> {
-        let address = self
-            .vm
-            .new_contract(name, init_args.clone(), entry_points_caller.clone());
-
-        if entry_points_caller
-            .entry_points()
-            .iter()
-            .any(|ep| ep.name == "init")
-        {
-            self.call_contract(
-                &address,
-                CallDef::new(String::from("init"), true, init_args),
-                false
-            )?;
-            self.vm.post_install(address);
-        }
-
-        Ok(address)
+        self.vm
+            .install(|| self.deploy(name, init_args, entry_points_caller))
     }
 
     fn upgrade_contract(
@@ -169,27 +153,8 @@ impl HostContext for OdraVmHost {
         upgrade_args: RuntimeArgs,
         entry_points_caller: EntryPointsCaller
     ) -> OdraResult<Address> {
-        let address = self.vm.upgrade_contract(
-            name,
-            contract_to_upgrade,
-            upgrade_args.clone(),
-            entry_points_caller.clone()
-        );
-
-        if entry_points_caller
-            .entry_points()
-            .iter()
-            .any(|ep| ep.name == "upgrade")
-        {
-            self.call_contract(
-                &address,
-                CallDef::new(String::from("upgrade"), true, upgrade_args),
-                false
-            )?;
-            self.vm.post_install(address);
-        }
-
-        Ok(address)
+        self.vm
+            .install(|| self.upgrade(name, contract_to_upgrade, upgrade_args, entry_points_caller))
     }
 
     fn register_contract(
@@ -200,6 +165,14 @@ impl HostContext for OdraVmHost {
     ) {
         self.vm
             .register_contract(address, &contract_name, entry_points_caller);
+    }
+
+    fn has_contract(&self, address: &Address) -> bool {
+        self.vm.has_contract(address)
+    }
+
+    fn take_child_contracts(&self) -> Vec<Address> {
+        self.vm.take_child_contracts()
     }
 
     fn contract_env(&self) -> ContractEnv {
@@ -235,5 +208,71 @@ impl OdraVmHost {
     pub fn new(vm: Rc<OdraVm>) -> Rc<Self> {
         let contract_env = Rc::new(ContractEnv::new(OdraVmContractEnv::new(vm.clone())));
         Rc::new(Self { vm, contract_env })
+    }
+
+    /// Deploys a contract and calls its constructor.
+    fn deploy(
+        &self,
+        name: &str,
+        init_args: RuntimeArgs,
+        entry_points_caller: EntryPointsCaller
+    ) -> OdraResult<Address> {
+        let address = self
+            .vm
+            .new_contract(name, init_args.clone(), entry_points_caller.clone());
+        // As on Casper, only the deployer of a factory may upgrade its children.
+        if entry_points_caller
+            .entry_points()
+            .iter()
+            .any(|ep| ep.name == "new_contract")
+        {
+            self.vm.set_factory_admin(address, self.caller());
+        }
+
+        if entry_points_caller
+            .entry_points()
+            .iter()
+            .any(|ep| ep.name == "init")
+        {
+            self.call_contract(
+                &address,
+                CallDef::new(String::from("init"), true, init_args),
+                false
+            )?;
+            self.vm.post_install(address);
+        }
+
+        Ok(address)
+    }
+
+    /// Upgrades a contract and calls its upgrader.
+    fn upgrade(
+        &self,
+        name: &str,
+        contract_to_upgrade: Address,
+        upgrade_args: RuntimeArgs,
+        entry_points_caller: EntryPointsCaller
+    ) -> OdraResult<Address> {
+        let address = self.vm.upgrade_contract(
+            name,
+            contract_to_upgrade,
+            upgrade_args.clone(),
+            entry_points_caller.clone()
+        );
+
+        if entry_points_caller
+            .entry_points()
+            .iter()
+            .any(|ep| ep.name == "upgrade")
+        {
+            self.call_contract(
+                &address,
+                CallDef::new(String::from("upgrade"), true, upgrade_args),
+                false
+            )?;
+            self.vm.post_install(address);
+        }
+
+        Ok(address)
     }
 }

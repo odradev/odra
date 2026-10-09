@@ -3,7 +3,7 @@ use syn::parse_quote;
 
 use crate::{
     ir::{EnumeratedTypedField, ModuleStructIR},
-    utils::{self, expr::IntoExpr}
+    utils
 };
 
 use super::parts_utils::UseSuperItem;
@@ -81,7 +81,7 @@ impl TryFrom<&'_ ModuleStructIR> for NewModuleFnItem {
 
     fn try_from(ir: &'_ ModuleStructIR) -> Result<Self, Self::Error> {
         let ty_contract_env = utils::ty::rc_contract_env();
-        let env = utils::ident::env();
+        let env = utils::ident::prefixed_env();
         let fields = ir.typed_fields()?;
         Ok(Self {
             sig: parse_quote!(fn new(#env: #ty_contract_env) -> Self),
@@ -109,7 +109,7 @@ impl From<&'_ EnumeratedTypedField> for ModuleFieldItem {
             assign_token: Default::default(),
             field_expr: utils::expr::module_component_instance(
                 &field.ty,
-                &utils::ident::env(),
+                &utils::ident::prefixed_env(),
                 field.idx
             ),
             semi_token: Default::default()
@@ -130,9 +130,8 @@ impl TryFrom<&'_ ModuleStructIR> for ModuleInstanceItem {
     type Error = syn::Error;
 
     fn try_from(ir: &'_ ModuleStructIR) -> Result<Self, Self::Error> {
-        let ident_underscored_env = utils::ident::underscored_env();
-        let ident_env = utils::ident::env();
-        let env_init = ValueInitItem::with_init(ident_underscored_env, ident_env.into_expr());
+        // The `Module::new` parameter and the hidden field share the name.
+        let env_init = ValueInitItem::new(utils::ident::prefixed_env());
 
         Ok(Self {
             self_token: Default::default(),
@@ -152,7 +151,7 @@ struct EnvFnItem;
 impl ToTokens for EnvFnItem {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let ty_contract_env = utils::ty::rc_contract_env();
-        let m_env = utils::member::underscored_env();
+        let m_env = utils::member::prefixed_env();
 
         tokens.extend(quote::quote!(
             fn env(&self) -> #ty_contract_env {
@@ -162,28 +161,15 @@ impl ToTokens for EnvFnItem {
     }
 }
 
+/// A field of `Self { .. }` initialized from the local of the same name.
 #[derive(syn_derive::ToTokens)]
 struct ValueInitItem {
-    ident: syn::Ident,
-    colon_token: Option<syn::Token![:]>,
-    init_expr: Option<syn::Expr>
+    ident: syn::Ident
 }
 
 impl ValueInitItem {
     fn new(ident: syn::Ident) -> Self {
-        Self {
-            ident,
-            colon_token: None,
-            init_expr: None
-        }
-    }
-
-    fn with_init(ident: syn::Ident, init_expr: syn::Expr) -> Self {
-        Self {
-            ident,
-            colon_token: Some(Default::default()),
-            init_expr: Some(init_expr)
-        }
+        Self { ident }
     }
 }
 
@@ -202,12 +188,12 @@ mod test {
                 use super::*;
 
                 impl Module for CounterPack {
-                    fn new(env: odra::prelude::Rc<odra::ContractEnv>) -> Self {
-                        Self { __env: env }
+                    fn new(__odra_env: odra::prelude::Rc<odra::ContractEnv>) -> Self {
+                        Self { __odra_env }
                     }
 
                     fn env(&self) -> odra::prelude::Rc<odra::ContractEnv> {
-                        self.__env.clone()
+                        self.__odra_env.clone()
                     }
                 }
             }
@@ -224,29 +210,29 @@ mod test {
                 use super::*;
 
                 impl Module for CounterPack {
-                    fn new(env: odra::prelude::Rc<odra::ContractEnv>) -> Self {
+                    fn new(__odra_env: odra::prelude::Rc<odra::ContractEnv>) -> Self {
                         let counter0 =
                             <SubModule<Counter> as odra::module::ModuleComponent>::instance(
-                                odra::prelude::Rc::clone(&env),
+                                odra::prelude::Rc::clone(&__odra_env),
                                 1u8
                             );
                         let counter1 =
                             <SubModule<Counter> as odra::module::ModuleComponent>::instance(
-                                odra::prelude::Rc::clone(&env),
+                                odra::prelude::Rc::clone(&__odra_env),
                                 2u8
                             );
                         let counter2 =
                             <SubModule<Counter> as odra::module::ModuleComponent>::instance(
-                                odra::prelude::Rc::clone(&env),
+                                odra::prelude::Rc::clone(&__odra_env),
                                 3u8
                             );
                         let counters = <Var<u32> as odra::module::ModuleComponent>::instance(
-                            odra::prelude::Rc::clone(&env),
+                            odra::prelude::Rc::clone(&__odra_env),
                             4u8
                         );
                         let counters_map =
                             <Mapping<u8, Counter> as odra::module::ModuleComponent>::instance(
-                                odra::prelude::Rc::clone(&env),
+                                odra::prelude::Rc::clone(&__odra_env),
                                 5u8
                             );
                         Self {
@@ -255,12 +241,12 @@ mod test {
                             counter2,
                             counters,
                             counters_map,
-                            __env: env
+                            __odra_env
                         }
                     }
 
                     fn env(&self) -> odra::prelude::Rc<odra::ContractEnv> {
-                        self.__env.clone()
+                        self.__odra_env.clone()
                     }
                 }
             }

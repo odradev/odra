@@ -16,9 +16,6 @@ use std::collections::BTreeMap;
 use std::rc::{Rc, Weak};
 
 /// What the host keeps about a deployed contract to run its offchain functions.
-///
-/// Deliberately not the `EntryPointsCaller` itself: that one holds a `HostEnv`, and a host that
-/// keeps it would own itself and never drop its VM.
 pub(crate) struct OffchainContract {
     name: String,
     entry_points: Vec<EntryPoint>,
@@ -150,7 +147,7 @@ impl ContractContext for CasperOffchainContractEnv {
     }
 
     fn caller(&self) -> Address {
-        *self.callstack.borrow().first().address()
+        *self.callstack.borrow().previous().address()
     }
 
     fn call_stack(&self) -> Vec<Address> {
@@ -165,14 +162,16 @@ impl ContractContext for CasperOffchainContractEnv {
         if call_def.is_mut() {
             Self::cannot_write("call a mutable entry point of another contract")
         }
-        let offchain = self
+        // Without tokens attached, a read-only entry point of a known contract runs here as well,
+        // so it sees this contract as its caller, like the livenet backend.
+        let local = self
             .contract_register
             .borrow()
             .get(&address)
-            .filter(|c| c.is_offchain(call_def.entry_point()))
+            .filter(|c| c.is_offchain(call_def.entry_point()) || call_def.amount().is_zero())
             .map(|c| (c.name().to_string(), c.callback()));
-        if let Some((contract_name, call)) = offchain {
-            // Another offchain function: run it here, one frame deeper.
+        if let Some((contract_name, call)) = local {
+            // Another offchain function or a getter: run it here, one frame deeper.
             self.callstack
                 .borrow_mut()
                 .push(CallstackElement::new_contract_call(
@@ -184,7 +183,8 @@ impl ContractContext for CasperOffchainContractEnv {
             self.callstack.borrow_mut().pop();
             return result.unwrap_or_else(|e| self.revert(e));
         }
-        // A real entry point: the VM executes it and the proxy hands back the return value.
+        // Tokens attached or an unknown contract: the VM executes the entry point and the proxy
+        // hands back the return value.
         self.vm.borrow_mut().call_contract(&address, call_def, true)
     }
 
