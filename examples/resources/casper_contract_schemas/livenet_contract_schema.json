@@ -1,6 +1,10 @@
 {
   "casper_contract_schema_version": 1,
-  "toolchain": "rustc 1.85.0-nightly (d117b7f21 2024-12-31)",
+  "toolchain": "rustc 1.94.0-nightly (8d670b93d 2025-12-31)",
+  "toolkit": {
+    "name": "Odra",
+    "version": "2.9.1"
+  },
   "authors": [
     "Jakub Płaskonka <kuba@odra.dev>",
     "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
@@ -9,7 +13,7 @@
   "repository": "https://github.com/odradev/odra",
   "homepage": "https://odra.dev/docs",
   "contract_name": "LivenetContract",
-  "contract_version": "2.5.0",
+  "contract_version": "2.9.1",
   "types": [
     {
       "struct": {
@@ -71,6 +75,7 @@
       "name": "transfer_ownership",
       "description": "Transfers the ownership of the contract to a new owner.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "new_owner",
@@ -87,6 +92,7 @@
       "name": "owner",
       "description": "Returns the owner of the contract.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "Key",
       "is_contract_context": true,
@@ -96,6 +102,7 @@
       "name": "push_on_stack",
       "description": "Pushes a value on the stack.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "value",
@@ -112,6 +119,7 @@
       "name": "pop_from_stack",
       "description": "Pops a value from the stack.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "U64",
       "is_contract_context": true,
@@ -121,6 +129,7 @@
       "name": "get_stack_len",
       "description": "Returns the length of the stack.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "U32",
       "is_contract_context": true,
@@ -130,6 +139,7 @@
       "name": "immutable_cross_call",
       "description": "Returns the total supply of the ERC20 contract. This is an example of an immutable cross-contract call.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "U256",
       "is_contract_context": true,
@@ -139,6 +149,7 @@
       "name": "mutable_cross_call",
       "description": "Transfers 1 token from the ERC20 contract to the caller. This is an example of a mutable cross-contract call.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "Unit",
       "is_contract_context": true,
@@ -148,6 +159,7 @@
       "name": "function_that_reverts",
       "description": "Function that reverts with a silly error.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "Unit",
       "is_contract_context": true,
@@ -157,6 +169,7 @@
       "name": "expensive_function",
       "description": "Function that eats up a lot of gas.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "Unit",
       "is_contract_context": true,

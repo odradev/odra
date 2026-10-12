@@ -1,6 +1,10 @@
 {
   "casper_contract_schema_version": 1,
-  "toolchain": "rustc 1.85.0-nightly (d117b7f21 2024-12-31)",
+  "toolchain": "rustc 1.94.0-nightly (8d670b93d 2025-12-31)",
+  "toolkit": {
+    "name": "Odra",
+    "version": "2.9.1"
+  },
   "authors": [
     "Jakub Płaskonka <kuba@odra.dev>",
     "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
@@ -9,7 +13,7 @@
   "repository": "https://github.com/odradev/odra",
   "homepage": "https://odra.dev/docs",
   "contract_name": "Cep18Example",
-  "contract_version": "2.5.0",
+  "contract_version": "2.9.1",
   "types": [
     {
       "struct": {
@@ -247,6 +251,7 @@
       "name": "mint",
       "description": "",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "owner",
@@ -269,6 +274,7 @@
       "name": "burn",
       "description": "",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "owner",
@@ -291,6 +297,7 @@
       "name": "name",
       "description": "Delegated. See `self.token.name()` for details.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "String",
       "is_contract_context": true,
@@ -300,6 +307,7 @@
       "name": "symbol",
       "description": "Delegated. See `self.token.symbol()` for details.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "String",
       "is_contract_context": true,
@@ -309,6 +317,7 @@
       "name": "decimals",
       "description": "Delegated. See `self.token.decimals()` for details.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "U8",
       "is_contract_context": true,
@@ -318,6 +327,7 @@
       "name": "total_supply",
       "description": "Delegated. See `self.token.total_supply()` for details.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "U256",
       "is_contract_context": true,
@@ -327,6 +337,7 @@
       "name": "balance_of",
       "description": "Delegated. See `self.token.balance_of()` for details.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "address",
@@ -343,6 +354,7 @@
       "name": "allowance",
       "description": "Delegated. See `self.token.allowance()` for details.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "owner",
@@ -365,6 +377,7 @@
       "name": "approve",
       "description": "Delegated. See `self.token.approve()` for details.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "spender",
@@ -387,6 +400,7 @@
       "name": "decrease_allowance",
       "description": "Delegated. See `self.token.decrease_allowance()` for details.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "spender",
@@ -409,6 +423,7 @@
       "name": "increase_allowance",
       "description": "Delegated. See `self.token.increase_allowance()` for details.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "spender",
@@ -431,6 +446,7 @@
       "name": "transfer",
       "description": "Delegated. See `self.token.transfer()` for details.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "recipient",
@@ -453,6 +469,7 @@
       "name": "transfer_from",
       "description": "Delegated. See `self.token.transfer_from()` for details.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "owner",

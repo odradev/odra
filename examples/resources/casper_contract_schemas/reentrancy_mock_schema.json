@@ -1,6 +1,10 @@
 {
   "casper_contract_schema_version": 1,
-  "toolchain": "rustc 1.85.0-nightly (d117b7f21 2024-12-31)",
+  "toolchain": "rustc 1.94.0-nightly (8d670b93d 2025-12-31)",
+  "toolkit": {
+    "name": "Odra",
+    "version": "2.9.1"
+  },
   "authors": [
     "Jakub Płaskonka <kuba@odra.dev>",
     "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
@@ -9,7 +13,7 @@
   "repository": "https://github.com/odradev/odra",
   "homepage": "https://odra.dev/docs",
   "contract_name": "ReentrancyMock",
-  "contract_version": "2.5.0",
+  "contract_version": "2.9.1",
   "types": [],
   "errors": [],
   "entry_points": [
@@ -17,6 +21,7 @@
       "name": "count_local_recursive",
       "description": "Simple recursive function that counts to `n`.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "n",
@@ -33,6 +38,7 @@
       "name": "count_ref_recursive",
       "description": "Recursive function that counts to `n` using a reference to the contract.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "n",
@@ -49,6 +55,7 @@
       "name": "non_reentrant_count",
       "description": "Recursive function that counts to `n` and is protected.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "Unit",
       "is_contract_context": true,
@@ -58,6 +65,7 @@
       "name": "get_value",
       "description": "Returns the value of the counter.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "U32",
       "is_contract_context": true,

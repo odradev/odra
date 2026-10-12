@@ -1,6 +1,10 @@
 {
   "casper_contract_schema_version": 1,
-  "toolchain": "rustc 1.85.0-nightly (d117b7f21 2024-12-31)",
+  "toolchain": "rustc 1.94.0-nightly (8d670b93d 2025-12-31)",
+  "toolkit": {
+    "name": "Odra",
+    "version": "2.9.1"
+  },
   "authors": [
     "Jakub Płaskonka <kuba@odra.dev>",
     "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
@@ -9,7 +13,7 @@
   "repository": "https://github.com/odradev/odra",
   "homepage": "https://odra.dev/docs",
   "contract_name": "Ownable2Step",
-  "contract_version": "2.5.0",
+  "contract_version": "2.9.1",
   "types": [
     {
       "struct": {
@@ -88,6 +92,7 @@
       "name": "get_owner",
       "description": "Returns the address of the current owner.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "Key",
       "is_contract_context": true,
@@ -97,6 +102,7 @@
       "name": "get_pending_owner",
       "description": "Returns the address of the pending owner.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": {
         "Option": "Key"
@@ -108,6 +114,7 @@
       "name": "transfer_ownership",
       "description": "Starts the ownership transfer of the module to a `new_owner`.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "new_owner",
@@ -124,6 +131,7 @@
       "name": "renounce_ownership",
       "description": "If the contract's owner chooses to renounce their ownership, the contract",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "Unit",
       "is_contract_context": true,
@@ -133,6 +141,7 @@
       "name": "accept_ownership",
       "description": "The new owner accepts the ownership transfer. Replaces the current owner and clears",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "Unit",
       "is_contract_context": true,
@@ -142,6 +151,7 @@
       "name": "assert_owner",
       "description": "Reverts with if the function called by any account other than the owner.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "address",

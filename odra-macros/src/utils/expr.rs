@@ -55,6 +55,17 @@ pub fn schemas(events: &syn::Expr) -> syn::Expr {
     parse_quote!(#ty(#events))
 }
 
+/// The contract schema JSON embedded at build time by `odra_build::build()`, if available.
+pub fn contract_schema() -> syn::Expr {
+    parse_quote!({
+        #[cfg(odra_contract_schema)]
+        let contract_schema = Some(include_str!(env!("ODRA_CONTRACT_SCHEMA_PATH")));
+        #[cfg(not(odra_contract_schema))]
+        let contract_schema: Option<&'static str> = None;
+        contract_schema
+    })
+}
+
 pub fn new_wasm_contract_env() -> syn::Expr {
     parse_quote!(odra::odra_casper_wasm_env::WasmContractEnv::new_env())
 }

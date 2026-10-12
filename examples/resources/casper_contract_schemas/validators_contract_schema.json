@@ -1,6 +1,10 @@
 {
   "casper_contract_schema_version": 1,
-  "toolchain": "rustc 1.85.0-nightly (d117b7f21 2024-12-31)",
+  "toolchain": "rustc 1.94.0-nightly (8d670b93d 2025-12-31)",
+  "toolkit": {
+    "name": "Odra",
+    "version": "2.9.1"
+  },
   "authors": [
     "Jakub Płaskonka <kuba@odra.dev>",
     "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
@@ -9,7 +13,7 @@
   "repository": "https://github.com/odradev/odra",
   "homepage": "https://odra.dev/docs",
   "contract_name": "ValidatorsContract",
-  "contract_version": "2.5.0",
+  "contract_version": "2.9.1",
   "types": [],
   "errors": [],
   "entry_points": [
@@ -17,6 +21,7 @@
       "name": "stake",
       "description": "Stake the number of tokens",
       "is_mutable": true,
+      "is_payable": true,
       "arguments": [
         {
           "name": "__cargo_purse",
@@ -33,6 +38,7 @@
       "name": "unstake",
       "description": "Undelegate the amount from the validator",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "amount",
@@ -49,6 +55,7 @@
       "name": "withdraw",
       "description": "Withdraw the amount from the validator",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "amount",
@@ -65,6 +72,7 @@
       "name": "currently_delegated_amount",
       "description": "Get the currently delegated amount",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "U512",
       "is_contract_context": true,
@@ -74,6 +82,7 @@
       "name": "current_casper_balance",
       "description": "Get the current casper balance of the contract",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "U512",
       "is_contract_context": true,
@@ -83,6 +92,7 @@
       "name": "get_minimum_delegation_amount",
       "description": "Get minimum delegation amount",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "U64",
       "is_contract_context": true,

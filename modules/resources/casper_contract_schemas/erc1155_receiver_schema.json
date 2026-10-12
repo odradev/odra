@@ -1,6 +1,10 @@
 {
   "casper_contract_schema_version": 1,
-  "toolchain": "rustc 1.85.0-nightly (d117b7f21 2024-12-31)",
+  "toolchain": "rustc 1.94.0-nightly (8d670b93d 2025-12-31)",
+  "toolkit": {
+    "name": "Odra",
+    "version": "2.9.1"
+  },
   "authors": [
     "Jakub Płaskonka <kuba@odra.dev>",
     "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
@@ -9,7 +13,7 @@
   "repository": "https://github.com/odradev/odra",
   "homepage": "https://odra.dev/docs",
   "contract_name": "Erc1155Receiver",
-  "contract_version": "2.5.0",
+  "contract_version": "2.9.1",
   "types": [
     {
       "struct": {
@@ -104,6 +108,7 @@
       "name": "on_erc1155_received",
       "description": "This function is called at the end of a [safe_transfer_from](crate::erc1155::Erc1155::safe_transfer_from),",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "operator",
@@ -148,6 +153,7 @@
       "name": "on_erc1155_batch_received",
       "description": "This function is called at the end of a [safe_batch_transfer_from](crate::erc1155::Erc1155::safe_batch_transfer_from)",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "operator",

@@ -8,7 +8,7 @@ use std::{collections::BTreeSet, env, path::PathBuf};
 pub use casper_contract_schema;
 use casper_contract_schema::{
     Access, Argument, CallMethod, ContractSchema, CustomType, Entrypoint, EnumVariant, Event,
-    NamedCLType, StructMember, UserError
+    NamedCLType, StructMember, Toolkit, UserError
 };
 
 use convert_case::{Boundary, Case, Casing};
@@ -16,6 +16,8 @@ use convert_case::{Boundary, Case, Casing};
 use odra_core::args::EntrypointArgument;
 
 const CCSV: u8 = 1;
+/// The version of Odra the contract is built with (odra-schema is versioned together with odra).
+const ODRA_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 mod custom_type;
 mod ty;
@@ -80,12 +82,14 @@ pub fn entry_point<T: NamedCLTyped>(
     name: &str,
     description: &str,
     is_mutable: bool,
+    is_payable: bool,
     arguments: Vec<Argument>
 ) -> Entrypoint {
     Entrypoint {
         name: name.into(),
         description: Some(description.to_string()),
         is_mutable,
+        is_payable,
         arguments,
         return_ty: T::ty().into(),
         is_contract_context: true,
@@ -208,6 +212,10 @@ pub fn schema<T: SchemaEntrypoints + SchemaEvents + SchemaCustomTypes + SchemaEr
     ContractSchema {
         casper_contract_schema_version: CCSV,
         toolchain: env!("RUSTC_VERSION").to_string(),
+        toolkit: Toolkit {
+            name: "Odra".to_string(),
+            version: ODRA_VERSION.to_string()
+        },
         contract_name: contract_name.to_string(),
         contract_version: contract_version.to_string(),
         types,
@@ -335,10 +343,12 @@ mod test {
     #[test]
     fn test_entry_point() {
         let arg = super::argument::<u32>("arg1");
-        let entry_point = super::entry_point::<u32>("entry1", "description", true, vec![arg]);
+        let entry_point =
+            super::entry_point::<u32>("entry1", "description", true, false, vec![arg]);
         assert_eq!(entry_point.name, "entry1");
         assert_eq!(entry_point.description, Some("description".to_string()));
         assert!(entry_point.is_mutable);
+        assert!(!entry_point.is_payable);
         assert_eq!(entry_point.arguments.len(), 1);
         assert_eq!(
             entry_point.return_ty,
@@ -424,6 +434,7 @@ mod test {
                     "entry1",
                     "description",
                     true,
+                    false,
                     vec![super::argument::<u32>("arg1")]
                 )]
             }
@@ -464,6 +475,8 @@ mod test {
 
         assert_eq!(schema.contract_name, "contract_name");
         assert_eq!(schema.contract_version, "contract_version");
+        assert_eq!(schema.toolkit.name, "Odra");
+        assert_eq!(schema.toolkit.version, env!("CARGO_PKG_VERSION"));
         assert_eq!(schema.authors, vec!["author".to_string()]);
         assert_eq!(schema.repository, Some("repository".to_string()));
         assert_eq!(schema.homepage, Some("homepage".to_string()));

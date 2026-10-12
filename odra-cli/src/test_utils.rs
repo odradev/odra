@@ -26,6 +26,7 @@ pub fn mock_entry_point() -> Entrypoint {
         name: "test".to_string(),
         description: None,
         is_mutable: false,
+        is_payable: false,
         arguments: vec![
             Argument::new(
                 "voucher",

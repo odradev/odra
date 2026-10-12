@@ -25,7 +25,7 @@ impl ToTokens for SchemaItem {
                 #[no_mangle]
                 fn casper_contract_schema() -> odra::schema::casper_contract_schema::ContractSchema {
                     let version = match #version {
-                        "" =>  env!("CARGO_PKG_VERSION"),
+                        "" => env!("CARGO_PKG_VERSION"),
                         _ => #version
                     };
 

@@ -30,6 +30,15 @@ pub const CONTRACT_CARGO_PURSE: &str = "__contract_cargo_purse";
 /// The key under which the reentrancy guard status is stored.
 pub const REENTRANCY_GUARD: [u8; 18] = *b"__reentrancy_guard";
 
+/// The key under which the contract schema (Casper Contract Schema JSON) is stored.
+pub const CONTRACT_SCHEMA: &str = odra_core::consts::CONTRACT_SCHEMA_KEY;
+
+/// The entry point that stores the contract schema during the upgrade process.
+pub const MIGRATE_CONTRACT_SCHEMA_EP: &str = "migrate_contract_schema";
+
+/// The argument of the `migrate_contract_schema` entry point holding the contract schema.
+pub const CONTRACT_SCHEMA_ARG: &str = "contract_schema";
+
 /// The key for account's cargo purse.
 pub const CARGO_PURSE_KEY: &str = "__cargo_purse";
 

@@ -1,6 +1,10 @@
 {
   "casper_contract_schema_version": 1,
-  "toolchain": "rustc 1.85.0-nightly (d117b7f21 2024-12-31)",
+  "toolchain": "rustc 1.94.0-nightly (8d670b93d 2025-12-31)",
+  "toolkit": {
+    "name": "Odra",
+    "version": "2.9.1"
+  },
   "authors": [
     "Jakub Płaskonka <kuba@odra.dev>",
     "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
@@ -9,7 +13,7 @@
   "repository": "https://github.com/odradev/odra",
   "homepage": "https://odra.dev/docs",
   "contract_name": "PauseableCounter",
-  "contract_version": "2.5.0",
+  "contract_version": "2.9.1",
   "types": [
     {
       "struct": {
@@ -55,6 +59,7 @@
       "name": "increment",
       "description": "Increments a value.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "Unit",
       "is_contract_context": true,
@@ -64,6 +69,7 @@
       "name": "pause",
       "description": "Pauses the contract.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "Unit",
       "is_contract_context": true,
@@ -73,6 +79,7 @@
       "name": "unpause",
       "description": "Unpauses the contract.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "Unit",
       "is_contract_context": true,
@@ -82,6 +89,7 @@
       "name": "is_paused",
       "description": "Returns true if the contract is paused, and false otherwise.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "Bool",
       "is_contract_context": true,
@@ -91,6 +99,7 @@
       "name": "get_value",
       "description": "Returns the value of the counter.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "U32",
       "is_contract_context": true,

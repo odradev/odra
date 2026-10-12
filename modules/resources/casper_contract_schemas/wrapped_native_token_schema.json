@@ -1,6 +1,10 @@
 {
   "casper_contract_schema_version": 1,
-  "toolchain": "rustc 1.85.0-nightly (d117b7f21 2024-12-31)",
+  "toolchain": "rustc 1.94.0-nightly (8d670b93d 2025-12-31)",
+  "toolkit": {
+    "name": "Odra",
+    "version": "2.9.1"
+  },
   "authors": [
     "Jakub Płaskonka <kuba@odra.dev>",
     "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
@@ -9,7 +13,7 @@
   "repository": "https://github.com/odradev/odra",
   "homepage": "https://odra.dev/docs",
   "contract_name": "WrappedNativeToken",
-  "contract_version": "2.5.0",
+  "contract_version": "2.9.1",
   "types": [
     {
       "struct": {
@@ -236,6 +240,7 @@
       "name": "deposit",
       "description": "Deposits native tokens into the contract.",
       "is_mutable": true,
+      "is_payable": true,
       "arguments": [
         {
           "name": "__cargo_purse",
@@ -252,6 +257,7 @@
       "name": "withdraw",
       "description": "Withdraws native tokens from the contract.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "amount",
@@ -268,6 +274,7 @@
       "name": "withdraw_to",
       "description": "Withdraws native tokens from the contract to a specific recipient.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "recipient",
@@ -290,6 +297,7 @@
       "name": "allowance",
       "description": "Sets the allowance for `spender` to spend `amount` of the caller's tokens.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "owner",
@@ -312,6 +320,7 @@
       "name": "balance_of",
       "description": "Returns the balance of `address`.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "address",
@@ -328,6 +337,7 @@
       "name": "total_supply",
       "description": "Returns the total supply of the token.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "U256",
       "is_contract_context": true,
@@ -337,6 +347,7 @@
       "name": "decimals",
       "description": "Returns the number of decimals used by the token.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "U8",
       "is_contract_context": true,
@@ -346,6 +357,7 @@
       "name": "symbol",
       "description": "Returns the symbol of the token.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "String",
       "is_contract_context": true,
@@ -355,6 +367,7 @@
       "name": "name",
       "description": "Returns the name of the token.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "String",
       "is_contract_context": true,
@@ -364,6 +377,7 @@
       "name": "approve",
       "description": "Approves `spender` to spend `amount` of the caller's tokens.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "spender",
@@ -386,6 +400,7 @@
       "name": "transfer_from",
       "description": "Transfers `amount` of the owners tokens to `recipient` using allowance.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "owner",
@@ -414,6 +429,7 @@
       "name": "transfer",
       "description": "Transfers `amount` of the caller's tokens to `recipient`.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "recipient",

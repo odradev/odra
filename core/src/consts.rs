@@ -15,6 +15,9 @@ pub const CONTRACT_CARGO_PURSE: &str = "__contract_cargo_purse";
 /// The key under which the reentrancy guard status is stored.
 pub const REENTRANCY_GUARD: [u8; 18] = *b"__reentrancy_guard";
 
+/// The key under which the contract schema (Casper Contract Schema JSON) is stored.
+pub const CONTRACT_SCHEMA_KEY: &str = "__contract_schema";
+
 /// The key for account's cargo purse.
 pub const CARGO_PURSE_KEY: &str = "__cargo_purse";
 

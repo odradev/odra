@@ -1,6 +1,10 @@
 {
   "casper_contract_schema_version": 1,
-  "toolchain": "rustc 1.85.0-nightly (d117b7f21 2024-12-31)",
+  "toolchain": "rustc 1.94.0-nightly (8d670b93d 2025-12-31)",
+  "toolkit": {
+    "name": "Odra",
+    "version": "2.9.1"
+  },
   "authors": [
     "Jakub Płaskonka <kuba@odra.dev>",
     "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
@@ -9,7 +13,7 @@
   "repository": "https://github.com/odradev/odra",
   "homepage": "https://odra.dev/docs",
   "contract_name": "TimeLockWallet",
-  "contract_version": "2.5.0",
+  "contract_version": "2.9.1",
   "types": [
     {
       "struct": {
@@ -70,6 +74,7 @@
       "name": "deposit",
       "description": "Deposits the tokens into the contract.",
       "is_mutable": true,
+      "is_payable": true,
       "arguments": [
         {
           "name": "__cargo_purse",
@@ -86,6 +91,7 @@
       "name": "withdraw",
       "description": "Withdraws the tokens from the contract.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "amount",
@@ -102,6 +108,7 @@
       "name": "get_balance",
       "description": "Returns the balance of the given account.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "address",
@@ -118,6 +125,7 @@
       "name": "lock_duration",
       "description": "Returns the lock duration.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "U64",
       "is_contract_context": true,
