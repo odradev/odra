@@ -150,6 +150,10 @@ Changelog for `odra`.
   `odra_module` is wrapped in a block that allows the lint, so a crate defining modules without
   `odra_build::build()` in its `build.rs` (a library of modules, for example) compiles cleanly, and
   `odra_build::build()` declares `odra_backend` to check-cfg next to `odra_module`.
+- `#[odra::module(factory = on)]` no longer warns about unused variables: the generated `<Module>Factory`
+  methods copy the module's signatures but only revert, so they allow `unused_variables`. The examples
+  crate and the `cep95`/`cep96` modules drop the file-wide `allow(unused_variables)` that hid the
+  warnings.
 - `cargo build --workspace` builds the `_build_contract` and `_build_schema` binaries of the examples,
   modules and benchmark crates on the host without `ODRA_MODULE`, like the templates' binaries do;
   they used to fail to link (no `main`, undefined `module_schema`).
