@@ -107,6 +107,15 @@ fqn = "factory::token::FToken"
 fqn = "factory::token::FactoryProxy"
 
 [[contracts]]
+fqn = "factory::dapp::DappCounter"
+
+[[contracts]]
+fqn = "factory::dapp::DappCounterFactory"
+
+[[contracts]]
+fqn = "factory::dapp::DappCounterSpawner"
+
+[[contracts]]
 fqn = "contracts::cep96_cep95::Cep96Cep95"
 
 [[contracts]]
@@ -130,3 +139,6 @@ fqn = "odra_modules::erc20::Erc20"
 
 [[contracts]]
 fqn = "odra_modules::cep18_token::Cep18"
+
+[[contracts]]
+fqn = "odra_modules::dapp::OwnedDappRegistry"

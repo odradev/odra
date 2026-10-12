@@ -47,9 +47,16 @@ impl TryFrom<&'_ ModuleImplIR> for FactoryContractEpcFn {
         let fun = module.factory_fn();
         let entry_point =
             utils::expr::new_entry_point(fun.name_str(), fun.raw_typed_args(), fun.is_payable(), false);
+        let get_dapp_registry = module.factory_get_dapp_registry_fn();
+        let get_dapp_registry = utils::expr::new_entry_point(
+            get_dapp_registry.name_str(),
+            vec![],
+            false,
+            false
+        );
         Ok(Self {
             sig: module.try_into()?,
-            entry_points_expr: utils::expr::vec(entry_point),
+            entry_points_expr: utils::expr::vec(quote::quote!(#entry_point, #get_dapp_registry)),
             caller: module.try_into()?
         })
     }
@@ -98,6 +105,15 @@ impl FactoryEntrypointCallerExpr {
 
         Ok(parse_quote!(
             #ty_caller::new(#env_ident.clone(), #entry_points_ident, |#contract_env_ident, #call_def_ident| {
+                // Livenet runs getters with this caller against the factory's storage.
+                if #call_def_ident.entry_point() == odra::factory_dapp::GET_DAPP_REGISTRY {
+                    return match odra::factory_dapp::dapp_registry(&#contract_env_ident) {
+                        Some(registry) => odra::casper_types::bytesrepr::ToBytes::to_bytes(&registry)
+                            .map(Into::into)
+                            .map_err(|err| OdraError::ExecutionError(err.into())),
+                        None => Err(OdraError::ExecutionError(ExecutionError::DappRegistryNotSet))
+                    };
+                }
                 if #call_def_ident.entry_point() == "new_contract" {
                     return Err(OdraError::VmError(
                         odra::VmError::Other(odra::prelude::String::from("Factory is not supported for this configuration."))

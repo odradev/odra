@@ -192,6 +192,10 @@ pub enum ExecutionError {
     PathIndexOutOfBounds = 137,
     /// A named argument is present but cannot be read as the expected type.
     InvalidArg = 138,
+    /// The factory does not belong to a dapp registry.
+    DappRegistryNotSet = 139,
+    /// The dapp registry is not a contract address.
+    DappRegistryNotAContract = 140,
     /// Maximum code for user errors
     MaxUserError = 64535,
     /// User error too high. The code should be in range 0..32767.
