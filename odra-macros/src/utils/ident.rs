@@ -121,3 +121,11 @@ pub fn from() -> syn::Ident {
 pub fn error() -> syn::Ident {
     format_ident!("error")
 }
+
+/// The module holding the `DappRegistryChanged` event of a factory module.
+pub fn factory_dapp_mod(factory_module_ident: &syn::Ident) -> syn::Ident {
+    format_ident!(
+        "__{}_dapp",
+        crate::utils::string::camel_to_snake(factory_module_ident)
+    )
+}

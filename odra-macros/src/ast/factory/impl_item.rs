@@ -83,7 +83,9 @@ mod test {
                         odra::entry_point::EntryPoint::FactoryUpgrade { 
                             args: vec![odra::args::parameter::<odra::prelude::string::String>("contract_name")], 
                         }, 
-                        odra::entry_point::EntryPoint::FactoryBatchUpgrade
+                        odra::entry_point::EntryPoint::FactoryBatchUpgrade,
+                        odra::entry_point::EntryPoint::FactoryGetDappRegistry,
+                        odra::entry_point::EntryPoint::FactorySetDappRegistry
                     ].into_iter().map(TryInto::try_into).collect::<Result<_, _>>().unwrap_or_default()
                 }
             }
@@ -175,6 +177,43 @@ mod test {
                         )
                     )
                 }
+
+                /// Returns the dapp registry the factory belongs to.
+                pub fn get_dapp_registry(&self) -> odra::prelude::Address {
+                    self.env.call_contract(
+                        self.address,
+                        odra::CallDef::new(
+                            odra::prelude::string::String::from("get_dapp_registry"),
+                            false,
+                            {
+                                let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
+                                if self.attached_value > odra::casper_types::U512::zero() {
+                                    let _ = __odra_named_args.insert("amount", self.attached_value);
+                                }
+                                __odra_named_args
+                            }
+                        ).with_amount(self.attached_value)
+                    )
+                }
+
+                /// Points the factory to the dapp registry. Only the factory access holder may call it.
+                pub fn set_factory_dapp_registry(&mut self, registry: odra::prelude::Address) {
+                    self.env.call_contract(
+                        self.address,
+                        odra::CallDef::new(
+                            odra::prelude::string::String::from("set_factory_dapp_registry"),
+                            true,
+                            {
+                                let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
+                                if self.attached_value > odra::casper_types::U512::zero() {
+                                    let _ = __odra_named_args.insert("amount", self.attached_value);
+                                }
+                                odra::args::EntrypointArgument::insert_runtime_arg(registry, "registry", &mut __odra_named_args);
+                                __odra_named_args
+                            }
+                        ).with_amount(self.attached_value)
+                    )
+                }
             }
 
             #[automatically_derived]
@@ -253,6 +292,17 @@ mod test {
                     >(&mut self, args: odra::prelude::BTreeMap<odra::prelude::string::String, T>) {
                         self.try_batch_upgrade_child_contract(args).unwrap()
                     }
+
+                    /// Returns the dapp registry the factory belongs to.
+                    pub fn get_dapp_registry(&self) -> odra::prelude::Address {
+                        self.try_get_dapp_registry().unwrap()
+                    }
+
+                    /// Points the factory to the dapp registry. Only the factory access holder may call it.
+                    pub fn set_factory_dapp_registry(&mut self, registry: odra::prelude::Address) {
+                        self.try_set_factory_dapp_registry(registry).unwrap()
+                    }
+
                 }
 
                 impl Erc20FactoryHostRef {
@@ -320,6 +370,45 @@ mod test {
                                 )
                             )
                     }
+
+                    /// Returns the dapp registry the factory belongs to.
+                    /// Does not fail in case of error, returns `odra::OdraResult` instead.
+                    pub fn try_get_dapp_registry(&self) -> OdraResult<odra::prelude::Address> {
+                        self.env.call_contract(
+                            self.address,
+                            odra::CallDef::new(
+                                odra::prelude::string::String::from("get_dapp_registry"),
+                                false,
+                                {
+                                    let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
+                                    if self.attached_value > odra::casper_types::U512::zero() {
+                                        let _ = __odra_named_args.insert("amount", self.attached_value);
+                                    }
+                                    __odra_named_args
+                                }
+                            ).with_amount(self.attached_value)
+                        )
+                    }
+
+                    /// Points the factory to the dapp registry. Only the factory access holder may call it.
+                    /// Does not fail in case of error, returns `odra::OdraResult` instead.
+                    pub fn try_set_factory_dapp_registry(&mut self, registry: odra::prelude::Address) -> OdraResult<()> {
+                        self.env.call_contract(
+                            self.address,
+                            odra::CallDef::new(
+                                odra::prelude::string::String::from("set_factory_dapp_registry"),
+                                true,
+                                {
+                                    let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
+                                    if self.attached_value > odra::casper_types::U512::zero() {
+                                        let _ = __odra_named_args.insert("amount", self.attached_value);
+                                    }
+                                    odra::args::EntrypointArgument::insert_runtime_arg(registry, "registry", &mut __odra_named_args);
+                                    __odra_named_args
+                                }
+                            ).with_amount(self.attached_value)
+                        )
+                    }
                 }
 
                 impl odra::contract_def::HasIdent for Erc20FactoryHostRef {
@@ -360,6 +449,10 @@ mod test {
                                         odra::prelude::string::String::from("args")
                                     )
                                 ]
+                            ),
+                            odra::entry_point_callback::EntryPoint::new(
+                                odra::prelude::string::String::from("get_dapp_registry"),
+                                odra::prelude::vec![]
                             )
                         ];
                         odra::entry_point_callback::EntryPointsCaller::new(entry_points, |__odra_contract_env, __odra_call_def| {
@@ -391,6 +484,12 @@ mod test {
                                         contract_address
                                     }
                                 ),
+                                odra::factory_dapp::GET_DAPP_REGISTRY => match odra::factory_dapp::dapp_registry(&__odra_contract_env) {
+                                    Some(registry) => odra::casper_types::bytesrepr::ToBytes::to_bytes(&registry)
+                                        .map(Into::into)
+                                        .map_err(|err| OdraError::ExecutionError(err.into())),
+                                    None => Err(OdraError::ExecutionError(ExecutionError::DappRegistryNotSet))
+                                },
                                 name => Err(OdraError::VmError(
                                     odra::VmError::NoSuchMethod(odra::prelude::String::from(name))
                                 ))
@@ -498,6 +597,8 @@ mod test {
                         args: vec![odra::args::parameter::<odra::prelude::string::String>("contract_name")],
                     });
                     entry_points.add(odra::entry_point::EntryPoint::FactoryBatchUpgrade);
+                    entry_points.add(odra::entry_point::EntryPoint::FactoryGetDappRegistry);
+                    entry_points.add(odra::entry_point::EntryPoint::FactorySetDappRegistry);
                     entry_points
                 }
 
@@ -668,6 +769,31 @@ mod test {
                 }
 
                 #[no_mangle]
+                fn get_dapp_registry() {
+                    let env = odra::odra_casper_wasm_env::WasmContractEnv::new_env();
+                    if let Some(registry) = odra::factory_dapp::dapp_registry(&env) {
+                        odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
+                            odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
+                                odra::casper_types::CLValue::from_t(registry)
+                            )
+                        );
+                    }
+                    env.revert(ExecutionError::DappRegistryNotSet);
+                }
+
+                #[no_mangle]
+                fn set_factory_dapp_registry() {
+                    let env = Rc::new(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
+                    let exec_env = odra::ExecutionEnv::new(env.clone());
+                    let registry = exec_env.get_named_arg::<odra::prelude::Address>(odra::factory_dapp::REGISTRY_ARG);
+                    let previous_registry = odra::factory_dapp::set_dapp_registry(&env, registry);
+                    env.emit_event(__erc20_factory_dapp::DappRegistryChanged {
+                        previous_registry,
+                        new_registry: registry
+                    });
+                }
+
+                #[no_mangle]
                 fn init() {
                     odra::odra_casper_wasm_env::host_functions::override_factory_caller();
                     __erc20_factory_exec_parts::execute_init(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
@@ -762,7 +888,19 @@ mod test {
                         odra::prelude::vec![
                             odra::schema::argument::<odra::casper_types::bytesrepr::Bytes>("args")
                         ]
-                    )
+                    ),
+                        odra::schema::entry_point::<odra::prelude::Address>(
+                            "get_dapp_registry",
+                            "Returns the dapp registry the factory belongs to.",
+                            false,
+                            odra::prelude::vec![]
+                        ),
+                        odra::schema::entry_point::<()>(
+                            "set_factory_dapp_registry",
+                            "Points the factory to the dapp registry. Only the factory access holder may call it.",
+                            true,
+                            odra::prelude::vec![odra::schema::argument::<odra::prelude::Address>("registry")]
+                        )
                 ]
             }
         }

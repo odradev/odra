@@ -268,3 +268,9 @@ pub fn bytes() -> syn::Type {
 pub fn batch_upgrade_args() -> syn::Type {
     parse_quote!(odra::args::BatchUpgradeArgs)
 }
+
+/// The `DappRegistryChanged` event a factory module emits, see `odra::factory_dapp`.
+pub fn factory_dapp_registry_changed(factory_module_ident: &syn::Ident) -> syn::Type {
+    let module = crate::utils::ident::factory_dapp_mod(factory_module_ident);
+    parse_quote!(#module::DappRegistryChanged)
+}

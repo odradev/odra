@@ -28,6 +28,26 @@
           }
         ]
       }
+    },
+    {
+      "struct": {
+        "name": "DappRegistryChanged",
+        "description": null,
+        "members": [
+          {
+            "name": "previous_registry",
+            "description": null,
+            "ty": {
+              "Option": "Key"
+            }
+          },
+          {
+            "name": "new_registry",
+            "description": null,
+            "ty": "Key"
+          }
+        ]
+      }
     }
   ],
   "errors": [],
@@ -92,12 +112,41 @@
       "return_ty": "Unit",
       "is_contract_context": true,
       "access": "public"
+    },
+    {
+      "name": "get_dapp_registry",
+      "description": "Returns the dapp registry the factory belongs to.",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "Key",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "set_factory_dapp_registry",
+      "description": "Points the factory to the dapp registry. Only the factory access holder may call it.",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "registry",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
     }
   ],
   "events": [
     {
       "name": "DappCounterFactoryContractDeployed",
       "ty": "DappCounterFactoryContractDeployed"
+    },
+    {
+      "name": "DappRegistryChanged",
+      "ty": "DappRegistryChanged"
     }
   ],
   "call": {

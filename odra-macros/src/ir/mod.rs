@@ -491,6 +491,35 @@ impl ModuleImplIR {
         }))
     }
 
+    /// The factory entry point returning the factory's dapp registry, see `odra::factory_dapp`.
+    pub fn factory_get_dapp_registry_fn(&self) -> FnIR {
+        let ty_address = utils::ty::address();
+        FnIR::Impl(FnImplIR::new(parse_quote! {
+            /// Returns the dapp registry the factory belongs to.
+            pub fn get_dapp_registry(&self) -> #ty_address {
+            }
+        }))
+    }
+
+    /// The factory entry point setting the factory's dapp registry, see `odra::factory_dapp`.
+    pub fn factory_set_dapp_registry_fn(&self) -> FnIR {
+        let ty_address = utils::ty::address();
+        FnIR::Impl(FnImplIR::new(parse_quote! {
+            /// Points the factory to the dapp registry. Only the factory access holder may call it.
+            pub fn set_factory_dapp_registry(&mut self, registry: #ty_address) {
+            }
+        }))
+    }
+
+    /// Returns the child module's `get_dapp_registry`, which shares the exported function with the
+    /// factory's one.
+    pub fn child_get_dapp_registry_fn(&self) -> Option<FnIR> {
+        self.functions()
+            .unwrap_or_default()
+            .into_iter()
+            .find(|f| f.name_str() == "get_dapp_registry")
+    }
+
     pub fn upgrader(&self) -> Option<FnIR> {
         self.functions()
             .unwrap_or_default()
@@ -651,13 +680,14 @@ impl FnIR {
     }
 }
 
-const PROTECTED_FUNCTIONS: [&str; 6] = [
+const PROTECTED_FUNCTIONS: [&str; 7] = [
     "new",
     "env",
     "address",
     "new_contract",
     "upgrade_child_contract",
-    "batch_upgrade_child_contract"
+    "batch_upgrade_child_contract",
+    "set_factory_dapp_registry"
 ];
 const PROTECTED_ARGS: [&str; 2] = ["gas", "attached_value"];
 

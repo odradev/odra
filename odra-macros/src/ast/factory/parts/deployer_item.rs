@@ -67,6 +67,13 @@ impl TryFrom<&'_ ModuleImplIR> for FactoryContractEpcFn {
                 #ty_entry_point_arg::new::<#ty_batch_upgrade_args<odra::host::NoArgs>>(#args_name)
             ]
         )));
+        let get_dapp_registry = module.factory_get_dapp_registry_fn();
+        entry_points.push(utils::expr::new_entry_point(
+            get_dapp_registry.name_str(),
+            vec![],
+            false,
+            false
+        ));
         Ok(Self {
             sig: module.try_into()?,
             entry_points_expr: utils::expr::vec(entry_points),
@@ -142,11 +149,21 @@ impl FactoryEntrypointCallerExpr {
             }
         })
         .collect::<proc_macro2::TokenStream>();
+        // The getter reads the factory's storage, on OdraVM and livenet alike; see `odra::factory_dapp`.
+        let dapp_registry_branch = quote::quote! {
+            odra::factory_dapp::GET_DAPP_REGISTRY => match odra::factory_dapp::dapp_registry(&#contract_env_ident) {
+                Some(registry) => odra::casper_types::bytesrepr::ToBytes::to_bytes(&registry)
+                    .map(Into::into)
+                    .map_err(|err| OdraError::ExecutionError(err.into())),
+                None => Err(OdraError::ExecutionError(ExecutionError::DappRegistryNotSet))
+            },
+        };
 
         Ok(parse_quote!(
             #ty_caller::new(#entry_points_ident, |#contract_env_ident, #call_def_ident| {
                 match #call_def_ident.entry_point() {
                     #branches
+                    #dapp_registry_branch
                     name => Err(OdraError::VmError(
                         odra::VmError::NoSuchMethod(odra::prelude::String::from(name))
                     ))
