@@ -3,6 +3,7 @@ use derive_try_from_ref::TryFromRef;
 use crate::{
     ast::{
         blueprint::BlueprintItem,
+        parts_utils::OdraModuleCfgItem,
         factory::parts::{
             FactoryContractItem, FactoryExecPartsItem, FactoryHasEntrypointsImplItem,
             FactoryRefItem, FactoryTestPartsItem, FactoryWasmPartsItem
@@ -24,9 +25,9 @@ pub struct FactoryModuleImplItem {
     test_parts: FactoryTestPartsItem,
     test_parts_reexport: TestPartsReexportItem,
     exec_parts: FactoryExecPartsItem,
-    wasm_parts: FactoryWasmPartsItem,
+    wasm_parts: OdraModuleCfgItem<FactoryWasmPartsItem>,
     contract_item: FactoryContractItem,
-    blueprint: BlueprintItem,
+    blueprint: OdraModuleCfgItem<BlueprintItem>,
     schema_entrypoints: FactorySchemaEntrypointsItem,
     schema_custom_types: SchemaCustomTypesItem
 }
@@ -458,6 +459,8 @@ mod test {
                 }
             }
 
+            #[allow(unexpected_cfgs)]
+            const _: () = {
             #[cfg(target_arch = "wasm32")]
             #[cfg(any(odra_module = "Erc20Factory", odra_module = "unknown_crate::Erc20Factory"))]
             mod __erc20_factory_wasm_parts {
@@ -697,6 +700,7 @@ mod test {
                     __erc20_factory_exec_parts::execute_approve(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                 }
             }
+            };
 
             impl odra::OdraContract for Erc20Factory {
                 #[cfg(not(target_arch = "wasm32"))]
@@ -708,6 +712,8 @@ mod test {
                 type UpgradeArgs = odra::host::NoArgs;
             }
 
+            #[allow(unexpected_cfgs)]
+            const _: () = {
             #[cfg(any(odra_module = "Erc20Factory", odra_module = "unknown_crate::Erc20Factory"))]
             mod __erc20_factory_schema {
                 use super::*;
@@ -717,6 +723,7 @@ mod test {
                     odra::contract_def::ContractBlueprint::new::<Erc20Factory>()
                 }
             }
+            };
         #[automatically_derived]
         #[cfg(not(target_arch = "wasm32"))]
         impl odra::schema::SchemaEntrypoints for Erc20Factory {

@@ -146,6 +146,13 @@ Changelog for `odra`.
   once at the project root, workspace-inherited package fields).
 
 ### Fixed
+- No more `unexpected cfg condition name: odra_module` warnings. The code `#[odra::module]` gates on
+  `odra_module` is wrapped in a block that allows the lint, so a crate defining modules without
+  `odra_build::build()` in its `build.rs` (a library of modules, for example) compiles cleanly, and
+  `odra_build::build()` declares `odra_backend` to check-cfg next to `odra_module`.
+- `cargo build --workspace` builds the `_build_contract` and `_build_schema` binaries of the examples,
+  modules and benchmark crates on the host without `ODRA_MODULE`, like the templates' binaries do;
+  they used to fail to link (no `main`, undefined `module_schema`).
 - odra-cli no longer needs a livenet configuration before it can parse its arguments: `--help` and
   `--version` (top-level and of any subcommand), usage errors and `completions` work without any
   `ODRA_CASPER_LIVENET_*` variable, and `config` reports what is set and what is missing (the caller
