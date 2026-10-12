@@ -80,6 +80,8 @@ jobs:
         run: just install-cargo-odra
       - name: Run OdraVM tests
         run: just test-odra test-modules-on-odravm test-examples-on-odravm
+      - name: Check the committed schemas are up to date
+        run: just check-schemas
 
   casper-vm:
     name: CasperVM tests

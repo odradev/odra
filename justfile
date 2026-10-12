@@ -163,3 +163,14 @@ generate-schemas:
     cd modules && cargo odra schema
     cd examples && cargo odra schema
 
+SCHEMA_DIRS := "modules/resources examples/resources/casper_contract_schemas examples/resources/legacy"
+
+# Fail if the committed schemas differ from freshly generated ones (fix: generate-schemas, commit).
+check-schemas: generate-schemas
+    @if [ -n "$(git status --porcelain -- {{SCHEMA_DIRS}})" ]; then \
+        git status --short -- {{SCHEMA_DIRS}}; \
+        git --no-pager diff --stat -- {{SCHEMA_DIRS}}; \
+        echo "Schemas are out of date: run 'just generate-schemas' and commit the result."; \
+        exit 1; \
+    fi
+

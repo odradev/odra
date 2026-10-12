@@ -84,6 +84,10 @@ Changelog for `odra`.
   examples build `Erc20` and `Cep18` this way instead of copying them from `modules/wasm` (#617).
 
 ### Changed
+- The committed contract schemas of `odra-modules` and the examples (`resources/casper_contract_schemas`,
+  `resources/legacy`) are regenerated: entry points and types added since 2.5.0, schemas of contracts
+  that had none, and the current toolchain and version. CI fails when they drift from the code
+  (`just check-schemas`).
 - `EntryPointsCaller` no longer holds a `HostEnv`; the backend hands the contract environment to
   every call. `EntryPointsCaller::new(env, entry_points, f)` is now `EntryPointsCaller::new(entry_points, f)`,
   `EntryPointsCaller::call(call_def)` is `call(contract_env, call_def)` (as are `ContractContainer::call`
