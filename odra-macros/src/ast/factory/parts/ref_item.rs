@@ -29,9 +29,14 @@ impl TryFrom<&'_ ModuleImplIR> for ContractRefImplItem {
 
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         let fns = [module.factory_fn(), module.factory_upgrade_fn(), module.factory_batch_upgrade_fn()];
+        let dapp_fns = [module.factory_get_dapp_registry_fn(), module.factory_set_dapp_registry_fn()];
         Ok(Self {
             ref_ident: module.contract_ref_ident()?,
-            factory_fns: fns.iter().map(|fun| ref_utils::factory_contract_function_item(fun, false)).collect()
+            factory_fns: fns
+                .iter()
+                .map(|fun| ref_utils::factory_contract_function_item(fun, false))
+                .chain(dapp_fns.iter().map(|fun| ref_utils::contract_function_item(fun, false)))
+                .collect()
         })
     }
 }
@@ -154,6 +159,43 @@ mod test {
                                     },
                                 )
                         )
+                }
+
+                /// Returns the dapp registry the factory belongs to.
+                pub fn get_dapp_registry(&self) -> odra::prelude::Address {
+                    self.env.call_contract(
+                        self.address,
+                        odra::CallDef::new(
+                            odra::prelude::string::String::from("get_dapp_registry"),
+                            false,
+                            {
+                                let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                if self.attached_value > odra::casper_types::U512::zero() {
+                                    let _ = named_args.insert("amount", self.attached_value);
+                                }
+                                named_args
+                            }
+                        ).with_amount(self.attached_value)
+                    )
+                }
+
+                /// Points the factory to the dapp registry. Only the factory access holder may call it.
+                pub fn set_factory_dapp_registry(&mut self, registry: odra::prelude::Address) {
+                    self.env.call_contract(
+                        self.address,
+                        odra::CallDef::new(
+                            odra::prelude::string::String::from("set_factory_dapp_registry"),
+                            true,
+                            {
+                                let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                if self.attached_value > odra::casper_types::U512::zero() {
+                                    let _ = named_args.insert("amount", self.attached_value);
+                                }
+                                odra::args::EntrypointArgument::insert_runtime_arg(registry, "registry", &mut named_args);
+                                named_args
+                            }
+                        ).with_amount(self.attached_value)
+                    )
                 }
             }
 

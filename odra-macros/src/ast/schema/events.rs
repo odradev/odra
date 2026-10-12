@@ -99,6 +99,7 @@ impl ToTokens for FactorySchemaEventsItem {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let module_ident = &self.module_ident;
         let event_ident = &self.event_ident;
+        let dapp_event = crate::utils::ty::factory_dapp_registry_changed(module_ident);
         let item = quote::quote! {
             #[automatically_derived]
             #[cfg(not(target_arch = "wasm32"))]
@@ -107,12 +108,18 @@ impl ToTokens for FactorySchemaEventsItem {
                     odra::prelude::vec![
                         odra::schema::event(
                             &<#event_ident as odra::casper_event_standard::EventInstance>::name()
+                        ),
+                        odra::schema::event(
+                            &<#dapp_event as odra::casper_event_standard::EventInstance>::name()
                         )
                     ]
                 }
 
                 fn custom_types() -> odra::prelude::Vec<Option<odra::schema::casper_contract_schema::CustomType>> {
                     <#event_ident as odra::schema::SchemaCustomTypes>::schema_types()
+                        .into_iter()
+                        .chain(<#dapp_event as odra::schema::SchemaCustomTypes>::schema_types())
+                        .collect()
                 }
             }
         };
@@ -195,6 +202,9 @@ mod test {
                     odra::prelude::vec![
                         odra::schema::event(
                             &<CounterPackContractDeployed as odra::casper_event_standard::EventInstance>::name()
+                        ),
+                        odra::schema::event(
+                            &<__counter_pack_dapp::DappRegistryChanged as odra::casper_event_standard::EventInstance>::name()
                         )
                     ]
                 }
@@ -203,6 +213,9 @@ mod test {
                     ) -> odra::prelude::Vec<Option<odra::schema::casper_contract_schema::CustomType>>
                 {
                     <CounterPackContractDeployed as odra::schema::SchemaCustomTypes>::schema_types()
+                        .into_iter()
+                        .chain(<__counter_pack_dapp::DappRegistryChanged as odra::schema::SchemaCustomTypes>::schema_types())
+                        .collect()
                 }
             }
         };

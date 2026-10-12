@@ -6,6 +6,7 @@ use crate::{ast::{events_item::EventsFnsItem, utils::ImplItem}, utils::{self, mi
 
 pub struct FactoryEventItem {
     event_ident: syn::Ident,
+    dapp_mod_ident: syn::Ident,
 }
 
 impl TryFrom<&'_ ModuleStructIR> for FactoryEventItem {
@@ -14,6 +15,7 @@ impl TryFrom<&'_ ModuleStructIR> for FactoryEventItem {
     fn try_from(module: &'_ ModuleStructIR) -> Result<Self, Self::Error> {
         Ok(Self {
             event_ident: format_ident!("{}ContractDeployed", module.module_ident()),
+            dapp_mod_ident: utils::ident::factory_dapp_mod(&module.module_ident()),
         })
     }
 }
@@ -21,6 +23,7 @@ impl TryFrom<&'_ ModuleStructIR> for FactoryEventItem {
 impl ToTokens for FactoryEventItem {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let event_ident = &self.event_ident;
+        let dapp_mod_ident = &self.dapp_mod_ident;
         let ty_string = utils::ty::string();
         let ty_address = utils::ty::address();
         tokens.append_all(quote::quote! {
@@ -28,6 +31,21 @@ impl ToTokens for FactoryEventItem {
             pub struct #event_ident {
                 pub contract_name: #ty_string,
                 pub contract_address: #ty_address
+            }
+
+            /// The event of the factory joining a dapp registry, named like the one of `DappContract`s.
+            #[doc(hidden)]
+            pub mod #dapp_mod_ident {
+                use odra::prelude::*;
+
+                /// Emitted when the factory points to a new dapp registry.
+                #[odra::event]
+                pub struct DappRegistryChanged {
+                    /// The previous registry, if any.
+                    pub previous_registry: Option<#ty_address>,
+                    /// The new registry.
+                    pub new_registry: #ty_address
+                }
             }
         });
     }
@@ -43,9 +61,10 @@ impl TryFrom<&'_ ModuleStructIR> for FactoryHasEventsImplItem {
 
     fn try_from(ir: &'_ ModuleStructIR) -> Result<Self, Self::Error> {
         let event_ident = format_ident!("{}ContractDeployed", ir.module_ident());
+        let dapp_event = utils::ty::factory_dapp_registry_changed(&ir.module_ident());
         Ok(Self {
             impl_item: ImplItem::has_events(ir)?,
-            event_ident: EventsFnsItem::single(&event_ident.as_type())
+            event_ident: EventsFnsItem::many(&[event_ident.as_type(), dapp_event])
         })
     }
 }
@@ -75,7 +94,8 @@ mod test {
             impl odra::contract_def::HasEvents for CounterPack {
                 fn events() -> odra::prelude::vec::Vec<odra::contract_def::Event> {
                     odra::prelude::vec![
-                        <CounterPackContractDeployed as odra::contract_def::IntoEvent>::into_event()
+                        <CounterPackContractDeployed as odra::contract_def::IntoEvent>::into_event(),
+                        <__counter_pack_dapp::DappRegistryChanged as odra::contract_def::IntoEvent>::into_event()
                     ]
                 }
 
@@ -84,6 +104,9 @@ mod test {
                         odra::prelude::vec![(
                             <CounterPackContractDeployed as odra::casper_event_standard::EventInstance>::name(), 
                             <CounterPackContractDeployed as odra::casper_event_standard::EventInstance>::schema()
+                        ), (
+                            <__counter_pack_dapp::DappRegistryChanged as odra::casper_event_standard::EventInstance>::name(),
+                            <__counter_pack_dapp::DappRegistryChanged as odra::casper_event_standard::EventInstance>::schema()
                         )]
                     )
                 }

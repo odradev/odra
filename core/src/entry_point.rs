@@ -44,6 +44,10 @@ pub enum EntryPoint {
     },
     /// A factory batch upgrade entry point.
     FactoryBatchUpgrade,
+    /// The factory entry point returning its dapp registry.
+    FactoryGetDappRegistry,
+    /// The factory entry point setting its dapp registry, callable by the factory access holder.
+    FactorySetDappRegistry,
     /// An upgrader entry point.
     Upgrader {
         /// The arguments for the upgrader entry point.
@@ -74,7 +78,9 @@ impl From<EntryPoint> for casper_types::EntityEntryPoint {
             EntryPoint::Factory { args } => factory(args),
             EntryPoint::Upgrader { args } => upgrader(args),
             EntryPoint::FactoryUpgrade { args } => factory_upgrade(args),
-            EntryPoint::FactoryBatchUpgrade => factory_batch_upgrade()
+            EntryPoint::FactoryBatchUpgrade => factory_batch_upgrade(),
+            EntryPoint::FactoryGetDappRegistry => factory_get_dapp_registry(),
+            EntryPoint::FactorySetDappRegistry => factory_set_dapp_registry()
         }
     }
 }
@@ -139,6 +145,28 @@ impl TryFrom<EntryPoint> for crate::contract_def::Entrypoint {
                         is_required: true
                     }
                 ],
+                is_mutable: true,
+                return_ty: <() as crate::casper_types::CLTyped>::cl_type(),
+                ty: crate::contract_def::EntrypointType::Public,
+                attributes: crate::prelude::vec![]
+            }),
+            EntryPoint::FactoryGetDappRegistry => Ok(crate::contract_def::Entrypoint {
+                name: crate::prelude::String::from(crate::factory_dapp::GET_DAPP_REGISTRY),
+                args: crate::prelude::vec![],
+                is_mutable: false,
+                return_ty: <crate::prelude::Address as crate::casper_types::CLTyped>::cl_type(),
+                ty: crate::contract_def::EntrypointType::Public,
+                attributes: crate::prelude::vec![]
+            }),
+            EntryPoint::FactorySetDappRegistry => Ok(crate::contract_def::Entrypoint {
+                name: crate::prelude::String::from(crate::factory_dapp::SET_DAPP_REGISTRY),
+                args: crate::prelude::vec![crate::contract_def::Argument {
+                    name: crate::prelude::String::from(crate::factory_dapp::REGISTRY_ARG),
+                    ty: <crate::prelude::Address as crate::casper_types::CLTyped>::cl_type(),
+                    is_ref: false,
+                    is_slice: false,
+                    is_required: true
+                }],
                 is_mutable: true,
                 return_ty: <() as crate::casper_types::CLTyped>::cl_type(),
                 ty: crate::contract_def::EntrypointType::Public,
@@ -229,6 +257,31 @@ fn factory_batch_upgrade() -> casper_types::EntityEntryPoint {
     casper_types::EntityEntryPoint::new(
         "batch_upgrade_child_contract",
         vec![casper_types::Parameter::new("args", Vec::<u8>::cl_type())],
+        CLType::Unit,
+        casper_types::EntryPointAccess::Groups(vec![casper_types::Group::new("factory_group")]),
+        casper_types::EntryPointType::Called,
+        casper_types::EntryPointPayment::Caller
+    )
+}
+
+fn factory_get_dapp_registry() -> casper_types::EntityEntryPoint {
+    casper_types::EntityEntryPoint::new(
+        crate::factory_dapp::GET_DAPP_REGISTRY,
+        vec![],
+        crate::prelude::Address::cl_type(),
+        casper_types::EntryPointAccess::Public,
+        casper_types::EntryPointType::Called,
+        casper_types::EntryPointPayment::Caller
+    )
+}
+
+fn factory_set_dapp_registry() -> casper_types::EntityEntryPoint {
+    casper_types::EntityEntryPoint::new(
+        crate::factory_dapp::SET_DAPP_REGISTRY,
+        vec![casper_types::Parameter::new(
+            crate::factory_dapp::REGISTRY_ARG,
+            crate::prelude::Address::cl_type()
+        )],
         CLType::Unit,
         casper_types::EntryPointAccess::Groups(vec![casper_types::Group::new("factory_group")]),
         casper_types::EntryPointType::Called,

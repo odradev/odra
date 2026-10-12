@@ -140,6 +140,8 @@ fn get_internal_error_name(error_num: u16) -> OdraError {
         ExecutionError::CannotGetAnImmediateCaller,
         ExecutionError::PathIndexOutOfBounds,
         ExecutionError::InvalidArg,
+        ExecutionError::DappRegistryNotSet,
+        ExecutionError::DappRegistryNotAContract,
         ExecutionError::MaxUserError,
         ExecutionError::UserErrorTooHigh
     )

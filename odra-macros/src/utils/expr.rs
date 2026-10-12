@@ -238,6 +238,14 @@ pub fn factory_batch_upgrade_ep() -> syn::Expr {
     parse_quote!(odra::entry_point::EntryPoint::FactoryBatchUpgrade)
 }
 
+pub fn factory_get_dapp_registry_ep() -> syn::Expr {
+    parse_quote!(odra::entry_point::EntryPoint::FactoryGetDappRegistry)
+}
+
+pub fn factory_set_dapp_registry_ep() -> syn::Expr {
+    parse_quote!(odra::entry_point::EntryPoint::FactorySetDappRegistry)
+}
+
 pub fn template_ep(name: String, args_expr: syn::Expr, ret_ty_expr: syn::Expr) -> syn::Expr {
     parse_quote!(odra::entry_point::EntryPoint::Template {
         name: #name,
