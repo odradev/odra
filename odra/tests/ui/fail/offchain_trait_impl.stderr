@@ -1,0 +1,5 @@
+error: `#[odra(offchain)]` on `value`: a trait impl cannot have offchain functions: the trait is also implemented by the ContractRef, where an offchain function has no meaning. Move it to a plain `impl` block of the module
+  --> tests/ui/fail/offchain_trait_impl.rs:15:5
+   |
+15 |     fn value(&self) -> u32 {
+   |     ^^^^^^^^^^^^^^^^^^^^^^

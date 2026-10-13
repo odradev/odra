@@ -1,0 +1,5 @@
+error: `#[odra(offchain)]` on `bump`: an offchain function runs on the host and cannot change the state: take `&self`
+  --> tests/ui/fail/offchain_mut.rs:11:9
+   |
+11 |     pub fn bump(&mut self) {
+   |         ^^^^^^^^^^^^^^^^^^

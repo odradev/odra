@@ -1,0 +1,35 @@
+error: Entrypoint name `new` is reserved
+  --> tests/ui/fail/reserved_entrypoint_names.rs:11:9
+   |
+11 |     pub fn new(&self) -> u32 {
+   |         ^^^^^^^^^^^^^^^^^^^^
+
+error: Entrypoint name `env` is reserved
+  --> tests/ui/fail/reserved_entrypoint_names.rs:23:9
+   |
+23 |     pub fn env(&self) -> u32 {
+   |         ^^^^^^^^^^^^^^^^^^^^
+
+error: Entrypoint name `address` is reserved
+  --> tests/ui/fail/reserved_entrypoint_names.rs:35:9
+   |
+35 |     pub fn address(&self) -> u32 {
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: Entrypoint name `new_contract` is reserved
+  --> tests/ui/fail/reserved_entrypoint_names.rs:47:9
+   |
+47 |     pub fn new_contract(&self) -> u32 {
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: Entrypoint name `upgrade_child_contract` is reserved
+  --> tests/ui/fail/reserved_entrypoint_names.rs:59:9
+   |
+59 |     pub fn upgrade_child_contract(&self) -> u32 {
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: Entrypoint name `batch_upgrade_child_contract` is reserved
+  --> tests/ui/fail/reserved_entrypoint_names.rs:71:9
+   |
+71 |     pub fn batch_upgrade_child_contract(&self) -> u32 {
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

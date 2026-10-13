@@ -1,0 +1,23 @@
+error: `#[odra(payable)]` is not allowed on `init`: `init` cannot receive attached tokens - there is no way to attach CSPR to it. Use a separate payable entrypoint instead
+  --> tests/ui/fail/attrs_on_init_and_upgrade.rs:11:5
+   |
+11 |     #[odra(payable)]
+   |     ^^^^^^^^^^^^^^^^
+
+error: `#[odra(non_reentrant)]` is not allowed on `init`: it is not applied when generating the `init` entrypoint
+  --> tests/ui/fail/attrs_on_init_and_upgrade.rs:22:5
+   |
+22 |     #[odra(non_reentrant)]
+   |     ^^^^^^^^^^^^^^^^^^^^^^
+
+error: `#[odra(payable)]` is not allowed on `upgrade`: `upgrade` cannot receive attached tokens - there is no way to attach CSPR to it. Use a separate payable entrypoint instead
+  --> tests/ui/fail/attrs_on_init_and_upgrade.rs:33:5
+   |
+33 |     #[odra(payable)]
+   |     ^^^^^^^^^^^^^^^^
+
+error: `#[odra(non_reentrant)]` is not allowed on `upgrade`: it is not applied when generating the `upgrade` entrypoint
+  --> tests/ui/fail/attrs_on_init_and_upgrade.rs:44:5
+   |
+44 |     #[odra(non_reentrant)]
+   |     ^^^^^^^^^^^^^^^^^^^^^^

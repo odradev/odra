@@ -1,0 +1,5 @@
+error: `events` is not allowed on a trait; `#[odra::module]` on a trait takes no arguments
+ --> tests/ui/fail/module_args_on_trait.rs:1:16
+  |
+1 | #[odra::module(events = [u32])]
+  |                ^^^^^^

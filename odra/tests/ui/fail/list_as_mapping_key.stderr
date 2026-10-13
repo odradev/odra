@@ -1,0 +1,48 @@
+error[E0277]: the trait bound `odra::prelude::List<u32>: odra::casper_types::bytesrepr::ToBytes` is not satisfied
+ --> tests/ui/fail/list_as_mapping_key.rs:6:13
+  |
+6 |     values: Mapping<List<u32>, u32>
+  |             ^^^^^^^^^^^^^^^^^^^^^^^ the trait `odra::casper_types::bytesrepr::ToBytes` is not implemented for `odra::prelude::List<u32>`
+  |
+  = help: the following other types implement trait `odra::casper_types::bytesrepr::ToBytes`:
+            &T
+            &str
+            ()
+            (T1, T2)
+            (T1, T2, T3)
+            (T1, T2, T3, T4)
+            (T1, T2, T3, T4, T5)
+            (T1, T2, T3, T4, T5, T6)
+          and $N others
+  = note: required for `odra::prelude::Mapping<odra::prelude::List<u32>, u32>` to implement `ModuleComponent`
+
+error[E0277]: the trait bound `odra::prelude::List<u32>: odra::casper_types::bytesrepr::ToBytes` is not satisfied
+ --> tests/ui/fail/list_as_mapping_key.rs:6:13
+  |
+6 |     values: Mapping<List<u32>, u32>
+  |             ^^^^^^^^^^^^^^^^^^^^^^^ the trait `odra::casper_types::bytesrepr::ToBytes` is not implemented for `odra::prelude::List<u32>`
+  |
+  = help: the following other types implement trait `odra::casper_types::bytesrepr::ToBytes`:
+            &T
+            &str
+            ()
+            (T1, T2)
+            (T1, T2, T3)
+            (T1, T2, T3, T4)
+            (T1, T2, T3, T4, T5)
+            (T1, T2, T3, T4, T5, T6)
+          and $N others
+  = note: required for `odra::prelude::Mapping<odra::prelude::List<u32>, u32>` to implement `ModulePrimitive`
+  = note: required for `odra::prelude::Mapping<odra::prelude::List<u32>, u32>` to implement `HasEvents`
+
+error[E0277]: the trait bound `odra::prelude::Mapping<odra::prelude::List<u32>, u32>: SchemaStorageLayout` is not satisfied
+ --> tests/ui/fail/list_as_mapping_key.rs:6:13
+  |
+6 |     values: Mapping<List<u32>, u32>
+  |             ^^^^^^^^^^^^^^^^^^^^^^^ the trait `SchemaStorageLayout` is not implemented for `odra::prelude::Mapping<odra::prelude::List<u32>, u32>`
+  |
+help: the trait `SchemaStorageLayout` is implemented for `odra::prelude::Mapping<K, V>`
+ --> $WORKSPACE/odra-schema/src/storage_layout.rs
+  |
+  | impl<K: NamedCLTyped + ToBytes, V: SchemaStorageLayout> SchemaStorageLayout for Mapping<K, V> {
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

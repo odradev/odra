@@ -1,0 +1,5 @@
+error: Invalid type. Only structs and enums are supported
+ --> tests/ui/fail/odra_type_on_fn.rs:2:1
+  |
+2 | pub fn not_a_type() {}
+  | ^^^^^^^^^^^^^^^^^^^^^^

@@ -1,0 +1,11 @@
+error: `#[odra(offchain)]` on `value`: an offchain function is never called on chain, so `payable` and `non_reentrant` do not apply to it
+  --> tests/ui/fail/offchain_payable.rs:11:9
+   |
+11 |     pub fn value(&self) -> u32 {
+   |         ^^^^^^^^^^^^^^^^^^^^^^
+
+error: `#[odra(offchain)]` on `value`: an offchain function is never called on chain, so `payable` and `non_reentrant` do not apply to it
+  --> tests/ui/fail/offchain_payable.rs:24:9
+   |
+24 |     pub fn value(&self) -> u32 {
+   |         ^^^^^^^^^^^^^^^^^^^^^^
