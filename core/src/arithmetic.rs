@@ -72,10 +72,28 @@ pub const fn u256(n: u128) -> U256 {
     U256([n as u64, (n >> 64) as u64, 0, 0])
 }
 
+/// Builds a [U512] from a `u128` in a const context.
+///
+/// [U512] is eight 64-bit limbs, little-endian, so a `u128` fills the low two
+/// and leaves the high six zero. `U512::from` cannot be used here because it is
+/// not a `const fn`, which is the whole point: this can initialise a `const` or
+/// `static`, where a runtime conversion cannot.
+///
+/// ```
+/// use odra_core::prelude::u512;
+/// use odra_core::casper_types::U512;
+///
+/// const ONE_CSPR: U512 = u512(1_000_000_000);
+/// assert_eq!(ONE_CSPR, U512::from(1_000_000_000u64));
+/// ```
+pub const fn u512(n: u128) -> U512 {
+    U512([n as u64, (n >> 64) as u64, 0, 0, 0, 0, 0, 0])
+}
+
 #[cfg(test)]
 mod test {
-    use crate::arithmetic::{u256, ArithmeticsError, OverflowingSub};
-    use casper_types::U256;
+    use crate::arithmetic::{u256, u512, ArithmeticsError, OverflowingSub};
+    use casper_types::{U256, U512};
 
     use super::OverflowingAdd;
 
@@ -132,5 +150,39 @@ mod test {
         assert_eq!(ZERO, U256::zero());
         assert_eq!(HIGH_LIMB, U256::from(u64::MAX) + U256::from(1));
         assert_eq!(MAX, U256::from(u128::MAX));
+    }
+
+    #[test]
+    fn test_u512_zero() {
+        assert_eq!(u512(0), U512::zero());
+    }
+
+    #[test]
+    fn test_u512_small_value() {
+        assert_eq!(u512(42), U512::from(42));
+    }
+
+    #[test]
+    fn test_u512_above_u64_max() {
+        let n = u128::from(u64::MAX) + 1;
+        assert_eq!(u512(n), U512::from(u64::MAX) + U512::from(1));
+    }
+
+    #[test]
+    fn test_u512_u128_max() {
+        assert_eq!(u512(u128::MAX), U512::from(u128::MAX));
+    }
+
+    /// Same as [test_u256_is_usable_in_a_const_context]: a `const` item fails
+    /// to build if `u512` ever stops being a `const fn`.
+    #[test]
+    fn test_u512_is_usable_in_a_const_context() {
+        const ZERO: U512 = u512(0);
+        const HIGH_LIMB: U512 = u512(1 << 64);
+        const MAX: U512 = u512(u128::MAX);
+
+        assert_eq!(ZERO, U512::zero());
+        assert_eq!(HIGH_LIMB, U512::from(u64::MAX) + U512::from(1));
+        assert_eq!(MAX, U512::from(u128::MAX));
     }
 }

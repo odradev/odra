@@ -82,6 +82,9 @@ Changelog for `odra`.
   (`fqn = "odra_modules::erc20::Erc20"`) builds that crate's contract wasm and schema from the current
   project, so `cargo odra build -c Erc20` works in any project that depends on `odra-modules`; the
   examples build `Erc20` and `Cep18` this way instead of copying them from `modules/wasm` (#617).
+- `const fn u512(n: u128) -> U512` in the prelude next to `u256`, so CSPR amounts and other `U512`
+  values can initialise a `const` or `static`. `cspr!` with a literal is documented and tested as a
+  constant expression, so `const STAKE: U512 = u512(cspr!(500) as u128);` works.
 
 ### Changed
 - The committed contract schemas of `odra-modules` and the examples (`resources/casper_contract_schemas`,
