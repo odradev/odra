@@ -93,6 +93,9 @@ Changelog for `odra`.
   every `ContractRef`, and `HostRef` imported anonymously by the prelude, so a `#[odra::ref_helpers]`
   helper can call `self.contract_address()` on both refs without extra imports, e.g.
   `self.balance_of(&self.contract_address())`.
+- odra-cli: `Scenario::captures_events(&self) -> bool` (default `false`) lets a scenario opt in to event
+  capturing, so `last_call()` of the calls it makes returns their events. Scenarios keep running
+  without it by default, as capturing reads the events of every deployed contract after every call.
 
 ### Changed
 - The committed contract schemas of `odra-modules` and the examples (`resources/casper_contract_schemas`,
