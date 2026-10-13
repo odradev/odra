@@ -1,60 +1,7 @@
-use std::{
-    collections::HashSet,
-    convert::TryFrom,
-    fmt::{self, Formatter}
-};
+use std::{collections::HashSet, convert::TryFrom};
 
-use itertools::{Either, Itertools};
-use proc_macro2::{Ident, Span};
 use quote::ToTokens;
 use syn::{punctuated::Punctuated, Meta, Path, Token};
-
-#[derive(Clone)]
-pub enum Attribute {
-    Odra(OdraAttribute),
-    Other(Box<syn::Attribute>)
-}
-
-impl PartialEq for Attribute {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Attribute::Odra(a), Attribute::Odra(b)) => a == b,
-            (Attribute::Other(a), Attribute::Other(b)) => {
-                a.to_token_stream().to_string() == b.to_token_stream().to_string()
-            }
-            _ => false
-        }
-    }
-}
-
-impl std::fmt::Debug for Attribute {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            Attribute::Odra(odra_attr) => odra_attr.fmt(f),
-            Attribute::Other(other_attr) => f
-                .debug_struct("syn::Attribute")
-                .field("value", &other_attr.to_token_stream().to_string())
-                .finish()
-        }
-    }
-}
-
-impl TryFrom<syn::Attribute> for Attribute {
-    type Error = syn::Error;
-
-    fn try_from(attr: syn::Attribute) -> Result<Self, Self::Error> {
-        if attr.path().is_ident("odra") {
-            return <OdraAttribute as TryFrom<_>>::try_from(attr).map(Into::into);
-        }
-        Ok(Attribute::Other(Box::new(attr)))
-    }
-}
-
-impl From<OdraAttribute> for Attribute {
-    fn from(odra_attribute: OdraAttribute) -> Self {
-        Attribute::Odra(odra_attribute)
-    }
-}
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct OdraAttribute {
@@ -91,16 +38,52 @@ impl TryFrom<syn::Attribute> for OdraAttribute {
     type Error = syn::Error;
 
     fn try_from(attr: syn::Attribute) -> Result<Self, Self::Error> {
-        let attrs = attr.parse_args_with(Punctuated::<syn::Meta, Token![,]>::parse_terminated)?;
-        let types = attrs
-            .iter()
-            .map(TryInto::try_into)
-            .collect::<Result<Vec<_>, _>>()?;
-
-        ensure_no_duplicates(&types)?;
-
-        Ok(OdraAttribute { types })
+        let mut seen = HashSet::new();
+        parse_odra_attribute(&attr, &mut seen)
     }
+}
+
+/// Parses the arguments of a single `#[odra(..)]`, rejecting unknown, malformed and duplicated
+/// ones (`seen` carries the arguments of the previous `#[odra(..)]` attributes of the same item).
+fn parse_odra_attribute(
+    attr: &syn::Attribute,
+    seen: &mut HashSet<AttrType>
+) -> syn::Result<OdraAttribute> {
+    let metas = match &attr.meta {
+        Meta::List(list) => {
+            list.parse_args_with(Punctuated::<syn::Meta, Token![,]>::parse_terminated)?
+        }
+        _ => {
+            return Err(syn::Error::new_spanned(
+                attr,
+                format!(
+                    "malformed odra attribute, expected `#[odra(..)]` with one or more of: {}",
+                    AttrType::expected()
+                )
+            ))
+        }
+    };
+    if metas.is_empty() {
+        return Err(syn::Error::new_spanned(
+            attr,
+            format!(
+                "empty odra attribute, expected one or more of: {}",
+                AttrType::expected()
+            )
+        ));
+    }
+    let mut types = Vec::with_capacity(metas.len());
+    for meta in metas.iter() {
+        let ty = AttrType::try_from(meta)?;
+        if !seen.insert(ty.clone()) {
+            return Err(syn::Error::new_spanned(
+                meta,
+                format!("duplicate odra attribute `{}`", ty.name())
+            ));
+        }
+        types.push(ty);
+    }
+    Ok(OdraAttribute { types })
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
@@ -111,6 +94,12 @@ enum AttrType {
 }
 
 impl AttrType {
+    const ALL: [AttrType; 3] = [
+        AttrType::Payable,
+        AttrType::NonReentrant,
+        AttrType::Offchain
+    ];
+
     fn name(&self) -> &'static str {
         match self {
             AttrType::Payable => "payable",
@@ -118,115 +107,134 @@ impl AttrType {
             AttrType::Offchain => "offchain"
         }
     }
+
+    /// The accepted arguments, for error messages: "payable, non_reentrant, offchain".
+    fn expected() -> String {
+        Self::ALL
+            .iter()
+            .map(Self::name)
+            .collect::<Vec<_>>()
+            .join(", ")
+    }
 }
 
 impl TryFrom<&'_ syn::Meta> for AttrType {
     type Error = syn::Error;
 
     fn try_from(meta: &'_ syn::Meta) -> Result<Self, Self::Error> {
+        let known = |path: &Path| Self::ALL.into_iter().find(|ty| path.is_ident(ty.name()));
+        let path_str = |path: &Path| path.to_token_stream().to_string().replace(' ', "");
         match meta {
-            Meta::Path(path) => match path.try_to_string(path)?.as_str() {
-                "payable" => Ok(AttrType::Payable),
-                "non_reentrant" => Ok(AttrType::NonReentrant),
-                "offchain" => Ok(AttrType::Offchain),
-                _ => Err(AttrTypeError::Path(meta).into())
-            },
-            Meta::List(_) => Err(AttrTypeError::List(meta).into()),
-            Meta::NameValue(_) => Err(AttrTypeError::NameValue(meta).into())
+            Meta::Path(path) => known(path).ok_or_else(|| {
+                syn::Error::new_spanned(
+                    meta,
+                    format!(
+                        "unknown odra attribute `{}`, expected one of: {}",
+                        path_str(path),
+                        Self::expected()
+                    )
+                )
+            }),
+            Meta::List(syn::MetaList { path, .. })
+            | Meta::NameValue(syn::MetaNameValue { path, .. }) => {
+                let msg = match known(path) {
+                    Some(ty) => format!("odra attribute `{}` takes no value", ty.name()),
+                    None => format!(
+                        "unknown odra attribute `{}`, expected one of: {}",
+                        path_str(path),
+                        Self::expected()
+                    )
+                };
+                Err(syn::Error::new_spanned(meta, msg))
+            }
         }
     }
 }
 
-trait TryToString {
-    fn try_to_string<T: ToTokens>(&self, span: &T) -> syn::Result<String>;
-}
-
-impl TryToString for Path {
-    fn try_to_string<T: ToTokens>(&self, span: &T) -> syn::Result<String> {
-        self.get_ident()
-            .map(Ident::to_string)
-            .ok_or_else(|| syn::Error::new_spanned(span, "unknown Odra attribute argument (path)"))
-    }
-}
-
-enum AttrTypeError<'a, T> {
-    List(&'a T),
-    Path(&'a T),
-    NameValue(&'a T)
-}
-
-impl<T: ToTokens> AttrTypeError<'_, T> {
-    fn span(&self) -> &T {
-        match self {
-            AttrTypeError::List(span) => span,
-            AttrTypeError::Path(span) => span,
-            AttrTypeError::NameValue(span) => span
-        }
-    }
-}
-
-impl<T: ToTokens> From<AttrTypeError<'_, T>> for syn::Error {
-    fn from(value: AttrTypeError<'_, T>) -> Self {
-        let ty = match value {
-            AttrTypeError::List(_) => "list",
-            AttrTypeError::Path(_) => "path",
-            AttrTypeError::NameValue(_) => "name = value"
-        };
-        syn::Error::new_spanned(
-            value.span(),
-            format!("unknown Odra attribute argument ({})", ty)
-        )
-    }
-}
-
-fn ensure_no_duplicates(types: &[AttrType]) -> syn::Result<()> {
-    let mut set: HashSet<&AttrType> = HashSet::new();
-
-    let contains_duplicate = types.iter().any(|attr| !set.insert(attr));
-    match contains_duplicate {
-        true => Err(syn::Error::new(
-            Span::call_site(),
-            "attr duplicate encountered".to_string()
-        )),
-        false => Ok(())
-    }
-}
-
+/// Splits the attributes of an item into the parsed `#[odra(..)]` ones and the others.
+///
+/// Fails at the span of the first unknown, malformed or duplicated `#[odra(..)]` argument; the
+/// duplicate check spans all the `#[odra(..)]` attributes of the item.
 pub fn partition_attributes<I>(attrs: I) -> syn::Result<(Vec<OdraAttribute>, Vec<syn::Attribute>)>
 where
     I: IntoIterator<Item = syn::Attribute>
 {
-    let (odra_attrs, other_attrs): (Vec<OdraAttribute>, Vec<syn::Attribute>) = attrs
-        .into_iter()
-        .map(<Attribute as TryFrom<_>>::try_from)
-        .collect::<syn::Result<Vec<Attribute>>>()?
-        .into_iter()
-        .partition_map(|attr| match attr {
-            Attribute::Odra(odra_attr) => Either::Left(odra_attr),
-            Attribute::Other(other_attr) => Either::Right(*other_attr)
-        });
-
-    let attrs = odra_attrs
-        .clone()
-        .into_iter()
-        .flat_map(|attr| attr.types)
-        .collect::<Vec<_>>();
-    ensure_no_duplicates(&attrs)?;
+    let mut seen = HashSet::new();
+    let mut odra_attrs = Vec::new();
+    let mut other_attrs = Vec::new();
+    for attr in attrs {
+        if attr.path().is_ident("odra") {
+            odra_attrs.push(parse_odra_attribute(&attr, &mut seen)?);
+        } else {
+            other_attrs.push(attr);
+        }
+    }
     Ok((odra_attrs, other_attrs))
 }
 
+/// The attributes other than `#[odra(..)]` (which are validated by [partition_attributes]).
 pub fn other_attributes<I>(attrs: I) -> Vec<syn::Attribute>
 where
     I: IntoIterator<Item = syn::Attribute>
 {
-    let (_, other_attrs) = partition_attributes(attrs).unwrap_or_default();
-    other_attrs
+    attrs
+        .into_iter()
+        .filter(|attr| !attr.path().is_ident("odra"))
+        .collect()
 }
 
 #[cfg(test)]
 mod tests {
 
     use super::*;
+    use std::fmt::{self, Formatter};
+
+    #[derive(Clone)]
+    enum Attribute {
+        Odra(OdraAttribute),
+        Other(Box<syn::Attribute>)
+    }
+
+    impl PartialEq for Attribute {
+        fn eq(&self, other: &Self) -> bool {
+            match (self, other) {
+                (Attribute::Odra(a), Attribute::Odra(b)) => a == b,
+                (Attribute::Other(a), Attribute::Other(b)) => {
+                    a.to_token_stream().to_string() == b.to_token_stream().to_string()
+                }
+                _ => false
+            }
+        }
+    }
+
+    impl std::fmt::Debug for Attribute {
+        fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+            match self {
+                Attribute::Odra(odra_attr) => odra_attr.fmt(f),
+                Attribute::Other(other_attr) => f
+                    .debug_struct("syn::Attribute")
+                    .field("value", &other_attr.to_token_stream().to_string())
+                    .finish()
+            }
+        }
+    }
+
+    impl TryFrom<syn::Attribute> for Attribute {
+        type Error = syn::Error;
+
+        fn try_from(attr: syn::Attribute) -> Result<Self, Self::Error> {
+            if attr.path().is_ident("odra") {
+                return <OdraAttribute as TryFrom<_>>::try_from(attr).map(Into::into);
+            }
+            Ok(Attribute::Other(Box::new(attr)))
+        }
+    }
+
+    impl From<OdraAttribute> for Attribute {
+        fn from(odra_attribute: OdraAttribute) -> Self {
+            Attribute::Odra(odra_attribute)
+        }
+    }
 
     #[test]
     fn payable_attr_works() {
@@ -281,7 +289,7 @@ mod tests {
             syn::parse_quote! {
                 #[odra(payable, payable)]
             },
-            Err("attr duplicate encountered")
+            Err("duplicate odra attribute `payable`")
         );
 
         assert_attributes_try_from(
@@ -289,8 +297,46 @@ mod tests {
                 syn::parse_quote! { #[odra(payable)] },
                 syn::parse_quote! { #[odra(payable)] },
             ],
-            Err("attr duplicate encountered")
+            Err("duplicate odra attribute `payable`")
         )
+    }
+
+    #[test]
+    fn unknown_attrs_fail() {
+        assert_attribute_try_from(
+            syn::parse_quote! { #[odra(paybale)] },
+            Err("unknown odra attribute `paybale`, expected one of: payable, non_reentrant, offchain")
+        );
+        assert_attribute_try_from(
+            syn::parse_quote! { #[odra(payable, a::b)] },
+            Err("unknown odra attribute `a::b`, expected one of: payable, non_reentrant, offchain")
+        );
+        assert_attribute_try_from(
+            syn::parse_quote! { #[odra(using = "x")] },
+            Err(
+                "unknown odra attribute `using`, expected one of: payable, non_reentrant, offchain"
+            )
+        );
+    }
+
+    #[test]
+    fn malformed_attrs_fail() {
+        assert_attribute_try_from(
+            syn::parse_quote! { #[odra(payable = true)] },
+            Err("odra attribute `payable` takes no value")
+        );
+        assert_attribute_try_from(
+            syn::parse_quote! { #[odra(offchain(x))] },
+            Err("odra attribute `offchain` takes no value")
+        );
+        assert_attribute_try_from(
+            syn::parse_quote! { #[odra] },
+            Err("malformed odra attribute, expected `#[odra(..)]` with one or more of: payable, non_reentrant, offchain")
+        );
+        assert_attribute_try_from(
+            syn::parse_quote! { #[odra()] },
+            Err("empty odra attribute, expected one or more of: payable, non_reentrant, offchain")
+        );
     }
 
     fn assert_attribute_try_from(input: syn::Attribute, expected: Result<Attribute, &'static str>) {

@@ -547,8 +547,15 @@ impl ModuleIR {
                 _ => None
             })
             .chain(self.delegated_functions()?)
-            .map(FnIR::try_from)
-            .filter(|r| self.is_trait_impl() || r.as_ref().map(FnIR::is_pub).unwrap_or(true))
+            .filter_map(|func| {
+                // Private functions of a plain impl are not entry points: only their
+                // `#[odra(..)]` attributes are checked, not their names nor arguments.
+                if self.is_trait_impl() || matches!(func.vis, syn::Visibility::Public(_)) {
+                    Some(FnIR::try_from(func))
+                } else {
+                    attr::partition_attributes(func.attrs).err().map(Err)
+                }
+            })
             .collect::<Result<Vec<_>, _>>()
     }
 
@@ -729,6 +736,7 @@ fn validate_fn_ir(
     utils::syn::function_arg_names(sig)
         .iter()
         .try_for_each(|arg_ident| validate_fn_arg(&arg_ident.to_string(), arg_ident))?;
+    attr::partition_attributes(attrs.to_vec())?;
     validate_fn_attrs(fn_name, attrs)?;
     Ok(())
 }
@@ -836,13 +844,6 @@ impl FnIR {
         self.name_str() == "factory"
     }
 
-    pub fn is_pub(&self) -> bool {
-        match self {
-            FnIR::Impl(ir) => ir.is_pub(),
-            FnIR::Def(_) => true
-        }
-    }
-
     fn attrs(&self) -> Vec<syn::Attribute> {
         match self {
             FnIR::Impl(ir) => ir.attrs(),
@@ -892,10 +893,6 @@ impl FnImplIR {
 
     fn attrs(&self) -> &[syn::Attribute] {
         &self.code.attrs
-    }
-
-    fn is_pub(&self) -> bool {
-        matches!(self.code.vis, syn::Visibility::Public(_))
     }
 
     pub fn raw(&self) -> syn::ImplItemFn {

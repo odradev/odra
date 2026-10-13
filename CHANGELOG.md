@@ -154,6 +154,17 @@ Changelog for `odra`.
   once at the project root, workspace-inherited package fields).
 
 ### Fixed
+- An unknown, malformed or repeated `#[odra(..)]` argument on a module function is a compile error at
+  the argument, e.g. "unknown odra attribute `paybale`, expected one of: payable, non_reentrant,
+  offchain" or "duplicate odra attribute `payable`". Such an attribute used to be ignored: the function
+  silently lost the flag (`#[odra(payable, payable)]` made it not payable) and its other attributes.
+  This can break the build of code with a wrong attribute, which never had an effect. It applies to
+  public, private, trait impl, factory, delegated and offchain functions and `#[odra::external_contract]`
+  traits.
+- Private functions of a module impl are not entry points, so the names reserved for entry points
+  (`new`, `env`, `address`, `new_contract`, `upgrade_child_contract`, `batch_upgrade_child_contract`)
+  and arguments (`gas`, `attached_value`) are allowed there; they were rejected like for a public
+  function.
 - No more `unexpected cfg condition name: odra_module` warnings. The code `#[odra::module]` gates on
   `odra_module` is wrapped in a block that allows the lint, so a crate defining modules without
   `odra_build::build()` in its `build.rs` (a library of modules, for example) compiles cleanly, and
