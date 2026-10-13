@@ -88,6 +88,10 @@ Changelog for `odra`.
   `resources/legacy`) are regenerated: entry points and types added since 2.5.0, schemas of contracts
   that had none, and the current toolchain and version. CI fails when they drift from the code
   (`just check-schemas`).
+- Faster `cargo odra schema`, `cargo odra build` and `cargo odra test -b casper` in projects that depend
+  on `odra-cli`: it no longer has a build script calling `odra_build::build()`, so it is not recompiled
+  for every contract (`ODRA_MODULE` changes); it uses neither the `odra_module` nor the `odra_backend`
+  cfg. About 4 s less per contract when building the schemas of the examples.
 - `EntryPointsCaller` no longer holds a `HostEnv`; the backend hands the contract environment to
   every call. `EntryPointsCaller::new(env, entry_points, f)` is now `EntryPointsCaller::new(entry_points, f)`,
   `EntryPointsCaller::call(call_def)` is `call(contract_env, call_def)` (as are `ContractContainer::call`
