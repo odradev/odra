@@ -85,6 +85,10 @@ Changelog for `odra`.
 - `const fn u512(n: u128) -> U512` in the prelude next to `u256`, so CSPR amounts and other `U512`
   values can initialise a `const` or `static`. `cspr!` with a literal is documented and tested as a
   constant expression, so `const STAKE: U512 = u512(cspr!(500) as u128);` works.
+- `HostEnv::concurrently_with(max_threads, items, f)` is `concurrently` with a given limit of worker
+  threads (`0` counts as `1`), and the `ODRA_MAX_THREADS` environment variable changes the limit of
+  `concurrently`, which stays 8 by default, so a node that rate-limits connections can be spared
+  without touching the code. A value that is not a number panics.
 
 ### Changed
 - The committed contract schemas of `odra-modules` and the examples (`resources/casper_contract_schemas`,
