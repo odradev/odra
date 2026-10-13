@@ -90,9 +90,9 @@ Changelog for `odra`.
   `concurrently`, which stays 8 by default, so a node that rate-limits connections can be spared
   without touching the code. A value that is not a number panics.
 - `ContractAddress` trait (`contract_address(&self) -> Address`) in `odra::prelude`, implemented for
-  every `ContractRef`, and `HostRef` imported anonymously by the prelude, so a `#[odra::ref_helpers]`
-  helper can call `self.contract_address()` on both refs without extra imports, e.g.
-  `self.balance_of(&self.contract_address())`.
+  every `ContractRef`. A `#[odra::ref_helpers]` helper can call `self.contract_address()` on both refs
+  without extra imports, e.g. `self.balance_of(&self.contract_address())`: the generated impls import
+  the trait that provides it (`ContractAddress` or `HostRef`) in their own scope only.
 - odra-cli: `Scenario::captures_events(&self) -> bool` (default `false`) lets a scenario opt in to event
   capturing, so `last_call()` of the calls it makes returns their events. Scenarios keep running
   without it by default, as capturing reads the events of every deployed contract after every call.

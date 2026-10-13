@@ -9,9 +9,6 @@ mod prelude {
     pub use crate::contract_env::{ContractAddress, ContractEnv};
     pub use crate::error::{ExecutionError, OdraError, OdraResult};
     pub use crate::external::External;
-    // Brings `HostRef::contract_address` (and the other `HostRef` methods) into scope without
-    // the name, so `#[odra::ref_helpers]` code can call `self.contract_address()` on a host ref.
-    pub use crate::host::HostRef as _;
     pub use crate::list::{List, ListIter};
     pub use crate::mapping::Mapping;
     pub use crate::module::{Module, Revertible, SubModule};
