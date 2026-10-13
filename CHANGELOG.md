@@ -89,6 +89,10 @@ Changelog for `odra`.
   threads (`0` counts as `1`), and the `ODRA_MAX_THREADS` environment variable changes the limit of
   `concurrently`, which stays 8 by default, so a node that rate-limits connections can be spared
   without touching the code. A value that is not a number panics.
+- `ContractAddress` trait (`contract_address(&self) -> Address`) in `odra::prelude`, implemented for
+  every `ContractRef`, and `HostRef` imported anonymously by the prelude, so a `#[odra::ref_helpers]`
+  helper can call `self.contract_address()` on both refs without extra imports, e.g.
+  `self.balance_of(&self.contract_address())`.
 
 ### Changed
 - The committed contract schemas of `odra-modules` and the examples (`resources/casper_contract_schemas`,

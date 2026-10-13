@@ -33,6 +33,32 @@ pub trait ContractRef {
     fn with_tokens(&self, tokens: U512) -> Self;
 }
 
+/// The address of the contract a [ContractRef] points at, by value.
+///
+/// [HostRef](crate::host::HostRef) has `contract_address(&self) -> Address`; this gives every
+/// [ContractRef] the same method, so code copied onto both refs by `#[odra::ref_helpers]` can
+/// call `self.contract_address()` on either side. Both traits are in `odra::prelude`.
+///
+/// ```ignore
+/// #[odra::ref_helpers]
+/// impl Token {
+///     /// The tokens the contract holds itself.
+///     pub fn own_balance(&self) -> U256 {
+///         self.balance_of(&self.contract_address())
+///     }
+/// }
+/// ```
+pub trait ContractAddress {
+    /// Returns the address of the contract.
+    fn contract_address(&self) -> Address;
+}
+
+impl<T: ContractRef> ContractAddress for T {
+    fn contract_address(&self) -> Address {
+        *self.address()
+    }
+}
+
 /// Represents the environment accessible in the contract context.
 ///
 /// The `ContractEnv` struct provides methods for interacting with the contract environment,

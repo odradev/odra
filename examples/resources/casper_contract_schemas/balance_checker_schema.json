@@ -44,6 +44,15 @@
       "return_ty": "Bool",
       "is_contract_context": true,
       "access": "public"
+    },
+    {
+      "name": "token_own_balance",
+      "description": "Returns the tokens held by the token contract itself (sent to its own address).",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "U256",
+      "is_contract_context": true,
+      "access": "public"
     }
   ],
   "events": [],

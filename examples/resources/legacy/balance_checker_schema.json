@@ -49,6 +49,14 @@
       "return_ty": "Bool",
       "ty": "Public",
       "attributes": []
+    },
+    {
+      "name": "token_own_balance",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "U256",
+      "ty": "Public",
+      "attributes": []
     }
   ]
 }
