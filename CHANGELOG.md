@@ -115,7 +115,9 @@ Changelog for `odra`.
   updated; only hand-written callers need the change. `HostContext` gets `take_child_contracts`
   (with a default), through which OdraVM reports the children of factories to the `HostEnv`.
   `OdraVm` no longer implements `Default`, use `OdraVm::new()`. `EntryPointsCaller::has_entry_point(name)`
-  is new. `ContractRegister` keeps its containers in `Rc`: `get_shared(addr)` hands the latest one out,
+  and `odra::utils::try_serialize(&value)` (the value as `Bytes`, or the error an entry point returns;
+  the generated entry point callers use it) are new. `ContractRegister` keeps its containers in `Rc`:
+  `get_shared(addr)` hands the latest one out,
   so a backend can release the register during a call, and `is_registered(addr, name)` tells whether
   code of that name is there as any version. `odra::host::revert_hook` (`install`, `mark_revert`) is
   the panic hook OdraVM and livenet share to keep the panic that unwinds a revert quiet; a custom

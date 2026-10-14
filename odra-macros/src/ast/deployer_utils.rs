@@ -137,7 +137,7 @@ impl TryFrom<(&'_ ModuleImplIR, &'_ FnIR)> for FunctionCallBranch {
             arrow_token: Default::default(),
             brace_token: Default::default(),
             call_stmt: Self::call_stmt(module, func)?,
-            result_expr: utils::expr::parse_bytes(&utils::ident::result())
+            result_expr: utils::expr::try_serialize(&utils::ident::result())
         })
     }
 }

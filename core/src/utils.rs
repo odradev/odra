@@ -22,6 +22,16 @@ pub fn serialize<T: ToBytes>(value: &T) -> Bytes {
     Bytes::from(value.to_bytes().expect("Couldn't serialize"))
 }
 
+/// Serializes a value implementing the `ToBytes` trait into a `Bytes` object, or returns the
+/// serialization error as the [OdraError] an entry point returns. The generated entry point
+/// callers return their results through it.
+pub fn try_serialize<T: ToBytes>(value: &T) -> OdraResult<Bytes> {
+    value
+        .to_bytes()
+        .map(Bytes::from)
+        .map_err(|err| OdraError::ExecutionError(err.into()))
+}
+
 /// Returns the name of the passed event.
 ///
 /// # Arguments
