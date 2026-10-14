@@ -6,6 +6,7 @@ use crate::{ast::deployer_utils::EpcSignature, utils, ModuleImplIR};
 pub struct FactoryDeployImplItem {
     ident: syn::Ident,
     module_ident: syn::Ident,
+    child_ident: syn::Ident,
     epc_fn: FactoryContractEpcFn,
 }
 
@@ -13,10 +14,10 @@ impl TryFrom<&'_ ModuleImplIR> for FactoryDeployImplItem {
     type Error = syn::Error;
 
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
-       
         Ok(Self {
             ident: module.host_ref_ident()?,
             module_ident: module.module_ident()?,
+            child_ident: module.child_module_ident()?,
             epc_fn: module.try_into()?,
         })
     }
@@ -28,8 +29,7 @@ impl ToTokens for FactoryDeployImplItem {
         let ident = &self.ident;
         let epc_fn = &self.epc_fn;
         let module_ident = &self.module_ident;
-        let module_str = module_ident.to_string();
-        let child_ident = format_ident!("{}", module_str.strip_suffix("Factory").unwrap_or(&module_str));
+        let child_ident = &self.child_ident;
 
         tokens.append_all(quote::quote! {
             impl #epc_ty for #ident {
@@ -130,11 +130,8 @@ impl FactoryEntrypointCallerExpr {
         let ty_caller = utils::ty::entry_points_caller();
         let ty_epc_provider = utils::ty::entry_point_caller_provider();
 
-        let module_ident = module.module_ident()?;
-        let module_str = module_ident.to_string();
-        let child_str = module_str.strip_suffix("Factory").unwrap_or(&module_str);
-        let child_host_ref = format_ident!("{}HostRef", child_str);
-        let event_ident = format_ident!("{}ContractDeployed", module_str);
+        let child_host_ref = format_ident!("{}HostRef", module.child_module_ident()?);
+        let event_ident = format_ident!("{}ContractDeployed", module.module_ident()?);
 
         let branches = [
             module.factory_fn(),

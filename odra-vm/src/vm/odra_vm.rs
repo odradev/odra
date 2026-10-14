@@ -165,6 +165,11 @@ impl OdraVm {
         self.factory_admins.borrow_mut().insert(factory, admin);
     }
 
+    /// The account that may upgrade the children of the factory at `factory`, if one is recorded.
+    pub(crate) fn factory_admin(&self, factory: &Address) -> Option<Address> {
+        self.factory_admins.borrow().get(factory).copied()
+    }
+
     /// Deploys a child of the factory contract being executed, see
     /// [ContractContext::new_child_contract](odra_core::ContractContext::new_child_contract).
     pub fn new_child_contract(
@@ -175,7 +180,7 @@ impl OdraVm {
     ) -> OdraResult<(Address, URef)> {
         let mut entry_points_caller = entry_points_caller();
         entry_points_caller.remove_entry_point("upgrade");
-        let has_init = has_entry_point(&entry_points_caller, "init");
+        let has_init = entry_points_caller.has_entry_point("init");
 
         let address = self.new_contract(name, init_args.clone(), entry_points_caller);
         // Let the host track the events of the child.
@@ -216,7 +221,7 @@ impl OdraVm {
 
         let mut entry_points_caller = entry_points_caller();
         entry_points_caller.remove_entry_point("init");
-        let has_upgrade = has_entry_point(&entry_points_caller, "upgrade");
+        let has_upgrade = entry_points_caller.has_entry_point("upgrade");
 
         self.upgrade_contract(name, address, upgrade_args.clone(), entry_points_caller);
         if has_upgrade {
@@ -247,7 +252,7 @@ impl OdraVm {
             }
         }
         // The register is not borrowed during the call, the contract may deploy another one.
-        let contract = self.contract_register.borrow().get(&address).cloned();
+        let contract = self.contract_register.borrow().get_shared(&address);
         let result = match contract {
             Some(contract) => contract.call(self.contract_env(), call_def),
             None => Err(OdraError::VmError(VmError::InvalidContractAddress))
@@ -683,13 +688,6 @@ impl OdraVm {
     }
 }
 
-fn has_entry_point(entry_points_caller: &EntryPointsCaller, name: &str) -> bool {
-    entry_points_caller
-        .entry_points()
-        .iter()
-        .any(|ep| ep.name == name)
-}
-
 impl OdraVm {
     fn prepare_call(&self, contract_name: String, address: Address, call_def: &CallDef) {
         let mut state = self.state.borrow_mut();
@@ -741,8 +739,7 @@ impl OdraVm {
         let contract = self
             .contract_register
             .borrow()
-            .get(&address)
-            .cloned()
+            .get_shared(&address)
             .ok_or(OdraError::VmError(VmError::InvalidContractAddress))?;
         let factory_frame = self.callstack_tip();
         {
@@ -1140,6 +1137,41 @@ mod tests {
     }
 
     #[test]
+    fn upgrading_a_contract_into_a_factory_records_its_admin() {
+        // given a plain contract
+        let (vm, env) = setup_env();
+        let address = env
+            .new_contract("Plain", RuntimeArgs::new(), no_entry_points())
+            .unwrap();
+        assert_eq!(vm.factory_admin(&address), None);
+
+        // when it is upgraded to a factory
+        env.upgrade_contract("Factory", address, RuntimeArgs::new(), test_factory())
+            .unwrap();
+
+        // then the account that upgraded it may upgrade its children
+        assert_eq!(vm.factory_admin(&address), Some(env.caller()));
+    }
+
+    #[test]
+    fn upgrading_a_factory_keeps_its_admin() {
+        // given a factory deployed by the default account
+        let (vm, env) = setup_env();
+        let admin = env.caller();
+        let factory = env
+            .new_contract("Factory", RuntimeArgs::new(), test_factory())
+            .unwrap();
+
+        // when another account upgrades it
+        env.set_caller(env.get_account(1));
+        env.upgrade_contract("Factory", factory, RuntimeArgs::new(), test_factory())
+            .unwrap();
+
+        // then the deployer stays the admin
+        assert_eq!(vm.factory_admin(&factory), Some(admin));
+    }
+
+    #[test]
     fn reverted_child_init_emits_nothing() {
         // given a factory
         let (vm, env) = setup_env();
@@ -1168,6 +1200,11 @@ mod tests {
         // Lets the entry points below reach the VM.
         VM.with(|cell| *cell.borrow_mut() = Some(vm.clone()));
         (vm, env)
+    }
+
+    /// A contract without entry points.
+    fn no_entry_points() -> EntryPointsCaller {
+        EntryPointsCaller::new(vec![], |_, _| Ok(Bytes::new()))
     }
 
     /// A factory whose `new_contract` deploys a child with a reverting `init`.

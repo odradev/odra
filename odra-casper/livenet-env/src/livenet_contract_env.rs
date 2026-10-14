@@ -1,12 +1,12 @@
 //! Livenet contract environment.
 use crate::livenet_host::read_failed;
-use crate::panic_hook;
 use blake2::digest::VariableOutput;
 use blake2::Blake2bVar;
 use odra_casper_rpc_client::casper_client::CasperClient;
 use odra_casper_rpc_client::log;
 use odra_core::callstack::{Callstack, CallstackElement};
 use odra_core::casper_types::{bytesrepr::Bytes, crypto, CLValue, PublicKey, Signature, U512};
+use odra_core::host::revert_hook;
 use odra_core::prelude::*;
 use odra_core::validator::ValidatorInfo;
 use odra_core::{CallDef, ContractContext, ContractEnv, ContractRegister, VmError};
@@ -148,7 +148,8 @@ impl ContractContext for LivenetContractEnv {
         }
         log::error(format!("Revert: {:?} - {}", error, revert_msg));
         *self.error.borrow_mut() = Some(error.clone());
-        panic_hook::mark_revert();
+        // The revert is logged above, the panic that unwinds it prints nothing.
+        revert_hook::mark_revert(|_| true);
         panic!("Revert: {:?} - {}", error, revert_msg);
     }
 
@@ -266,8 +267,7 @@ pub(crate) fn call_locally(
     let contract = contract_register
         .read()
         .expect("Couldn't read contract register.")
-        .get(address)
-        .cloned();
+        .get_shared(address);
     let Some(contract) = contract else {
         log::error(unregistered_contract_message(address));
         return Err(OdraError::VmError(VmError::InvalidContractAddress));

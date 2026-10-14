@@ -5,7 +5,7 @@ use crate::{
     ir::{FnIR, ModuleImplIR},
     utils
 };
-use quote::{format_ident, ToTokens, TokenStreamExt};
+use quote::{ToTokens, TokenStreamExt};
 use syn::{parse_quote, Ident};
 
 pub(crate) struct FactoryExecPartsItem {
@@ -115,8 +115,7 @@ impl TryFrom<(&'_ ModuleImplIR, &'_ FnIR)> for ExecutableFnBodyItem {
             (func.is_payable() || func.is_non_reentrant() || func.has_args() || func.is_upgrader())
                 .then(|| utils::stmt::new_execution_env(&exec_env_ident, &env_rc_ident));
         let contract_ident = utils::ident::contract();
-        let module_ident = module.module_ident()?;
-        let child_module_ident = format_ident!("{}", module_ident.to_string().strip_suffix("Factory").unwrap_or(&module_ident.to_string()));
+        let child_module_ident = module.child_module_ident()?;
 
         let fn_args = func
             .named_args()

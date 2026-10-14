@@ -323,6 +323,16 @@ impl ModuleImplIR {
         ))
     }
 
+    /// The module a factory impl stands for. `#[odra::factory]` sees only the `<Module>Factory`
+    /// ident that [factory_module_ident](Self::factory_module_ident) made, so the suffix is
+    /// stripped back; for any other module it is the module ident itself.
+    pub fn child_module_ident(&self) -> syn::Result<Ident> {
+        let module_ident = self.module_ident()?;
+        let module_str = module_ident.to_string();
+        let child = module_str.strip_suffix("Factory").unwrap_or(&module_str);
+        Ok(Ident::new(child, module_ident.span()))
+    }
+
     pub fn init_args_ident(&self) -> syn::Result<syn::Ident> {
         let module_ident = self.module_ident()?;
         Ok(Ident::new(

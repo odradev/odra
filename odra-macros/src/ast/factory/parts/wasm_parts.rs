@@ -329,7 +329,7 @@ impl TryFrom<&'_ ModuleImplIR> for CallFnItem {
 }
 
 struct NoMangleFactoryFnItem {
-    module_ident: syn::Ident,
+    child_ident: syn::Ident,
     event_ident: syn::Ident,
     init_fn: Option<FnIR>,
     new_env_expr: syn::Expr,
@@ -339,11 +339,9 @@ impl TryFrom<&'_ ModuleImplIR> for NoMangleFactoryFnItem {
     type Error = syn::Error;
 
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
-        let module_ident = module.module_ident()?;
-        let module_str = module_ident.to_string();
-        let event_ident = format_ident!("{}ContractDeployed", module_str);
+        let event_ident = format_ident!("{}ContractDeployed", module.module_ident()?);
         Ok(Self {
-            module_ident,
+            child_ident: module.child_module_ident()?,
             event_ident,
             init_fn: module.constructor(),
             new_env_expr: utils::expr::new_wasm_contract_env(),
@@ -357,10 +355,7 @@ impl ToTokens for NoMangleFactoryFnItem {
         let ident_schemas = utils::ident::schemas();
         let address_ty = utils::ty::address();
         let string_ty = utils::ty::string();
-        let ident = &self.module_ident.to_string();
-        let contract_ident = ident.strip_suffix("Factory").unwrap_or(ident);
-        let contract_ident: syn::Ident = format_ident!("{}", contract_ident);
-        let events_expr = utils::expr::event_schemas(&contract_ident.as_type());
+        let events_expr = utils::expr::event_schemas(&self.child_ident.as_type());
         let expr_new_schemas = utils::expr::schemas(&events_expr);
         let ident_args = utils::ident::named_args();
         let new_runtime_args = utils::expr::new_runtime_args();
@@ -407,7 +402,7 @@ impl ToTokens for NoMangleFactoryFnItem {
 }
 
 struct NoMangleFactoryUpgradeFnItem {
-    module_ident: syn::Ident,
+    child_ident: syn::Ident,
     event_ident: syn::Ident,
     upgrader_args: Vec<(String, syn::Type)>,
     new_env_expr: syn::Expr,
@@ -417,17 +412,15 @@ impl TryFrom<&'_ ModuleImplIR> for NoMangleFactoryUpgradeFnItem {
     type Error = syn::Error;
 
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
-        let module_ident = module.module_ident()?;
-        let module_str = module_ident.to_string();
         let upgrader_args = module.upgrader()
             .map(|fn_ir| fn_ir.named_args())
             .unwrap_or_default()
             .iter()
             .map(|arg| arg.name_and_ty())
             .collect::<Result<Vec<_>, _>>()?;
-        let event_ident = format_ident!("{}ContractDeployed", module_str);
+        let event_ident = format_ident!("{}ContractDeployed", module.module_ident()?);
         Ok(Self {
-            module_ident,
+            child_ident: module.child_module_ident()?,
             event_ident,
             upgrader_args,
             new_env_expr: utils::expr::new_wasm_contract_env(),
@@ -444,10 +437,7 @@ impl ToTokens for NoMangleFactoryUpgradeFnItem {
         let runtime_args_ty = utils::ty::runtime_args();
         let bytes_ty = utils::ty::bytes();
         let btree_map_str_bytes_ty = utils::ty::typed_btree_map(&string_ty, &bytes_ty);
-        let ident = &self.module_ident.to_string();
-        let contract_ident = ident.strip_suffix("Factory").unwrap_or(ident);
-        let contract_ident: syn::Ident = format_ident!("{}", contract_ident);
-        let events_expr = utils::expr::event_schemas(&contract_ident.as_type());
+        let events_expr = utils::expr::event_schemas(&self.child_ident.as_type());
         let expr_new_schemas = utils::expr::schemas(&events_expr);
         let event_ident = &self.event_ident;
         let unwrap_or_revert = quote::quote!(odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert);

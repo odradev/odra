@@ -165,13 +165,29 @@ impl CasperClient {
         *self.last_transaction_gas.borrow()
     }
 
-    /// The native events recorded for `entity_addr`, see [Self::native_events].
-    pub(crate) fn recorded_native_events(&self, entity_addr: &EntityAddr) -> Vec<Bytes> {
-        self.native_events
-            .borrow()
-            .get(entity_addr)
+    /// The number of native events recorded for the entities `entity_addrs` together, see
+    /// [Self::native_events].
+    pub(crate) fn recorded_native_events_count(&self, entity_addrs: &[EntityAddr]) -> usize {
+        let native_events = self.native_events.borrow();
+        entity_addrs
+            .iter()
+            .map(|entity_addr| native_events.get(entity_addr).map_or(0, Vec::len))
+            .sum()
+    }
+
+    /// The `index`-th native event recorded for the entities `entity_addrs`, counted over them in
+    /// order, see [Self::native_events].
+    pub(crate) fn recorded_native_event(
+        &self,
+        entity_addrs: &[EntityAddr],
+        index: usize
+    ) -> Option<Bytes> {
+        let native_events = self.native_events.borrow();
+        entity_addrs
+            .iter()
+            .flat_map(|entity_addr| native_events.get(entity_addr).into_iter().flatten())
+            .nth(index)
             .cloned()
-            .unwrap_or_default()
     }
 
     /// Global state query response cached at `state_root_hash`, if any.

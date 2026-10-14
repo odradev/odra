@@ -97,7 +97,7 @@ mod tests {
         NativePartyStarted, PartyContract, PartyError, PartyRelay, PartyRelayInitArgs, PartyStarted
     };
     use core::time::Duration;
-    use odra::host::{Deployer, HostRef, NoArgs};
+    use odra::host::{Deployer, HostRef, InstallConfig, NoArgs};
     use odra::prelude::*;
 
     #[test]
@@ -181,6 +181,34 @@ mod tests {
         assert_eq!(test_env.native_events_count(&party), 2);
         assert_eq!(test_env.get_event(&party, 1), Ok(event()));
         assert_eq!(test_env.get_native_event(&party, 1), Ok(native_event()));
+    }
+
+    #[test]
+    fn native_events_carry_on_across_an_upgrade() {
+        let test_env = odra_test::env();
+        let mut party = PartyContract::deploy_with_cfg(
+            &test_env,
+            NoArgs,
+            InstallConfig::upgradable::<PartyContract>()
+        );
+        party.emit();
+        assert_eq!(test_env.native_events_count(&party), 2);
+
+        // The same code installed again is a new version of the contract. Casper keeps a native
+        // event with the version that emitted it, the host counts them over all the versions.
+        let mut party = PartyContract::try_upgrade(&test_env, party.address(), NoArgs).unwrap();
+        party.emit();
+        assert_eq!(party.last_call().native_events().len(), 1);
+        assert_eq!(party.last_call().events().len(), 1);
+        assert_eq!(test_env.native_events_count(&party), 3);
+        assert_eq!(test_env.events_count(&party), 3);
+        assert_eq!(
+            test_env.get_native_event(&party, 2),
+            Ok(NativePartyStarted {
+                caller: test_env.get_account(0),
+                block_time: 0
+            })
+        );
     }
 
     #[test]

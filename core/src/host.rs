@@ -2,6 +2,8 @@
 
 mod deployed_contracts;
 pub mod factory;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod revert_hook;
 
 use crate::address::Addressable;
 use crate::gas_report::GasReport;
@@ -32,12 +34,13 @@ const MAX_CONCURRENT_THREADS: usize = 8;
 const MAX_THREADS_ENV: &str = "ODRA_MAX_THREADS";
 
 /// The thread limit [`HostEnv::concurrently`] uses for the value of `ODRA_MAX_THREADS`: the
-/// default when it is not set, at least one thread, and a panic on a value that is not a number,
-/// so a typo does not silently fall back to the default.
+/// default when it is not set or empty (a blank entry in a `.env` file), at least one thread, and
+/// a panic on a value that is not a number, so a typo does not silently fall back to the default.
 #[cfg(not(target_arch = "wasm32"))]
 fn max_threads_from_env(value: Option<&str>) -> usize {
     match value {
         None => MAX_CONCURRENT_THREADS,
+        Some(value) if value.trim().is_empty() => MAX_CONCURRENT_THREADS,
         Some(value) => value.trim().parse::<usize>().unwrap_or_else(|_| {
             panic!("{MAX_THREADS_ENV} must be a number of threads, got {value:?}")
         })
@@ -839,6 +842,10 @@ impl HostEnv {
 
     /// Upgrades an existing contract with a new one with given upgrade arguments and new entry
     /// points caller.
+    ///
+    /// The contract need not be known to this environment (deployed, loaded or wrapped in a host
+    /// ref here): the upgrade registers it. The events of a known contract, native ones included,
+    /// are counted over all its versions, so its counts carry over the upgrade.
     pub fn upgrade_contract(
         &self,
         name: &str,
@@ -855,12 +862,20 @@ impl HostEnv {
             backend.upgrade_contract(name, contract_to_upgrade, upgrade_args, entry_points_caller);
         self.track_child_contracts(result.is_ok());
         let upgraded_contract = result?;
-        let mut contracts = self.deployed_contracts.borrow_mut();
-        let contract = contracts.get_mut(&upgraded_contract).unwrap();
-        contract.current_version += 1;
-        contract.name = Some(String::from(name));
-        // CES events are intact, but native events are connected to a contract, not a package.
-        contract.native_events_count = 0;
+        let newly_known = {
+            let mut contracts = self.deployed_contracts.borrow_mut();
+            let newly_known = !contracts.contains_key(&upgraded_contract);
+            let contract = contracts
+                .entry(upgraded_contract)
+                .or_insert_with(|| DeployedContract::new(upgraded_contract));
+            contract.current_version += 1;
+            contract.name = Some(String::from(name));
+            newly_known
+        };
+        // The events emitted before a contract was known here belong to nobody's `last_call`.
+        if newly_known && *self.captures_events.borrow() {
+            self.init_events(&upgraded_contract);
+        }
         Ok(upgraded_contract)
     }
 
@@ -1566,6 +1581,8 @@ mod test {
     #[test]
     fn max_threads_comes_from_the_environment_variable_or_defaults_to_eight() {
         assert_eq!(max_threads_from_env(None), 8);
+        assert_eq!(max_threads_from_env(Some("")), 8);
+        assert_eq!(max_threads_from_env(Some(" ")), 8);
         assert_eq!(max_threads_from_env(Some("2")), 2);
         assert_eq!(max_threads_from_env(Some(" 16 ")), 16);
         // `concurrently_with` treats it as one.
@@ -1817,6 +1834,32 @@ mod test {
 
     fn no_entry_points() -> EntryPointsCaller {
         EntryPointsCaller::new(vec![], |_, _| Ok(Bytes::default()))
+    }
+
+    #[test]
+    fn upgrade_registers_a_contract_the_env_did_not_know() {
+        let address = Address::Contract(ContractPackageHash::new([1; 32]));
+        let mut ctx = MockHostContext::new();
+        ctx.expect_upgrade_contract()
+            .times(1)
+            .returning(move |_, _, _, _| Ok(address));
+        ctx.expect_take_child_contracts().returning(Vec::new);
+        // The events emitted before belong to nobody's `last_call`.
+        ctx.expect_get_events_count().times(1).returning(|_| Ok(3));
+        ctx.expect_get_native_events_count()
+            .times(1)
+            .returning(|_| Ok(2));
+        let env = HostEnv::new(Rc::new(ctx));
+
+        env.upgrade_contract("Upgraded", address, RuntimeArgs::new(), no_entry_points())
+            .unwrap();
+
+        let contracts = env.deployed_contracts.borrow();
+        let contract = contracts.get(&address).unwrap();
+        assert_eq!(contract.name.as_deref(), Some("Upgraded"));
+        assert_eq!(contract.current_version, 1);
+        assert_eq!(contract.events_count, 3);
+        assert_eq!(contract.native_events_count, 2);
     }
 
     #[test]

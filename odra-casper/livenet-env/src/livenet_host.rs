@@ -2,7 +2,6 @@
 
 use crate::error;
 use crate::livenet_contract_env::{call_locally, CallFrame, LivenetContractEnv};
-use crate::panic_hook;
 use odra_casper_rpc_client::casper_client::configuration::CasperClientConfiguration;
 use odra_casper_rpc_client::casper_client::CasperClient;
 use odra_casper_rpc_client::error::LivenetError;
@@ -11,6 +10,7 @@ use odra_casper_rpc_client::utils::find_wasm_file_path;
 use odra_core::callstack::{Callstack, CallstackElement};
 use odra_core::casper_types::Timestamp;
 use odra_core::entry_point_callback::EntryPointsCaller;
+use odra_core::host::revert_hook;
 use odra_core::{
     casper_types::{bytesrepr::Bytes, PublicKey, RuntimeArgs, U512},
     host::{HostContext, HostEnv, ThreadEnvFactory},
@@ -77,7 +77,7 @@ impl LivenetHost {
     /// transaction would. A revert unwinds the call with a panic, it is caught here and returned
     /// as the error the contract reverted with.
     fn execute_locally(&self, address: &Address, call_def: CallDef) -> OdraResult<Bytes> {
-        panic_hook::set_livenet_panic_hook();
+        revert_hook::install();
         *self.error.borrow_mut() = None;
         let caller = CallstackElement::new_account(self.caller());
         let _caller_frame = CallFrame::push(&self.callstack, caller);
@@ -333,14 +333,22 @@ impl HostContext for LivenetHost {
             .contract_register
             .write()
             .expect("Couldn't write contract register.");
-        // Every host ref registers its contract; the code is there already.
-        if register.get_name(&address) == Some(contract_name.as_str()) {
+        // Every host ref registers its contract. Code registered before stays, as any version:
+        // the latest code (an upgrade, or the last contract type registered) runs the getters.
+        if register.is_registered(&address, &contract_name) {
             return;
         }
         register.add(
             address,
             ContractContainer::new(&contract_name, entry_points_caller)
         );
+    }
+
+    fn has_contract(&self, address: &Address) -> bool {
+        self.casper_client
+            .borrow()
+            .has_contract(address)
+            .unwrap_or_else(|e| read_failed("contract package", address, e))
     }
 
     fn contract_env(&self) -> ContractEnv {
@@ -513,6 +521,14 @@ mod tests {
         host.register_contract(ADDRESS, String::from("Contract"), no_entry_points());
         assert_eq!(version(), 0);
         // A host ref of another contract type brings its code.
+        host.register_contract(ADDRESS, String::from("Other"), no_entry_points());
+        assert_eq!(version(), 1);
+        assert_eq!(
+            host.contract_register.read().unwrap().get_name(&ADDRESS),
+            Some("Other")
+        );
+        // Code registered before is there already, whichever version it is.
+        host.register_contract(ADDRESS, String::from("Contract"), no_entry_points());
         host.register_contract(ADDRESS, String::from("Other"), no_entry_points());
         assert_eq!(version(), 1);
         assert_eq!(

@@ -1,5 +1,5 @@
-use std::cell::Cell;
-use std::sync::Once;
+use odra_core::host::revert_hook;
+use std::panic::PanicHookInfo;
 
 const REVERT_PREFIX: &str = "Revert: ";
 const REVERT_MESSAGE_PREFIX: &str = "Revert: ExecutionError";
@@ -7,14 +7,10 @@ const CONTRACT_PREFIX: &str = "Contract(ContractPackageHash";
 const USER_ERROR_PREFIX: &str = "UserError { code: ";
 const EXEC_PARTS_PREFIX: &str = "exec_parts::execute";
 
-thread_local! {
-    static REVERTING: Cell<bool> = const { Cell::new(false) };
-}
-
-/// Marks the next panic on this thread as an Odra revert. Called by the VM right before it panics
-/// to unwind a reverted call.
+/// Marks the next panic on this thread as an Odra revert, printed in a compact form. Called by
+/// the VM right before it panics to unwind a reverted call.
 pub fn mark_revert() {
-    REVERTING.with(|r| r.set(true));
+    revert_hook::mark_revert(report_revert);
 }
 
 /// Installs the Odra panic hook, once per process.
@@ -22,23 +18,22 @@ pub fn mark_revert() {
 /// Reverts are printed in a compact form. Any other panic goes to the hook that was installed
 /// before, so it is reported as usual (the default hook prints the message, location and backtrace).
 pub fn set_odra_panic_hook() {
-    static INSTALL: Once = Once::new();
-    INSTALL.call_once(|| {
-        let previous_hook = std::panic::take_hook();
-        std::panic::set_hook(Box::new(move |panic_info| {
-            let is_revert = REVERTING.with(|r| r.replace(false));
-            let panic_message = panic_info
-                .payload()
-                .downcast_ref::<String>()
-                .cloned()
-                .unwrap_or_default();
-            if is_revert && panic_message.starts_with(REVERT_PREFIX) {
-                print_revert(&panic_message);
-            } else {
-                previous_hook(panic_info);
-            }
-        }));
-    });
+    revert_hook::install();
+}
+
+/// Prints a marked revert in the compact form. A marked panic without the revert message is left
+/// to the hook installed before.
+fn report_revert(panic_info: &PanicHookInfo<'_>) -> bool {
+    let panic_message = panic_info
+        .payload()
+        .downcast_ref::<String>()
+        .cloned()
+        .unwrap_or_default();
+    if !panic_message.starts_with(REVERT_PREFIX) {
+        return false;
+    }
+    print_revert(&panic_message);
+    true
 }
 
 fn print_revert(panic_message: &str) {

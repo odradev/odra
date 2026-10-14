@@ -66,6 +66,11 @@ impl EntryPointsCaller {
     pub fn remove_entry_point(&mut self, name: &str) {
         self.entry_points.retain(|ep| ep.name != name);
     }
+
+    /// Whether the contract has an entry point named `name` (`init`, `upgrade`, `new_contract`...).
+    pub fn has_entry_point(&self, name: &str) -> bool {
+        self.entry_points.iter().any(|ep| ep.name == name)
+    }
 }
 
 /// A struct representing an entry point.
