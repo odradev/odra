@@ -7,11 +7,11 @@ use odra::schema::{SchemaCustomTypes, SchemaEntrypoints, SchemaEvents};
 use odra::OdraContract;
 use odra::{contract_def::HasIdent, host::HostEnv};
 
+use odra_schema::codec::CustomTypeSet;
 use serde_derive::Serialize;
 
 use crate::cmd::args::Arg;
 use crate::cmd::{CmdOutput, CONTRACTS_SUBCOMMAND};
-use crate::custom_types::CustomTypeSet;
 use crate::entry_point::{self, ContractEvents};
 use crate::{log, DeployedContractsContainer};
 

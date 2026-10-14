@@ -7,14 +7,13 @@ use odra::schema::{
     SchemaCustomTypes, SchemaEntrypoints, SchemaEvents, SchemaStorageLayout, StorageKind
 };
 use odra::{contract_def::HasIdent, host::HostEnv, OdraContract};
+use odra_schema::codec::CustomTypeSet;
 use serde_derive::Serialize;
 
 use crate::cmd::storage::print_fields;
 use crate::cmd::CmdOutput;
 use crate::log;
-use crate::{
-    cmd::INSPECT_SUBCOMMAND, custom_types::CustomTypeSet, types, DeployedContractsContainer
-};
+use crate::{cmd::INSPECT_SUBCOMMAND, DeployedContractsContainer};
 
 use super::OdraCommand;
 
@@ -143,10 +142,10 @@ impl ContractSchema {
                     .iter()
                     .map(|a| ArgReport {
                         name: a.name.clone(),
-                        ty: types::format_type_hint(&a.ty.0)
+                        ty: odra_schema::codec::format_type_hint(&a.ty.0)
                     })
                     .collect(),
-                return_type: types::format_type_hint(&ep.return_ty.0),
+                return_type: odra_schema::codec::format_type_hint(&ep.return_ty.0),
                 description: ep.description.clone().filter(|d| !d.is_empty())
             })
             .collect();

@@ -4,12 +4,12 @@ use crate::{
         CmdOutput, OdraCommand, PRINT_EVENTS_SUBCOMMAND
     },
     container::{self, ContractProvider},
-    custom_types::CustomTypeSet,
-    log, types, DeployedContractsContainer
+    log, DeployedContractsContainer
 };
 use anyhow::Result;
 use clap::{ArgMatches, Command};
 use odra::{contract_def::HasIdent, host::HostEnv, OdraContract};
+use odra_schema::codec::CustomTypeSet;
 use serde_derive::Serialize;
 
 #[derive(Debug, thiserror::Error)]
@@ -17,7 +17,7 @@ pub enum EventError {
     #[error(transparent)]
     ArgsError(#[from] ArgsError),
     #[error(transparent)]
-    TypesError(#[from] types::Error),
+    TypesError(#[from] odra_schema::codec::Error),
     #[error("Contract not found")]
     ContractNotFound,
     #[error("Event at {index} not found for contract '{contract_name}'")]
@@ -119,7 +119,7 @@ impl OdraCommand for PrintContractEventsCmd {
             })?;
             events.push(EventEntry {
                 index: idx,
-                data: types::decode_event(&bytes, types)?
+                data: odra_schema::codec::decode_event(&bytes, types)?
             });
         }
 

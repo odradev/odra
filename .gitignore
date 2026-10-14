@@ -38,3 +38,7 @@ CLAUDE.md
 !templates/*/CLAUDE.md
 !templates/*/.env.sample
 !templates/*/.gitignore
+odra-storage-reader/pkg-web/**
+odra-storage-reader/example/node_modules/**
+odra-storage-reader/example/dist/**
+odra-storage-reader/example/layouts/**

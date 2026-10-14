@@ -2,13 +2,13 @@ use std::any::Any;
 
 use crate::cmd::args::CommandArg;
 use crate::cmd::{CmdOutput, SCENARIOS_SUBCOMMAND};
-use crate::custom_types::CustomTypeSet;
-use crate::{container::ContractError, types, DeployedContractsContainer};
+use crate::{container::ContractError, DeployedContractsContainer};
 use anyhow::Result;
 use clap::{ArgMatches, Command};
 use odra::casper_types::{CLTyped, CLValue};
 use odra::schema::NamedCLTyped;
 use odra::{casper_types::bytesrepr::FromBytes, host::HostEnv, prelude::OdraError};
+use odra_schema::codec::CustomTypeSet;
 use thiserror::Error;
 
 use super::OdraCommand;
@@ -143,7 +143,7 @@ pub enum ScenarioError {
     #[error("Arg error")]
     ArgError(#[from] ArgError),
     #[error("Types error")]
-    TypesError(#[from] types::Error),
+    TypesError(#[from] odra_schema::codec::Error),
     #[error("Missing scenario argument: {0}")]
     MissingScenarioArg(String)
 }

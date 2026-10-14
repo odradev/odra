@@ -1,0 +1,107 @@
+{
+  "version": 1,
+  "contract": "NestedOdraTypesContract",
+  "ident": "NestedOdraTypesContract",
+  "layout": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "latest_result",
+        "index": 1,
+        "kind": "value",
+        "ty": "OperationResult"
+      },
+      {
+        "name": "current_generation_storage",
+        "index": 2,
+        "kind": "module",
+        "fields": [
+          {
+            "name": "results",
+            "index": 1,
+            "kind": "mapping",
+            "key": "U32",
+            "value": {
+              "kind": "value",
+              "ty": "OperationResult"
+            }
+          },
+          {
+            "name": "results_count",
+            "index": 2,
+            "kind": "value",
+            "ty": "U32"
+          }
+        ]
+      }
+    ]
+  },
+  "types": [
+    {
+      "struct": {
+        "name": "OperationEnded",
+        "description": null,
+        "members": [
+          {
+            "name": "id",
+            "description": null,
+            "ty": "U32"
+          },
+          {
+            "name": "status",
+            "description": null,
+            "ty": "Status"
+          },
+          {
+            "name": "description",
+            "description": null,
+            "ty": "String"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "OperationResult",
+        "description": null,
+        "members": [
+          {
+            "name": "id",
+            "description": null,
+            "ty": "U32"
+          },
+          {
+            "name": "status",
+            "description": null,
+            "ty": "Status"
+          },
+          {
+            "name": "description",
+            "description": null,
+            "ty": "String"
+          }
+        ]
+      }
+    },
+    {
+      "enum": {
+        "name": "Status",
+        "description": null,
+        "variants": [
+          {
+            "name": "Failure",
+            "description": null,
+            "discriminant": 0,
+            "ty": "Unit"
+          },
+          {
+            "name": "Success",
+            "description": null,
+            "discriminant": 1,
+            "ty": "Unit"
+          }
+        ]
+      }
+    }
+  ]
+}

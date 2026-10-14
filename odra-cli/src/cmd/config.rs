@@ -1,11 +1,11 @@
 use anyhow::Result;
 use clap::{ArgMatches, Command};
 use odra::host::HostEnv;
+use odra_schema::codec::CustomTypeSet;
 use serde_derive::Serialize;
 
 use crate::{
     cmd::{CmdOutput, CONFIG_SUBCOMMAND},
-    custom_types::CustomTypeSet,
     log,
     utils::get_default_contracts_file,
     DeployedContractsContainer
