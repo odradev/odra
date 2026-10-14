@@ -397,13 +397,6 @@ mod test {
                             }
                         })
                     }
-
-                    fn contract_events() -> odra::prelude::vec::Vec<odra::contract_def::Event> {
-                        <Erc20Factory as odra::contract_def::HasEvents>::events()
-                            .into_iter()
-                            .chain(<Erc20 as odra::contract_def::HasEvents>::events())
-                            .collect()
-                    }
                 }
             }
 
@@ -710,6 +703,14 @@ mod test {
                 type InitArgs = odra::host::NoArgs;
                 #[cfg(not(target_arch = "wasm32"))]
                 type UpgradeArgs = odra::host::NoArgs;
+
+                #[cfg(not(target_arch = "wasm32"))]
+                fn contract_events() -> odra::prelude::vec::Vec<odra::contract_def::Event> {
+                    <Erc20Factory as odra::contract_def::HasEvents>::events()
+                        .into_iter()
+                        .chain(<Erc20 as odra::contract_def::HasEvents>::events())
+                        .collect()
+                }
             }
 
             #[allow(unexpected_cfgs)]

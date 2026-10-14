@@ -4,6 +4,7 @@ use crate::ModuleImplIR;
 
 pub struct FactoryContractItem {
     module_ident: syn::Ident,
+    child_ident: syn::Ident,
     host_ref: syn::Ident,
     contract_ref: syn::Ident
 }
@@ -14,6 +15,7 @@ impl TryFrom<&'_ ModuleImplIR> for FactoryContractItem {
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
             module_ident: module.module_ident()?,
+            child_ident: module.child_module_ident()?,
             host_ref: module.host_ref_ident()?,
             contract_ref: module.contract_ref_ident()?
         })
@@ -23,8 +25,11 @@ impl TryFrom<&'_ ModuleImplIR> for FactoryContractItem {
 impl ToTokens for FactoryContractItem {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let module_ident = &self.module_ident;
+        let child_ident = &self.child_ident;
         let host_ref = &self.host_ref;
         let contract_ref = &self.contract_ref;
+        // The factory carries the code of its children, so their events are checked with its own
+        // when it is deployed.
         tokens.append_all(quote::quote! {
             impl odra::OdraContract for #module_ident {
                 #[cfg(not(target_arch = "wasm32"))]
@@ -37,6 +42,14 @@ impl ToTokens for FactoryContractItem {
 
                 #[cfg(not(target_arch = "wasm32"))]
                 type UpgradeArgs = odra::host::NoArgs;
+
+                #[cfg(not(target_arch = "wasm32"))]
+                fn contract_events() -> odra::prelude::vec::Vec<odra::contract_def::Event> {
+                    <#module_ident as odra::contract_def::HasEvents>::events()
+                        .into_iter()
+                        .chain(<#child_ident as odra::contract_def::HasEvents>::events())
+                        .collect()
+                }
             }
         });
     }
@@ -64,6 +77,14 @@ mod test {
 
                 #[cfg(not(target_arch = "wasm32"))]
                 type UpgradeArgs = odra::host::NoArgs;
+
+                #[cfg(not(target_arch = "wasm32"))]
+                fn contract_events() -> odra::prelude::vec::Vec<odra::contract_def::Event> {
+                    <Erc20Factory as odra::contract_def::HasEvents>::events()
+                        .into_iter()
+                        .chain(<Erc20 as odra::contract_def::HasEvents>::events())
+                        .collect()
+                }
             }
         };
         test_utils::assert_eq(item, expected);

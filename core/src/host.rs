@@ -91,12 +91,6 @@ pub trait HostRefLoader<T: HostRef> {
 pub trait EntryPointsCallerProvider {
     /// Returns the [EntryPointsCaller] of the contract.
     fn entry_points_caller() -> EntryPointsCaller;
-
-    /// The events the contract may emit, including those of its submodules (and, for a factory,
-    /// of the contracts it creates). Checked when the contract is deployed or upgraded.
-    fn contract_events() -> Vec<crate::contract_def::Event> {
-        Vec::new()
-    }
 }
 
 /// A type which can deploy a contract.
@@ -289,10 +283,7 @@ impl<R: OdraContract> Deployer<R> for R {
         let contract_ident = R::HostRef::ident();
         // A contract that cannot emit one of its events is a programming error, like a missing
         // trait impl: it panics instead of returning an error, before anything is deployed.
-        crate::contract_def::assert_events_can_be_emitted(
-            &contract_ident,
-            &R::HostRef::contract_events()
-        );
+        crate::contract_def::assert_events_can_be_emitted(&contract_ident, &R::contract_events());
         let caller = R::HostRef::entry_points_caller();
 
         let mut init_args = init_args.into();
@@ -340,10 +331,7 @@ impl<R: OdraContract> Deployer<R> for R {
         )?;
         upgrade_args.insert(consts::CREATE_UPGRADE_GROUP, cfg.force_create_upgrade_group)?;
         let contract_ident = R::HostRef::ident();
-        crate::contract_def::assert_events_can_be_emitted(
-            &contract_ident,
-            &R::HostRef::contract_events()
-        );
+        crate::contract_def::assert_events_can_be_emitted(&contract_ident, &R::contract_events());
         let entry_points_caller = R::HostRef::entry_points_caller();
 
         let address = env.upgrade_contract(
@@ -1435,6 +1423,12 @@ mod test {
 
         fn with_tokens(&self, _tokens: U512) -> Self {
             unimplemented!()
+        }
+    }
+
+    impl crate::contract_def::HasEvents for MockTestRef {
+        fn events() -> Vec<crate::contract_def::Event> {
+            Vec::new()
         }
     }
 

@@ -241,7 +241,8 @@ Changelog for `odra`.
   (``Contract `Exchange`: event `Traded`: field `price` has no concrete CLType ...``), and a failed
   emit on the host prints the reason. `Event::has_any` now looks into compound types, like
   casper-event-standard does; `Event::validate`, `contract_def::cl_type_has_any` and
-  `EntryPointsCallerProvider::contract_events` (with a default) are new.
+  `OdraContract::contract_events` (the events checked at deploy: the contract's own by default, and
+  those of its children for a factory; `HasEvents` is a supertrait of `OdraContract` now) are new.
 - An entry point argument may be named `contract`, `env_rc`, `exec_env`, `named_args`, `result`,
   `env`, `call_def` or `contract_env`, also in an external contract. The generated code used these
   names for its own locals, so such an argument was shadowed and failed with a type error pointing at
