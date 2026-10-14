@@ -59,6 +59,10 @@ impl Event {
 
     /// Checks that the event can be emitted, see [Event::has_any]. The error names the event,
     /// each offending field and what to do about it.
+    ///
+    /// Host only: the check runs before a deploy and when the schema is generated, see
+    /// [assert_events_can_be_emitted]; a contract never needs it.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn validate(&self) -> Result<(), String> {
         let fields = self
             .args
@@ -121,7 +125,8 @@ pub fn cl_type_has_any(ty: &CLType) -> bool {
 ///
 /// Called when a contract is deployed or upgraded on the host and when its schema is generated:
 /// such an event compiles and deploys, and only its `emit_event` would revert, with a bare
-/// `Formatting` error.
+/// `Formatting` error. Host only, like the callers: in wasm a failed emit can only revert.
+#[cfg(not(target_arch = "wasm32"))]
 pub fn assert_events_can_be_emitted(contract: &str, events: &[Event]) {
     let errors = events
         .iter()
@@ -211,8 +216,11 @@ impl ContractBlueprint {
     ///
     /// # Panics
     ///
-    /// If an event of the contract cannot be emitted, see [assert_events_can_be_emitted].
+    /// On the host, if an event of the contract cannot be emitted, see
+    /// [assert_events_can_be_emitted]. The blueprint is built by the schema generator, which
+    /// runs on the host; a wasm build skips the check.
     pub fn new<T: HasIdent + HasEvents + HasEntrypoints>() -> Self {
+        #[cfg(not(target_arch = "wasm32"))]
         assert_events_can_be_emitted(&T::ident(), &T::events());
         Self {
             name: T::ident(),
