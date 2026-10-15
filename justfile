@@ -65,6 +65,8 @@ build-storage-reader-wasm:
     cd odra-storage-reader && wasm-pack build --target web --out-dir pkg-web .
     cp odra-storage-reader/pkg-web/odra_storage_reader_bg.wasm \
         resources/odra_storage_reader.wasm
+    cp odra-storage-reader/pkg-web/odra_storage_reader.js resources/
+    cp odra-storage-reader/pkg-web/odra_storage_reader.d.ts resources/
 
 test-odra:
     cargo test
