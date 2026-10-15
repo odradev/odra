@@ -468,7 +468,7 @@ impl ContractEnv {
     /// - validator - The validator to query
     ///
     /// # Returns
-    /// Option<ValidatorBid>
+    /// `Option<ValidatorInfo>`
     pub fn get_validator_info(&self, validator: PublicKey) -> Option<ValidatorInfo> {
         self.backend.borrow().get_validator_info(validator)
     }

@@ -23,7 +23,7 @@ pub trait Deployer<R: OdraContract>: Sized {
     /// If the `init_args` is not [NoArgs], the contract is deployed and initialized
     /// by calling the constructor. Otherwise no constructor is called.
     ///
-    /// The default [OdraConfig] is used for deployment.
+    /// The default [InstallConfig] is used for deployment.
     ///
     /// Returns a host reference to the deployed contract.
     fn deploy(env: &HostEnv, init_args: R::InitArgs) -> R::HostRef;
@@ -88,7 +88,7 @@ impl From<NoArgs> for RuntimeArgs {
 /// A configuration for a contract.
 ///
 /// The configuration every contract written in Odra expects.
-/// Read more: [https://odra.dev/docs/backends/casper/#wasm-arguments]
+/// Read more: <https://odra.dev/docs/backends/casper/#wasm-arguments>
 #[cfg(not(target_arch = "wasm32"))]
 pub struct InstallConfig {
     /// Returns the package hash of the contract.
@@ -106,7 +106,7 @@ pub struct InstallConfig {
 /// A configuration for upgrading contract.
 ///
 /// The configuration every contract upgrade written in Odra expects.
-/// Read more: [https://odra.dev/docs/backends/casper/#wasm-arguments]
+/// Read more: <https://odra.dev/docs/backends/casper/#wasm-arguments>
 #[cfg(not(target_arch = "wasm32"))]
 pub struct UpgradeConfig {
     /// Returns the package hash of the contract.

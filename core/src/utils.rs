@@ -162,7 +162,7 @@ pub fn storage_index_bytes(path: &[u8]) -> Vec<u8> {
 /// Returns the bytes that are hashed to produce a storage key of a module element.
 ///
 /// `path` is the chain of field indices from the contract root to the element and
-/// `mapping_data` is the concatenation of serialized [`Mapping`](crate::mapping::Mapping)
+/// `mapping_data` is the concatenation of serialized [`Mapping`]
 /// keys used along the way. The storage key is the hex-encoded `blake2b` hash of the result.
 pub fn storage_key_preimage(path: &[u8], mapping_data: &[u8]) -> Vec<u8> {
     let mut key = storage_index_bytes(path);

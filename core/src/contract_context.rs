@@ -224,7 +224,7 @@ pub trait ContractContext {
     /// - validator - The validator to query
     ///
     /// # Returns
-    /// Option<ValidatorBid>
+    /// `Option<ValidatorInfo>`
     fn get_validator_info(&self, validator: PublicKey) -> Option<ValidatorInfo>;
 
     /// Returns a vector of pseudorandom bytes of the specified size.
