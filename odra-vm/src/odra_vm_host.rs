@@ -220,10 +220,9 @@ impl OdraVmHost {
         let address = self
             .vm
             .new_contract(name, init_args.clone(), entry_points_caller.clone());
-        // As on Casper, only the deployer of a factory may upgrade its children.
-        if entry_points_caller.has_entry_point("new_contract") {
-            self.vm.set_factory_admin(address, self.caller());
-        }
+        // The installer: on Casper it holds the package's access URef and, for a factory, the
+        // factory group, so it is the one account that may upgrade the children.
+        self.vm.set_deployer(address, self.caller());
 
         if entry_points_caller.has_entry_point("init") {
             self.call_contract(
@@ -252,12 +251,10 @@ impl OdraVmHost {
             entry_points_caller.clone()
         );
 
-        // A contract upgraded into a factory gets the account that installed the factory code as
-        // the admin of its children, like a deployed factory; a factory keeps its admin.
-        if entry_points_caller.has_entry_point("new_contract")
-            && self.vm.factory_admin(&address).is_none()
-        {
-            self.vm.set_factory_admin(address, self.caller());
+        // A contract loaded rather than deployed here has no installer on record; the account
+        // that upgrades it is the nearest thing. A deployed contract keeps its installer.
+        if self.vm.deployer(&address).is_none() {
+            self.vm.set_deployer(address, self.caller());
         }
 
         if entry_points_caller.has_entry_point("upgrade") {

@@ -36,9 +36,10 @@ pub struct OdraVm {
     snapshot: RefCell<Option<(OdraVmSnapshot, CodeSnapshot)>>,
     /// The code before the outermost call, brought back if the call reverts.
     call_snapshot: RefCell<Option<CodeSnapshot>>,
-    /// The accounts that deployed the factory contracts, the only ones allowed to upgrade the
-    /// children of a factory.
-    factory_admins: RefCell<BTreeMap<Address, Address>>,
+    /// The account that installed each contract; a loaded contract has none. On Casper the
+    /// installer holds the package's access URef and, for a factory, the factory group, so it is
+    /// the account that may upgrade the children of a factory.
+    deployers: RefCell<BTreeMap<Address, Address>>,
     /// The children deployed by factories, not yet handed to the host, see
     /// [take_child_contracts](Self::take_child_contracts).
     child_contracts: RefCell<Vec<Address>>,
@@ -46,8 +47,8 @@ pub struct OdraVm {
     this: Weak<OdraVm>
 }
 
-/// What a revert undoes on top of [OdraVmState]: the contracts deployed or upgraded, and the
-/// factory admins.
+/// What a revert undoes on top of [OdraVmState]: the contracts deployed or upgraded, and their
+/// deployers.
 ///
 /// Only the latest version of each contract is kept, the versions added later are dropped. The
 /// kept versions need no other care: a version is post-installed right after it is added, by
@@ -55,7 +56,7 @@ pub struct OdraVm {
 #[derive(Clone)]
 struct CodeSnapshot {
     versions: BTreeMap<Address, ContractVersion>,
-    factory_admins: BTreeMap<Address, Address>
+    deployers: BTreeMap<Address, Address>
 }
 
 impl OdraVm {
@@ -66,7 +67,7 @@ impl OdraVm {
             contract_register: Rc::new(RefCell::new(ContractRegister::default())),
             snapshot: RefCell::new(None),
             call_snapshot: RefCell::new(None),
-            factory_admins: RefCell::new(BTreeMap::new()),
+            deployers: RefCell::new(BTreeMap::new()),
             child_contracts: RefCell::new(Vec::new()),
             this: this.clone()
         })
@@ -160,14 +161,17 @@ impl OdraVm {
         result
     }
 
-    /// Lets `admin` upgrade the children of the factory contract at `factory`.
-    pub(crate) fn set_factory_admin(&self, factory: Address, admin: Address) {
-        self.factory_admins.borrow_mut().insert(factory, admin);
+    /// Records `deployer` as the account that installed the contract at `address`, see
+    /// [deployer](Self::deployer).
+    pub(crate) fn set_deployer(&self, address: Address, deployer: Address) {
+        self.deployers.borrow_mut().insert(address, deployer);
     }
 
-    /// The account that may upgrade the children of the factory at `factory`, if one is recorded.
-    pub(crate) fn factory_admin(&self, factory: &Address) -> Option<Address> {
-        self.factory_admins.borrow().get(factory).copied()
+    /// The account that installed the contract at `address`, if it was deployed or upgraded in
+    /// this VM rather than loaded. On Casper it holds the package's access URef, so for a factory
+    /// it is the only account that may upgrade the children.
+    pub(crate) fn deployer(&self, address: &Address) -> Option<Address> {
+        self.deployers.borrow().get(address).copied()
     }
 
     /// Deploys a child of the factory contract being executed, see
@@ -208,8 +212,9 @@ impl OdraVm {
         upgrade_args: RuntimeArgs,
         entry_points_caller: EntryPointsCallerFn
     ) -> OdraResult<Option<Address>> {
+        // As on Casper, where the installer of the factory holds its factory group URef.
         let factory = self.self_address();
-        if self.factory_admins.borrow().get(&factory) != Some(&self.caller()) {
+        if self.deployer(&factory) != Some(self.caller()) {
             return Err(OdraError::VmError(VmError::InvalidContext));
         }
         let Some(address) = self
@@ -720,7 +725,7 @@ impl OdraVm {
     fn code_snapshot(&self) -> CodeSnapshot {
         CodeSnapshot {
             versions: self.contract_register.borrow().versions(),
-            factory_admins: self.factory_admins.borrow().clone()
+            deployers: self.deployers.borrow().clone()
         }
     }
 
@@ -728,7 +733,7 @@ impl OdraVm {
         self.contract_register
             .borrow_mut()
             .revert_to(&code.versions);
-        *self.factory_admins.borrow_mut() = code.factory_admins.clone();
+        *self.deployers.borrow_mut() = code.deployers.clone();
     }
 
     /// Calls the constructor or the upgrader of a child of the factory contract being executed.
@@ -1090,7 +1095,7 @@ mod tests {
         assert_eq!(result, Err(OdraError::user(1, "Init")));
         let address = utils::contract_address_from_u32(1);
         assert!(vm.contract_register.borrow().get(&address).is_none());
-        assert!(vm.factory_admins.borrow().is_empty());
+        assert!(vm.deployers.borrow().is_empty());
     }
 
     #[test]
@@ -1133,42 +1138,42 @@ mod tests {
         let register = vm.contract_register.borrow();
         assert_eq!(register.get(&factory).map(|c| c.name()), Some("Factory"));
         assert!(register.get(&other).is_none());
-        assert_eq!(vm.factory_admins.borrow().len(), 1);
+        assert_eq!(vm.deployers.borrow().len(), 1);
     }
 
     #[test]
-    fn upgrading_a_contract_into_a_factory_records_its_admin() {
-        // given a plain contract
+    fn deploying_records_the_deployer_and_upgrading_keeps_it() {
+        // given a contract deployed by the default account
         let (vm, env) = setup_env();
+        let deployer = env.caller();
         let address = env
             .new_contract("Plain", RuntimeArgs::new(), no_entry_points())
             .unwrap();
-        assert_eq!(vm.factory_admin(&address), None);
+        assert_eq!(vm.deployer(&address), Some(deployer));
 
-        // when it is upgraded to a factory
+        // when another account upgrades it, into a factory even
+        env.set_caller(env.get_account(1));
         env.upgrade_contract("Factory", address, RuntimeArgs::new(), test_factory())
             .unwrap();
 
-        // then the account that upgraded it may upgrade its children
-        assert_eq!(vm.factory_admin(&address), Some(env.caller()));
+        // then the installer is still the deployer, so only it may upgrade the children
+        assert_eq!(vm.deployer(&address), Some(deployer));
     }
 
     #[test]
-    fn upgrading_a_factory_keeps_its_admin() {
-        // given a factory deployed by the default account
+    fn upgrading_a_loaded_contract_records_the_upgrader() {
+        // given a contract this VM did not deploy (`HostRefLoader::load`)
         let (vm, env) = setup_env();
-        let admin = env.caller();
-        let factory = env
-            .new_contract("Factory", RuntimeArgs::new(), test_factory())
+        let address = utils::contract_address_from_u32(7);
+        vm.register_contract(address, "Plain", no_entry_points());
+        assert_eq!(vm.deployer(&address), None);
+
+        // when it is upgraded here
+        env.upgrade_contract("Factory", address, RuntimeArgs::new(), test_factory())
             .unwrap();
 
-        // when another account upgrades it
-        env.set_caller(env.get_account(1));
-        env.upgrade_contract("Factory", factory, RuntimeArgs::new(), test_factory())
-            .unwrap();
-
-        // then the deployer stays the admin
-        assert_eq!(vm.factory_admin(&factory), Some(admin));
+        // then the account that upgraded it is the nearest thing to its installer
+        assert_eq!(vm.deployer(&address), Some(env.caller()));
     }
 
     #[test]

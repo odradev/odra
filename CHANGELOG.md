@@ -277,7 +277,7 @@ Changelog for `odra`.
   account, like on OdraVM. A call with tokens attached still goes to the VM.
 - OdraVM rolls back contract code with the state, like Casper: a reverted `init` or `upgrade` (also of
   a factory child) leaves no new contract or version behind, so a failed `try_upgrade` keeps the old
-  code running, and `HostEnv::restore_snapshot` brings back the code, the factory admins and the
+  code running, and `HostEnv::restore_snapshot` brings back the code, the recorded deployers and the
   host's record of deployed contracts and their events from the time of the snapshot.
 - OdraVM drops the events and native events emitted during a call that reverts, also those of
   nested calls and of factory children, like Casper: event counts, `get_event` indices and
