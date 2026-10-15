@@ -283,87 +283,13 @@ mod tests {
         );
     }
 
-    #[test]
-    fn duplicated_attrs_fail() {
-        assert_attribute_try_from(
-            syn::parse_quote! {
-                #[odra(payable, payable)]
-            },
-            Err("duplicate odra attribute `payable`")
-        );
-
-        assert_attributes_try_from(
-            vec![
-                syn::parse_quote! { #[odra(payable)] },
-                syn::parse_quote! { #[odra(payable)] },
-            ],
-            Err("duplicate odra attribute `payable`")
-        )
-    }
-
-    #[test]
-    fn unknown_attrs_fail() {
-        assert_attribute_try_from(
-            syn::parse_quote! { #[odra(paybale)] },
-            Err("unknown odra attribute `paybale`, expected one of: payable, non_reentrant, offchain")
-        );
-        assert_attribute_try_from(
-            syn::parse_quote! { #[odra(payable, a::b)] },
-            Err("unknown odra attribute `a::b`, expected one of: payable, non_reentrant, offchain")
-        );
-        assert_attribute_try_from(
-            syn::parse_quote! { #[odra(using = "x")] },
-            Err(
-                "unknown odra attribute `using`, expected one of: payable, non_reentrant, offchain"
-            )
-        );
-    }
-
-    #[test]
-    fn malformed_attrs_fail() {
-        assert_attribute_try_from(
-            syn::parse_quote! { #[odra(payable = true)] },
-            Err("odra attribute `payable` takes no value")
-        );
-        assert_attribute_try_from(
-            syn::parse_quote! { #[odra(offchain(x))] },
-            Err("odra attribute `offchain` takes no value")
-        );
-        assert_attribute_try_from(
-            syn::parse_quote! { #[odra] },
-            Err("malformed odra attribute, expected `#[odra(..)]` with one or more of: payable, non_reentrant, offchain")
-        );
-        assert_attribute_try_from(
-            syn::parse_quote! { #[odra()] },
-            Err("empty odra attribute, expected one or more of: payable, non_reentrant, offchain")
-        );
-    }
+    // Wrong attributes (unknown, duplicate, malformed) are covered by the compile-fail tests of
+    // the `odra` crate (`tests/macros/fail`), which check the message and its span.
 
     fn assert_attribute_try_from(input: syn::Attribute, expected: Result<Attribute, &'static str>) {
         assert_eq!(
             <Attribute as TryFrom<_>>::try_from(input).map_err(|err| err.to_string()),
             expected.map_err(ToString::to_string),
         );
-    }
-
-    fn assert_attributes_try_from(
-        inputs: Vec<syn::Attribute>,
-        expected: Result<(Vec<Attribute>, Vec<Attribute>), &'static str>
-    ) {
-        let result: Result<(Vec<Attribute>, Vec<Attribute>), String> = partition_attributes(inputs)
-            .map(|(odra_attrs, other_attrs)| {
-                (
-                    odra_attrs
-                        .into_iter()
-                        .map(Attribute::from)
-                        .collect::<Vec<_>>(),
-                    other_attrs
-                        .into_iter()
-                        .map(|a| Attribute::Other(Box::new(a)))
-                        .collect::<Vec<_>>()
-                )
-            })
-            .map_err(|err| err.to_string());
-        assert_eq!(result, expected.map_err(ToString::to_string));
     }
 }

@@ -1,23 +1,23 @@
 error: duplicate odra attribute `payable`
-  --> tests/ui/fail/duplicate_odra_attribute.rs:11:21
+  --> tests/macros/fail/duplicate_odra_attribute.rs:11:21
    |
 11 |     #[odra(payable, payable)]
    |                     ^^^^^^^
 
 error: duplicate odra attribute `payable`
-  --> tests/ui/fail/duplicate_odra_attribute.rs:25:27
+  --> tests/macros/fail/duplicate_odra_attribute.rs:25:27
    |
 25 |     #[odra(non_reentrant, payable)]
    |                           ^^^^^^^
 
 error: duplicate odra attribute `offchain`
-  --> tests/ui/fail/duplicate_odra_attribute.rs:39:12
+  --> tests/macros/fail/duplicate_odra_attribute.rs:39:12
    |
 39 |     #[odra(offchain)]
    |            ^^^^^^^^
 
 error: duplicate odra attribute `non_reentrant`
-  --> tests/ui/fail/duplicate_odra_attribute.rs:52:27
+  --> tests/macros/fail/duplicate_odra_attribute.rs:52:27
    |
 52 |     #[odra(non_reentrant, non_reentrant)]
    |                           ^^^^^^^^^^^^^

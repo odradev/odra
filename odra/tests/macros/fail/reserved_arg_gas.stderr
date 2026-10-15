@@ -1,5 +1,5 @@
 error: Argument name `gas` is reserved
-  --> tests/ui/fail/reserved_arg_gas.rs:10:27
+  --> tests/macros/fail/reserved_arg_gas.rs:10:27
    |
 10 |     pub fn set(&mut self, gas: u64) {
    |                           ^^^

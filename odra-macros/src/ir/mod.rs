@@ -1037,64 +1037,17 @@ mod test {
         assert!(result.is_ok());
     }
 
-    #[test]
-    fn test_reserved_fn_arg() {
-        let code: syn::ImplItemFn = syn::parse_quote!(
-            pub fn abc(&self, gas: u64) {}
-        );
-        let result = FnIR::try_from(code);
-        assert_eq!(
-            result.err().unwrap().to_string(),
-            "Argument name `gas` is reserved"
-        );
-
-        let code: syn::ImplItemFn = syn::parse_quote!(
-            pub fn pay(&self, attached_value: u64) {}
-        );
-        let result = FnIR::try_from(code);
-        assert_eq!(
-            result.err().unwrap().to_string(),
-            "Argument name `attached_value` is reserved"
-        );
-    }
+    // The rejected arguments, attributes and names (reserved arguments, module arguments on an
+    // impl or a trait, `payable` on `init`...) are covered by the compile-fail tests of the `odra`
+    // crate (`tests/macros/fail`), which check the message and its span.
 
     #[test]
-    fn test_payable_constructor_is_rejected() {
-        let code: syn::ImplItemFn = syn::parse_quote!(
-            #[odra(payable)]
-            pub fn init(&mut self) {}
-        );
-        let result = FnIR::try_from(code);
-        assert_eq!(
-            result.err().unwrap().to_string(),
-            "`#[odra(payable)]` is not allowed on `init`: `init` cannot receive attached \
-             tokens - there is no way to attach CSPR to it. Use a separate payable \
-             entrypoint instead"
-        );
-    }
-
-    #[test]
-    fn test_module_args_on_impl_are_rejected() {
+    fn test_module_args_factory_or_none_on_impl_are_allowed() {
         let item = quote::quote!(
             impl Token {
                 pub fn transfer(&mut self) {}
             }
         );
-        for attr in [
-            quote::quote!(events = [Transfer]),
-            quote::quote!(errors = Error),
-            quote::quote!(name = "Token"),
-            quote::quote!(version = "1.0.0"),
-            quote::quote!(layout = my_layout()),
-            quote::quote!(factory = on, events = [Transfer])
-        ] {
-            let err = ModuleImplIR::try_from((&attr, &item)).err().unwrap();
-            assert!(
-                err.to_string().contains("is not allowed on an impl block"),
-                "{attr}: {err}"
-            );
-        }
-
         let attr = quote::quote!(factory = on);
         assert!(ModuleImplIR::try_from((&attr, &item)).is_ok());
         let attr = quote::quote!();
@@ -1102,42 +1055,14 @@ mod test {
     }
 
     #[test]
-    fn test_module_args_on_trait_are_rejected() {
+    fn test_module_without_args_on_trait_is_allowed() {
         let item = quote::quote!(
             pub trait Token {
                 fn transfer(&mut self);
             }
         );
-        let attr = quote::quote!(factory = on);
-        let err = ModuleImplIR::try_from((&attr, &item)).err().unwrap();
-        assert_eq!(
-            err.to_string(),
-            "`factory` is not allowed on a trait; `#[odra::module]` on a trait takes no arguments"
-        );
         let attr = quote::quote!();
         assert!(ModuleImplIR::try_from((&attr, &item)).is_ok());
-    }
-
-    #[test]
-    fn test_payable_upgrader_is_rejected() {
-        let code: syn::ImplItemFn = syn::parse_quote!(
-            #[odra(payable)]
-            pub fn upgrade(&mut self) {}
-        );
-        assert!(FnIR::try_from(code).is_err());
-    }
-
-    #[test]
-    fn test_non_reentrant_constructor_is_rejected() {
-        let code: syn::ImplItemFn = syn::parse_quote!(
-            #[odra(non_reentrant)]
-            pub fn init(&mut self) {}
-        );
-        assert_eq!(
-            FnIR::try_from(code).err().unwrap().to_string(),
-            "`#[odra(non_reentrant)]` is not allowed on `init`: it is not applied when \
-             generating the `init` entrypoint"
-        );
     }
 
     #[test]
@@ -1193,44 +1118,5 @@ mod offchain_tests {
             names(module.offchain_functions().unwrap()),
             vec!["balances"]
         );
-    }
-
-    #[test]
-    fn offchain_function_must_be_read_only() {
-        let err = parse(quote! {
-            impl Token {
-                #[odra(offchain)]
-                pub fn burn_all(&mut self) {}
-            }
-        })
-        .err()
-        .expect("a mutable offchain function must be rejected");
-        assert!(err.to_string().contains("cannot change the state"), "{err}");
-    }
-
-    #[test]
-    fn offchain_function_cannot_be_payable() {
-        let err = parse(quote! {
-            impl Token {
-                #[odra(offchain, payable)]
-                pub fn total(&self) -> U256 { U256::zero() }
-            }
-        })
-        .err()
-        .expect("payable + offchain must be rejected");
-        assert!(err.to_string().contains("payable"), "{err}");
-    }
-
-    #[test]
-    fn offchain_function_is_not_allowed_in_a_trait_impl() {
-        let err = parse(quote! {
-            impl Erc20 for Token {
-                #[odra(offchain)]
-                fn total(&self) -> U256 { U256::zero() }
-            }
-        })
-        .err()
-        .expect("an offchain function in a trait impl must be rejected");
-        assert!(err.to_string().contains("trait impl"), "{err}");
     }
 }

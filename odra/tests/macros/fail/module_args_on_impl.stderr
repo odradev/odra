@@ -1,23 +1,35 @@
 error: `events` is not allowed on an impl block; put it on the module struct: `#[odra::module(events = ...)] pub struct ...`
-  --> tests/ui/fail/module_args_on_impl.rs:19:16
+  --> tests/macros/fail/module_args_on_impl.rs:19:16
    |
 19 | #[odra::module(events = [Event])]
    |                ^^^^^^
 
 error: `errors` is not allowed on an impl block; put it on the module struct: `#[odra::module(errors = ...)] pub struct ...`
-  --> tests/ui/fail/module_args_on_impl.rs:27:16
+  --> tests/macros/fail/module_args_on_impl.rs:27:16
    |
 27 | #[odra::module(errors = Error)]
    |                ^^^^^^
 
 error: `name` is not allowed on an impl block; put it on the module struct: `#[odra::module(name = ...)] pub struct ...`
-  --> tests/ui/fail/module_args_on_impl.rs:35:30
+  --> tests/macros/fail/module_args_on_impl.rs:35:30
    |
 35 | #[odra::module(factory = on, name = "Name")]
    |                              ^^^^
 
 error: `version` is not allowed on an impl block; put it on the module struct: `#[odra::module(version = ...)] pub struct ...`
-  --> tests/ui/fail/module_args_on_impl.rs:43:16
+  --> tests/macros/fail/module_args_on_impl.rs:43:16
    |
 43 | #[odra::module(version = "1.0.0")]
    |                ^^^^^^^
+
+error: `layout` is not allowed on an impl block; put it on the module struct: `#[odra::module(layout = ...)] pub struct ...`
+  --> tests/macros/fail/module_args_on_impl.rs:51:16
+   |
+51 | #[odra::module(layout = my_layout())]
+   |                ^^^^^^
+
+error: `events` is not allowed on an impl block; put it on the module struct: `#[odra::module(events = ...)] pub struct ...`
+  --> tests/macros/fail/module_args_on_impl.rs:59:30
+   |
+59 | #[odra::module(factory = on, events = [Event])]
+   |                              ^^^^^^

@@ -43,4 +43,20 @@ pub struct WithVersion {
 #[odra::module(version = "1.0.0")]
 impl WithVersion {}
 
+#[odra::module]
+pub struct WithLayout {
+    value: Var<u32>
+}
+
+#[odra::module(layout = my_layout())]
+impl WithLayout {}
+
+#[odra::module]
+pub struct FactoryWithEvents {
+    value: Var<u32>
+}
+
+#[odra::module(factory = on, events = [Event])]
+impl FactoryWithEvents {}
+
 fn main() {}

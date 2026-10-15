@@ -1,5 +1,5 @@
 error: Argument name `attached_value` is reserved
-  --> tests/ui/fail/reserved_arg_attached_value.rs:12:31
+  --> tests/macros/fail/reserved_arg_attached_value.rs:12:31
    |
 12 |     pub fn deposit(&mut self, attached_value: U512) {
    |                               ^^^^^^^^^^^^^^

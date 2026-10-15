@@ -1,5 +1,5 @@
 error: Struct or impl block expected
- --> tests/ui/fail/module_on_enum.rs:2:1
+ --> tests/macros/fail/module_on_enum.rs:2:1
   |
 2 | / pub enum Contract {
 3 | |     A,

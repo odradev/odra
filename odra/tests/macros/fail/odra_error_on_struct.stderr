@@ -1,5 +1,5 @@
 error: Expected an enum or unit enum for #[odra_error]
- --> tests/ui/fail/odra_error_on_struct.rs:2:1
+ --> tests/macros/fail/odra_error_on_struct.rs:2:1
   |
 2 | / pub struct Error {
 3 | |     pub code: u16

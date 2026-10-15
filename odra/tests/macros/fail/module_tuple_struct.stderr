@@ -1,5 +1,5 @@
 error: Invalid fields. Module fields must be named
- --> tests/ui/fail/module_tuple_struct.rs:2:20
+ --> tests/macros/fail/module_tuple_struct.rs:2:20
   |
 2 | pub struct Contract(Var<u32>);
   |                    ^^^^^^^^^^

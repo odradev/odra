@@ -1,5 +1,5 @@
 error: Unexpected token
- --> tests/ui/fail/unexpected_module_arg.rs:1:29
+ --> tests/macros/fail/unexpected_module_arg.rs:1:29
   |
 1 | #[odra::module(events = [], storage = on)]
   |                             ^^^^^^^

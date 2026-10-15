@@ -1,5 +1,5 @@
 error: Argument name `gas` is reserved
- --> tests/ui/fail/reserved_arg_external_contract.rs:3:41
+ --> tests/macros/fail/reserved_arg_external_contract.rs:3:41
   |
 3 |     fn transfer(&mut self, amount: u64, gas: u64);
   |                                         ^^^
