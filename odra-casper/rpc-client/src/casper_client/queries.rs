@@ -120,7 +120,9 @@ impl super::CasperClient {
     ///
     /// Native events are Casper messages: their payload is only in the execution result of the
     /// emitting transaction, so the client can only know about the transactions it sent itself.
-    /// Events emitted before this client was created, or by someone else, are not counted.
+    /// Events emitted before this client was created, or by someone else, are not counted. A
+    /// message belongs to the entity that emitted it and an upgrade installs a new entity, so the
+    /// events of every version of the contract are counted, oldest version first.
     pub fn native_events_count(&self, address: &Address) -> Result<u32> {
         block_on(self.native_events_count_async(address))
     }
@@ -128,8 +130,8 @@ impl super::CasperClient {
     /// The number of native events the contract at `address` emitted in transactions sent by this
     /// client, see [Self::native_events_count].
     pub async fn native_events_count_async(&self, address: &Address) -> Result<u32> {
-        let entity_addr = self.entity_addr(address).await?;
-        Ok(self.recorded_native_events(&entity_addr).len() as u32)
+        let entity_addrs = self.entity_addrs(address).await?;
+        Ok(self.recorded_native_events_count(&entity_addrs) as u32)
     }
 
     /// The `index`-th native event the contract at `address` emitted in transactions sent by this
@@ -145,11 +147,28 @@ impl super::CasperClient {
         address: &Address,
         index: u32
     ) -> Result<Option<Bytes>> {
-        let entity_addr = self.entity_addr(address).await?;
-        Ok(self
-            .recorded_native_events(&entity_addr)
-            .get(index as usize)
-            .cloned())
+        let entity_addrs = self.entity_addrs(address).await?;
+        Ok(self.recorded_native_event(&entity_addrs, index as usize))
+    }
+
+    /// Whether a contract package is stored at `address`: `Ok(false)` for an account or a hash
+    /// the node does not know, `Err` when the node could not be asked.
+    pub fn has_contract(&self, address: &Address) -> Result<bool> {
+        block_on(self.has_contract_async(address))
+    }
+
+    /// Whether a contract package is stored at `address`, see [Self::has_contract].
+    pub async fn has_contract_async(&self, address: &Address) -> Result<bool> {
+        if !address.is_contract() {
+            return Ok(false);
+        }
+        let value = self
+            .query_global_state_maybe(address.as_key(), None)
+            .await?;
+        Ok(matches!(
+            value,
+            Some(StoredValue::SmartContract(_) | StoredValue::ContractPackage(_))
+        ))
     }
 
     /// Returns the balance of the account.
@@ -382,16 +401,43 @@ impl super::CasperClient {
     ///
     /// Served from the query cache within one state root hash, so a burst of reads from one
     /// contract resolves it once.
-    async fn entity_addr(&self, address: &Address) -> Result<EntityAddr> {
-        let entity_addr_value = self
-            .query_global_state_maybe(address.as_key(), None)
+    /// The contract package at `address`, a Casper 2.0 package or a legacy one.
+    async fn package(&self, address: &Address) -> Result<StoredValue> {
+        self.query_global_state_maybe(address.as_key(), None)
             .await?
             .ok_or_else(|| {
                 ClientError(format!(
                     "No contract found at {}",
                     address.to_formatted_string()
                 ))
-            })?;
+            })
+    }
+
+    /// The entities of every version of the contract at `address`, oldest first, the current one
+    /// last. A native event belongs to the entity that emitted it, and an upgrade installs a new
+    /// entity.
+    async fn entity_addrs(&self, address: &Address) -> Result<Vec<EntityAddr>> {
+        match self.package(address).await? {
+            StoredValue::SmartContract(package) => Ok(package
+                .versions()
+                .contract_hashes()
+                .map(|hash| EntityAddr::SmartContract(hash.value()))
+                .collect()),
+            StoredValue::ContractPackage(package) => Ok(package
+                .versions()
+                .values()
+                .map(|hash| EntityAddr::SmartContract(hash.value()))
+                .collect()),
+            other => Err(ClientError(format!(
+                "Expected a contract package at {}, found {:?}",
+                address.to_formatted_string(),
+                other
+            )))
+        }
+    }
+
+    async fn entity_addr(&self, address: &Address) -> Result<EntityAddr> {
+        let entity_addr_value = self.package(address).await?;
         match entity_addr_value {
             StoredValue::SmartContract(package) => package
                 .current_entity_hash()

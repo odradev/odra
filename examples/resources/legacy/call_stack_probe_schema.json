@@ -1,0 +1,24 @@
+{
+  "name": "CallStackProbe",
+  "events": [],
+  "entrypoints": [
+    {
+      "name": "inspect",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": {
+        "Tuple3": [
+          "Key",
+          {
+            "Option": "Key"
+          },
+          {
+            "List": "Key"
+          }
+        ]
+      },
+      "ty": "Public",
+      "attributes": []
+    }
+  ]
+}

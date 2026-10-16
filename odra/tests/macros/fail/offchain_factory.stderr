@@ -1,0 +1,5 @@
+error: `#[odra(offchain)]` on `value`: offchain functions are not supported in a factory module
+  --> tests/macros/fail/offchain_factory.rs:11:9
+   |
+11 |     pub fn value(&self) -> u32 {
+   |         ^^^^^^^^^^^^^^^^^^^^^^

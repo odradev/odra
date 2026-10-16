@@ -38,15 +38,23 @@ jobs:
       - name: Set base benchmark filename
         id: set-benchmark-filename
         run: echo "BASE_BENCHMARK=${GITHUB_BASE_REF}" | sed 's:/:-:g' | sed 's:\.:-:g' >> $GITHUB_OUTPUT
+      # A base branch without a benchmark run (e.g. the base of a stacked PR) has no report to
+      # compare against: warn and skip the evaluation instead of failing the job.
       - name: Download base benchmark report for ${{ github.base_ref }}
-        uses: dawidd6/action-download-artifact@v4
+        id: download-base-benchmark
+        uses: dawidd6/action-download-artifact@v27
         with:
           name: ${{ steps.set-benchmark-filename.outputs.BASE_BENCHMARK }}
           branch: ${{ github.base_ref }}
           workflow: benchmark.yml
           path: benchmark/base/
+          if_no_artifact_found: warn
+      - name: Skip evaluation without a base benchmark report
+        if: steps.download-base-benchmark.outputs.found_artifact != 'true'
+        run: echo "::notice::No benchmark report for ${{ github.base_ref }}, the benchmark is not evaluated."
       - name: Evaluate benchmark
         id: evaluate-benchmark
+        if: steps.download-base-benchmark.outputs.found_artifact == 'true'
         run: |
           set +e
           just evaluate-benchmark
@@ -54,11 +62,12 @@ jobs:
         continue-on-error: true
       - name: Create comment
         uses: peter-evans/create-or-update-comment@v4
-        if: steps.evaluate-benchmark.outputs.EXIT_CODE != '0'
+        if: steps.evaluate-benchmark.outcome == 'success' && steps.evaluate-benchmark.outputs.EXIT_CODE != '0'
         with:
           issue-number: ${{ github.event.number }}
           body-path: benchmark/benchmark_report.txt
       - name: Upload full report artifact
+        if: steps.evaluate-benchmark.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: benchmark-report

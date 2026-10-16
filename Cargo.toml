@@ -105,6 +105,7 @@ syn_derive = "0.2"
 thiserror = "1.0"
 tokio = "1.48"
 toml = "0.9"
+trybuild = "1.0"
 wasm-bindgen = "=0.2.100"
 wasm-bindgen-futures = "0.4"
 web-sys = { version = "0.3"}

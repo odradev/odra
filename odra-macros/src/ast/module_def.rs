@@ -14,7 +14,7 @@ impl TryFrom<&'_ ModuleStructIR> for ModuleDefItem {
     fn try_from(ir: &'_ ModuleStructIR) -> Result<Self, Self::Error> {
         let mut item_struct = ir.self_code().clone();
         let env_field: syn::Field = utils::misc::field(
-            &utils::ident::underscored_env(),
+            &utils::ident::prefixed_env(),
             &utils::ty::rc_contract_env()
         );
 
@@ -59,7 +59,7 @@ mod tests {
                 counter2: SubModule<Counter>,
                 counters: Var<u32>,
                 counters_map: Mapping<u8, Counter>,
-                __env: odra::prelude::Rc<odra::ContractEnv>
+                __odra_env: odra::prelude::Rc<odra::ContractEnv>
             }
         };
 
@@ -72,7 +72,7 @@ mod tests {
         let def = ModuleDefItem::try_from(&ir).unwrap();
         let expected = quote::quote! {
             pub struct CounterPack {
-                __env: odra::prelude::Rc<odra::ContractEnv>
+                __odra_env: odra::prelude::Rc<odra::ContractEnv>
             }
         };
         assert_eq(def, expected);

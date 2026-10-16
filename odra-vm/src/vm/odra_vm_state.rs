@@ -33,6 +33,9 @@ pub struct AwaitingTransfer {
     pub transfer_unlock: u64
 }
 
+/// The events emitted by each contract.
+type Events = BTreeMap<Address, Vec<Bytes>>;
+
 /// A copy of everything in [`OdraVmState`] that a contract call can change, taken by
 /// [`OdraVmState::snapshot`] and brought back by [`OdraVmState::restore`].
 ///
@@ -57,6 +60,8 @@ pub struct OdraVmState {
     callstack: Callstack,
     events: BTreeMap<Address, Vec<Bytes>>,
     native_events: BTreeMap<Address, Vec<Bytes>>,
+    /// The events and native events before the outermost call, brought back if it reverts.
+    events_snapshot: Option<(Events, Events)>,
     contract_counter: u32,
     pub error: Option<OdraError>,
     block_time: u64,
@@ -412,14 +417,20 @@ impl OdraVmState {
 
     pub fn take_snapshot(&mut self) {
         self.storage.take_snapshot();
+        self.events_snapshot = Some((self.events.clone(), self.native_events.clone()));
     }
 
     pub fn drop_snapshot(&mut self) {
         self.storage.drop_snapshot();
+        self.events_snapshot = None;
     }
 
     pub fn restore_snapshot(&mut self) {
         self.storage.restore_snapshot();
+        if let Some((events, native_events)) = self.events_snapshot.take() {
+            self.events = events;
+            self.native_events = native_events;
+        }
     }
 
     pub fn block_time(&self) -> u64 {
@@ -579,6 +590,7 @@ impl Default for OdraVmState {
             callstack: Default::default(),
             events: Default::default(),
             native_events: Default::default(),
+            events_snapshot: None,
             contract_counter: 0,
             error: None,
             block_time: 0,

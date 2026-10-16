@@ -321,12 +321,9 @@ impl CasperVm {
         contract_address: &Address,
         index: u32
     ) -> Result<Bytes, EventError> {
-        let messages = self
-            .messages
-            .get(&self.get_contract_entity_addr(contract_address))
-            .ok_or(EventError::IndexOutOfBounds)?;
-        let message = messages
-            .get(index as usize)
+        let message = self
+            .native_events(contract_address)
+            .nth(index as usize)
             .ok_or(EventError::IndexOutOfBounds)?;
         match message {
             MessagePayload::String(_) => Err(EventError::CouldntExtractEventData),
@@ -343,13 +340,25 @@ impl CasperVm {
         Ok(self.events_length(package_hash.unwrap()))
     }
 
-    /// Gets the count of native events for the given contract address.
+    /// Gets the count of native events for the given contract address, over all its versions.
     pub fn get_native_events_count(&self, contract_address: &Address) -> Result<u32, EventError> {
-        let messages = self
-            .messages
-            .get(&self.get_contract_entity_addr(contract_address))
-            .ok_or(EventError::IndexOutOfBounds)?;
-        Ok(messages.len() as u32)
+        Ok(self.native_events(contract_address).count() as u32)
+    }
+
+    /// The native events (messages) the contract at `address` emitted, over all its versions in
+    /// order: Casper keeps a message with the entity that emitted it, and an upgrade installs a
+    /// new entity.
+    fn native_events(&self, address: &Address) -> impl Iterator<Item = &MessagePayload> {
+        self.get_contract_entity_addrs(address)
+            .into_iter()
+            .flat_map(|entity_addr| self.messages.get(&entity_addr).into_iter().flatten())
+    }
+
+    /// Whether a contract package exists under `address`.
+    pub fn has_contract(&self, address: &Address) -> bool {
+        address
+            .as_package_hash()
+            .is_some_and(|package_hash| self.context.get_package(package_hash).is_some())
     }
 
     /// Attaches a value to the next call.
@@ -444,7 +453,8 @@ impl CasperVm {
         });
     }
 
-    fn get_contract_entity_addr(&self, address: &Address) -> EntityAddr {
+    /// The entities of every version of the contract at `address`, oldest first.
+    fn get_contract_entity_addrs(&self, address: &Address) -> Vec<EntityAddr> {
         match address {
             Address::Account(_) => {
                 panic!(
@@ -462,13 +472,7 @@ impl CasperVm {
                             contract
                         )
                     });
-
-                package.current_entity_hash().unwrap_or_else(|| {
-                    panic!(
-                        "Current entity hash not found while getting entity addr: {:?}",
-                        contract
-                    )
-                })
+                package.versions().contract_hashes().copied().collect()
             }
         }
     }

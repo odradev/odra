@@ -1,33 +1,45 @@
 //! A module that provides the interface for interacting with the host environment.
 
+#[cfg(not(target_arch = "wasm32"))]
+mod concurrently;
+mod context;
 mod deployed_contracts;
+mod deployer;
+mod events;
+pub mod factory;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod revert_hook;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub use concurrently::ThreadEnvFactory;
+pub use context::HostContext;
+#[cfg(test)]
+pub(crate) use context::MockHostContext;
+#[cfg(not(target_arch = "wasm32"))]
+pub use deployer::{Deployer, InstallConfig, UpgradeConfig};
+pub use deployer::{InitArgs, NoArgs, UpgradeArgs};
 
 use crate::address::Addressable;
 use crate::gas_report::GasReport;
 use crate::host::deployed_contracts::DeployedContract;
+use crate::prelude::*;
 use crate::{
     call_result::CallResult, entry_point_callback::EntryPointsCaller, CallDef, ContractCallResult,
     ContractEnv, EventError
 };
-#[cfg(not(target_arch = "wasm32"))]
-use crate::{consts, contract::OdraContract, contract_def::HasIdent};
-use crate::{prelude::*, utils};
-use alloc::sync::Arc;
 use casper_event_standard::EventInstance;
 use casper_types::{
-    bytesrepr::{Bytes, FromBytes, ToBytes},
+    bytesrepr::{Bytes, FromBytes},
     CLTyped, PublicKey, RuntimeArgs, U512
 };
 use core::time::Duration;
 
-/// The most worker threads [`HostEnv::concurrently`] starts; each one keeps its own node
-/// connection and caches.
-#[cfg(not(target_arch = "wasm32"))]
-const MAX_CONCURRENT_THREADS: usize = 8;
-
 /// A host side reference to a contract.
 pub trait HostRef {
     /// Creates a new host side reference to a contract.
+    ///
+    /// A generated host ref registers the contract at `address` in `env`, like
+    /// [HostRefLoader::load] does, see [HostEnv::register_contract_ref].
     fn new(address: Address, env: HostEnv) -> Self;
     /// Creates a new host reference with attached tokens, based on the current instance.
     ///
@@ -64,430 +76,8 @@ pub trait HostRefLoader<T: HostRef> {
 
 /// A type which can provide an [EntryPointsCaller].
 pub trait EntryPointsCallerProvider {
-    /// Returns an [EntryPointsCaller] for the given host environment.
-    fn entry_points_caller(env: &HostEnv) -> EntryPointsCaller;
-}
-
-/// A type which can deploy a contract.
-///
-/// Before any interaction with the contract, it must be deployed, either
-/// on a virtual machine or on a real blockchain.
-///
-/// The `Deployer` trait provides a simple way to deploy a contract.
-#[cfg(not(target_arch = "wasm32"))]
-pub trait Deployer<R: OdraContract>: Sized {
-    /// Deploys a contract with given init args.
-    ///
-    /// If the `init_args` is not [NoArgs], the contract is deployed and initialized
-    /// by calling the constructor. Otherwise no constructor is called.
-    ///
-    /// The default [OdraConfig] is used for deployment.
-    ///
-    /// Returns a host reference to the deployed contract.
-    fn deploy(env: &HostEnv, init_args: R::InitArgs) -> R::HostRef;
-
-    /// Tries to deploy a contract with given init args.
-    ///
-    /// Similar to `deploy`, but returns a result instead of panicking.
-    fn try_deploy(env: &HostEnv, init_args: R::InitArgs) -> OdraResult<R::HostRef>;
-
-    /// Deploys a contract with given init args and configuration.
-    ///
-    /// Returns a host reference to the deployed contract.
-    fn deploy_with_cfg(env: &HostEnv, init_args: R::InitArgs, cfg: InstallConfig) -> R::HostRef;
-
-    /// Tries to deploy a contract with given init args and configuration.
-    ///
-    /// Similar to `deploy_with_cfg`, but returns a result instead of panicking.
-    fn try_deploy_with_cfg(
-        env: &HostEnv,
-        init_args: R::InitArgs,
-        cfg: InstallConfig
-    ) -> OdraResult<R::HostRef>;
-
-    /// Tries to upgrade a contract with given init args.
-    fn try_upgrade(
-        env: &HostEnv,
-        address: Address,
-        init_args: R::UpgradeArgs
-    ) -> OdraResult<R::HostRef>;
-
-    /// Tries to upgrade a contract with given init args and configuration
-    fn try_upgrade_with_cfg(
-        env: &HostEnv,
-        address: Address,
-        upgrade_args: R::UpgradeArgs,
-        cfg: UpgradeConfig
-    ) -> OdraResult<R::HostRef>;
-}
-
-/// A type which can be used as initialization arguments for a contract.
-pub trait InitArgs: Into<RuntimeArgs> {}
-/// A type which can be used as upgrade arguments for a contract.
-pub trait UpgradeArgs: Into<RuntimeArgs> {}
-
-/// Default implementation of [InitArgs]. Should be used when the contract
-/// does not require initialization arguments.
-///
-/// Precisely, it means the constructor function has not been defined,
-/// or does not require any arguments.
-pub struct NoArgs;
-
-impl InitArgs for NoArgs {}
-
-impl UpgradeArgs for NoArgs {}
-
-impl From<NoArgs> for RuntimeArgs {
-    fn from(_: NoArgs) -> Self {
-        RuntimeArgs::new()
-    }
-}
-
-/// A configuration for a contract.
-///
-/// The configuration every contract written in Odra expects.
-/// Read more: [https://odra.dev/docs/backends/casper/#wasm-arguments]
-#[cfg(not(target_arch = "wasm32"))]
-pub struct InstallConfig {
-    /// Returns the package hash of the contract.
-    ///
-    /// Used to set the `odra_cfg_package_hash_key_name` key at the contract initialization.
-    pub package_named_key: String,
-    /// Returns true if the contract should be deployed as upgradable.
-    ///
-    /// If true, the `odra_cfg_is_upgradable` key is set to `true` at the contract initialization.
-    pub is_upgradable: bool,
-    /// If true and the key `odra_cfg_package_hash_key_name` already exists, it should be overwritten.
-    pub allow_key_override: bool
-}
-
-/// A configuration for upgrading contract.
-///
-/// The configuration every contract upgrade written in Odra expects.
-/// Read more: [https://odra.dev/docs/backends/casper/#wasm-arguments]
-#[cfg(not(target_arch = "wasm32"))]
-pub struct UpgradeConfig {
-    /// Returns the package hash of the contract.
-    ///
-    /// Used to set the `odra_cfg_package_hash_key_name` key at the contract initialization.
-    pub package_named_key: String,
-    /// Create a new upgrade group for the contract. Set it to `true` if you want to upgrade a contract
-    /// Which was deployed using Odra 2.2 or earlier, or not using Odra at all.
-    pub force_create_upgrade_group: bool,
-    /// If true and the key `odra_cfg_package_hash_key_name` already exists, it should be overwritten.
-    pub allow_key_override: bool
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-impl InstallConfig {
-    /// Returns new InstallConfig
-    pub fn new<T: HasIdent>(is_upgradable: bool, allow_key_override: bool) -> Self {
-        InstallConfig {
-            package_named_key: T::contract_name(),
-            is_upgradable,
-            allow_key_override
-        }
-    }
-
-    /// Returns new InstallConfig configured for default upgradable contract
-    pub fn upgradable<T: HasIdent>() -> Self {
-        InstallConfig::new::<T>(true, true)
-    }
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-impl UpgradeConfig {
-    /// Returns new UpgradeConfig with default values.
-    /// It is by default upgradable and allows key override.
-    pub fn new<T: HasIdent>() -> Self {
-        UpgradeConfig {
-            package_named_key: T::contract_name(),
-            force_create_upgrade_group: false,
-            allow_key_override: true
-        }
-    }
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-impl<R: OdraContract> Deployer<R> for R {
-    fn deploy(
-        env: &HostEnv,
-        init_args: <R as OdraContract>::InitArgs
-    ) -> <R as OdraContract>::HostRef {
-        let contract_ident = R::HostRef::ident();
-        match Self::try_deploy(env, init_args) {
-            Ok(contract) => contract,
-            Err(OdraError::ExecutionError(ExecutionError::MissingArg)) => {
-                core::panic!("Invalid init args for contract {}.", contract_ident)
-            }
-            Err(e) => core::panic!("Contract init failed {:?}", e)
-        }
-    }
-
-    fn try_deploy(
-        env: &HostEnv,
-        init_args: <R as OdraContract>::InitArgs
-    ) -> OdraResult<<R as OdraContract>::HostRef> {
-        Self::try_deploy_with_cfg(
-            env,
-            init_args,
-            InstallConfig::new::<<R as OdraContract>::HostRef>(false, true)
-        )
-    }
-
-    fn deploy_with_cfg(
-        env: &HostEnv,
-        init_args: <R as OdraContract>::InitArgs,
-        cfg: InstallConfig
-    ) -> <R as OdraContract>::HostRef {
-        let contract_ident = R::HostRef::ident();
-        match Self::try_deploy_with_cfg(env, init_args, cfg) {
-            Ok(contract) => contract,
-            Err(OdraError::ExecutionError(ExecutionError::MissingArg)) => {
-                core::panic!("Invalid init args for contract {}.", contract_ident)
-            }
-            Err(e) => core::panic!("Contract init failed {:?}", e)
-        }
-    }
-
-    fn try_deploy_with_cfg(
-        env: &HostEnv,
-        init_args: <R as OdraContract>::InitArgs,
-        cfg: InstallConfig
-    ) -> OdraResult<<R as OdraContract>::HostRef> {
-        let contract_ident = R::HostRef::ident();
-        let caller = R::HostRef::entry_points_caller(env);
-
-        let mut init_args = init_args.into();
-        init_args.insert(consts::IS_UPGRADABLE_ARG, cfg.is_upgradable)?;
-        init_args.insert(consts::IS_UPGRADE_ARG, false)?;
-        init_args.insert(consts::ALLOW_KEY_OVERRIDE_ARG, cfg.allow_key_override)?;
-        init_args.insert(
-            consts::PACKAGE_HASH_KEY_NAME_ARG,
-            format!("{}_package_hash", cfg.package_named_key)
-        )?;
-
-        let address = env.new_contract(&contract_ident, init_args, caller)?;
-        Ok(R::HostRef::new(address, env.clone()))
-    }
-
-    fn try_upgrade(
-        env: &HostEnv,
-        contract_to_upgrade: Address,
-        upgrade_args: <R as OdraContract>::UpgradeArgs
-    ) -> OdraResult<<R as OdraContract>::HostRef> {
-        Self::try_upgrade_with_cfg(
-            env,
-            contract_to_upgrade,
-            upgrade_args,
-            UpgradeConfig::new::<<R as OdraContract>::HostRef>()
-        )
-    }
-
-    fn try_upgrade_with_cfg(
-        env: &HostEnv,
-        contract_to_upgrade: Address,
-        upgrade_args: <R as OdraContract>::UpgradeArgs,
-        cfg: UpgradeConfig
-    ) -> OdraResult<<R as OdraContract>::HostRef> {
-        let mut upgrade_args = upgrade_args.into();
-        upgrade_args.insert(consts::IS_UPGRADE_ARG, true)?;
-        upgrade_args.insert(
-            consts::PACKAGE_HASH_TO_UPGRADE_ARG,
-            contract_to_upgrade.value()
-        )?;
-        upgrade_args.insert(consts::ALLOW_KEY_OVERRIDE_ARG, cfg.allow_key_override)?;
-        upgrade_args.insert(
-            consts::PACKAGE_HASH_KEY_NAME_ARG,
-            format!("{}_package_hash", cfg.package_named_key)
-        )?;
-        upgrade_args.insert(consts::CREATE_UPGRADE_GROUP, cfg.force_create_upgrade_group)?;
-        let contract_ident = R::HostRef::ident();
-        let entry_points_caller = R::HostRef::entry_points_caller(env);
-
-        let address = env.upgrade_contract(
-            &contract_ident,
-            contract_to_upgrade,
-            upgrade_args,
-            entry_points_caller
-        )?;
-        Ok(HostRef::new(address, env.clone()))
-    }
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-impl<T: OdraContract> HostRefLoader<T::HostRef> for T {
-    fn load(env: &HostEnv, address: Address) -> T::HostRef {
-        let caller = T::HostRef::entry_points_caller(env);
-        let contract_name = T::HostRef::ident();
-        env.register_contract(address, contract_name, caller);
-        T::HostRef::new(address, env.clone())
-    }
-}
-
-/// Builds an independent [`HostEnv`] for a worker thread of [`HostEnv::concurrently`]; see
-/// [`HostContext::thread_env_factory`].
-#[derive(Clone)]
-pub struct ThreadEnvFactory(Arc<dyn Fn() -> HostEnv + Send + Sync>);
-
-impl ThreadEnvFactory {
-    /// Wraps the function that builds the environment; it is called once per worker thread.
-    pub fn new(build: impl Fn() -> HostEnv + Send + Sync + 'static) -> Self {
-        Self(Arc::new(build))
-    }
-
-    /// Builds a new environment.
-    pub fn build(&self) -> HostEnv {
-        (self.0)()
-    }
-}
-
-/// The `HostContext` trait defines the interface for interacting with the host environment.
-#[cfg_attr(test, mockall::automock)]
-pub trait HostContext {
-    /// Sets the caller address for the current contract execution.
-    fn set_caller(&self, caller: Address);
-
-    /// Sets the gas limit for the current contract execution.
-    fn set_gas(&self, gas: u64);
-
-    /// Returns the caller address for the current contract execution.
-    fn caller(&self) -> Address;
-
-    /// Returns the account address at the specified index.
-    fn get_account(&self, index: usize) -> Address;
-
-    /// Returns the validator public key.
-    fn get_validator(&self, index: usize) -> PublicKey;
-
-    /// The validator at the given index will withdraw all funds and be removed from the validator set.
-    fn remove_validator(&self, index: usize);
-
-    /// Returns the CSPR balance of the specified address.
-    fn balance_of(&self, address: &Address) -> U512;
-
-    /// Advances the block time by the specified time difference.
-    fn advance_block_time(&self, time_diff: u64);
-
-    /// Advances the block time by the specified time difference and processes auctions.
-    fn advance_with_auctions(&self, time_diff: u64);
-
-    /// Time between auctions in milliseconds.
-    fn auction_delay(&self) -> u64;
-
-    /// Time for the funds to be transferred back to the delegator after undelegation in milliseconds.
-    fn unbonding_delay(&self) -> u64;
-
-    /// Returns the delegated amount for the specified delegator and validator.
-    fn delegated_amount(&self, delegator: Address, validator: PublicKey) -> U512;
-
-    /// Returns the current block time.
-    fn block_time(&self) -> u64;
-
-    /// An independent environment for another thread, if the backend can be used from several
-    /// threads at once (livenet). `None`, the default, makes [`HostEnv::concurrently`] run its
-    /// items one after another on the calling thread.
-    fn thread_env_factory(&self) -> Option<ThreadEnvFactory> {
-        None
-    }
-
-    /// Remembers the current state of the backend, so that
-    /// [`restore_snapshot`](Self::restore_snapshot) can bring it back.
-    ///
-    /// The default panics: the backend does not support snapshots.
-    fn take_snapshot(&self) {
-        panic!("Snapshots are not supported by this backend")
-    }
-
-    /// Brings the backend back to the state remembered by the last
-    /// [`take_snapshot`](Self::take_snapshot).
-    ///
-    /// The default panics: the backend does not support snapshots.
-    fn restore_snapshot(&self) {
-        panic!("Snapshots are not supported by this backend")
-    }
-
-    /// Returns the event bytes for the specified contract address and index.
-    fn get_event(&self, contract_address: &Address, index: u32) -> Result<Bytes, EventError>;
-
-    /// Returns the native event bytes for the specified contract address and index.
-    fn get_native_event(&self, contract_address: &Address, index: u32)
-        -> Result<Bytes, EventError>;
-
-    /// Returns the number of emitted events for the specified contract address.
-    fn get_events_count(&self, contract_address: &Address) -> Result<u32, EventError>;
-
-    /// Returns the number of emitted native events for the specified contract address.
-    fn get_native_events_count(&self, contract_address: &Address) -> Result<u32, EventError>;
-
-    /// Calls a contract at the specified address with the given call definition.
-    fn call_contract(
-        &self,
-        address: &Address,
-        call_def: CallDef,
-        use_proxy: bool
-    ) -> OdraResult<Bytes>;
-
-    /// Creates a new contract with the specified name, initialization arguments, and entry points caller.
-    fn new_contract(
-        &self,
-        name: &str,
-        init_args: RuntimeArgs,
-        entry_points_caller: EntryPointsCaller
-    ) -> OdraResult<Address>;
-
-    /// Upgrades an existing contract with a new one with given upgrade arguments and new entry
-    /// points caller.
-    fn upgrade_contract(
-        &self,
-        name: &str,
-        contract_to_upgrade: Address,
-        upgrade_args: RuntimeArgs,
-        entry_points_caller: EntryPointsCaller
-    ) -> OdraResult<Address>;
-
-    /// Registers an existing contract with the specified address, name, and entry points caller.
-    fn register_contract(
-        &self,
-        address: Address,
-        contract_name: String,
-        entry_points_caller: EntryPointsCaller
-    );
-
-    /// Returns the contract environment.
-    fn contract_env(&self) -> ContractEnv;
-
-    /// Returns the gas report for the current contract execution.
-    fn gas_report(&self) -> GasReport;
-
-    /// Returns the gas cost of the last contract call.
-    fn last_call_gas_cost(&self) -> u64;
-
-    /// Signs the specified message with the given address and returns the signature.
-    fn sign_message(&self, message: &Bytes, address: &Address) -> Bytes;
-
-    /// Returns the public key associated with the specified address.
-    fn public_key(&self, address: &Address) -> PublicKey;
-
-    /// Transfers the specified amount of CSPR from the current caller to the specified address.
-    fn transfer(&self, to: Address, amount: U512) -> OdraResult<()>;
-
-    /// Reads a raw value from the Odra storage (the `state` dictionary) of the contract
-    /// at the given address.
-    ///
-    /// `key` is the storage key as produced by the contract environment (a hex-encoded hash).
-    fn get_storage_value(&self, address: &Address, key: &[u8]) -> Option<Bytes>;
-
-    /// Reads the raw value stored under a named key of the contract at the given address.
-    fn get_named_value(&self, address: &Address, name: &str) -> Option<Bytes>;
-
-    /// Reads the raw value stored in a named dictionary of the contract at the given address.
-    fn get_dictionary_value(
-        &self,
-        address: &Address,
-        dictionary_name: &str,
-        key: &[u8]
-    ) -> Option<Bytes>;
+    /// Returns the [EntryPointsCaller] of the contract.
+    fn entry_points_caller() -> EntryPointsCaller;
 }
 
 /// Represents the host environment for executing smart contracts.
@@ -499,6 +89,8 @@ pub struct HostEnv {
     backend: Rc<dyn HostContext>,
     last_call_result: Rc<RefCell<Option<CallResult>>>,
     deployed_contracts: Rc<RefCell<BTreeMap<Address, DeployedContract>>>,
+    /// The deployed contracts remembered by [take_snapshot](Self::take_snapshot).
+    deployed_contracts_snapshot: Rc<RefCell<Option<BTreeMap<Address, DeployedContract>>>>,
     captures_events: Rc<RefCell<bool>>
 }
 
@@ -509,21 +101,8 @@ impl HostEnv {
             backend,
             last_call_result: RefCell::new(None).into(),
             deployed_contracts: RefCell::new(Default::default()).into(),
+            deployed_contracts_snapshot: RefCell::new(None).into(),
             captures_events: Rc::new(RefCell::new(true))
-        }
-    }
-
-    /// Sets the `captures_events` flag, which determines whether events should be captured.
-    pub fn set_captures_events(&self, captures: bool) {
-        *self.captures_events.borrow_mut() = captures;
-        if captures {
-            // Initialize events for all deployed contracts if capturing is enabled
-            let contract_addresses: Vec<Address> =
-                self.deployed_contracts.borrow().keys().copied().collect();
-
-            for contract_address in contract_addresses {
-                self.init_events(&contract_address);
-            }
         }
     }
 
@@ -615,8 +194,8 @@ impl HostEnv {
         backend.block_time() / 1000
     }
 
-    /// Remembers the current state of the test VM: contract storage, CSPR balances, events and
-    /// the block time.
+    /// Remembers the current state of the test VM: deployed contracts and their code, contract
+    /// storage, CSPR balances, events and the block time.
     ///
     /// [`restore_snapshot`](Self::restore_snapshot) brings that state back, as many times as
     /// needed, so several scenarios can branch off one expensive setup. Only the last snapshot
@@ -637,7 +216,9 @@ impl HostEnv {
     /// ```
     pub fn take_snapshot(&self) {
         let backend = self.backend.as_ref();
-        backend.take_snapshot()
+        backend.take_snapshot();
+        let deployed_contracts = self.deployed_contracts.borrow().clone();
+        *self.deployed_contracts_snapshot.borrow_mut() = Some(deployed_contracts);
     }
 
     /// Brings the test VM back to the state remembered by the last
@@ -648,80 +229,11 @@ impl HostEnv {
     /// Panics if no snapshot has been taken.
     pub fn restore_snapshot(&self) {
         let backend = self.backend.as_ref();
-        backend.restore_snapshot()
-    }
-
-    /// Runs `f` once per item and returns the results in the order of the items.
-    ///
-    /// On livenet the items are spread over a few worker threads, each with its own node
-    /// connection and its own `HostEnv` (same caller and gas as this one), so deploys and reads
-    /// that do not depend on each other overlap instead of waiting for one another. On OdraVM and
-    /// CasperVM the items run one after another on this thread, with this environment.
-    ///
-    /// `f` gets the environment to use; it must not capture this one (the compiler enforces it:
-    /// `HostEnv` cannot be sent to another thread). Deploy in the closure and hand back the
-    /// address, then `load` it in the caller's environment:
-    ///
-    /// ```ignore
-    /// env.set_gas(cspr!(450));
-    /// let addresses = env.concurrently(vec![args_a, args_b, args_c], |env, args| {
-    ///     Erc20::deploy(env, args).address()
-    /// });
-    /// let tokens: Vec<Erc20HostRef> = addresses.iter().map(|a| Erc20::load(&env, *a)).collect();
-    /// let supplies = env.concurrently(addresses, |env, address| {
-    ///     Erc20::load(env, address).total_supply()
-    /// });
-    /// ```
-    ///
-    /// # Panics
-    ///
-    /// A panic in `f` (a failed `deploy`, a revert) is propagated after the other items finish.
-    #[cfg(not(target_arch = "wasm32"))]
-    pub fn concurrently<T, R, F>(&self, items: Vec<T>, f: F) -> Vec<R>
-    where
-        T: Send,
-        R: Send,
-        F: Fn(&HostEnv, T) -> R + Sync
-    {
-        use std::sync::atomic::{AtomicUsize, Ordering};
-        use std::sync::Mutex;
-
-        let Some(factory) = self.backend.thread_env_factory() else {
-            return items.into_iter().map(|item| f(self, item)).collect();
-        };
-
-        let workers = items.len().min(MAX_CONCURRENT_THREADS);
-        let items: Vec<Mutex<Option<T>>> = items.into_iter().map(|i| Mutex::new(Some(i))).collect();
-        let results: Vec<Mutex<Option<R>>> = items.iter().map(|_| Mutex::new(None)).collect();
-        let next = AtomicUsize::new(0);
-
-        std::thread::scope(|scope| {
-            for _ in 0..workers {
-                scope.spawn(|| {
-                    let env = factory.build();
-                    loop {
-                        let index = next.fetch_add(1, Ordering::SeqCst);
-                        let Some(slot) = items.get(index) else { break };
-                        let item = slot
-                            .lock()
-                            .expect("item slot poisoned")
-                            .take()
-                            .expect("every item is taken exactly once");
-                        let result = f(&env, item);
-                        *results[index].lock().expect("result slot poisoned") = Some(result);
-                    }
-                });
-            }
-        });
-
-        results
-            .into_iter()
-            .map(|slot| {
-                slot.into_inner()
-                    .expect("result slot poisoned")
-                    .expect("every item produced a result")
-            })
-            .collect()
+        backend.restore_snapshot();
+        // The contracts deployed since are gone, the versions and event counts are back.
+        if let Some(deployed_contracts) = self.deployed_contracts_snapshot.borrow().as_ref() {
+            *self.deployed_contracts.borrow_mut() = deployed_contracts.clone();
+        }
     }
 
     /// Registers a new contract with the specified name, initialization arguments, and entry points caller.
@@ -736,11 +248,14 @@ impl HostEnv {
         entry_points_caller.remove_entry_point("upgrade");
 
         let backend = self.backend.as_ref();
-        let contract_address = backend.new_contract(name, init_args, entry_points_caller)?;
+        let result = backend.new_contract(name, init_args, entry_points_caller);
+        self.track_child_contracts(result.is_ok());
+        let contract_address = result?;
 
-        self.deployed_contracts
-            .borrow_mut()
-            .insert(contract_address, DeployedContract::new(contract_address));
+        self.deployed_contracts.borrow_mut().insert(
+            contract_address,
+            DeployedContract::with_name(contract_address, name)
+        );
         // The events of `init` belong to the deploy, not to the first call after it.
         if *self.captures_events.borrow() {
             self.init_events(&contract_address);
@@ -750,6 +265,10 @@ impl HostEnv {
 
     /// Upgrades an existing contract with a new one with given upgrade arguments and new entry
     /// points caller.
+    ///
+    /// The contract need not be known to this environment (deployed, loaded or wrapped in a host
+    /// ref here): the upgrade registers it. The events of a known contract, native ones included,
+    /// are counted over all its versions, so its counts carry over the upgrade.
     pub fn upgrade_contract(
         &self,
         name: &str,
@@ -762,22 +281,32 @@ impl HostEnv {
         entry_points_caller.remove_entry_point("init");
 
         let backend = self.backend.as_ref();
-        let upgraded_contract = backend.upgrade_contract(
-            name,
-            contract_to_upgrade,
-            upgrade_args,
-            entry_points_caller
-        )?;
-        let mut contracts = self.deployed_contracts.borrow_mut();
-        let contract = contracts.get_mut(&upgraded_contract).unwrap();
-        contract.current_version += 1;
-        // CES events are intact, but native events are connected to a contract, not a package.
-        contract.native_events_count = 0;
+        let result =
+            backend.upgrade_contract(name, contract_to_upgrade, upgrade_args, entry_points_caller);
+        self.track_child_contracts(result.is_ok());
+        let upgraded_contract = result?;
+        let newly_known = {
+            let mut contracts = self.deployed_contracts.borrow_mut();
+            let newly_known = !contracts.contains_key(&upgraded_contract);
+            let contract = contracts
+                .entry(upgraded_contract)
+                .or_insert_with(|| DeployedContract::new(upgraded_contract));
+            contract.current_version += 1;
+            contract.name = Some(String::from(name));
+            newly_known
+        };
+        // The events emitted before a contract was known here belong to nobody's `last_call`.
+        if newly_known && *self.captures_events.borrow() {
+            self.init_events(&upgraded_contract);
+        }
         Ok(upgraded_contract)
     }
 
     /// Registers an existing contract with the specified address, name and entry points caller.
     /// Similar to `new_contract`, but skips the deployment phase.
+    ///
+    /// Registering a contract this environment already knows keeps its events: the events
+    /// emitted so far still belong to the calls that emitted them.
     pub fn register_contract(
         &self,
         address: Address,
@@ -785,13 +314,40 @@ impl HostEnv {
         entry_points_caller: EntryPointsCaller
     ) {
         let backend = self.backend.as_ref();
-        backend.register_contract(address, contract_name, entry_points_caller);
+        backend.register_contract(address, contract_name.clone(), entry_points_caller);
         self.deployed_contracts
             .borrow_mut()
-            .insert(address, DeployedContract::new(address));
+            .entry(address)
+            .or_insert_with(|| DeployedContract::new(address))
+            .name = Some(contract_name);
         // Events emitted before the contract was loaded belong to nobody's `last_call`.
         if *self.captures_events.borrow() {
             self.init_events(&address);
+        }
+    }
+
+    /// Registers the contract a host ref is made for with [HostRef::new], so that a host ref
+    /// made from a bare address (e.g. of a contract deployed by a factory) works like one made
+    /// by [HostRefLoader::load]. On livenet, the non-mutable calls run on the host and need the
+    /// contract code.
+    ///
+    /// Does nothing if the contract is already registered under `contract_name`, and nothing
+    /// for an address that holds no contract on the backend (see
+    /// [HostContext::has_contract]): a host ref to a made-up address does not make up a
+    /// contract, its calls fail.
+    pub fn register_contract_ref(
+        &self,
+        address: Address,
+        contract_name: String,
+        entry_points_caller: impl FnOnce() -> EntryPointsCaller
+    ) {
+        let known = match self.deployed_contracts.borrow().get(&address) {
+            Some(contract) if contract.name.as_ref() == Some(&contract_name) => return,
+            Some(_) => true,
+            None => false
+        };
+        if known || self.backend.has_contract(&address) {
+            self.register_contract(address, contract_name, entry_points_caller());
         }
     }
 
@@ -822,6 +378,7 @@ impl HostEnv {
             let backend = self.backend.as_ref();
             backend.call_contract(&address, call_def, use_proxy)
         };
+        self.track_child_contracts(call_result.is_ok());
 
         let mut events_map: BTreeMap<Address, Vec<Bytes>> = BTreeMap::new();
         let mut native_events_map: BTreeMap<Address, Vec<Bytes>> = BTreeMap::new();
@@ -868,232 +425,6 @@ impl HostEnv {
     pub fn balance_of<T: Addressable>(&self, addr: &T) -> U512 {
         let backend = self.backend.as_ref();
         backend.balance_of(&addr.address())
-    }
-
-    /// Retrieves an event with the specified index from the specified contract.
-    ///
-    /// # Returns
-    ///
-    /// Returns the event as an instance of the specified type, or an error if the event
-    /// couldn't be retrieved or parsed.
-    pub fn get_event<T: FromBytes + EventInstance, R: Addressable>(
-        &self,
-        addr: &R,
-        index: i32
-    ) -> Result<T, EventError> {
-        let contract_address = addr.address();
-        let backend = self.backend.as_ref();
-        let events_count = self.events_count(&contract_address);
-        let event_absolute_position = crate::utils::event_absolute_position(events_count, index)
-            .ok_or(EventError::IndexOutOfBounds)?;
-
-        let bytes = backend.get_event(&contract_address, event_absolute_position)?;
-        let (event, remainder) = T::from_bytes(&bytes).map_err(|_| EventError::Parsing)?;
-
-        if remainder.is_empty() {
-            Ok(event)
-        } else {
-            Err(EventError::Formatting)
-        }
-    }
-
-    /// Retrieves a native event with the specified index from the specified contract.
-    ///
-    /// # Returns
-    ///
-    /// Returns the event as an instance of the specified type, or an error if the event
-    /// couldn't be retrieved or parsed.
-    pub fn get_native_event<T: FromBytes + EventInstance, R: Addressable>(
-        &self,
-        addr: &R,
-        index: i32
-    ) -> Result<T, EventError> {
-        let contract_address = addr.address();
-        let backend = self.backend.as_ref();
-        let events_count = self.native_events_count(&contract_address);
-        let event_absolute_position = crate::utils::event_absolute_position(events_count, index)
-            .ok_or(EventError::IndexOutOfBounds)?;
-
-        let bytes = backend.get_native_event(&contract_address, event_absolute_position)?;
-        T::from_bytes(&bytes)
-            .map_err(|_| EventError::Parsing)
-            .map(|r| r.0)
-    }
-
-    /// Retrieves a raw event (serialized) with the specified index from the specified contract.
-    pub fn get_event_bytes<T: Addressable>(
-        &self,
-        addr: &T,
-        index: u32
-    ) -> Result<Bytes, EventError> {
-        let backend = self.backend.as_ref();
-        backend.get_event(&addr.address(), index)
-    }
-
-    /// Retrieves a raw native event (serialized) with the specified index from the specified contract.
-    pub fn get_native_event_bytes<T: Addressable>(
-        &self,
-        addr: &T,
-        index: u32
-    ) -> Result<Bytes, EventError> {
-        let backend = self.backend.as_ref();
-        backend.get_native_event(&addr.address(), index)
-    }
-
-    /// Returns the names of all events emitted by the specified contract.
-    pub fn event_names<T: Addressable>(&self, addr: &T) -> Vec<String> {
-        let events_count = self.events_count(addr);
-
-        let backend = self.backend.as_ref();
-        (0..events_count)
-            .map(|event_id| {
-                backend
-                    .get_event(&addr.address(), event_id)
-                    .and_then(|bytes| utils::extract_event_name(&bytes))
-                    .unwrap_or_else(|e| panic!("Couldn't extract event name: {:?}", e))
-            })
-            .collect()
-    }
-
-    /// Returns all events emitted by the specified contract.
-    pub fn events<T: Addressable>(&self, addr: &T) -> Vec<Bytes> {
-        let backend = self.backend.as_ref();
-        let contract_address = addr.address();
-        let events_count = backend
-            .get_events_count(&contract_address)
-            .unwrap_or_default();
-        (0..events_count)
-            .map(|event_id| {
-                backend
-                    .get_event(&contract_address, event_id)
-                    .unwrap_or_else(|e| {
-                        panic!(
-                            "Couldn't get event at address {:?} with id {}: {:?}",
-                            &contract_address, event_id, e
-                        )
-                    })
-            })
-            .collect()
-    }
-
-    /// Returns the number of events emitted by the specified contract.
-    pub fn events_count<T: Addressable>(&self, addr: &T) -> u32 {
-        let backend = self.backend.as_ref();
-        backend
-            .get_events_count(&addr.address())
-            .unwrap_or_default()
-    }
-
-    /// Returns the number of native events emitted by the specified contract.
-    pub fn native_events_count<T: Addressable>(&self, addr: &T) -> u32 {
-        let backend = self.backend.as_ref();
-        backend
-            .get_native_events_count(&addr.address())
-            .unwrap_or_default()
-    }
-
-    /// Returns true if the specified event was emitted by the specified contract.
-    pub fn emitted_event<T: ToBytes + EventInstance, R: Addressable>(
-        &self,
-        addr: &R,
-        event: T
-    ) -> bool {
-        let contract_address = addr.address();
-        let events_count = self.events_count(addr);
-
-        let event_bytes = Bytes::from(
-            event
-                .to_bytes()
-                .unwrap_or_else(|_| panic!("Couldn't serialize event"))
-        );
-
-        (0..events_count)
-            .map(|event_id| {
-                self.get_event_bytes(&contract_address, event_id)
-                    .unwrap_or_else(|e| {
-                        panic!(
-                            "Couldn't get event at address {:?} with id {}: {:?}",
-                            &contract_address, event_id, e
-                        )
-                    })
-            })
-            .any(|bytes| bytes == event_bytes)
-    }
-
-    /// Returns true if the specified event was emitted by the specified contract.
-    pub fn emitted_native_event<T: ToBytes + EventInstance, R: Addressable>(
-        &self,
-        addr: &R,
-        event: T
-    ) -> bool {
-        let contract_address = addr.address();
-        let events_count = self.native_events_count(addr);
-        if events_count > 0 {
-            let event_bytes = Bytes::from(
-                event
-                    .to_bytes()
-                    .unwrap_or_else(|_| panic!("Couldn't serialize event"))
-            );
-            (0..events_count)
-                .map(|event_id| {
-                    self.get_native_event_bytes(&contract_address, event_id)
-                        .unwrap_or_else(|e| {
-                            panic!(
-                                "Couldn't get event at address {:?} with id {}: {:?}",
-                                &contract_address, event_id, e
-                            )
-                        })
-                })
-                .any(|bytes| bytes == event_bytes)
-        } else {
-            false
-        }
-    }
-
-    /// Returns true if an event with the specified name was emitted by the specified contract.
-    pub fn emitted<T: AsRef<str>, R: Addressable>(&self, addr: &R, event_name: T) -> bool {
-        let events_count = self.events_count(addr);
-
-        (0..events_count)
-            .map(|event_id| {
-                self.get_event_bytes(addr, event_id).unwrap_or_else(|e| {
-                    panic!(
-                        "Couldn't get event at address {:?} with id {}: {:?}",
-                        addr.address(),
-                        event_id,
-                        e
-                    )
-                })
-            })
-            .any(|bytes| {
-                utils::extract_event_name(&bytes)
-                    .unwrap_or_else(|e| panic!("Couldn't extract event name: {:?}", e))
-                    .as_str()
-                    == event_name.as_ref()
-            })
-    }
-    /// Returns true if a native event with the specified name was emitted by the specified contract.
-    pub fn emitted_native<T: AsRef<str>, R: Addressable>(&self, addr: &R, event_name: T) -> bool {
-        let events_count = self.native_events_count(addr);
-
-        (0..events_count)
-            .map(|event_id| {
-                self.get_native_event_bytes(addr, event_id)
-                    .unwrap_or_else(|e| {
-                        panic!(
-                            "Couldn't get event at address {:?} with id {}: {:?}",
-                            addr.address(),
-                            event_id,
-                            e
-                        )
-                    })
-            })
-            .any(|bytes| {
-                utils::extract_event_name(&bytes)
-                    .unwrap_or_else(|e| panic!("Couldn't extract event name: {:?}", e))
-                    .as_str()
-                    == event_name.as_ref()
-            })
     }
 
     /// Returns the last call result for the specified contract.
@@ -1165,55 +496,20 @@ impl HostEnv {
         backend.transfer(to, amount)
     }
 
-    fn last_events(&self, contract: &mut DeployedContract) -> Vec<Bytes> {
-        let old_count = contract.events_count;
-        let new_count = self.events_count(&contract.address);
-        let mut events = vec![];
-        for count in old_count..new_count {
-            let event = self.get_event_bytes(&contract.address, count).unwrap();
-            events.push(event);
+    /// Starts tracking the contracts the backend deployed from other contracts (factory
+    /// children), unless the operation that deployed them failed and reverted them.
+    fn track_child_contracts(&self, succeeded: bool) {
+        let children = self.backend.take_child_contracts();
+        if !succeeded {
+            return;
         }
-
-        contract.events_count = new_count;
-        events
-    }
-
-    fn last_native_events(&self, contract: &mut DeployedContract) -> Vec<Bytes> {
-        let old_count = contract.native_events_count;
-        let new_count = self.native_events_count(&contract.address);
-        let mut events = vec![];
-        for count in old_count..new_count {
-            let event = self
-                .get_native_event_bytes(&contract.address, count)
-                .unwrap();
-            events.push(event);
-        }
-
-        contract.native_events_count = new_count;
-        events
-    }
-
-    fn init_events(&self, contract_address: &Address) {
-        // First, check if initialization is needed and get event counts
-        let needs_init = {
-            let contracts = self.deployed_contracts.borrow();
-            contracts
-                .get(contract_address)
-                .map(|contract| !contract.events_initialized)
-                .unwrap_or(false)
-        };
-
-        if needs_init {
-            // Get event counts while not holding any borrows
-            let events_count = self.events_count(contract_address);
-            let native_events_count = self.native_events_count(contract_address);
-
-            // Now update the contract
-            let mut contracts = self.deployed_contracts.borrow_mut();
-            let contract = contracts.get_mut(contract_address).unwrap();
-            contract.events_count = events_count;
-            contract.native_events_count = native_events_count;
-            contract.events_initialized = true;
+        let captures_events = *self.captures_events.borrow();
+        let mut contracts = self.deployed_contracts.borrow_mut();
+        for address in children {
+            // The contract is new, all its events belong to the operation that deployed it.
+            let mut contract = DeployedContract::new(address);
+            contract.events_initialized = captures_events;
+            contracts.insert(address, contract);
         }
     }
 }
@@ -1241,191 +537,17 @@ impl BlockTimeDiff for Duration {
 
 #[cfg(test)]
 mod test {
-    use core::fmt::Debug;
-
     use super::*;
-    use casper_event_standard::Event;
     use casper_types::account::AccountHash;
     use casper_types::contracts::ContractPackageHash;
-    use mockall::{mock, predicate};
-    use std::sync::Mutex;
-
-    static IDENT_MTX: Mutex<()> = Mutex::new(());
-    static EPC_MTX: Mutex<()> = Mutex::new(());
-
-    #[derive(Debug, Event, PartialEq)]
-    struct TestEv {}
-
-    mock! {
-        TestRef {}
-        impl HasIdent for TestRef {
-            fn ident() -> String;
-        }
-        impl EntryPointsCallerProvider for TestRef {
-            fn entry_points_caller(env: &HostEnv) -> EntryPointsCaller;
-        }
-        impl HostRef for TestRef {
-            fn new(address: Address, env: HostEnv) -> Self;
-            fn with_tokens(&self, tokens: U512) -> Self;
-            fn contract_address(&self) -> Address;
-            fn env(&self) -> &HostEnv;
-            fn get_event<T>(&self, index: i32) -> Result<T, EventError> where T: FromBytes + EventInstance + 'static;
-            fn last_call(&self) -> ContractCallResult;
-        }
-    }
-
-    impl crate::ContractRef for MockTestRef {
-        fn new(_env: Rc<ContractEnv>, _address: Address) -> Self {
-            unimplemented!()
-        }
-        fn address(&self) -> &Address {
-            unimplemented!()
-        }
-
-        fn with_tokens(&self, _tokens: U512) -> Self {
-            unimplemented!()
-        }
-    }
-
-    impl OdraContract for MockTestRef {
-        type HostRef = MockTestRef;
-
-        type ContractRef = MockTestRef;
-
-        type InitArgs = NoArgs;
-
-        type UpgradeArgs = NoArgs;
-    }
-
-    mock! {
-        Ev {}
-        impl Into<RuntimeArgs> for Ev {
-            fn into(self) -> RuntimeArgs;
-        }
-    }
-
-    #[test]
-    fn concurrently_runs_on_the_calling_thread_without_a_factory() {
-        let mut ctx = MockHostContext::new();
-        ctx.expect_thread_env_factory().returning(|| None);
-        let env = HostEnv::new(Rc::new(ctx));
-        let main_thread = std::thread::current().id();
-
-        let results = env.concurrently((0..5).collect(), |_, i: u32| {
-            (i * 2, std::thread::current().id())
-        });
-
-        assert_eq!(
-            results,
-            (0..5).map(|i| (i * 2, main_thread)).collect::<Vec<_>>()
-        );
-    }
-
-    #[test]
-    fn concurrently_spreads_items_over_worker_threads_and_keeps_the_order() {
-        let mut ctx = MockHostContext::new();
-        ctx.expect_thread_env_factory().returning(|| {
-            Some(ThreadEnvFactory::new(|| {
-                let mut ctx = MockHostContext::new();
-                ctx.expect_get_account()
-                    .returning(|_| Address::Account(AccountHash::new([7; 32])));
-                HostEnv::new(Rc::new(ctx))
-            }))
-        });
-        let env = HostEnv::new(Rc::new(ctx));
-        let main_thread = std::thread::current().id();
-
-        let results = env.concurrently((0..50u32).collect(), |env, i| {
-            // The worker's own environment is usable, and the work really runs elsewhere.
-            assert_eq!(
-                env.get_account(0),
-                Address::Account(AccountHash::new([7; 32]))
-            );
-            std::thread::sleep(core::time::Duration::from_millis(1));
-            (i * 2, std::thread::current().id())
-        });
-
-        let values: Vec<u32> = results.iter().map(|(v, _)| *v).collect();
-        assert_eq!(values, (0..50).map(|i| i * 2).collect::<Vec<_>>());
-        let threads: std::collections::HashSet<_> = results.iter().map(|(_, t)| *t).collect();
-        assert!(threads.len() > 1, "expected several worker threads");
-        assert!(!threads.contains(&main_thread));
-    }
-
-    #[test]
-    fn test_deploy_with_default_args() {
-        // MockTestRef::ident() and  MockTestRef::entry_points_caller() are static and can't be safely used
-        // from multiple tests at the same time. Should be to protected with a Mutex. Each function has
-        // a separate Mutex.
-        // https://github.com/asomers/mockall/blob/master/mockall/tests/mock_struct_with_static_method.rs
-        let _i = IDENT_MTX.lock();
-        let _e = EPC_MTX.lock();
-
-        // stubs
-        let indent_ctx = MockTestRef::ident_context();
-        indent_ctx.expect().returning(|| "TestRef".to_string());
-
-        let epc_ctx = MockTestRef::entry_points_caller_context();
-        epc_ctx
-            .expect()
-            .returning(|h| EntryPointsCaller::new(h.clone(), vec![], |_, _| Ok(Bytes::default())));
-
-        // check if TestRef::new() is called exactly once
-        let instance_ctx = MockTestRef::new_context();
-        instance_ctx
-            .expect()
-            .times(1)
-            .returning(|_, _| MockTestRef::default());
-
-        let mut ctx = MockHostContext::new();
-        ctx.expect_new_contract()
-            .returning(|_, _, _| Ok(Address::Account(AccountHash::new([0; 32]))));
-        // The event baseline of the new contract is read right after the deploy.
-        ctx.expect_get_events_count().returning(|_| Ok(0));
-        ctx.expect_get_native_events_count().returning(|_| Ok(0));
-        let env = HostEnv::new(Rc::new(ctx));
-        MockTestRef::deploy(&env, NoArgs);
-    }
-
-    #[test]
-    fn test_load_ref() {
-        // MockTestRef::ident() and MockTestRef::entry_points_caller() are static and can't be safely used
-        // from multiple tests at the same time. Should be to protected with a Mutex. Each function has
-        // a separate Mutex.
-        // https://github.com/asomers/mockall/blob/master/mockall/tests/mock_struct_with_static_method.rs
-        let _e = EPC_MTX.lock();
-        let _i = IDENT_MTX.lock();
-
-        // stubs
-        let epc_ctx = MockTestRef::entry_points_caller_context();
-        epc_ctx
-            .expect()
-            .returning(|h| EntryPointsCaller::new(h.clone(), vec![], |_, _| Ok(Bytes::default())));
-        let indent_ctx = MockTestRef::ident_context();
-        indent_ctx.expect().returning(|| "TestRef".to_string());
-
-        let mut ctx = MockHostContext::new();
-        ctx.expect_register_contract().returning(|_, _, _| ());
-        ctx.expect_get_events_count().returning(|_| Ok(0));
-        ctx.expect_get_native_events_count().returning(|_| Ok(0));
-
-        // check if TestRef::new() is called exactly once
-        let instance_ctx = MockTestRef::new_context();
-        instance_ctx
-            .expect()
-            .times(1)
-            .returning(|_, _| MockTestRef::default());
-
-        let env = HostEnv::new(Rc::new(ctx));
-        let address = Address::Account(AccountHash::new([0; 32]));
-        MockTestRef::load(&env, address);
-    }
+    use mockall::predicate;
 
     #[test]
     fn test_host_env() {
         let mut ctx = MockHostContext::new();
         ctx.expect_new_contract()
             .returning(|_, _, _| Ok(Address::Account(AccountHash::new([0; 32]))));
+        ctx.expect_take_child_contracts().returning(Vec::new);
         ctx.expect_caller()
             .returning(|| Address::Account(AccountHash::new([2; 32])))
             .times(1);
@@ -1491,99 +613,114 @@ mod test {
         );
     }
 
-    #[test]
-    fn test_get_event() {
-        let addr = Address::Account(AccountHash::new([0; 32]));
-
-        let mut ctx = MockHostContext::new();
-        // there are 2 events emitted by the contract
-        ctx.expect_get_events_count().returning(|_| Ok(2));
-        // get_event() at index 0 will return an invalid event
-        ctx.expect_get_event()
-            .with(predicate::always(), predicate::eq(0))
-            .returning(|_, _| Ok(vec![1].into()));
-        // get_event() at index 1 will return an valid event
-        ctx.expect_get_event()
-            .with(predicate::always(), predicate::eq(1))
-            .returning(|_, _| Ok(TestEv {}.to_bytes().unwrap().into()));
-
-        let env = HostEnv::new(Rc::new(ctx));
-
-        assert_eq!(env.get_event(&addr, 1), Ok(TestEv {}));
-        assert_eq!(env.get_event(&addr, -1), Ok(TestEv {}));
-        assert_eq!(
-            env.get_event::<TestEv, _>(&addr, 0),
-            Err(EventError::Parsing)
-        );
-        assert_eq!(
-            env.get_event::<TestEv, _>(&addr, -2),
-            Err(EventError::Parsing)
-        );
-        assert_eq!(
-            env.get_event::<TestEv, _>(&addr, 2),
-            Err(EventError::IndexOutOfBounds)
-        );
-        assert_eq!(
-            env.get_event::<TestEv, _>(&addr, -3),
-            Err(EventError::IndexOutOfBounds)
-        );
+    fn no_entry_points() -> EntryPointsCaller {
+        EntryPointsCaller::new(vec![], |_, _| Ok(Bytes::default()))
     }
 
     #[test]
-    fn test_events_works() {
-        let addr = Address::Account(AccountHash::new([0; 32]));
-
+    fn upgrade_registers_a_contract_the_env_did_not_know() {
+        let address = Address::Contract(ContractPackageHash::new([1; 32]));
         let mut ctx = MockHostContext::new();
-        // there are 2 events emitted by the contract
-        ctx.expect_get_events_count().returning(|_| Ok(2));
-        // get_event() at index 0 will return an invalid event
-        ctx.expect_get_event()
-            .with(predicate::always(), predicate::eq(0))
-            .returning(|_, _| Ok(vec![1].into()));
-        // get_event() at index 1 will return an valid event
-        ctx.expect_get_event()
-            .with(predicate::always(), predicate::eq(1))
-            .returning(|_, _| Ok(vec![1, 0, 1].into()));
-
+        ctx.expect_upgrade_contract()
+            .times(1)
+            .returning(move |_, _, _, _| Ok(address));
+        ctx.expect_take_child_contracts().returning(Vec::new);
+        // The events emitted before belong to nobody's `last_call`.
+        ctx.expect_get_events_count().times(1).returning(|_| Ok(3));
+        ctx.expect_get_native_events_count()
+            .times(1)
+            .returning(|_| Ok(2));
         let env = HostEnv::new(Rc::new(ctx));
 
-        assert_eq!(
-            env.events(&addr),
-            vec![vec![1].into(), vec![1, 0, 1].into()]
-        );
+        env.upgrade_contract("Upgraded", address, RuntimeArgs::new(), no_entry_points())
+            .unwrap();
+
+        let contracts = env.deployed_contracts.borrow();
+        let contract = contracts.get(&address).unwrap();
+        assert_eq!(contract.name.as_deref(), Some("Upgraded"));
+        assert_eq!(contract.current_version, 1);
+        assert_eq!(contract.events_count, 3);
+        assert_eq!(contract.native_events_count, 2);
     }
 
     #[test]
-    #[should_panic(
-        expected = "Couldn't get event at address Account(AccountHash(0000000000000000000000000000000000000000000000000000000000000000)) with id 0: CouldntExtractEventData"
-    )]
-    fn test_events_fails() {
-        let addr = Address::Account(AccountHash::new([0; 32]));
-
+    fn register_contract_ref_skips_an_address_without_a_contract() {
         let mut ctx = MockHostContext::new();
-        // there are 2 events emitted by the contract
-        ctx.expect_get_events_count().returning(|_| Ok(2));
-        // get_event() at index 0 panics
-        ctx.expect_get_event()
-            .with(predicate::always(), predicate::eq(0))
-            .returning(|_, _| Err(EventError::CouldntExtractEventData));
-
+        ctx.expect_has_contract().times(1).returning(|_| false);
+        ctx.expect_register_contract().never();
         let env = HostEnv::new(Rc::new(ctx));
+        let address = Address::Contract(ContractPackageHash::new([1; 32]));
 
-        env.events(&addr);
+        env.register_contract_ref(address, "TestRef".to_string(), no_entry_points);
+        assert!(env.deployed_contracts.borrow().is_empty());
     }
 
     #[test]
-    fn test_emitted() {
-        let addr = Address::Account(AccountHash::new([0; 32]));
+    fn register_contract_ref_registers_once_per_name() {
         let mut ctx = MockHostContext::new();
-
-        ctx.expect_get_events_count().returning(|_| Ok(1));
-        ctx.expect_get_event()
-            .returning(|_, _| Ok(TestEv {}.to_bytes().unwrap().into()));
-
+        ctx.expect_has_contract().times(1).returning(|_| true);
+        ctx.expect_register_contract()
+            .with(
+                predicate::always(),
+                predicate::eq("TestRef".to_string()),
+                predicate::always()
+            )
+            .times(1)
+            .returning(|_, _, _| ());
+        // A host ref of another type for the same address brings its code.
+        ctx.expect_register_contract()
+            .with(
+                predicate::always(),
+                predicate::eq("OtherRef".to_string()),
+                predicate::always()
+            )
+            .times(1)
+            .returning(|_, _, _| ());
+        ctx.expect_get_events_count().times(1).returning(|_| Ok(3));
+        ctx.expect_get_native_events_count()
+            .times(1)
+            .returning(|_| Ok(1));
         let env = HostEnv::new(Rc::new(ctx));
-        assert!(env.emitted(&addr, "TestEv"));
-        assert!(!env.emitted(&addr, "AnotherEvent"));
+        let address = Address::Contract(ContractPackageHash::new([1; 32]));
+
+        env.register_contract_ref(address, "TestRef".to_string(), no_entry_points);
+        env.register_contract_ref(address, "TestRef".to_string(), || {
+            panic!("the entry points of a registered contract are not needed")
+        });
+        env.register_contract_ref(address, "OtherRef".to_string(), no_entry_points);
+
+        let contracts = env.deployed_contracts.borrow();
+        let contract = contracts.get(&address).unwrap();
+        assert_eq!(contract.name.as_deref(), Some("OtherRef"));
+        assert_eq!(contract.events_count, 3);
+        assert_eq!(contract.native_events_count, 1);
+    }
+
+    #[test]
+    fn registering_a_known_contract_keeps_its_events() {
+        let mut ctx = MockHostContext::new();
+        ctx.expect_register_contract()
+            .times(2)
+            .returning(|_, _, _| ());
+        // Read once, by the first registration.
+        ctx.expect_get_events_count().times(1).returning(|_| Ok(2));
+        ctx.expect_get_native_events_count()
+            .times(1)
+            .returning(|_| Ok(0));
+        let env = HostEnv::new(Rc::new(ctx));
+        let address = Address::Contract(ContractPackageHash::new([1; 32]));
+
+        env.register_contract(address, "TestRef".to_string(), no_entry_points());
+        env.deployed_contracts
+            .borrow_mut()
+            .get_mut(&address)
+            .unwrap()
+            .current_version = 1;
+        env.register_contract(address, "TestRef".to_string(), no_entry_points());
+
+        let contracts = env.deployed_contracts.borrow();
+        let contract = contracts.get(&address).unwrap();
+        assert_eq!(contract.events_count, 2);
+        assert_eq!(contract.current_version, 1);
     }
 }

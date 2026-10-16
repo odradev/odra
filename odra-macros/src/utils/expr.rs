@@ -11,10 +11,10 @@ pub fn u512_zero() -> syn::Expr {
     parse_quote!(#ty::zero())
 }
 
-pub fn parse_bytes(data_ident: &syn::Ident) -> syn::Expr {
-    let ty = super::ty::to_bytes();
-    let ty_err = super::ty::odra_error();
-    parse_quote!(#ty::to_bytes(&#data_ident).map(Into::into).map_err(|err| #ty_err::ExecutionError(err.into())))
+/// `odra::utils::try_serialize(&data)`: the value of `data_ident` as the `Bytes` an entry point
+/// returns, or the serialization error.
+pub fn try_serialize(data_ident: &syn::Ident) -> syn::Expr {
+    parse_quote!(odra::utils::try_serialize(&#data_ident))
 }
 
 pub fn module_component_instance(ty: &syn::Type, env_ident: &syn::Ident, idx: u8) -> syn::Expr {
@@ -183,15 +183,6 @@ fn new_entry_point_arg(arg: &syn::PatType) -> syn::Expr {
 
 pub fn into_arg(ty: syn::Type, ident: String) -> syn::Expr {
     parse_quote!(odra::args::odra_argument::<#ty>(#ident))
-}
-pub trait IntoExpr {
-    fn into_expr(self) -> syn::Expr;
-}
-
-impl IntoExpr for syn::Ident {
-    fn into_expr(self) -> syn::Expr {
-        parse_quote!(#self)
-    }
 }
 
 pub fn constructor_ep(args_expr: syn::Expr) -> syn::Expr {

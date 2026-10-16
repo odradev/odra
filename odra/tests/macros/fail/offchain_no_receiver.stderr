@@ -1,0 +1,5 @@
+error: `#[odra(offchain)]` on `constant`: an offchain function reads the contract's state: take `&self`
+  --> tests/macros/fail/offchain_no_receiver.rs:11:9
+   |
+11 |     pub fn constant() -> u32 {
+   |         ^^^^^^^^^^^^^^^^^^^^

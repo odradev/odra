@@ -297,7 +297,7 @@ mod deployer_impl {
             }
 
             impl odra::host::EntryPointsCallerProvider for Erc20HostRef {
-                fn entry_points_caller(env: &odra::host::HostEnv) -> odra::entry_point_callback::EntryPointsCaller {
+                fn entry_points_caller() -> odra::entry_point_callback::EntryPointsCaller {
                     let entry_points = odra::prelude::vec![
                         odra::entry_point_callback::EntryPoint::new(
                             odra::prelude::string::String::from("init"),
@@ -337,35 +337,35 @@ mod deployer_impl {
                         )
                     ];
 
-                    odra::entry_point_callback::EntryPointsCaller::new(env.clone(), entry_points, |contract_env, call_def| {
-                        match call_def.entry_point() {
+                    odra::entry_point_callback::EntryPointsCaller::new(entry_points, |__odra_contract_env, __odra_call_def| {
+                        match __odra_call_def.entry_point() {
                             "init" => {
-                                let result = __erc20_exec_parts::execute_init(contract_env);
-                                odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
+                                let __odra_result = __erc20_exec_parts::execute_init(__odra_contract_env);
+                                odra::utils::try_serialize(&__odra_result)
                             }
                             "upgrade" => {
-                                let result = __erc20_exec_parts::execute_upgrade(contract_env);
-                                odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
+                                let __odra_result = __erc20_exec_parts::execute_upgrade(__odra_contract_env);
+                                odra::utils::try_serialize(&__odra_result)
                             }
                             "total_supply" => {
-                                let result = __erc20_exec_parts::execute_total_supply(contract_env);
-                                odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
+                                let __odra_result = __erc20_exec_parts::execute_total_supply(__odra_contract_env);
+                                odra::utils::try_serialize(&__odra_result)
                             }
                             "pay_to_mint" => {
-                                let result = __erc20_exec_parts::execute_pay_to_mint(contract_env);
-                                odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
+                                let __odra_result = __erc20_exec_parts::execute_pay_to_mint(__odra_contract_env);
+                                odra::utils::try_serialize(&__odra_result)
                             }
                             "approve" => {
-                                let result = __erc20_exec_parts::execute_approve(contract_env);
-                                odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
+                                let __odra_result = __erc20_exec_parts::execute_approve(__odra_contract_env);
+                                odra::utils::try_serialize(&__odra_result)
                             }
                             "airdrop" => {
-                                let result = __erc20_exec_parts::execute_airdrop(contract_env);
-                                odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
+                                let __odra_result = __erc20_exec_parts::execute_airdrop(__odra_contract_env);
+                                odra::utils::try_serialize(&__odra_result)
                             }
                             "swap" => {
-                                let result = __erc20_exec_parts::execute_swap(contract_env);
-                                odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
+                                let __odra_result = __erc20_exec_parts::execute_swap(__odra_contract_env);
+                                odra::utils::try_serialize(&__odra_result)
                             }
                             name => Err(OdraError::VmError(
                                 odra::VmError::NoSuchMethod(odra::prelude::String::from(name)),
@@ -384,25 +384,25 @@ mod deployer_impl {
         let module = test_utils::mock::module_trait_impl();
         let expected = quote! {
             impl odra::host::EntryPointsCallerProvider for Erc20HostRef {
-                fn entry_points_caller(env: &odra::host::HostEnv) -> odra::entry_point_callback::EntryPointsCaller {
+                fn entry_points_caller() -> odra::entry_point_callback::EntryPointsCaller {
                     let entry_points = odra::prelude::vec![
                         odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("total_supply"), odra::prelude::vec![]),
                         odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("set_total_supply"), odra::prelude::vec![]),
                         odra::entry_point_callback::EntryPoint::new_payable(odra::prelude::string::String::from("pay_to_mint"), odra::prelude::vec![])
                     ];
-                    odra::entry_point_callback::EntryPointsCaller::new(env.clone(), entry_points, |contract_env, call_def| {
-                        match call_def.entry_point() {
+                    odra::entry_point_callback::EntryPointsCaller::new(entry_points, |__odra_contract_env, __odra_call_def| {
+                        match __odra_call_def.entry_point() {
                             "total_supply" => {
-                                let result = __erc20_exec_parts::execute_total_supply(contract_env);
-                                odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
+                                let __odra_result = __erc20_exec_parts::execute_total_supply(__odra_contract_env);
+                                odra::utils::try_serialize(&__odra_result)
                             }
                             "set_total_supply" => {
-                                let result = __erc20_exec_parts::execute_set_total_supply(contract_env);
-                                odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
+                                let __odra_result = __erc20_exec_parts::execute_set_total_supply(__odra_contract_env);
+                                odra::utils::try_serialize(&__odra_result)
                             }
                             "pay_to_mint" => {
-                                let result = __erc20_exec_parts::execute_pay_to_mint(contract_env);
-                                odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
+                                let __odra_result = __erc20_exec_parts::execute_pay_to_mint(__odra_contract_env);
+                                odra::utils::try_serialize(&__odra_result)
                             }
                             name => Err(OdraError::VmError(
                                 odra::VmError::NoSuchMethod(odra::prelude::String::from(name)),
@@ -421,7 +421,7 @@ mod deployer_impl {
         let module = test_utils::mock::module_delegation();
         let expected = quote! {
             impl odra::host::EntryPointsCallerProvider for Erc20HostRef {
-                fn entry_points_caller(env: &odra::host::HostEnv) -> odra::entry_point_callback::EntryPointsCaller {
+                fn entry_points_caller() -> odra::entry_point_callback::EntryPointsCaller {
                     let entry_points = odra::prelude::vec![
                         odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("total_supply"), odra::prelude::vec![]),
                         odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("get_owner"), odra::prelude::vec![]),
@@ -431,27 +431,27 @@ mod deployer_impl {
                         odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("name"), odra::prelude::vec![]),
                         odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("symbol"), odra::prelude::vec![])
                     ];
-                    odra::entry_point_callback::EntryPointsCaller::new(env.clone(), entry_points, |contract_env, call_def| {
-                        match call_def.entry_point() {
+                    odra::entry_point_callback::EntryPointsCaller::new(entry_points, |__odra_contract_env, __odra_call_def| {
+                        match __odra_call_def.entry_point() {
                             "total_supply" => {
-                                let result = __erc20_exec_parts::execute_total_supply(contract_env);
-                                odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
+                                let __odra_result = __erc20_exec_parts::execute_total_supply(__odra_contract_env);
+                                odra::utils::try_serialize(&__odra_result)
                             }
                             "get_owner" => {
-                                let result = __erc20_exec_parts::execute_get_owner(contract_env);
-                                odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
+                                let __odra_result = __erc20_exec_parts::execute_get_owner(__odra_contract_env);
+                                odra::utils::try_serialize(&__odra_result)
                             }
                             "set_owner" => {
-                                let result = __erc20_exec_parts::execute_set_owner(contract_env);
-                                odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
+                                let __odra_result = __erc20_exec_parts::execute_set_owner(__odra_contract_env);
+                                odra::utils::try_serialize(&__odra_result)
                             }
                             "name" => {
-                                let result = __erc20_exec_parts::execute_name(contract_env);
-                                odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
+                                let __odra_result = __erc20_exec_parts::execute_name(__odra_contract_env);
+                                odra::utils::try_serialize(&__odra_result)
                             }
                             "symbol" => {
-                                let result = __erc20_exec_parts::execute_symbol(contract_env);
-                                odra::casper_types::bytesrepr::ToBytes::to_bytes(&result).map(Into::into).map_err(|err| OdraError::ExecutionError(err.into()))
+                                let __odra_result = __erc20_exec_parts::execute_symbol(__odra_contract_env);
+                                odra::utils::try_serialize(&__odra_result)
                             }
                             name => Err(OdraError::VmError(
                                 odra::VmError::NoSuchMethod(odra::prelude::String::from(name)),

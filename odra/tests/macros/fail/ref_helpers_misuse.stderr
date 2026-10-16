@@ -1,0 +1,11 @@
+error: #[odra::ref_helpers] takes no arguments
+  --> tests/macros/fail/ref_helpers_misuse.rs:15:21
+   |
+15 | #[odra::ref_helpers(extra)]
+   |                     ^^^^^
+
+error: #[odra::ref_helpers] can be applied to an inherent impl block only, not a trait impl
+  --> tests/macros/fail/ref_helpers_misuse.rs:27:6
+   |
+27 | impl Doubled for Token {
+   |      ^^^^^^^

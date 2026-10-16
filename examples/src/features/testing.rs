@@ -157,6 +157,33 @@ mod tests {
     }
 
     #[test]
+    fn concurrently_with_a_thread_limit() {
+        // `concurrently_with` caps the worker threads on livenet (`0` counts as `1`); the VMs
+        // run the items one after another whatever the limit, and the order is kept.
+        let env = odra_test::env();
+        let supplies = [U256::from(1), U256::from(2), U256::from(3), U256::from(4)];
+
+        for max_threads in [0, 1, 2] {
+            let addresses = env.concurrently_with(max_threads, supplies.to_vec(), |env, supply| {
+                OwnedToken::deploy(
+                    env,
+                    OwnedTokenInitArgs {
+                        name: "Token".to_string(),
+                        symbol: "TKN".to_string(),
+                        decimals: 0,
+                        initial_supply: supply
+                    }
+                )
+                .address()
+            });
+            let read = env.concurrently_with(max_threads, addresses, |env, address| {
+                OwnedToken::load(env, address).total_supply()
+            });
+            assert_eq!(read, supplies.to_vec());
+        }
+    }
+
+    #[test]
     fn odra_vm_only() {
         // `odra_test::odra_env()` ignores `ODRA_BACKEND`, so this test runs on OdraVM
         // even under `cargo odra test -b casper`. Handy for a submodule that is not

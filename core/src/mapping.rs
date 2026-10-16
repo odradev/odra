@@ -85,7 +85,7 @@ impl<K: ToBytes, T> Mapping<K, List<T>> {
     /// Retrieves the [`List`] associated with the given key.
     ///
     /// Each key gets its own, independently-stored `List`: the key is folded into the
-    /// storage namespace (the same way [`Mapping::env_for_key`] namespaces any other
+    /// storage namespace (the same way `Mapping::env_for_key` namespaces any other
     /// value), so two different keys never share the underlying storage, even though
     /// both lists are addressed using the same `index`.
     ///

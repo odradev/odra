@@ -1,0 +1,43 @@
+{
+  "name": "MockDex",
+  "events": [],
+  "entrypoints": [
+    {
+      "name": "init",
+      "args": [],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Constructor",
+      "attributes": []
+    },
+    {
+      "name": "get_reserves",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": {
+        "Tuple2": [
+          "U256",
+          "U256"
+        ]
+      },
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "swap",
+      "args": [
+        {
+          "name": "amount_in",
+          "ty": "U256",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": true,
+      "return_ty": "U256",
+      "ty": "Public",
+      "attributes": []
+    }
+  ]
+}
