@@ -4,337 +4,130 @@ Changelog for `odra`.
 
 ## [Unreleased]
 ### Added
-- Gas on livenet: `HostEnv::gas_report()` lists every wasm deploy (`Name.wasm`) and contract call
-  the environment sent, failed ones included, with the gas the node reports as consumed (gas units,
-  like CasperVM), and the last call result carries the gas of the last transaction, a transfer
-  included. A `concurrently` worker reports its own transactions. Before, `gas_report()` panicked and
-  the gas of a call was 0.
-- `ContractEnv::get_validator_info` on livenet reads the validator's bid from the chain, `None` for a
-  key without a validator bid; it used to panic.
 - Factory modules (`#[odra::module(factory = on)]`) work on OdraVM: `new_contract`,
-  `upgrade_child_contract` and `batch_upgrade_child_contract` deploy and upgrade the children in the
-  in-memory VM like on Casper. The child's constructor and upgrader see the caller of the factory as
-  their caller, only the account that deployed the factory (or upgraded a contract into one) may
-  upgrade its children, and the events of the children are tracked. `ContractContext` gets `new_child_contract` and `upgrade_child_contract`,
-  with default implementations, and an OdraVM contract may now deploy or upgrade another contract
-  during a call.
-- `HostEnv::advance_block_time` and `advance_with_auctions` accept a `core::time::Duration` as well as
-  a number of milliseconds (`odra::host::BlockTimeDiff`), so `Duration::from_secs(60)` says the unit
-  itself. Existing calls with milliseconds keep working (#589).
-- `#[odra::ref_helpers]` on an inherent impl block named after a module or an external contract
-  trait adds its functions to both the generated `XxxContractRef` and `XxxHostRef`, so a helper built
-  from entry point calls is written once and called with method syntax in contracts and tests (#490).
-- Native events on livenet: the events emitted by the transactions an environment sends are recorded
-  from their execution results, so `native_events_count`, `get_native_event`, `emitted_native_event` and
-  `last_call().emitted_native_events` work there like in tests. Casper keeps a message's payload only in
-  the execution result of its transaction, so events emitted before the environment was created, or by
-  someone else, are not visible; CES events keep reading the contract's storage (#538, #511).
-- `#[odra(offchain)]` on a `&self` function of a module: the function is not deployed (no wasm entry
-  point, not in the schema) and runs on the host against the contract's state instead. It is on the
-  `HostRef` like any getter, tests call it on OdraVM and CasperVM, livenet executes it offline, and
-  odra-cli lists it under `contract <Name>` marked as offchain. A function that would be too expensive
-  or too big as an entry point (iterate a list, aggregate many balances) goes there. `HostRefLoader::load`
-  works on OdraVM and CasperVM now, and CasperVM keeps a register of the entry points of deployed
-  contracts to run offchain functions the way livenet runs getters (#594).
-- `ContractEnv::call_stack()` returns every address from the account that initiated the call to the
-  contract being executed, and `ContractEnv::nth_caller(n)` walks it (`nth_caller(0)` is `caller()`),
-  so a contract can find the account behind an intermediary contract. Works on OdraVM, CasperVM and
-  livenet getters (#501).
-- `HostEnv::concurrently(items, |env, item| ..)` runs one closure per item and returns the results in order.
-  On livenet the items are spread over worker threads, each with its own node connection and `HostEnv`
-  (same caller and gas), so independent deploys and reads overlap; on OdraVM and CasperVM they run one
-  after another. Deploy in the closure, return the address, `load` it in the caller's environment (#482).
-- `CasperClient` has a public async API: every network call exists as `xxx_async` next to the blocking
-  `xxx`, so async programs can drive it with `.await` and run several calls at once with `join_all` (#544).
-- `HostEnv::take_snapshot()` and `HostEnv::restore_snapshot()` remember the state of the test VM
-  (storage, CSPR balances, events, block time) and bring it back, as many times as needed, so several
-  test scenarios can branch off one setup. OdraVM and CasperVM; livenet panics (#533).
-- Storage layout of contracts: every `#[odra::module]` implements `odra::schema::SchemaStorageLayout`,
-  describing its fields, their indices and storage kinds. `odra::schema::resolve_storage` turns a dotted
-  field path into the storage key, so the state of a deployed contract can be read without calling it.
-- `HostEnv::get_storage_value`, `HostEnv::get_named_value` and `HostEnv::get_dictionary_value` to read the raw
-  storage of a contract on every backend.
-- `layout` argument of the `#[odra::module]` attribute to declare an explicit storage layout; the named-key
-  storage macros use it.
-- `storage` command in `odra-cli` that prints the storage layout of a contract and reads any field by its
-  path. `inspect` includes the storage layout as well.
-- `#[odra::external_contract]` keeps the annotated trait and implements it for the generated
-  `XxxContractRef` and `XxxHostRef`, so the trait can be used as a bound or implemented by a module.
-  A trait declared a second time by hand as a workaround must be removed.
-- Livenet: `ODRA_CASPER_LIVENET_STATE_ROOT_HASH` pins every read to a past state root hash (transactions are
-  refused while it is set). In `odra-cli` the global `--state-root-hash <HEX>` flag does the same for one
-  invocation or REPL session, so any getter, `inspect` or `storage` command can look at the chain as it was (#572).
-- `odra_cli::ContractLoaderExt`: `MyContract::load_from_file(&env, path)`, `load_from_file_named` and
-  `load_from_default_file(&env)` load an already deployed contract from the contracts file written by the
-  `deploy` command, instead of pasting its package hash into a script (#566).
-- `ContractEnv::debug(message)` prints from a contract: always on OdraVM and for livenet getters, and on
-  the Casper test VM when the contract is built with the new `test-support` feature of `odra` (`cargo odra
-  test -b casper -- --nocapture`). Without the feature the wasm carries no trace of it (#616).
-- `WalletProxy` example: a contract attaches CSPR to a cross-contract call with
-  `XxxContractRef::with_tokens(..)`, both from the value attached to its own call and from its balance;
-  tested on OdraVM and CasperVM (#529).
-- Project templates ship `AGENTS.md` (and `CLAUDE.md` importing it): a short pointer that tells an AI
-  agent to install the Odra Claude Code plugin or read `llms.txt`, and lists the `cargo odra` commands.
-- `odra_test::odra_env()` and `odra_test::casper_env()` are public, so a test can be pinned to one backend
-  regardless of `ODRA_BACKEND`. Modules that are not registered in `Odra.toml` (no wasm) can be tested
-  on OdraVM under `cargo odra test -b casper` this way.
-- Contracts from dependency crates: an `Odra.toml` entry whose first segment is a crate name
-  (`fqn = "odra_modules::erc20::Erc20"`) builds that crate's contract wasm and schema from the current
-  project, so `cargo odra build -c Erc20` works in any project that depends on `odra-modules`; the
-  examples build `Erc20` and `Cep18` this way instead of copying them from `modules/wasm` (#617).
-- `const fn u512(n: u128) -> U512` in the prelude next to `u256`, so CSPR amounts and other `U512`
-  values can initialise a `const` or `static`. `cspr!` with a literal is documented and tested as a
-  constant expression, so `const STAKE: U512 = u512(cspr!(500) as u128);` works.
-- `HostEnv::concurrently_with(max_threads, items, f)` is `concurrently` with a given limit of worker
-  threads (`0` counts as `1`), and the `ODRA_MAX_THREADS` environment variable changes the limit of
-  `concurrently`, which stays 8 by default, so a node that rate-limits connections can be spared
-  without touching the code. A value that is not a number panics, an empty one counts as not set.
-- `ContractAddress` trait (`contract_address(&self) -> Address`) in `odra::prelude`, implemented for
-  every `ContractRef`. A `#[odra::ref_helpers]` helper can call `self.contract_address()` on both refs
-  without extra imports, e.g. `self.balance_of(&self.contract_address())`: the generated impls import
-  the trait that provides it (`ContractAddress` or `HostRef`) in their own scope only.
-- odra-cli: `Scenario::captures_events(&self) -> bool` (default `false`) lets a scenario opt in to event
-  capturing, so `last_call()` of the calls it makes returns their events. Scenarios keep running
-  without it by default, as capturing reads the events of every deployed contract after every call.
+  `upgrade_child_contract` and `batch_upgrade_child_contract` deploy and upgrade the children like on
+  Casper, only the account that installed the factory may upgrade them, and their events are tracked.
+- `#[odra(offchain)]` on a `&self` function of a module: the function is not deployed and runs on the
+  host against the contract's state, on OdraVM, CasperVM and livenet alike, for reads too expensive or
+  too big for an entry point (#594).
+- `#[odra::ref_helpers]` on an impl block named after a module or an external contract trait adds its
+  functions to both `XxxContractRef` and `XxxHostRef`; `self.contract_address()` works on both
+  (`ContractAddress` in the prelude) (#490).
+- `#[odra::external_contract]` keeps the annotated trait and implements it for both generated refs, so
+  it can be used as a bound; a second, hand-written copy of the trait must go.
+- `ContractEnv::call_stack()` and `nth_caller(n)`: every address from the initiating account to the
+  contract being executed, on every backend (#501).
+- `ContractEnv::debug(message)` prints from a contract on OdraVM and livenet, and on CasperVM when the
+  contract is built with the `test-support` feature of `odra` (#616).
+- `HostEnv::take_snapshot()` and `restore_snapshot()` bring the test VM back to a saved state (storage,
+  balances, events, block time), as often as needed; livenet panics (#533).
+- `HostEnv::concurrently(items, |env, item| ..)` runs the closure once per item; on livenet over worker
+  threads with their own node connection, 8 at most or `ODRA_MAX_THREADS`, and `concurrently_with` takes
+  the limit as an argument (#482).
+- Livenet: `gas_report()` and the gas of the last call work (they panicked or returned 0), native events
+  are recorded from the execution results of the transactions the environment sends (#538, #511), and
+  `get_validator_info` reads the validator's bid.
+- Livenet: `ODRA_CASPER_LIVENET_STATE_ROOT_HASH`, and `--state-root-hash` in odra-cli, pin every read to
+  a past state of the chain (#572).
+- Storage layout: every module implements `odra::schema::SchemaStorageLayout`, `resolve_storage` turns
+  a dotted field path into the storage key, `HostEnv::get_storage_value`, `get_named_value` and
+  `get_dictionary_value` read raw storage on every backend, `#[odra::module]` takes a `layout`
+  argument, and odra-cli has a `storage` command.
+- odra-cli: `ContractLoaderExt` (`load_from_file`, `load_from_file_named`, `load_from_default_file`)
+  loads a contract deployed by the `deploy` command (#566); `Scenario::captures_events()` opts a
+  scenario in to event capturing.
+- `CasperClient` has an async API: `xxx_async` next to every blocking `xxx` (#544).
+- `HostEnv::advance_block_time` and `advance_with_auctions` take a `Duration` as well as milliseconds
+  (#589).
+- `odra_test::odra_env()` and `casper_env()` pin a test to one backend regardless of `ODRA_BACKEND`.
+- Contracts from dependency crates: an `Odra.toml` entry such as `fqn = "odra_modules::erc20::Erc20"`
+  builds that crate's wasm and schema from the current project (#617).
+- `const fn u512` in the prelude; `cspr!` with a literal is a constant expression.
 
 ### Changed
-- The committed contract schemas of `odra-modules` and the examples (`resources/casper_contract_schemas`,
-  `resources/legacy`) are regenerated: entry points and types added since 2.5.0, schemas of contracts
-  that had none, and the current toolchain and version. CI fails when they drift from the code
-  (`just check-schemas`).
-- Faster `cargo odra schema`, `cargo odra build` and `cargo odra test -b casper` in projects that depend
-  on `odra-cli`: it no longer has a build script calling `odra_build::build()`, so it is not recompiled
-  for every contract (`ODRA_MODULE` changes); it uses neither the `odra_module` nor the `odra_backend`
-  cfg. About 4 s less per contract when building the schemas of the examples.
-- `EntryPointsCaller` no longer holds a `HostEnv`; the backend hands the contract environment to
-  every call. `EntryPointsCaller::new(env, entry_points, f)` is now `EntryPointsCaller::new(entry_points, f)`,
-  `EntryPointsCaller::call(call_def)` is `call(contract_env, call_def)` (as are `ContractContainer::call`
-  and `ContractRegister::call`), `EntryPointsCaller::host_env()` is removed,
-  `EntryPointsCallerProvider::entry_points_caller(env: &HostEnv)` is `entry_points_caller()` and
-  `EntryPointsCallerFn` is `fn() -> EntryPointsCaller`. Code generated by `#[odra::module]` is
-  updated; only hand-written callers need the change. `HostContext` gets `take_child_contracts`
-  (with a default), through which OdraVM reports the children of factories to the `HostEnv`.
-  `OdraVm` no longer implements `Default`, use `OdraVm::new()`. `EntryPointsCaller::has_entry_point(name)`
-  and `odra::utils::try_serialize(&value)` (the value as `Bytes`, or the error an entry point returns;
-  the generated entry point callers use it) are new. `ContractRegister` keeps its containers in `Rc`:
-  `get_shared(addr)` hands the latest one out,
-  so a backend can release the register during a call, and `is_registered(addr, name)` tells whether
-  code of that name is there as any version. `odra::host::revert_hook` (`install`, `mark_revert`) is
-  the panic hook OdraVM and livenet share to keep the panic that unwinds a revert quiet; a custom
-  backend that unwinds reverts the same way can use it.
-- On livenet a deployment or upgrade whose constructor or upgrade function reverts returns the
-  contract's error, like OdraVM and CasperVM, named after the schema of the deployed contract; it used
-  to be `ContractDeploymentError("Livenet execution error")`. Running out of gas returns `OutOfGas`.
-  `ContractDeploymentError` is left for a deployment that did not get to run the contract (wasm not
-  found, gas not set, the node not reachable).
-- The wasm parts of a module are gated by `cfg(any(odra_module = "<Struct>", odra_module = "<crate>::<Struct>"))`;
-  `cargo odra` passes the crate-qualified form, so two crates defining the same struct name no longer both
-  compile their entry points into one wasm. A bare `ODRA_MODULE=<Struct>` still works (#321).
-- The blocking livenet calls run on one process-wide Tokio runtime (`odra_casper_rpc_client::utils::block_on`)
-  instead of a runtime per `CasperClient`. They also work inside a multi-thread Tokio runtime (a
-  `#[tokio::main]` program); inside a current-thread runtime they panic with a pointer to the async API,
-  where they used to fail with Tokio's own "cannot start a runtime from within a runtime" (#544).
-- `CasperClient::deploy_wasm` takes `&self`.
-- Custom backends: `ContractContext` gained `call_stack` and `debug`, `HostContext` gained `take_snapshot`,
-  `restore_snapshot` and `thread_env_factory`, all with default implementations, so existing backends
-  keep compiling (snapshots then panic as unsupported). `EntryPoint` has a new `is_offchain` field; build
-  it with `EntryPoint::new` / `new_payable` / `new_offchain` rather than a struct literal (#594).
-- The livenet examples are scenarios of the examples' `odra_cli` binary (`erc20-transfer`, `cep18-transfer`,
-  `tlw`, `install-config`, `factory`, `gasless`) instead of one binary each;
-  `cargo run --bin odra_cli -- --help`. The CI livenet job runs the CLI too (#631, #520).
-- CI: the test workflow runs lints, OdraVM, CasperVM and NCTL suites as parallel jobs; the benchmark
-  artifact is produced on `release/**` pushes only, pull requests build and compare in one job (#593, #445).
-- Project templates ship a `.env.sample` for a local NCTL network and a README walkthrough from
-  `cargo odra build` to `<project>_cli deploy` (#466).
-- `#[odra::module(name = "..")]` now also names the package: the named key the package hash is stored
-  under at install is `<name>_package_hash` instead of `<StructName>_package_hash` (`HasIdent::contract_name()`,
-  used by `InstallConfig` and `UpgradeConfig`). Modules without `name` are unaffected (#385).
-- Livenet: `CasperClient` caches global state and dictionary query responses for the state root hash
-  they were read at (a query at a fixed state root is deterministic). Resolving a contract's entity,
-  the events counter `HostEnv` reads after every call and repeated getters cost no RPC calls within
-  one state root; a burst of 31 getter calls went from 64 queries to 6.
-- Livenet: `CasperClient::get_value`, `get_named_value`, `get_dictionary_value` and `events_count`
-  return `Result<Option<_>>`: `Ok(None)` is a value the node does not have, `Err` a node that could
-  not be asked. The livenet host and contract env stop with the real reason
-  (`Livenet: reading <what> of <address> failed: ...`) instead of the misleading
-  "Couldn't query for entity address value" panic, and a wrong address reports
-  "No contract found at ...".
-- Livenet: `CasperClient` caches the state root hash for up to 5 seconds and drops it after every
-  transaction it sends, instead of asking the node before every single query. On the `erc20_on_livenet`
-  example this removes 16 of 39 RPC calls; reads after the client's own writes stay consistent.
-- Mutable library functions of `odra-modules` that skip access checks (`raw_*`, `unchecked_*`,
-  `set_*`, `init`, `pause`/`unpause`, ...) carry a `SECURITY` doc note reminding not to expose them
-  as entry points without access control.
-- `Ownable::unchecked_transfer_ownership`, `Erc20::mint` and `Erc20::burn` moved out of the
-  `#[odra::module]` impl blocks, so they are no longer entry points of contracts built from these
-  modules (a deployed `Erc20` let anyone mint). They stay callable from Rust, e.g. `self.erc20.mint(..)`
-  in a wrapping module that adds its own access control.
-- `Ownable`, `Ownable2Step`, `MockModerated` and `PauseableCounter` are no longer registered as
-  contracts in `Odra.toml` of `odra-modules` and `odra-examples`; their tests run on OdraVM only.
-- `cargo-odra` branch bumped to `release/0.2.0` (contracts from dependency crates, wasm written
-  once at the project root, workspace-inherited package fields).
+- `Erc20::mint`, `Erc20::burn` and `Ownable::unchecked_transfer_ownership` are no longer entry points
+  of contracts built from `odra-modules` (a deployed `Erc20` let anyone mint); call them from a
+  wrapping module that adds its own access control.
+- `#[odra::module(name = "..")]` also names the package: the package hash is stored under
+  `<name>_package_hash` (#385).
+- On livenet a deploy or upgrade whose `init` or `upgrade` reverts returns the contract's error, as on
+  the VMs, instead of `ContractDeploymentError("Livenet execution error")`; out of gas is `OutOfGas`.
+- The wasm parts of a module are also gated on `odra_module = "<crate>::<Struct>"`, so two crates with
+  the same struct name no longer compile into one wasm (#321).
+- Livenet makes far fewer RPC calls: global state and dictionary reads are cached per state root hash,
+  the state root hash for up to 5 s (dropped after each transaction), and reads rejected with HTTP 429
+  are retried with backoff instead of failing.
+- The blocking livenet calls share one Tokio runtime and work inside a multi-thread runtime (#544).
+  `CasperClient::deploy_wasm` takes `&self`; `get_value`, `get_named_value`, `get_dictionary_value`
+  and `events_count` return `Result<Option<_>>`.
+- `cargo odra schema`, `build` and `test -b casper` are faster in projects that depend on `odra-cli`,
+  which lost its build script (about 4 s less per contract).
+- Custom backends and hand-written callers only: `EntryPointsCaller` no longer holds a `HostEnv` and
+  `call` takes the `ContractEnv`; `ContractContext` gained `call_stack`, `debug`, `new_child_contract`
+  and `upgrade_child_contract`, `HostContext` gained `take_snapshot`, `restore_snapshot`,
+  `thread_env_factory`, `has_contract` and `take_child_contracts`, all with defaults; `EntryPoint` has
+  `is_offchain` (use its constructors); `HasEvents` is a supertrait of `OdraContract`; `OdraVm::new()`
+  replaces `Default`.
+- The livenet examples are scenarios of the examples' `odra_cli` binary (#631, #520); `cargo-odra` is
+  `release/0.2.0`.
 
 ### Fixed
-- An unknown, malformed or repeated `#[odra(..)]` argument on a module function is a compile error at
-  the argument, e.g. "unknown odra attribute `paybale`, expected one of: payable, non_reentrant,
-  offchain" or "duplicate odra attribute `payable`". Such an attribute used to be ignored: the function
-  silently lost the flag (`#[odra(payable, payable)]` made it not payable) and its other attributes.
-  This can break the build of code with a wrong attribute, which never had an effect. It applies to
-  public, private, trait impl, factory, delegated and offchain functions and `#[odra::external_contract]`
-  traits.
-- Private functions of a module impl are not entry points, so the names reserved for entry points
-  (`new`, `env`, `address`, `new_contract`, `upgrade_child_contract`, `batch_upgrade_child_contract`)
-  and arguments (`gas`, `attached_value`) are allowed there; they were rejected like for a public
-  function.
-- No more `unexpected cfg condition name: odra_module` warnings. The code `#[odra::module]` gates on
-  `odra_module` is wrapped in a block that allows the lint, so a crate defining modules without
-  `odra_build::build()` in its `build.rs` (a library of modules, for example) compiles cleanly, and
-  `odra_build::build()` declares `odra_backend` to check-cfg next to `odra_module`.
-- `#[odra::module(factory = on)]` no longer warns about unused variables: the generated `<Module>Factory`
-  methods copy the module's signatures but only revert, so they allow `unused_variables`. The examples
-  crate and the `cep95`/`cep96` modules drop the file-wide `allow(unused_variables)` that hid the
-  warnings.
-- `cargo build --workspace` builds the `_build_contract` and `_build_schema` binaries of the examples,
-  modules and benchmark crates on the host without `ODRA_MODULE`, like the templates' binaries do;
-  they used to fail to link (no `main`, undefined `module_schema`).
-- odra-cli no longer needs a livenet configuration before it can parse its arguments: `--help` and
-  `--version` (top-level and of any subcommand), usage errors and `completions` work without any
-  `ODRA_CASPER_LIVENET_*` variable, and `config` reports what is set and what is missing (the caller
-  address as unavailable, with the reason) instead of prompting or failing. Before, `OdraCli::new()`
-  created the host environment up front, so all of these prompted for the node address and secret key
-  on a terminal and exited with an error elsewhere. The environment is now created after the
-  arguments are parsed, once, and only for the commands that talk to the network, with the same
-  prompts and error messages as before.
-- A livenet getter reading a named argument while the account is the current frame gets `None`
-  (`MissingArg` for a required one), like on CasperVM, instead of panicking with `todo!`.
-- `XxxHostRef::new(address, env)` works like `Xxx::load(&env, address)`: the generated `new` registers
-  the contract in the environment. Before, on livenet the getters of a contract known only by its
-  address (e.g. a factory child) failed with a bare `InvalidContractAddress`, as they run locally and
-  need the contract code, while its transactions worked; on CasperVM its offchain functions failed
-  and its events were missing from `last_call()`. Registering a contract the environment already
-  knows changes nothing (the events of earlier calls stay theirs; livenet keeps the code it has, and
-  code registered before under another name is not added again), and a host ref to an address holding
-  no contract registers nothing, so its calls still fail: OdraVM checks its register, CasperVM its
-  packages and livenet asks the node once (`HostContext::has_contract`). A livenet getter of an
-  unregistered contract (e.g. an `#[odra::external_contract]`) now logs which address lacks code and
-  how to register it.
-- A `HostEnv` that deployed or loaded a contract never freed its backend: the `EntryPointsCaller`
-  kept by the backend held the `HostEnv`, which holds the backend. Dropping the environment now
-  drops the OdraVM (with the children of factories, after snapshots and `HostRefLoader::load`) and the
-  livenet host.
-- Native events of an upgraded contract: on CasperVM and livenet they are counted over all the
-  versions of the contract, as on OdraVM, so `native_events_count`, `get_native_event` and
-  `last_call().native_events()` carry on across `try_upgrade` and across an upgrade by a factory
-  (`upgrade_child_contract`). Casper keeps a message with the entity that emitted it and an upgrade
-  installs a new entity, so the count restarted at the upgrade: `HostEnv` reset its own counter for
-  the upgrades it made (on OdraVM, where the count never restarts, that replayed every native event
-  of the contract into the next call) and kept a stale one for a child upgraded by its factory,
-  whose native events then went missing from `last_call()`.
-- `Deployer::try_upgrade` (`HostEnv::upgrade_contract`) of a contract the environment never
-  deployed, loaded or wrapped in a host ref registers it; it panicked after the upgrade had gone
-  through.
-- An event with a field whose `CLType` is or contains `Any` (an `#[odra::odra_type]` struct or
-  data-carrying enum, also in an `Option`, `Vec`, map, `Result` or tuple) compiled and deployed, and
-  every `emit_event` of it reverted with a bare `ExecutionError::Formatting`. Deploying or upgrading
-  such a contract from the host (OdraVM, CasperVM, livenet before the transaction is sent) and
-  generating its schema now panic with a message naming the event and the field
-  (``Contract `Exchange`: event `Traded`: field `price` has no concrete CLType ...``), and a failed
-  emit on the host prints the reason. `Event::has_any` now looks into compound types, like
-  casper-event-standard does; `Event::validate`, `contract_def::cl_type_has_any` and
-  `OdraContract::contract_events` (the events checked at deploy: the contract's own by default, and
-  those of its children for a factory; `HasEvents` is a supertrait of `OdraContract` now) are new.
-- An entry point argument may be named `contract`, `env_rc`, `exec_env`, `named_args`, `result`,
-  `env`, `call_def` or `contract_env`, also in an external contract. The generated code used these
-  names for its own locals, so such an argument was shadowed and failed with a type error pointing at
-  the user's code (`expected Address, found Vault`). The locals of the generated code are prefixed
-  with `__odra_` now.
-- The same for fields: a module field may be named `env` (it was also left out of the field
-  indices), an `#[odra::odra_type]` struct or enum variant field and an `#[odra::event]` field may be
-  named `bytes`, and an enum variant field named `result` no longer serializes the wrong value.
-  `#[odra::event]` implements the `casper_event_standard` traits itself instead of deriving
-  `odra::Event`, with the same bytes and schema. The hidden env field of a module is `__odra_env`
-  (was `__env`). Storage keys and serialized layouts are unchanged.
-- Livenet names a user error after the schema of the contract that was called: contracts reuse
-  small codes, and the first schema with the code used to win, so a revert could come back as another
-  contract's error. If the called contract has no such error (a contract it called reverted, the code
-  alone does not tell which), all the schemas are searched as before.
-- Livenet no longer panics on an Odra error code it does not know (a contract built with a newer
-  Odra); the error comes back as `VmError::Other` with the message of the node. The codes are decoded
-  by the new `ExecutionError::from_code` instead of a separate table that had to be kept in sync.
-- A getter or `#[odra(offchain)]` function that reverts on livenet returns the error, so its `try_*`
-  call gets `Err` like on OdraVM and CasperVM instead of panicking; a revert in a nested getter
-  returns the error of the inner contract, and any other panic returns `VmError::Panic`. The call
-  stack of the local execution is unwound with it, so a call after a caught revert (e.g. in
-  `HostEnv::concurrently`) no longer sees a stale frame. The revert is logged as an error instead of
-  printed as a panic.
-- On livenet a getter or `#[odra(offchain)]` function sees the calling account (the `HostEnv` caller)
-  as `caller()`, and a getter it calls sees the calling contract, like on OdraVM and CasperVM;
-  `call_stack()` and `nth_caller` start with that account. It used to see its own address.
-- On CasperVM a getter called by an `#[odra(offchain)]` function runs on the host too, like on livenet,
-  so it sees the offchain function's contract as its caller and the whole call stack (it was executed
-  by the VM as if the account called it), and its revert returns the error instead of
-  `VmError::Panic`. A nested offchain call sees the calling contract as `caller()` instead of the
-  account, like on OdraVM. A call with tokens attached still goes to the VM.
-- OdraVM rolls back contract code with the state, like Casper: a reverted `init` or `upgrade` (also of
-  a factory child) leaves no new contract or version behind, so a failed `try_upgrade` keeps the old
-  code running, and `HostEnv::restore_snapshot` brings back the code, the recorded deployers and the
-  host's record of deployed contracts and their events from the time of the snapshot.
-- OdraVM drops the events and native events emitted during a call that reverts, also those of
-  nested calls and of factory children, like Casper: event counts, `get_event` indices and
-  `last_call()` no longer see them.
-- Project templates ignore the `wasm` directory where it is actually created: at the root of a
-  workspace project rather than in its members, and in the `cep18` and `cep95` templates, which
-  never ignored it.
-- `odra-wasm-client` builds without `WASM_CLIENT_SK`: the key is empty then and signing fails with a
-  clear message, so a workspace-wide `cargo clippy` needs no secret.
-- `last_call()` of the first call after `deploy` (or `load`) no longer includes the events emitted by
-  `init` (or before the load): the event baseline of a contract is set when it is deployed or loaded.
-- `CallResult::contract_native_events` returned the CES events of the call instead of the native ones.
-- `MyContract::load(&env, address)` (`HostRefLoader`) works on OdraVM and CasperVM; both panicked with
-  "register_contract is not supported".
-- `HostEnv::transfer` on CasperVM built a deploy without payment code and always panicked; it is a native
-  transfer request now (#533).
-- The Casper test VM finds contract wasm files from any workspace member. It looks for
-  `wasm/<Contract>.wasm` in the working directory and then in each parent directory, so the single
-  `wasm` directory `cargo odra build` produces at the workspace root serves tests in every crate,
-  including ones that define no contract. Previously it relied on the working directory alone, and
-  Cargo runs a crate's tests inside that crate. A missing file now reports the directories searched.
-- Livenet backend no longer panics when a transaction fails with an internal Odra error that was missing
-  from its error table (e.g. `ContractNotInstalled` or `PathIndexOutOfBounds`).
-- Reading a stored value or a dictionary item as the wrong type reverts with the concrete `bytesrepr`
-  error (`LeftOverBytes`, `EarlyEndOfStream`, ...) instead of a blanket `Formatting`; the same for
-  deserializing a cross-contract call result on the host. A named argument that exists but cannot be
-  read as the declared type is `ExecutionError::InvalidArg` (138) instead of `MissingArg` (#417).
-- No naked `unwrap`/`expect` remains on code paths compiled into wasm: resolving the caller of a
-  contract call reverts with `CannotExtractCallerInfo` instead of trapping, the remaining `expect`s in
-  `odra-core` name the invariant they rely on, and the example contracts revert (`unwrap_or_revert`)
-  instead of panicking (#450).
+- `#[odra(..)]` mistakes are compile errors at the attribute: unknown, duplicate and malformed
+  arguments (they were silently ignored, `#[odra(payable, payable)]` made a function not payable),
+  module arguments on an impl block or a trait (only `factory = on` is accepted on an impl), `payable`
+  or `non_reentrant` on `init` and `upgrade`, and offchain misuse. Private functions are not entry
+  points, so reserved names are allowed on them.
+- An entry point argument or a field may use the names the generated code used for its own locals
+  (`contract`, `env`, `exec_env`, `result`, `bytes`, ...): the generated locals are `__odra_` prefixed.
+  An enum variant field named `result` serialized the wrong value. The hidden module field is
+  `__odra_env` (was `__env`); bytes and storage layouts are unchanged.
+- An event with a field whose `CLType` is or contains `Any` (an `#[odra::odra_type]`, also inside
+  `Option`, `Vec`, a map, `Result` or a tuple) fails at deploy, upgrade and `cargo odra schema` with a
+  message naming the field; it deployed, and every emit reverted with a bare `Formatting`.
+- No warnings from generated code: `unexpected cfg condition name: odra_module` in a crate without
+  `odra_build::build()`, and unused variables in factory modules.
+- `XxxHostRef::new(address, env)` registers the contract like `Xxx::load`: on livenet the getters of a
+  contract known only by its address (a factory child) failed with `InvalidContractAddress`, on
+  CasperVM its offchain functions failed and its events were missing. An address holding no contract
+  registers nothing. `load` works on OdraVM and CasperVM; both panicked.
+- Native events are counted over all versions of a contract on every backend, so
+  `native_events_count`, `get_native_event` and `last_call().native_events()` carry on across an
+  upgrade, also of a factory child. `try_upgrade` of a contract the environment never deployed or
+  loaded registers it instead of panicking.
+- A `HostEnv` never freed its backend (a reference cycle through the `EntryPointsCaller`); dropping it
+  now drops the OdraVM or the livenet host.
+- OdraVM rolls back contract code and events with the state, like Casper: a reverted `init` or
+  `upgrade` (also of a factory child) leaves nothing behind, the events of a reverted call are gone,
+  and a restored snapshot brings back the code and the event counts too.
+- OdraVM no longer silences panics: its hook is installed once, prints reverts as before and passes
+  every other panic on, so `unwrap`, `expect` and failed assertions print again after the first
+  OdraVM call.
+- Livenet getters and `#[odra(offchain)]` functions: a revert returns the error (`try_*` gets `Err`
+  like on the VMs), a nested revert the inner contract's error, another panic `VmError::Panic`;
+  `caller()` is the calling account, and the calling contract for a nested getter, as on the VMs; a
+  named argument read on the account frame is `None` instead of `todo!`. On CasperVM a getter called
+  by an offchain function runs on the host too, with the right caller and call stack.
+- Livenet decodes a user error against the schema of the contract that was called (contracts reuse
+  small codes, and the first schema with the code used to win), returns `VmError::Other` for an Odra
+  error code it does not know instead of panicking, and explains an unfunded sending account instead
+  of the node's "no such addressable entity".
+- odra-cli `--help`, `--version`, `completions` and `config` work without a livenet configuration; the
+  environment is created only for the commands that talk to the network.
+- `last_call()` of the first call after `deploy` or `load` no longer includes the events of `init`;
+  `CallResult::contract_native_events` returned the CES events.
+- `HostEnv::transfer` on CasperVM is a native transfer; it always panicked (#533). CasperVM finds
+  `wasm/<Contract>.wasm` in the working directory and its parents, so the one `wasm` directory at a
+  workspace root serves every crate.
+- Reading a value as the wrong type reverts with the concrete `bytesrepr` error instead of
+  `Formatting`; an argument that exists but has the wrong type is `InvalidArg` instead of `MissingArg`
+  (#417). No naked `unwrap` or `expect` is left on wasm code paths (#450).
 - The gasless CEP-18 example signed its EIP-712 authorization for a domain without the `version`
-  field `CEP3009` includes, so every `transfer_with_authorization` on a live network failed with
-  `InvalidSignature`. The signing helper now lives in `odra_examples::contracts::gasless_cep18::authorization`,
-  is used by the CLI `gasless` scenario and is tested on both VMs (#667).
-- `cargo odra generate-client` no longer emits an empty `<Contract>Errors` enum for a contract without
-  user errors; wasm-bindgen rejects empty enums, which broke the generated client of the `workspace`
-  template (#665).
-- Livenet: RPC reads rejected by the node with HTTP 429 (Too Many Requests) are retried with exponential
-  backoff (5 attempts) instead of failing on the spot. A burst of getter calls against NCTL or cspr.cloud
-  used to fail on the second or third one.
-- Livenet: `query_global_state` failures are no longer swallowed into a bare "not found"; transport and
-  HTTP errors are logged as warnings (`ODRA_LOG_LEVEL=warn` or above), a missing value at debug level.
-- Livenet: a transaction sent from an account that has never received CSPR failed with the node's bare
-  "no such addressable entity"; the error now explains that the account does not exist on chain yet
-  and has to be funded first.
-- `#[odra::module(events = ...)]` (and `errors`, `name`, `version`, `layout`) on an `impl` block is now a
-  compile error pointing at the misplaced argument, instead of being silently ignored. Only `factory = on`
-  is accepted on `impl`; `#[odra::module]` on a trait takes no arguments. Errors from the attribute
-  arguments are also reported as-is now, instead of the generic "Struct or impl block expected".
-- `odra-test` no longer declares `#![no_std]`; it depends on std crates and the attribute broke
-  `no_std` builds of dependents.
-- OdraVM no longer silences panics: its panic hook replaced the process-wide hook on every contract call
-  and printed only reverts and assertion failures, so after the first OdraVM call any other panic in the
-  test binary (`unwrap`, `expect`, `panic!`, failed tests on CasperVM) printed nothing, not even with
-  `RUST_BACKTRACE`, and a hook installed by the user was dropped. The hook is installed once now,
-  prints reverts as before and passes every other panic to the hook installed before it.
+  field, so every `transfer_with_authorization` on a live network failed; the signing helper is in
+  `odra_examples::contracts::gasless_cep18::authorization` (#667).
+- `cargo odra generate-client` no longer emits an empty errors enum, which wasm-bindgen rejects (#665).
+- `odra-test` no longer declares `#![no_std]`, which broke `no_std` builds of dependents.
+- Project templates ignore the `wasm` directory where it is created (the workspace root; `cep18` and
+  `cep95` never ignored it).
 
 ## [2.9.1] - 2026-08-04
 ### Fixed
