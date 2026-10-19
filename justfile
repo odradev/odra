@@ -35,7 +35,8 @@ install-cargo-odra:
 prepare-test-env: install-cargo-odra
     rustup target add wasm32-unknown-unknown
     rustup component add llvm-tools-preview
-    cargo +stable install grcov
+    # `--locked` takes the dependency versions grcov ships, which also survive a yank of one of them.
+    cargo +stable install grcov --locked
     sudo apt-get update && sudo apt-get install -y wabt
     wget https://github.com/WebAssembly/binaryen/releases/download/{{BINARYEN_VERSION}}/binaryen-{{BINARYEN_VERSION}}-x86_64-linux.tar.gz || { echo "Download failed"; exit 1; }
     sha256sum binaryen-{{BINARYEN_VERSION}}-x86_64-linux.tar.gz | grep {{BINARYEN_CHECKSUM}} || { echo "Checksum verification failed"; exit 1; }
