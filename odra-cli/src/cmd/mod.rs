@@ -12,6 +12,7 @@ mod inspect;
 mod main;
 mod scenario;
 mod status;
+mod storage;
 mod transfer;
 mod whoami;
 
@@ -26,6 +27,7 @@ pub(crate) use main::MainCmd;
 pub(crate) use scenario::ScenariosCmd;
 pub use scenario::{Scenario, ScenarioArgs, ScenarioError, ScenarioMetadata};
 pub(crate) use status::StatusCmd;
+pub(crate) use storage::StorageCmd;
 pub(crate) use transfer::TransferCmd;
 pub(crate) use whoami::WhoamiCmd;
 
@@ -43,6 +45,7 @@ pub(crate) const WHOAMI_SUBCOMMAND: &str = "whoami";
 pub(crate) const REPL_SUBCOMMAND: &str = "repl";
 pub(crate) const STATUS_SUBCOMMAND: &str = "status";
 pub(crate) const INSPECT_SUBCOMMAND: &str = "inspect";
+pub(crate) const STORAGE_SUBCOMMAND: &str = "storage";
 pub(crate) const CONFIG_SUBCOMMAND: &str = "config";
 pub(crate) const TRANSFER_SUBCOMMAND: &str = "transfer";
 pub(crate) const COMPLETIONS_SUBCOMMAND: &str = "completions";

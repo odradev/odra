@@ -3,7 +3,7 @@
   "toolchain": "rustc 1.94.0-nightly (8d670b93d 2025-12-31)",
   "toolkit": {
     "name": "Odra",
-    "version": "2.9.1"
+    "version": "2.10.0"
   },
   "authors": [
     "Jakub Płaskonka <kuba@odra.dev>",
@@ -13,7 +13,7 @@
   "repository": "https://github.com/odradev/odra",
   "homepage": "https://odra.dev/docs",
   "contract_name": "PartyContract",
-  "contract_version": "2.9.1",
+  "contract_version": "2.10.0",
   "types": [
     {
       "struct": {
@@ -52,11 +52,27 @@
       }
     }
   ],
-  "errors": [],
+  "errors": [
+    {
+      "name": "Cancelled",
+      "description": "The party was cancelled.",
+      "discriminant": 1
+    }
+  ],
   "entry_points": [
     {
       "name": "emit",
       "description": "Emits the events.",
+      "is_mutable": true,
+      "is_payable": false,
+      "arguments": [],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "emit_and_revert",
+      "description": "Emits the events and reverts, so the events are never emitted.",
       "is_mutable": true,
       "is_payable": false,
       "arguments": [],

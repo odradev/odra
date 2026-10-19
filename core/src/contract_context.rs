@@ -2,9 +2,10 @@ use crate::call_def::CallDef;
 use crate::casper_types::bytesrepr::Bytes;
 use crate::casper_types::U512;
 use crate::consts::RANDOM_BYTES_COUNT;
+use crate::entry_point_callback::EntryPointsCallerFn;
 use crate::prelude::*;
 use crate::validator::ValidatorInfo;
-use casper_types::{CLValue, PublicKey, Signature};
+use casper_types::{CLValue, PublicKey, RuntimeArgs, Signature, URef};
 
 /// Trait representing the context of a smart contract.
 #[cfg_attr(test, allow(unreachable_code))]
@@ -76,6 +77,15 @@ pub trait ContractContext {
     /// Retrieves the address of the caller.
     fn caller(&self) -> Address;
 
+    /// Retrieves the whole call stack: the account that initiated the call first, the contract
+    /// being executed last, and every contract in between in call order.
+    ///
+    /// The default knows only the immediate caller and the current contract; backends that see
+    /// the whole stack override it.
+    fn call_stack(&self) -> Vec<Address> {
+        vec![self.caller(), self.self_address()]
+    }
+
     /// Retrieves the address of the current contract.
     fn self_address(&self) -> Address;
 
@@ -124,6 +134,12 @@ pub trait ContractContext {
     ///
     /// * `event` - The event data to emit.
     fn emit_native_event(&self, event: &Bytes);
+
+    /// Prints a debug message on the host: always on OdraVM and livenet, inside wasm only when the
+    /// contract is built with the `test-support` feature of `odra`.
+    ///
+    /// The default discards the message.
+    fn debug(&self, _message: &str) {}
 
     /// Transfers tokens to the specified address.
     ///
@@ -208,7 +224,7 @@ pub trait ContractContext {
     /// - validator - The validator to query
     ///
     /// # Returns
-    /// Option<ValidatorBid>
+    /// `Option<ValidatorInfo>`
     fn get_validator_info(&self, validator: PublicKey) -> Option<ValidatorInfo>;
 
     /// Returns a vector of pseudorandom bytes of the specified size.
@@ -232,4 +248,46 @@ pub trait ContractContext {
         signature: &Signature,
         public_key: &PublicKey
     ) -> bool;
+
+    /// Deploys a child contract of the currently executed factory contract and calls its
+    /// constructor, if there is one. The constructor sees the caller of the factory as its
+    /// caller.
+    ///
+    /// The child is remembered by the factory under `name`, so it can be upgraded later with
+    /// [ContractContext::upgrade_child_contract].
+    ///
+    /// Returns the address of the child and its access URef.
+    ///
+    /// Only a backend that runs contracts natively (OdraVM) supports it; a factory compiled to
+    /// Wasm deploys its children on its own.
+    fn new_child_contract(
+        &self,
+        _name: &str,
+        _init_args: RuntimeArgs,
+        _entry_points_caller: EntryPointsCallerFn
+    ) -> OdraResult<(Address, URef)> {
+        Err(factory_not_supported())
+    }
+
+    /// Upgrades the child contract the currently executed factory contract deployed under
+    /// `name`, and calls its upgrader, if there is one.
+    ///
+    /// Only the account that deployed the factory may upgrade its children. Returns `None` if
+    /// the factory has no child named `name`.
+    ///
+    /// See [ContractContext::new_child_contract] for the supported backends.
+    fn upgrade_child_contract(
+        &self,
+        _name: &str,
+        _upgrade_args: RuntimeArgs,
+        _entry_points_caller: EntryPointsCallerFn
+    ) -> OdraResult<Option<Address>> {
+        Err(factory_not_supported())
+    }
+}
+
+fn factory_not_supported() -> OdraError {
+    OdraError::VmError(crate::VmError::Other(String::from(
+        "Factory is not supported for this configuration."
+    )))
 }

@@ -3,7 +3,7 @@
   "toolchain": "rustc 1.94.0-nightly (8d670b93d 2025-12-31)",
   "toolkit": {
     "name": "Odra",
-    "version": "2.9.1"
+    "version": "2.10.0"
   },
   "authors": [
     "Jakub Płaskonka <kuba@odra.dev>",
@@ -13,7 +13,7 @@
   "repository": "https://github.com/odradev/odra",
   "homepage": "https://odra.dev/docs",
   "contract_name": "BasicCep95",
-  "contract_version": "2.9.1",
+  "contract_version": "2.10.0",
   "types": [
     {
       "struct": {

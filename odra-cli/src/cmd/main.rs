@@ -37,6 +37,7 @@ impl MainCmd {
             .arg_required_else_help(true)
             .arg(Arg::Contracts)
             .arg(Arg::Json)
+            .arg(Arg::StateRootHash)
             .subcommands(
                 self.sub_cmds
                     .iter()

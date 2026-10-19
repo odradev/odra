@@ -102,6 +102,7 @@ impl AccessControl {
     /// Sets `admin_role` as `role`'s admin role.
     ///
     /// Emits a `RoleAdminChanged` event.
+    /// SECURITY: Do not expose this function publicly without proper access control.
     pub fn set_admin_role(&mut self, role: &Role, admin_role: &Role) {
         let previous_admin_role = self.get_role_admin(role);
         self.role_admin.set(role, *admin_role);
@@ -118,6 +119,7 @@ impl AccessControl {
     /// This function should be used to setup the initial access control.
     ///
     /// May emit a `RoleGranted` event.
+    /// SECURITY: Do not expose this function publicly without proper access control.
     pub fn unchecked_grant_role(&mut self, role: &Role, address: &Address) {
         if !self.has_role(role, address) {
             self.roles.set(&(*role, *address), true);
@@ -135,6 +137,7 @@ impl AccessControl {
     /// This function should be used to setup the initial access control.
     ///
     /// May emit a `RoleRevoked` event.
+    /// SECURITY: Do not expose this function publicly without proper access control.
     pub fn unchecked_revoke_role(&mut self, role: &Role, address: &Address) {
         if self.has_role(role, address) {
             self.roles.set(&(*role, *address), false);

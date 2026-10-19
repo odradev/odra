@@ -1,17 +1,19 @@
 use std::cell::RefCell;
 use std::panic::{self, AssertUnwindSafe};
-use std::rc::Rc;
+use std::rc::{Rc, Weak};
 
-use super::odra_vm_state::OdraVmState;
+use super::odra_vm_state::{OdraVmSnapshot, OdraVmState};
+use crate::odra_vm_contract_env::OdraVmContractEnv;
 use anyhow::Result;
 use odra_core::callstack::CallstackElement;
 use odra_core::casper_types::bytesrepr::{deserialize, deserialize_from_slice, serialize};
 use odra_core::casper_types::system::auction::ValidatorBid;
-use odra_core::casper_types::{CLType, CLValue, HashAddr, PackageHash, RuntimeArgs};
-use odra_core::entry_point_callback::EntryPointsCaller;
+use odra_core::casper_types::{
+    AccessRights, CLType, CLValue, HashAddr, PackageHash, RuntimeArgs, URef
+};
+use odra_core::entry_point_callback::{EntryPointsCaller, EntryPointsCallerFn};
 use odra_core::prelude::*;
 use odra_core::validator::ValidatorInfo;
-use odra_core::CallDef;
 use odra_core::EventError;
 use odra_core::VmError;
 use odra_core::{
@@ -21,28 +23,66 @@ use odra_core::{
         PublicKey, SecretKey, U512
     }
 };
-use odra_core::{ContractContainer, ContractRegister};
+use odra_core::{CallDef, ContractEnv};
+use odra_core::{ContractContainer, ContractRegister, ContractVersion};
 const NAMED_KEY_PREFIX: &str = "NAMED_KEY";
+/// The dictionary of a factory contract mapping the names of its children to their addresses.
+const FACTORY_CHILDREN_DICT: &str = "__odra_factory_children";
 
 /// Odra in-memory virtual machine.
 pub struct OdraVm {
     state: Rc<RefCell<OdraVmState>>,
-    contract_register: Rc<RefCell<ContractRegister>>
+    contract_register: Rc<RefCell<ContractRegister>>,
+    snapshot: RefCell<Option<(OdraVmSnapshot, CodeSnapshot)>>,
+    /// The code before the outermost call, brought back if the call reverts.
+    call_snapshot: RefCell<Option<CodeSnapshot>>,
+    /// The account that installed each contract; a loaded contract has none. On Casper the
+    /// installer holds the package's access URef and, for a factory, the factory group, so it is
+    /// the account that may upgrade the children of a factory.
+    deployers: RefCell<BTreeMap<Address, Address>>,
+    /// The children deployed by factories, not yet handed to the host, see
+    /// [take_child_contracts](Self::take_child_contracts).
+    child_contracts: RefCell<Vec<Address>>,
+    /// This VM, to build the environment the contracts are called in.
+    this: Weak<OdraVm>
 }
 
-impl Default for OdraVm {
-    fn default() -> Self {
-        Self {
-            state: Rc::new(RefCell::new(OdraVmState::default())),
-            contract_register: Rc::new(RefCell::new(ContractRegister::default()))
-        }
-    }
+/// What a revert undoes on top of [OdraVmState]: the contracts deployed or upgraded, and their
+/// deployers.
+///
+/// Only the latest version of each contract is kept, the versions added later are dropped. The
+/// kept versions need no other care: a version is post-installed right after it is added, by
+/// the same deploy or upgrade.
+#[derive(Clone)]
+struct CodeSnapshot {
+    versions: BTreeMap<Address, ContractVersion>,
+    deployers: BTreeMap<Address, Address>
 }
 
 impl OdraVm {
     /// Creates a new instance of OdraVm.
     pub fn new() -> Rc<Self> {
-        Rc::new(Self::default())
+        Rc::new_cyclic(|this| Self {
+            state: Rc::new(RefCell::new(OdraVmState::default())),
+            contract_register: Rc::new(RefCell::new(ContractRegister::default())),
+            snapshot: RefCell::new(None),
+            call_snapshot: RefCell::new(None),
+            deployers: RefCell::new(BTreeMap::new()),
+            child_contracts: RefCell::new(Vec::new()),
+            this: this.clone()
+        })
+    }
+
+    /// The environment a contract of this VM is called in.
+    fn contract_env(&self) -> ContractEnv {
+        let vm = self.this.upgrade().expect("the VM is alive while it runs");
+        ContractEnv::new(OdraVmContractEnv::new(vm))
+    }
+
+    /// Hands over the children deployed by factories since the last call, see
+    /// [HostContext::take_child_contracts](odra_core::host::HostContext::take_child_contracts).
+    pub fn take_child_contracts(&self) -> Vec<Address> {
+        self.child_contracts.take()
     }
 
     /// Adds a new contract to the virtual machine.
@@ -66,6 +106,28 @@ impl OdraVm {
         address
     }
 
+    /// Makes a contract callable under `address` without deploying it (`HostRefLoader::load`).
+    ///
+    /// A contract deployed in this VM is already registered and is left as it is.
+    pub fn register_contract(
+        &self,
+        address: Address,
+        name: &str,
+        entry_points_caller: EntryPointsCaller
+    ) {
+        let mut contract_register = self.contract_register.borrow_mut();
+        if contract_register.get(&address).is_some() {
+            return;
+        }
+        contract_register.add(address, ContractContainer::new(name, entry_points_caller));
+        self.state.borrow_mut().set_balance(address, U512::zero());
+    }
+
+    /// Whether a contract is deployed (or registered) under `address`.
+    pub fn has_contract(&self, address: &Address) -> bool {
+        self.contract_register.borrow().get(address).is_some()
+    }
+
     /// Upgrades an existing contract.
     pub fn upgrade_contract(
         &self,
@@ -84,6 +146,94 @@ impl OdraVm {
 
     pub(crate) fn post_install(&self, address: Address) {
         self.contract_register.borrow_mut().post_install(&address);
+    }
+
+    /// Runs `f`, a deploy or an upgrade, and forgets the code it registered if it fails.
+    ///
+    /// The code is registered before the constructor or the upgrader is called, so a revert of
+    /// that call alone would leave it behind.
+    pub(crate) fn install<T>(&self, f: impl FnOnce() -> OdraResult<T>) -> OdraResult<T> {
+        let code = self.code_snapshot();
+        let result = f();
+        if result.is_err() {
+            self.restore_code(&code);
+        }
+        result
+    }
+
+    /// Records `deployer` as the account that installed the contract at `address`, see
+    /// [deployer](Self::deployer).
+    pub(crate) fn set_deployer(&self, address: Address, deployer: Address) {
+        self.deployers.borrow_mut().insert(address, deployer);
+    }
+
+    /// The account that installed the contract at `address`, if it was deployed or upgraded in
+    /// this VM rather than loaded. On Casper it holds the package's access URef, so for a factory
+    /// it is the only account that may upgrade the children.
+    pub(crate) fn deployer(&self, address: &Address) -> Option<Address> {
+        self.deployers.borrow().get(address).copied()
+    }
+
+    /// Deploys a child of the factory contract being executed, see
+    /// [ContractContext::new_child_contract](odra_core::ContractContext::new_child_contract).
+    pub fn new_child_contract(
+        &self,
+        name: &str,
+        init_args: RuntimeArgs,
+        entry_points_caller: EntryPointsCallerFn
+    ) -> OdraResult<(Address, URef)> {
+        let mut entry_points_caller = entry_points_caller();
+        entry_points_caller.remove_entry_point("upgrade");
+        let has_init = entry_points_caller.has_entry_point("init");
+
+        let address = self.new_contract(name, init_args.clone(), entry_points_caller);
+        // Let the host track the events of the child.
+        self.child_contracts.borrow_mut().push(address);
+        self.set_dict_value(
+            FACTORY_CHILDREN_DICT,
+            name.as_bytes(),
+            CLValue::from_t(address)?
+        );
+
+        if has_init {
+            self.call_factory_child(address, CallDef::new("init", true, init_args))?;
+            self.post_install(address);
+        }
+
+        let access_uref = URef::new(address.value(), AccessRights::READ_ADD_WRITE);
+        Ok((address, access_uref))
+    }
+
+    /// Upgrades a child of the factory contract being executed, see
+    /// [ContractContext::upgrade_child_contract](odra_core::ContractContext::upgrade_child_contract).
+    pub fn upgrade_child_contract(
+        &self,
+        name: &str,
+        upgrade_args: RuntimeArgs,
+        entry_points_caller: EntryPointsCallerFn
+    ) -> OdraResult<Option<Address>> {
+        // As on Casper, where the installer of the factory holds its factory group URef.
+        let factory = self.self_address();
+        if self.deployer(&factory) != Some(self.caller()) {
+            return Err(OdraError::VmError(VmError::InvalidContext));
+        }
+        let Some(address) = self
+            .get_dict_value(FACTORY_CHILDREN_DICT, name.as_bytes())
+            .and_then(|bytes| deserialize_from_slice::<_, Address>(bytes).ok())
+        else {
+            return Ok(None);
+        };
+
+        let mut entry_points_caller = entry_points_caller();
+        entry_points_caller.remove_entry_point("init");
+        let has_upgrade = entry_points_caller.has_entry_point("upgrade");
+
+        self.upgrade_contract(name, address, upgrade_args.clone(), entry_points_caller);
+        if has_upgrade {
+            self.call_factory_child(address, CallDef::new("upgrade", true, upgrade_args))?;
+            self.post_install(address);
+        }
+        Ok(Some(address))
     }
 
     /// Calls a contract with the specified address and call definition.
@@ -106,7 +256,12 @@ impl OdraVm {
                 self.revert(err);
             }
         }
-        let result = self.contract_register.borrow().call(&address, call_def);
+        // The register is not borrowed during the call, the contract may deploy another one.
+        let contract = self.contract_register.borrow().get_shared(&address);
+        let result = match contract {
+            Some(contract) => contract.call(self.contract_env(), call_def),
+            None => Err(OdraError::VmError(VmError::InvalidContractAddress))
+        };
 
         match result {
             Err(err) => self.revert(err),
@@ -136,9 +291,13 @@ impl OdraVm {
         state.clear_callstack();
         if state.is_in_caller_context() {
             state.restore_snapshot();
+            if let Some(code) = self.call_snapshot.take() {
+                self.restore_code(&code);
+            }
         }
         drop(state);
 
+        crate::panic_hook::mark_revert();
         panic!("Revert: {:?} - {}", error, revert_msg);
     }
 
@@ -157,6 +316,32 @@ impl OdraVm {
     /// Retrieves from the state the address of the current caller.
     pub fn caller(&self) -> Address {
         self.state.borrow().caller()
+    }
+
+    /// Retrieves from the state the whole call stack, initiating account first.
+    pub fn call_stack(&self) -> Vec<Address> {
+        self.state.borrow().call_stack()
+    }
+
+    /// Remembers the current state, replacing any previous snapshot.
+    pub fn take_snapshot(&self) {
+        let snapshot = self.state.borrow().snapshot();
+        *self.snapshot.borrow_mut() = Some((snapshot, self.code_snapshot()));
+    }
+
+    /// Brings back the state remembered by [`take_snapshot`](Self::take_snapshot). The snapshot
+    /// is kept, so it can be restored again.
+    ///
+    /// # Panics
+    ///
+    /// Panics if no snapshot has been taken.
+    pub fn restore_snapshot(&self) {
+        let snapshot = self.snapshot.borrow();
+        let (snapshot, code) = snapshot
+            .as_ref()
+            .expect("No snapshot to restore: call `take_snapshot` first");
+        self.state.borrow_mut().restore(snapshot);
+        self.restore_code(code);
     }
 
     /// Retrieves the callstack record.
@@ -261,6 +446,29 @@ impl OdraVm {
                 None
             }
         }
+    }
+
+    /// Reads a value from the Odra storage of the contract at the given address.
+    ///
+    /// Unlike [OdraVm::get_var], it does not depend on the callstack and never sets
+    /// the virtual machine in the error state.
+    pub fn get_storage_value(&self, address: &Address, key: &[u8]) -> Option<Bytes> {
+        self.state.borrow().get_var_of(address, key).ok().flatten()
+    }
+
+    /// Reads the value of the named key of the contract at the given address.
+    pub fn get_named_value(&self, address: &Address, name: &str) -> Option<Bytes> {
+        let key = Self::key_of_named_key(name);
+        self.get_storage_value(address, key.as_bytes())
+    }
+
+    /// Reads the value of the dictionary item of the contract at the given address.
+    pub fn get_dictionary_value(&self, address: &Address, dict: &str, key: &[u8]) -> Option<Bytes> {
+        self.state
+            .borrow()
+            .get_dict_value_of(address, dict.as_bytes(), key)
+            .ok()
+            .flatten()
     }
 
     /// Writes an event data to the global state.
@@ -492,6 +700,7 @@ impl OdraVm {
         if state.is_in_caller_context() {
             state.take_snapshot();
             state.clear_error();
+            *self.call_snapshot.borrow_mut() = Some(self.code_snapshot());
         }
         // Put the address on stack.
 
@@ -508,8 +717,52 @@ impl OdraVm {
         // If only one address on the call_stack, drop the snapshot
         if state.is_in_caller_context() {
             state.drop_snapshot();
+            self.call_snapshot.take();
         }
         result
+    }
+
+    fn code_snapshot(&self) -> CodeSnapshot {
+        CodeSnapshot {
+            versions: self.contract_register.borrow().versions(),
+            deployers: self.deployers.borrow().clone()
+        }
+    }
+
+    fn restore_code(&self, code: &CodeSnapshot) {
+        self.contract_register
+            .borrow_mut()
+            .revert_to(&code.versions);
+        *self.deployers.borrow_mut() = code.deployers.clone();
+    }
+
+    /// Calls the constructor or the upgrader of a child of the factory contract being executed.
+    ///
+    /// As on Casper, the frame of the factory is skipped: the child sees the caller of the
+    /// factory as its caller.
+    fn call_factory_child(&self, address: Address, call_def: CallDef) -> OdraResult<()> {
+        let contract = self
+            .contract_register
+            .borrow()
+            .get_shared(&address)
+            .ok_or(OdraError::VmError(VmError::InvalidContractAddress))?;
+        let factory_frame = self.callstack_tip();
+        {
+            let mut state = self.state.borrow_mut();
+            state.pop_callstack_element();
+            state.push_callstack_element(CallstackElement::new_contract_call(
+                String::from(contract.name()),
+                address,
+                call_def.clone()
+            ));
+        }
+        let result = contract.call(self.contract_env(), call_def);
+        {
+            let mut state = self.state.borrow_mut();
+            state.pop_callstack_element();
+            state.push_callstack_element(factory_frame);
+        }
+        result.map(|_| ())
     }
 
     fn key_of_named_key(name: &str) -> String {
@@ -524,14 +777,15 @@ mod tests {
     use odra_core::casper_types::bytesrepr::{Bytes, ToBytes};
     use odra_core::{
         entry_point_callback::{EntryPoint, EntryPointsCaller},
+        host::HostEnv,
         utils::serialize
     };
 
     use std::collections::BTreeMap;
+    use std::rc::{Rc, Weak};
 
     use odra_core::casper_types::bytesrepr::FromBytes;
     use odra_core::casper_types::{CLValue, RuntimeArgs, U512};
-    use odra_core::host::HostEnv;
     use odra_core::{prelude::*, CallDef, VmError};
 
     use crate::vm::utils;
@@ -542,7 +796,7 @@ mod tests {
     #[test]
     fn contracts_have_different_addresses() {
         // given a new instance
-        let instance = OdraVm::default();
+        let instance = OdraVm::new();
         // when register two contracts with the same entrypoints
         let address1 =
             instance.new_contract("A", RuntimeArgs::new(), test_caller(TEST_ENTRY_POINT));
@@ -556,7 +810,7 @@ mod tests {
     #[test]
     fn addresses_have_different_type() {
         // given an address of a contract and an address of an account
-        let instance = OdraVm::default();
+        let instance = OdraVm::new();
 
         let account_address = instance.get_account(0);
         let contract_address = setup_contract(&instance, TEST_ENTRY_POINT);
@@ -570,7 +824,7 @@ mod tests {
     #[test]
     fn test_contract_call() {
         // given an instance with a registered contract having one entrypoint
-        let instance = OdraVm::default();
+        let instance = OdraVm::new();
         let contract_address = setup_contract(&instance, TEST_ENTRY_POINT);
 
         // when call an existing entrypoint
@@ -587,7 +841,7 @@ mod tests {
     #[test]
     fn test_transfer() {
         // given an empty vm and two addresses
-        let instance = OdraVm::default();
+        let instance = OdraVm::new();
         let from = instance.get_account(0);
         let from_balance = instance.balance_of(&from);
         let to = instance.get_account(1);
@@ -606,7 +860,7 @@ mod tests {
     #[should_panic]
     fn test_transfer_too_much() {
         // given an empty vm and two addresses
-        let instance = OdraVm::default();
+        let instance = OdraVm::new();
         let from = instance.get_account(0);
         let from_balance = instance.balance_of(&from);
         let to = instance.get_account(1);
@@ -620,7 +874,7 @@ mod tests {
     #[test]
     fn test_call_non_existing_contract() {
         // given an empty vm
-        let instance = OdraVm::default();
+        let instance = OdraVm::new();
 
         let address = utils::contract_address_from_u32(42);
 
@@ -640,7 +894,7 @@ mod tests {
     #[test]
     fn test_call_non_existing_entrypoint() {
         // given an instance with a registered contract having one entrypoint
-        let instance = OdraVm::default();
+        let instance = OdraVm::new();
         let invalid_entry_point_name = "aaa";
         let contract_address = setup_contract(&instance, TEST_ENTRY_POINT);
 
@@ -662,7 +916,7 @@ mod tests {
     #[test]
     fn test_caller_switching() {
         // given an empty instance
-        let instance = OdraVm::default();
+        let instance = OdraVm::new();
 
         // when set a new caller
         let new_caller = utils::account_address_from_str("ff");
@@ -677,14 +931,14 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_revert() {
-        let instance = OdraVm::default();
+        let instance = OdraVm::new();
         instance.revert(OdraError::user(1, "Test revert"));
     }
 
     #[test]
     fn test_read_write_value() {
         // given an empty instance
-        let instance = OdraVm::default();
+        let instance = OdraVm::new();
 
         // when set a value
         let key = b"key";
@@ -700,7 +954,7 @@ mod tests {
     #[test]
     fn test_read_write_dict() {
         // given an empty instance
-        let instance = OdraVm::default();
+        let instance = OdraVm::new();
 
         // when set a value
         let dict = "dict";
@@ -722,7 +976,7 @@ mod tests {
     #[test]
     fn test_named_key() {
         // given an empty instance
-        let instance = OdraVm::default();
+        let instance = OdraVm::new();
 
         // when set a value
         let name = "name";
@@ -741,7 +995,7 @@ mod tests {
     #[test]
     fn events() {
         // given an empty instance
-        let instance = OdraVm::default();
+        let instance = OdraVm::new();
 
         let first_contract_address = utils::contract_address_from_u32(123);
         // put a contract on stack
@@ -783,7 +1037,7 @@ mod tests {
     #[test]
     fn test_current_contract_address() {
         // given an empty instance
-        let instance = OdraVm::default();
+        let instance = OdraVm::new();
         let contract_address = setup_contract(&instance, TEST_ENTRY_POINT);
 
         // when push a contract into the stack
@@ -797,7 +1051,7 @@ mod tests {
     #[test]
     fn test_call_contract_with_amount() {
         // given an instance with a registered contract having one entrypoint
-        let instance = OdraVm::default();
+        let instance = OdraVm::new();
         let contract_address = setup_contract(&instance, TEST_ENTRY_POINT);
 
         // when call a contract with the whole balance of the caller
@@ -817,7 +1071,7 @@ mod tests {
     #[should_panic(expected = "VmError(BalanceExceeded)")]
     fn test_call_contract_with_amount_exceeding_balance() {
         // given an instance with a registered contract having one entrypoint
-        let instance = OdraVm::default();
+        let instance = OdraVm::new();
         let contract_address = setup_contract(&instance, TEST_ENTRY_POINT);
 
         let caller = instance.get_account(0);
@@ -827,6 +1081,161 @@ mod tests {
         let call_def = CallDef::new(TEST_ENTRY_POINT, false, RuntimeArgs::new())
             .with_amount(caller_balance + 1);
         instance.call_contract(contract_address, call_def);
+    }
+
+    #[test]
+    fn reverted_init_leaves_no_contract() {
+        // given a factory whose `init` reverts
+        let (vm, env) = setup_env();
+
+        // when deploying it
+        let result = env.new_contract("Factory", RuntimeArgs::new(), reverting_factory());
+
+        // then the deploy fails and leaves nothing behind
+        assert_eq!(result, Err(OdraError::user(1, "Init")));
+        let address = utils::contract_address_from_u32(1);
+        assert!(vm.contract_register.borrow().get(&address).is_none());
+        assert!(vm.deployers.borrow().is_empty());
+    }
+
+    #[test]
+    fn reverted_child_init_leaves_no_child() {
+        // given a factory
+        let (vm, env) = setup_env();
+        let factory = env
+            .new_contract("Factory", RuntimeArgs::new(), test_factory())
+            .unwrap();
+
+        // when deploying a child whose `init` reverts
+        let call_def = CallDef::new("new_contract", true, RuntimeArgs::new());
+        let result = env.raw_call_contract(factory, call_def, false);
+
+        // then the call fails and the child is not registered
+        assert_eq!(result, Err(OdraError::user(1, "Init")));
+        let child = utils::contract_address_from_u32(2);
+        assert!(vm.contract_register.borrow().get(&child).is_none());
+        assert!(vm.contract_register.borrow().get(&factory).is_some());
+    }
+
+    #[test]
+    fn restoring_a_snapshot_forgets_newer_contracts() {
+        // given a snapshot taken with one contract deployed
+        let (vm, env) = setup_env();
+        let factory = env
+            .new_contract("Factory", RuntimeArgs::new(), test_factory())
+            .unwrap();
+        vm.take_snapshot();
+
+        // when another contract is deployed, the first one upgraded and the snapshot restored
+        let other = env
+            .new_contract("Other", RuntimeArgs::new(), test_factory())
+            .unwrap();
+        env.upgrade_contract("Upgraded", factory, RuntimeArgs::new(), test_factory())
+            .unwrap();
+        vm.restore_snapshot();
+
+        // then only the first version of the first contract is left
+        let register = vm.contract_register.borrow();
+        assert_eq!(register.get(&factory).map(|c| c.name()), Some("Factory"));
+        assert!(register.get(&other).is_none());
+        assert_eq!(vm.deployers.borrow().len(), 1);
+    }
+
+    #[test]
+    fn deploying_records_the_deployer_and_upgrading_keeps_it() {
+        // given a contract deployed by the default account
+        let (vm, env) = setup_env();
+        let deployer = env.caller();
+        let address = env
+            .new_contract("Plain", RuntimeArgs::new(), no_entry_points())
+            .unwrap();
+        assert_eq!(vm.deployer(&address), Some(deployer));
+
+        // when another account upgrades it, into a factory even
+        env.set_caller(env.get_account(1));
+        env.upgrade_contract("Factory", address, RuntimeArgs::new(), test_factory())
+            .unwrap();
+
+        // then the installer is still the deployer, so only it may upgrade the children
+        assert_eq!(vm.deployer(&address), Some(deployer));
+    }
+
+    #[test]
+    fn upgrading_a_loaded_contract_records_the_upgrader() {
+        // given a contract this VM did not deploy (`HostRefLoader::load`)
+        let (vm, env) = setup_env();
+        let address = utils::contract_address_from_u32(7);
+        vm.register_contract(address, "Plain", no_entry_points());
+        assert_eq!(vm.deployer(&address), None);
+
+        // when it is upgraded here
+        env.upgrade_contract("Factory", address, RuntimeArgs::new(), test_factory())
+            .unwrap();
+
+        // then the account that upgraded it is the nearest thing to its installer
+        assert_eq!(vm.deployer(&address), Some(env.caller()));
+    }
+
+    #[test]
+    fn reverted_child_init_emits_nothing() {
+        // given a factory
+        let (vm, env) = setup_env();
+        let factory = env
+            .new_contract("Factory", RuntimeArgs::new(), test_factory())
+            .unwrap();
+
+        // when deploying a child that emits events in its `init` and reverts
+        let call_def = CallDef::new("new_contract", true, RuntimeArgs::new());
+        let result = env.raw_call_contract(factory, call_def, false);
+
+        // then the events are gone with the child
+        assert_eq!(result, Err(OdraError::user(1, "Init")));
+        let child = utils::contract_address_from_u32(2);
+        assert!(vm.get_events_count(&child).is_err());
+        assert!(vm.get_native_events_count(&child).is_err());
+    }
+
+    thread_local! {
+        static VM: RefCell<Option<Rc<OdraVm>>> = const { RefCell::new(None) };
+    }
+
+    fn setup_env() -> (Rc<OdraVm>, HostEnv) {
+        let vm = OdraVm::new();
+        let env = HostEnv::new(OdraVmHost::new(vm.clone()));
+        // Lets the entry points below reach the VM.
+        VM.with(|cell| *cell.borrow_mut() = Some(vm.clone()));
+        (vm, env)
+    }
+
+    /// A contract without entry points.
+    fn no_entry_points() -> EntryPointsCaller {
+        EntryPointsCaller::new(vec![], |_, _| Ok(Bytes::new()))
+    }
+
+    /// A factory whose `new_contract` deploys a child with a reverting `init`.
+    fn test_factory() -> EntryPointsCaller {
+        let entry_point = EntryPoint::new(String::from("new_contract"), vec![]);
+        EntryPointsCaller::new(vec![entry_point], |env, _| {
+            env.new_child_contract("Child", RuntimeArgs::new(), reverting_factory)?;
+            Ok(Bytes::new())
+        })
+    }
+
+    /// A factory with an `init` that emits events and reverts.
+    fn reverting_factory() -> EntryPointsCaller {
+        let entry_points = vec![
+            EntryPoint::new(String::from("init"), vec![]),
+            EntryPoint::new(String::from("new_contract"), vec![]),
+        ];
+        EntryPointsCaller::new(entry_points, |_, _| {
+            VM.with(|cell| {
+                let vm = cell.borrow();
+                let vm = vm.as_ref().unwrap();
+                vm.emit_event(&Bytes::from(vec![1]));
+                vm.emit_native_event(&Bytes::from(vec![2]));
+            });
+            Err(OdraError::user(1, "Init"))
+        })
     }
 
     fn push_address(vm: &OdraVm, address: &Address) {
@@ -844,10 +1253,7 @@ mod tests {
     }
 
     fn test_caller(entry_point_name: &str) -> EntryPointsCaller {
-        let vm = OdraVm::new();
-        let host_env = OdraVmHost::new(vm);
-        let env = HostEnv::new(host_env);
         let entry_point = EntryPoint::new_payable(String::from(entry_point_name), vec![]);
-        EntryPointsCaller::new(env, vec![entry_point], |_, _| Ok(test_call_result()))
+        EntryPointsCaller::new(vec![entry_point], |_, _| Ok(test_call_result()))
     }
 }

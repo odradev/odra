@@ -1,6 +1,7 @@
 use crate::host_functions;
 use casper_contract::contract_api::runtime;
 use casper_types::bytesrepr::ToBytes;
+use casper_types::ApiError;
 use casper_types::U512;
 use odra_core::casper_types;
 use odra_core::casper_types::bytesrepr::Bytes;
@@ -16,6 +17,10 @@ use odra_core::{ContractContext, ContractEnv};
 pub struct WasmContractEnv;
 
 impl ContractContext for WasmContractEnv {
+    fn debug(&self, message: &str) {
+        host_functions::debug(message);
+    }
+
     fn get_value(&self, key: &[u8]) -> Option<Bytes> {
         host_functions::get_value(key).map(Bytes::from)
     }
@@ -50,6 +55,10 @@ impl ContractContext for WasmContractEnv {
 
     fn caller(&self) -> Address {
         host_functions::caller().unwrap_or_else(|e| self.revert(e))
+    }
+
+    fn call_stack(&self) -> Vec<Address> {
+        host_functions::call_stack().unwrap_or_else(|e| self.revert(e))
     }
 
     fn self_address(&self) -> Address {
@@ -91,7 +100,11 @@ impl ContractContext for WasmContractEnv {
     fn get_named_arg_bytes(&self, name: &str) -> OdraResult<Bytes> {
         host_functions::get_named_arg(name)
             .map(Bytes::from)
-            .map_err(|_| OdraError::ExecutionError(ExecutionError::MissingArg))
+            .map_err(|e| match e {
+                ApiError::MissingArgument => ExecutionError::MissingArg,
+                _ => ExecutionError::InvalidArg
+            })
+            .map_err(OdraError::ExecutionError)
     }
 
     fn get_opt_named_arg_bytes(&self, name: &str) -> Option<Bytes> {

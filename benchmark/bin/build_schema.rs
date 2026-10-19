@@ -1,12 +1,12 @@
 #[allow(unused_imports, clippy::single_component_path_imports)]
 use benchmark;
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(odra_module = ""), not(target_arch = "wasm32")))]
 extern "Rust" {
     fn module_schema() -> odra::contract_def::ContractBlueprint;
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(odra_module = ""), not(target_arch = "wasm32")))]
 fn main() {
     let schema = unsafe { crate::module_schema() };
 
@@ -21,3 +21,6 @@ fn main() {
     std::io::Write::write_all(&mut schema_file, &json.into_bytes())
         .expect("Failed to write to schema file");
 }
+
+#[cfg(any(odra_module = "", target_arch = "wasm32"))]
+fn main() {}

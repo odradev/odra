@@ -33,6 +33,30 @@
       "return_ty": "U256",
       "ty": "Public",
       "attributes": []
+    },
+    {
+      "name": "holds_tokens",
+      "args": [
+        {
+          "name": "account",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": false,
+      "return_ty": "Bool",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "token_own_balance",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "U256",
+      "ty": "Public",
+      "attributes": []
     }
   ]
 }

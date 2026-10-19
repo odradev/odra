@@ -2,10 +2,11 @@
 
 mod event_matcher;
 
+pub use event_matcher::ProcessedTransaction;
+
 use crate::casper_client::configuration::CasperClientConfiguration;
 use crate::error::LivenetError;
 use crate::log;
-use casper_types::execution::ExecutionResult;
 use casper_types::TransactionHash;
 use futures_util::StreamExt;
 use reqwest_eventsource::{Error as EventSourceError, Event, EventSource};
@@ -52,7 +53,7 @@ impl TransactionWatch {
     pub async fn wait_for_transaction_hash(
         self,
         transaction_hash: &TransactionHash
-    ) -> Result<ExecutionResult, LivenetError> {
+    ) -> Result<ProcessedTransaction, LivenetError> {
         log::debug(format!(
             "[WATCHER] Starting to monitor for transaction: {}",
             transaction_hash
@@ -74,7 +75,7 @@ impl TransactionWatch {
     async fn monitor_events_until_found(
         mut es: EventSource,
         transaction_hash: &str
-    ) -> Result<ExecutionResult, LivenetError> {
+    ) -> Result<ProcessedTransaction, LivenetError> {
         log::debug("[WATCHER] Monitoring stream for events...");
 
         let mut event_count = 0;

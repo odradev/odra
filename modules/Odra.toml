@@ -17,12 +17,6 @@ fqn = "erc1155_receiver::Erc1155Receiver"
 fqn = "wrapped_native::WrappedNativeToken"
 
 [[contracts]]
-fqn = "access::Ownable"
-
-[[contracts]]
-fqn = "ownable_2step::Ownable2Step"
-
-[[contracts]]
 fqn = "cep95::utils::BasicCep95"
 
 [[contracts]]

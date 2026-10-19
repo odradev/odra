@@ -56,6 +56,14 @@
       "return_ty": "Unit",
       "ty": "Public",
       "attributes": []
+    },
+    {
+      "name": "emit_and_revert",
+      "args": [],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Public",
+      "attributes": []
     }
   ]
 }

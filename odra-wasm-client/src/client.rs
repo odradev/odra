@@ -258,7 +258,7 @@ impl OdraWasmClient {
             ARG_AMOUNT => U512::zero(),
         };
 
-        let sk = SecretKey::from_pem(SECRET_KEY_PEM)?;
+        let sk = secret_key()?;
         let signed_deploy = self.new_proxy_deploy(&sk, args).await?;
         let result = casper_client::speculative_exec(
             self.rpc_id(),
@@ -551,5 +551,17 @@ pub enum ClientError {
     #[error("Failed to serialize/deserialize CLValue: {0}")]
     CLValue(casper_types::CLValueError),
     #[error("Read global state error: {0}")]
-    ReadGlobalStateError(String)
+    ReadGlobalStateError(String),
+    #[error("WASM_CLIENT_SK was empty at build time")]
+    MissingSecretKey,
+    #[error("Invalid secret key: {0}")]
+    InvalidSecretKey(String)
+}
+
+/// Reads the secret key baked in at build time from the `WASM_CLIENT_SK` environment variable.
+fn secret_key() -> Result<SecretKey, ClientError> {
+    if SECRET_KEY_PEM.is_empty() {
+        return Err(ClientError::MissingSecretKey);
+    }
+    SecretKey::from_pem(SECRET_KEY_PEM).map_err(|e| ClientError::InvalidSecretKey(e.to_string()))
 }

@@ -19,7 +19,7 @@ mod utils;
 pub use cli::OdraCli;
 pub use cmd::args::CommandArg;
 pub use container::{ContractProvider, DeployedContractsContainer};
-pub use utils::{log, DeployerExt};
+pub use utils::{log, ContractLoaderExt, DeployerExt};
 
 pub mod scenario {
     //! Traits and structs for defining custom scenarios.
@@ -40,6 +40,12 @@ pub mod deploy {
     pub use crate::cmd::{DeployError as Error, DeployScript};
 }
 
+/// Converts an amount of CSPR to motes (`u64`), e.g. `cspr!(2.5)` is `2_500_000_000`.
+///
+/// With a literal argument the macro expands to a constant expression, so it can
+/// initialise a `const` or `static` (`const DEPLOY_GAS: u64 = cspr!(450);`).
+/// For a `U512` constant, combine it with `odra::prelude::u512`:
+/// `const STAKE: U512 = u512(cspr!(500) as u128);`.
 #[macro_export]
 macro_rules! cspr {
     ($val:literal) => {{
@@ -59,4 +65,23 @@ macro_rules! cspr {
         };
         (parsed * MOTES_PER_CSPR as f64) as u64
     }};
+}
+
+#[cfg(test)]
+mod cspr_tests {
+    use odra::casper_types::U512;
+    use odra::prelude::u512;
+
+    /// `const` items fail to build if the literal arm ever stops being a
+    /// constant expression.
+    #[test]
+    fn cspr_literal_is_usable_in_a_const_context() {
+        const WHOLE: u64 = cspr!(450);
+        const FRACTION: u64 = cspr!(2.5);
+        const STAKE: U512 = u512(cspr!(500) as u128);
+
+        assert_eq!(WHOLE, 450_000_000_000);
+        assert_eq!(FRACTION, 2_500_000_000);
+        assert_eq!(STAKE, U512::from(500_000_000_000u64));
+    }
 }

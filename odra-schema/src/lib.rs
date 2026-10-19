@@ -20,14 +20,25 @@ const CCSV: u8 = 1;
 const ODRA_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 mod custom_type;
+mod storage_layout;
 mod ty;
 
+pub use storage_layout::{
+    resolve_storage, resolve_storage_with, KeyEncoding, SchemaStorageLayout, StorageField,
+    StorageKind, StorageLayoutError, StorageLocation, StorageQuery
+};
 pub use ty::NamedCLTyped;
 
 /// Trait representing schema entrypoints.
 pub trait SchemaEntrypoints {
     /// Returns a vector of [Entrypoint]s.
     fn schema_entrypoints() -> Vec<Entrypoint>;
+
+    /// The `#[odra(offchain)]` functions of the module: callable on the host (tests, scripts,
+    /// odra-cli), never deployed, so not part of the contract schema.
+    fn schema_offchain_entrypoints() -> Vec<Entrypoint> {
+        Vec::new()
+    }
 }
 
 /// Trait representing schema events.

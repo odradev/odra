@@ -1,11 +1,13 @@
 use crate::casper_client::{
     ENV_ACCOUNT_PREFIX, ENV_CHAIN_NAME, ENV_CSPR_CLOUD_AUTH_TOKEN, ENV_EVENTS_ADDRESS,
-    ENV_GAS_PRICE_TOLERANCE, ENV_LIVENET_ENV_FILE, ENV_NODE_ADDRESS, ENV_SECRET_KEY, ENV_TTL
+    ENV_GAS_PRICE_TOLERANCE, ENV_LIVENET_ENV_FILE, ENV_NODE_ADDRESS, ENV_SECRET_KEY,
+    ENV_STATE_ROOT_HASH, ENV_TTL
 };
 use crate::error::LivenetError;
 use crate::log;
 use crate::utils::{get_env_variable, get_optional_env_variable};
 use casper_client::Verbosity;
+use casper_types::Digest;
 use casper_types::TimeDiff;
 use odra_core::casper_types::SecretKey;
 use std::path::PathBuf;
@@ -22,7 +24,9 @@ pub struct CasperClientConfiguration {
     pub secret_key_paths: Vec<String>,
     pub cspr_cloud_auth_token: Option<String>,
     pub gas_price_tolerance: u8,
-    pub ttl: u32
+    pub ttl: u32,
+    /// Pins every read to this state root hash and disables transactions.
+    pub state_root_hash: Option<Digest>
 }
 
 impl CasperClientConfiguration {
@@ -51,6 +55,15 @@ impl CasperClientConfiguration {
             .and_then(|ttl| ttl.parse::<u8>().ok())
             .unwrap_or(DEFAULT_GAS_TOLERANCE);
 
+        let state_root_hash = match get_optional_env_variable(ENV_STATE_ROOT_HASH) {
+            None => None,
+            Some(hex) => Some(Digest::from_hex(hex.trim()).map_err(|e| {
+                LivenetError::ClientError(format!(
+                    "{ENV_STATE_ROOT_HASH} is not a valid state root hash: {e}"
+                ))
+            })?)
+        };
+
         let (secret_keys, secret_key_paths) = Self::secret_keys_from_env()?;
         Ok(CasperClientConfiguration {
             node_address,
@@ -60,7 +73,8 @@ impl CasperClientConfiguration {
             cspr_cloud_auth_token: get_optional_env_variable(ENV_CSPR_CLOUD_AUTH_TOKEN),
             events_url,
             gas_price_tolerance,
-            ttl
+            ttl,
+            state_root_hash
         })
     }
 

@@ -1,4 +1,4 @@
-#![allow(unused_variables, missing_docs)]
+#![allow(missing_docs)]
 
 use alloc::collections::BTreeMap;
 use odra::{
@@ -140,7 +140,8 @@ impl CEP95Receiver {
     ///
     /// # Returns
     /// `true` to accept the NFT, anything else to reject.
-    #[allow(dead_code)]
+    // A placeholder: the arguments, named as the entry point's arguments, go unused.
+    #[allow(dead_code, unused_variables)]
     pub fn on_cep95_received(
         &mut self,
         operator: &Address,
@@ -359,7 +360,6 @@ impl CEP95Interface for Cep95 {
     }
 
     fn approve(&mut self, spender: Address, token_id: U256) {
-        let caller = self.env().caller();
         let owner = self
             .owner_of(token_id)
             .unwrap_or_revert_with(self, Error::InvalidTokenId);
@@ -425,6 +425,7 @@ impl CEP95Interface for Cep95 {
 
 impl Cep95 {
     /// Initializes the module with a name and symbol.
+    /// SECURITY: Do not expose this function publicly without proper access control.
     pub fn init(&mut self, name: String, symbol: String) {
         // Initialize the name and symbol.
         self.name.set(name);
@@ -666,7 +667,8 @@ mod utils {
 
     #[odra::module]
     impl RejectingNFTReceiver {
-        #[allow(dead_code)]
+        // Rejects every token, the arguments are the entry point's and go unused.
+        #[allow(dead_code, unused_variables)]
         pub fn on_cep95_received(
             &mut self,
             operator: Address,
@@ -724,14 +726,14 @@ mod tests {
 
     #[test]
     fn test_name() {
-        let (env, cep95) = setup();
+        let (_env, cep95) = setup();
         let name = cep95.name();
         assert_eq!(name, "TestToken");
     }
 
     #[test]
     fn test_symbol() {
-        let (env, cep95) = setup();
+        let (_env, cep95) = setup();
         let symbol = cep95.symbol();
         assert_eq!(symbol, "TT");
     }
@@ -806,8 +808,7 @@ mod tests {
 
     #[test]
     fn test_burn_non_existing_token() {
-        let (env, mut cep95) = setup();
-        let owner = env.caller();
+        let (_env, mut cep95) = setup();
 
         let token_id = U256::from(1);
         let result = cep95.try_burn(token_id);

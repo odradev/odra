@@ -6,7 +6,7 @@
 mod prelude {
     pub use crate::address::{Address, Addressable};
     pub use crate::arithmetic::*;
-    pub use crate::contract_env::ContractEnv;
+    pub use crate::contract_env::{ContractAddress, ContractEnv};
     pub use crate::error::{ExecutionError, OdraError, OdraResult};
     pub use crate::external::External;
     pub use crate::list::{List, ListIter};

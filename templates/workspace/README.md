@@ -53,6 +53,25 @@ you need to specify the backend passing -b argument to `cargo-odra`.
 $ cargo odra test -b casper
 ```
 
+### Deploy to a network
+
+The `{{project-name}}_cli` binary deploys the contracts and talks to them on a live network -
+a local [NCTL](https://github.com/make-software/casper-nctl-docker) node, testnet or mainnet.
+`.env.sample` holds a configuration for NCTL; copy it and follow its comments:
+
+```
+$ cp .env.sample .env
+$ docker run --rm -d --name mynctl -p 11101:11101 -p 14101:14101 -p 18101:18101 -p 25101:25101 makesoftware/casper-nctl:v203
+$ docker exec mynctl /bin/bash -c "cat /home/casper/casper-nctl/assets/net-1/users/user-1/secret_key.pem" > secret_key.pem
+$ cargo odra build
+$ cargo run --bin {{project-name}}_cli -- deploy
+$ cargo run --bin {{project-name}}_cli -- --help
+```
+
+Deployed addresses land in `resources/<chain>-contracts.toml`, so the next `deploy` reuses them. See
+the [Odra CLI tutorial](https://odra.dev/docs/tutorials/odra-cli) and the
+[Livenet backend](https://odra.dev/docs/backends/livenet) docs for the details.
+
 ## Documentation and tooling
 
 - [Odra Docs and Tutorials](https://odra.dev/docs) — start here

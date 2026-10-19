@@ -1,0 +1,6 @@
+{
+  "contract_name": "Second",
+  "errors": [
+    { "name": "SecondError", "description": "Shares its code with FirstError.", "discriminant": 1 }
+  ]
+}

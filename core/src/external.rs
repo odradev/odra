@@ -80,7 +80,9 @@ impl<T: ContractRef> External<T> {
         if self.contract_ref.get().is_none() {
             let _ = self.contract_ref();
         }
-        self.contract_ref.get_mut().unwrap()
+        self.contract_ref
+            .get_mut()
+            .expect("initialized by contract_ref() above")
     }
 
     fn contract_ref(&self) -> &T {

@@ -26,12 +26,14 @@ impl ValidatorsContract {
         if amount.is_zero() {
             self.env().revert(ValError::InsufficientBalance);
         }
-        self.env().delegate(self.validator.get().unwrap(), amount);
+        self.env()
+            .delegate(self.validator.get().unwrap_or_revert(&self.env()), amount);
     }
 
     /// Undelegate the amount from the validator
     pub fn unstake(&mut self, amount: U512) {
-        self.env().undelegate(self.validator.get().unwrap(), amount);
+        self.env()
+            .undelegate(self.validator.get().unwrap_or_revert(&self.env()), amount);
     }
 
     /// Withdraw the amount from the validator
@@ -41,7 +43,8 @@ impl ValidatorsContract {
 
     /// Get the currently delegated amount
     pub fn currently_delegated_amount(&self) -> U512 {
-        self.env().delegated_amount(self.validator.get().unwrap())
+        self.env()
+            .delegated_amount(self.validator.get().unwrap_or_revert(&self.env()))
     }
 
     /// Get the current casper balance of the contract
@@ -52,8 +55,8 @@ impl ValidatorsContract {
     /// Get minimum delegation amount
     pub fn get_minimum_delegation_amount(&self) -> u64 {
         self.env()
-            .get_validator_info(self.validator.get().unwrap())
-            .unwrap()
+            .get_validator_info(self.validator.get().unwrap_or_revert(&self.env()))
+            .unwrap_or_revert(&self.env())
             .minimum_delegation_amount
     }
 }

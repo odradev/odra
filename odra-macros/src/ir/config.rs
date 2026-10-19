@@ -27,6 +27,7 @@ mod kw {
     syn::custom_keyword!(events);
     syn::custom_keyword!(errors);
     syn::custom_keyword!(factory);
+    syn::custom_keyword!(layout);
 }
 
 #[derive(Default, Clone)]
@@ -35,7 +36,22 @@ pub struct ModuleConfiguration {
     pub errors: ModuleErrors,
     pub name: ModuleName,
     pub version: ModuleVersion,
-    pub factory: Factory
+    pub factory: Factory,
+    pub layout: ModuleLayout,
+    /// Names and spans of the arguments that were actually written, in source order.
+    given: Vec<(&'static str, proc_macro2::Span)>
+}
+
+impl ModuleConfiguration {
+    /// Arguments that only make sense on the module struct, not on an `impl` or `trait` block.
+    pub fn struct_only_args(&self) -> impl Iterator<Item = &(&'static str, proc_macro2::Span)> {
+        self.given.iter().filter(|(name, _)| *name != "factory")
+    }
+
+    /// All arguments that were written.
+    pub fn args(&self) -> impl Iterator<Item = &(&'static str, proc_macro2::Span)> {
+        self.given.iter()
+    }
 }
 
 impl Parse for ModuleConfiguration {
@@ -45,33 +61,48 @@ impl Parse for ModuleConfiguration {
         let mut events = None;
         let mut errors = None;
         let mut factory = None;
+        let mut layout = None;
+        let mut given = Vec::new();
         while !input.is_empty() {
+            let span = input.span();
             if events.is_none() && input.peek(kw::events) {
+                given.push(("events", span));
                 events = Some(input.parse::<ModuleEvents>()?);
                 let _ = input.parse::<Token![,]>(); // optional comma
                 continue;
             }
 
             if errors.is_none() && input.peek(kw::errors) {
+                given.push(("errors", span));
                 errors = Some(input.parse::<ModuleErrors>()?);
                 let _ = input.parse::<Token![,]>(); // optional comma
                 continue;
             }
 
             if name.is_none() && input.peek(kw::name) {
+                given.push(("name", span));
                 name = Some(input.parse::<ModuleName>()?);
                 let _ = input.parse::<Token![,]>(); // optional comma
                 continue;
             }
 
             if version.is_none() && input.peek(kw::version) {
+                given.push(("version", span));
                 version = Some(input.parse::<ModuleVersion>()?);
                 let _ = input.parse::<Token![,]>(); // optional comma
                 continue;
             }
 
             if factory.is_none() && input.peek(kw::factory) {
+                given.push(("factory", span));
                 factory = Some(input.parse::<Factory>()?);
+                let _ = input.parse::<Token![,]>(); // optional comma
+                continue;
+            }
+
+            if layout.is_none() && input.peek(kw::layout) {
+                given.push(("layout", span));
+                layout = Some(input.parse::<ModuleLayout>()?);
                 let _ = input.parse::<Token![,]>(); // optional comma
                 continue;
             }
@@ -84,8 +115,34 @@ impl Parse for ModuleConfiguration {
             version: version.unwrap_or_default(),
             events: events.unwrap_or_default(),
             errors: errors.unwrap_or_default(),
-            factory: factory.unwrap_or_default()
+            factory: factory.unwrap_or_default(),
+            layout: layout.unwrap_or_default(),
+            given
         })
+    }
+}
+
+/// An explicit storage layout of the module, overriding the one derived from its fields.
+///
+/// Used by modules that store data outside of the Odra storage layout, e.g. under named keys:
+/// `#[odra::module(layout = odra::schema::StorageKind::named_key::<u8>("decimals"))]`.
+#[derive(Default, Clone, Debug)]
+pub struct ModuleLayout(Option<syn::Expr>);
+
+impl Deref for ModuleLayout {
+    type Target = Option<syn::Expr>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl Parse for ModuleLayout {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        input.parse::<kw::layout>()?;
+        input.parse::<Token![=]>()?;
+        let layout = input.parse::<syn::Expr>()?;
+        Ok(Self(Some(layout)))
     }
 }
 

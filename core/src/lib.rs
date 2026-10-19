@@ -3,6 +3,8 @@
 #![cfg_attr(test, feature(never_type))]
 
 extern crate alloc;
+#[cfg(not(target_arch = "wasm32"))]
+extern crate std;
 
 mod address;
 pub mod args;
@@ -43,8 +45,8 @@ pub use call_result::ContractCallResult;
 pub use casper_event_standard;
 pub use contract_container::ContractContainer;
 pub use contract_context::ContractContext;
-pub use contract_env::{ContractEnv, ContractRef, ExecutionEnv};
-pub use contract_register::ContractRegister;
+pub use contract_env::{ContractAddress, ContractEnv, ContractRef, ExecutionEnv};
+pub use contract_register::{ContractRegister, ContractVersion};
 pub use error::{AddressError, CollectionError, EventError, VmError, CASPER_ERROR_GENERIC_NAME};
 
 pub use casper_types;

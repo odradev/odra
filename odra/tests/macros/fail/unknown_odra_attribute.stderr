@@ -1,0 +1,29 @@
+error: unknown odra attribute `paybale`, expected one of: payable, non_reentrant, offchain
+  --> tests/macros/fail/unknown_odra_attribute.rs:11:12
+   |
+11 |     #[odra(paybale)]
+   |            ^^^^^^^
+
+error: unknown odra attribute `view`, expected one of: payable, non_reentrant, offchain
+  --> tests/macros/fail/unknown_odra_attribute.rs:24:12
+   |
+24 |     #[odra(view)]
+   |            ^^^^
+
+error: unknown odra attribute `nonreentrant`, expected one of: payable, non_reentrant, offchain
+  --> tests/macros/fail/unknown_odra_attribute.rs:37:21
+   |
+37 |     #[odra(payable, nonreentrant)]
+   |                     ^^^^^^^^^^^^
+
+error: unknown odra attribute `off_chain`, expected one of: payable, non_reentrant, offchain
+  --> tests/macros/fail/unknown_odra_attribute.rs:54:12
+   |
+54 |     #[odra(off_chain)]
+   |            ^^^^^^^^^
+
+error: unknown odra attribute `using`, expected one of: payable, non_reentrant, offchain
+  --> tests/macros/fail/unknown_odra_attribute.rs:62:21
+   |
+62 |     #[odra(payable, using = "x")]
+   |                     ^^^^^^^^^^^

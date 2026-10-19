@@ -4,7 +4,7 @@ use crate::casper_client::Result;
 use crate::error::LivenetError;
 use casper_client::JsonRpcId;
 use casper_types::bytesrepr::{Bytes, ToBytes};
-use casper_types::{PublicKey, SecretKey};
+use casper_types::{PublicKey, SecretKey, U512};
 use itertools::Itertools;
 use odra_core::casper_types::crypto::sign;
 use odra_core::prelude::*;
@@ -15,6 +15,11 @@ impl super::CasperClient {
     /// Sets the amount of gas for the next deployment.
     pub fn set_gas(&mut self, gas: u64) {
         self.gas = gas.into();
+    }
+
+    /// The amount of gas attached to the next transaction.
+    pub fn gas(&self) -> U512 {
+        self.gas
     }
 
     /// Public key of the client account.

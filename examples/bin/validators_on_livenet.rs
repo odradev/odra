@@ -1,5 +1,6 @@
 //! Deploys an example Validators contract and tests its functionality.
-use odra::casper_types::{PublicKey, U512};
+use core::time::Duration;
+use odra::casper_types::{PublicKey, SecretKey, U512};
 use odra::host::{Deployer, HostEnv, HostRef};
 use odra::prelude::*;
 use odra_examples::features::validators::{
@@ -17,6 +18,17 @@ fn main() {
         validators_contract.address().to_string()
     );
 
+    // The validator's bid is read from the chain; an unknown validator has none.
+    let minimum_delegation_amount = validators_contract.get_minimum_delegation_amount();
+    println!("Minimum delegation amount: {minimum_delegation_amount}");
+    let unknown = PublicKey::from(&SecretKey::ed25519_from_bytes([7u8; 32]).unwrap());
+    let unknown_validator_contract =
+        ValidatorsContract::deploy(&env, ValidatorsContractInitArgs { validator: unknown });
+    assert_eq!(
+        unknown_validator_contract.try_get_minimum_delegation_amount(),
+        Err(ExecutionError::UnwrapError.into())
+    );
+
     // Stake some amount
     let staking_amount = U512::from(1_000_000_000_000u64);
     validators_contract.with_tokens(staking_amount).stake();
@@ -27,10 +39,10 @@ fn main() {
     assert_eq!(delegated_amount_contract, delegated_amount_host);
 
     // Check Host's validator's functionality
-    println!("Auction delay: {:?}", env.auction_delay());
-    println!("Unbonding delay: {:?}", env.unbonding_delay());
+    println!("Auction delay: {} ms", env.auction_delay());
+    println!("Unbonding delay: {} ms", env.unbonding_delay());
 
-    env.advance_with_auctions(1000);
+    env.advance_with_auctions(Duration::from_secs(1));
 }
 
 /// Deploys an ERC20 contract.

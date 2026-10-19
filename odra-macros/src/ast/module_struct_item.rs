@@ -3,7 +3,8 @@ use crate::ast::factory::FactoryModuleItem;
 use crate::ast::ident_item::HasIdentImplItem;
 use crate::ast::module_def::ModuleDefItem;
 use crate::ast::module_item::ModuleModItem;
-use crate::ast::schema::{SchemaErrorsItem, SchemaEventsItem, SchemaItem};
+use crate::ast::parts_utils::OdraModuleCfgItem;
+use crate::ast::schema::{SchemaErrorsItem, SchemaEventsItem, SchemaItem, SchemaStorageLayoutItem};
 use crate::ir::ModuleStructIR;
 use derive_try_from_ref::TryFromRef;
 
@@ -15,8 +16,9 @@ pub struct ModuleStructItem {
     mod_item: ModuleModItem,
     has_ident_item: HasIdentImplItem,
     has_events_item: HasEventsImplItem,
-    schema_item: SchemaItem,
+    schema_item: OdraModuleCfgItem<SchemaItem>,
     schema_events_item: SchemaEventsItem,
     schema_errors: SchemaErrorsItem,
+    schema_storage_layout: SchemaStorageLayoutItem,
     factory: FactoryModuleItem
 }

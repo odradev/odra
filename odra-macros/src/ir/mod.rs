@@ -92,13 +92,7 @@ impl ModuleStructIR {
     }
 
     pub fn typed_fields(&self) -> syn::Result<Vec<EnumeratedTypedField>> {
-        let fields = utils::syn::struct_typed_fields(&self.code)?;
-        let fields = fields
-            .iter()
-            .filter(|(i, _)| i != &utils::ident::env())
-            .collect::<Vec<_>>();
-
-        fields
+        utils::syn::struct_typed_fields(&self.code)?
             .iter()
             .enumerate()
             .map(|(idx, (ident, ty))| {
@@ -122,6 +116,14 @@ impl ModuleStructIR {
     pub fn errors(&self) -> Option<syn::Type> {
         if let ConfigItem::Module(cfg) = &self.config {
             (*cfg.errors).clone()
+        } else {
+            None
+        }
+    }
+
+    pub fn storage_layout(&self) -> Option<syn::Expr> {
+        if let ConfigItem::Module(cfg) = &self.config {
+            (*cfg.layout).clone()
         } else {
             None
         }
@@ -172,12 +174,7 @@ impl ModuleStructIR {
             }
         }
         let fields = utils::syn::struct_typed_fields(&self.code)?;
-        let set = HashSet::<syn::Type>::from_iter(
-            fields
-                .iter()
-                .filter(|(i, _)| i != &utils::ident::env())
-                .map(|(_, ty)| ty.clone())
-        );
+        let set = HashSet::<syn::Type>::from_iter(fields.iter().map(|(_, ty)| ty.clone()));
         let mut fields = set.into_iter().map(OrdType).collect::<Vec<_>>();
         fields.sort();
 
@@ -204,10 +201,31 @@ impl TryFrom<(&proc_macro2::TokenStream, &proc_macro2::TokenStream)> for ModuleI
     ) -> Result<Self, Self::Error> {
         let config = syn::parse2::<ConfigItem>(stream.0.clone())?;
         if let Ok(code) = syn::parse2::<syn::ItemImpl>(stream.1.clone()) {
-            return Ok(Self::Impl(ModuleIR { code, config }));
+            if let ConfigItem::Module(cfg) = &config {
+                if let Some((name, span)) = cfg.struct_only_args().next() {
+                    return Err(syn::Error::new(
+                        *span,
+                        format!(
+                            "`{name}` is not allowed on an impl block; put it on the module \
+                             struct: `#[odra::module({name} = ...)] pub struct ...`"
+                        )
+                    ));
+                }
+            }
+            let ir = Self::Impl(ModuleIR { code, config });
+            ir.validate_offchain_functions()?;
+            return Ok(ir);
         }
 
         if let Ok(code) = syn::parse2::<syn::ItemTrait>(stream.1.clone()) {
+            if let ConfigItem::Module(cfg) = &config {
+                if let Some((name, span)) = cfg.args().next() {
+                    return Err(syn::Error::new(
+                        *span,
+                        format!("`{name}` is not allowed on a trait; `#[odra::module]` on a trait takes no arguments")
+                    ));
+                }
+            }
             for c in code.items.iter() {
                 if let syn::TraitItem::Verbatim(func) = c {
                     syn::parse2::<syn::TraitItemFn>(func.clone())?;
@@ -305,6 +323,16 @@ impl ModuleImplIR {
         ))
     }
 
+    /// The module a factory impl stands for. `#[odra::factory]` sees only the `<Module>Factory`
+    /// ident that [factory_module_ident](Self::factory_module_ident) made, so the suffix is
+    /// stripped back; for any other module it is the module ident itself.
+    pub fn child_module_ident(&self) -> syn::Result<Ident> {
+        let module_ident = self.module_ident()?;
+        let module_str = module_ident.to_string();
+        let child = module_str.strip_suffix("Factory").unwrap_or(&module_str);
+        Ok(Ident::new(child, module_ident.span()))
+    }
+
     pub fn init_args_ident(&self) -> syn::Result<syn::Ident> {
         let module_ident = self.module_ident()?;
         Ok(Ident::new(
@@ -355,6 +383,67 @@ impl ModuleImplIR {
 
     pub fn host_functions(&self) -> syn::Result<Vec<FnIR>> {
         Ok(self.functions()?.into_iter().collect())
+    }
+
+    /// The functions that become entry points of the deployed contract: everything but the
+    /// `#[odra(offchain)]` ones.
+    pub fn onchain_functions(&self) -> syn::Result<Vec<FnIR>> {
+        Ok(self
+            .functions()?
+            .into_iter()
+            .filter(|f| !f.is_offchain())
+            .collect())
+    }
+
+    /// The `#[odra(offchain)]` functions: run on the host against the contract's state, never
+    /// deployed.
+    pub fn offchain_functions(&self) -> syn::Result<Vec<FnIR>> {
+        Ok(self
+            .functions()?
+            .into_iter()
+            .filter(FnIR::is_offchain)
+            .collect())
+    }
+
+    /// `#[odra(offchain)]` is only meaningful on a read-only function of a plain module impl.
+    fn validate_offchain_functions(&self) -> syn::Result<()> {
+        // A function list that does not parse is reported by whoever consumes it.
+        let Ok(offchain_functions) = self.offchain_functions() else {
+            return Ok(());
+        };
+        for f in offchain_functions {
+            let sig = f.sig();
+            let reason = if self.is_trait_impl() {
+                Some(
+                    "a trait impl cannot have offchain functions: the trait is also implemented \
+                     by the ContractRef, where an offchain function has no meaning. Move it to a \
+                     plain `impl` block of the module"
+                )
+            } else if self.is_factory() {
+                Some("offchain functions are not supported in a factory module")
+            } else if f.is_mut() {
+                Some(
+                    "an offchain function runs on the host and cannot change the state: take \
+                     `&self`"
+                )
+            } else if f.is_payable() || f.is_non_reentrant() {
+                Some(
+                    "an offchain function is never called on chain, so `payable` and \
+                     `non_reentrant` do not apply to it"
+                )
+            } else if utils::syn::receiver_arg(sig).is_none() {
+                Some("an offchain function reads the contract's state: take `&self`")
+            } else {
+                None
+            };
+            if let Some(reason) = reason {
+                return Err(syn::Error::new_spanned(
+                    sig,
+                    format!("`#[odra(offchain)]` on `{}`: {}", f.name_str(), reason)
+                ));
+            }
+        }
+        Ok(())
     }
 
     pub fn host_mut_ret_functions(&self) -> syn::Result<Vec<FnIR>> {
@@ -468,8 +557,15 @@ impl ModuleIR {
                 _ => None
             })
             .chain(self.delegated_functions()?)
-            .map(FnIR::try_from)
-            .filter(|r| self.is_trait_impl() || r.as_ref().map(FnIR::is_pub).unwrap_or(true))
+            .filter_map(|func| {
+                // Private functions of a plain impl are not entry points: only their
+                // `#[odra(..)]` attributes are checked, not their names nor arguments.
+                if self.is_trait_impl() || matches!(func.vis, syn::Visibility::Public(_)) {
+                    Some(FnIR::try_from(func))
+                } else {
+                    attr::partition_attributes(func.attrs).err().map(Err)
+                }
+            })
             .collect::<Result<Vec<_>, _>>()
     }
 
@@ -650,6 +746,7 @@ fn validate_fn_ir(
     utils::syn::function_arg_names(sig)
         .iter()
         .try_for_each(|arg_ident| validate_fn_arg(&arg_ident.to_string(), arg_ident))?;
+    attr::partition_attributes(attrs.to_vec())?;
     validate_fn_attrs(fn_name, attrs)?;
     Ok(())
 }
@@ -683,6 +780,11 @@ impl FnIR {
     pub fn is_non_reentrant(&self) -> bool {
         let (odra_attrs, _) = attr::partition_attributes(self.attrs()).unwrap_or_default();
         odra_attrs.iter().any(OdraAttribute::is_non_reentrant)
+    }
+
+    pub fn is_offchain(&self) -> bool {
+        let (odra_attrs, _) = attr::partition_attributes(self.attrs()).unwrap_or_default();
+        odra_attrs.iter().any(OdraAttribute::is_offchain)
     }
 
     pub fn arg_names(&self) -> Vec<Ident> {
@@ -752,13 +854,6 @@ impl FnIR {
         self.name_str() == "factory"
     }
 
-    pub fn is_pub(&self) -> bool {
-        match self {
-            FnIR::Impl(ir) => ir.is_pub(),
-            FnIR::Def(_) => true
-        }
-    }
-
     fn attrs(&self) -> Vec<syn::Attribute> {
         match self {
             FnIR::Impl(ir) => ir.attrs(),
@@ -808,10 +903,6 @@ impl FnImplIR {
 
     fn attrs(&self) -> &[syn::Attribute] {
         &self.code.attrs
-    }
-
-    fn is_pub(&self) -> bool {
-        matches!(self.code.vis, syn::Visibility::Public(_))
     }
 
     pub fn raw(&self) -> syn::ImplItemFn {
@@ -946,62 +1037,32 @@ mod test {
         assert!(result.is_ok());
     }
 
-    #[test]
-    fn test_reserved_fn_arg() {
-        let code: syn::ImplItemFn = syn::parse_quote!(
-            pub fn abc(&self, gas: u64) {}
-        );
-        let result = FnIR::try_from(code);
-        assert_eq!(
-            result.err().unwrap().to_string(),
-            "Argument name `gas` is reserved"
-        );
+    // The rejected arguments, attributes and names (reserved arguments, module arguments on an
+    // impl or a trait, `payable` on `init`...) are covered by the compile-fail tests of the `odra`
+    // crate (`tests/macros/fail`), which check the message and its span.
 
-        let code: syn::ImplItemFn = syn::parse_quote!(
-            pub fn pay(&self, attached_value: u64) {}
+    #[test]
+    fn test_module_args_factory_or_none_on_impl_are_allowed() {
+        let item = quote::quote!(
+            impl Token {
+                pub fn transfer(&mut self) {}
+            }
         );
-        let result = FnIR::try_from(code);
-        assert_eq!(
-            result.err().unwrap().to_string(),
-            "Argument name `attached_value` is reserved"
-        );
+        let attr = quote::quote!(factory = on);
+        assert!(ModuleImplIR::try_from((&attr, &item)).is_ok());
+        let attr = quote::quote!();
+        assert!(ModuleImplIR::try_from((&attr, &item)).is_ok());
     }
 
     #[test]
-    fn test_payable_constructor_is_rejected() {
-        let code: syn::ImplItemFn = syn::parse_quote!(
-            #[odra(payable)]
-            pub fn init(&mut self) {}
+    fn test_module_without_args_on_trait_is_allowed() {
+        let item = quote::quote!(
+            pub trait Token {
+                fn transfer(&mut self);
+            }
         );
-        let result = FnIR::try_from(code);
-        assert_eq!(
-            result.err().unwrap().to_string(),
-            "`#[odra(payable)]` is not allowed on `init`: `init` cannot receive attached \
-             tokens - there is no way to attach CSPR to it. Use a separate payable \
-             entrypoint instead"
-        );
-    }
-
-    #[test]
-    fn test_payable_upgrader_is_rejected() {
-        let code: syn::ImplItemFn = syn::parse_quote!(
-            #[odra(payable)]
-            pub fn upgrade(&mut self) {}
-        );
-        assert!(FnIR::try_from(code).is_err());
-    }
-
-    #[test]
-    fn test_non_reentrant_constructor_is_rejected() {
-        let code: syn::ImplItemFn = syn::parse_quote!(
-            #[odra(non_reentrant)]
-            pub fn init(&mut self) {}
-        );
-        assert_eq!(
-            FnIR::try_from(code).err().unwrap().to_string(),
-            "`#[odra(non_reentrant)]` is not allowed on `init`: it is not applied when \
-             generating the `init` entrypoint"
-        );
+        let attr = quote::quote!();
+        assert!(ModuleImplIR::try_from((&attr, &item)).is_ok());
     }
 
     #[test]
@@ -1021,5 +1082,41 @@ mod test {
             pub fn init(&mut self) {}
         );
         assert!(FnIR::try_from(code).is_ok());
+    }
+}
+
+#[cfg(test)]
+mod offchain_tests {
+    use super::ModuleImplIR;
+    use quote::quote;
+
+    fn parse(module: proc_macro2::TokenStream) -> syn::Result<ModuleImplIR> {
+        ModuleImplIR::try_from((&quote!(), &module))
+    }
+
+    #[test]
+    fn offchain_functions_are_split_from_the_entry_points() {
+        let module = parse(quote! {
+            impl Token {
+                pub fn balance_of(&self, owner: &Address) -> U256 { U256::zero() }
+                #[odra(offchain)]
+                pub fn balances(&self, owners: Vec<Address>) -> Vec<U256> { vec![] }
+            }
+        })
+        .unwrap();
+        let names =
+            |fns: Vec<super::FnIR>| fns.iter().map(super::FnIR::name_str).collect::<Vec<_>>();
+        assert_eq!(
+            names(module.functions().unwrap()),
+            vec!["balance_of", "balances"]
+        );
+        assert_eq!(
+            names(module.onchain_functions().unwrap()),
+            vec!["balance_of"]
+        );
+        assert_eq!(
+            names(module.offchain_functions().unwrap()),
+            vec!["balances"]
+        );
     }
 }

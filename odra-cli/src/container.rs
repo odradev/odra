@@ -162,6 +162,14 @@ pub struct DeployedContractsContainer {
 }
 
 impl DeployedContractsContainer {
+    /// Wraps already read data and the storage it came from.
+    pub(crate) fn with_data(data: ContractsData, storage: impl ContractStorage + 'static) -> Self {
+        Self {
+            data: std::cell::RefCell::new(data),
+            storage: std::cell::RefCell::new(Box::new(storage))
+        }
+    }
+
     /// Creates a new instance.
     pub(crate) fn instance(storage: impl ContractStorage + 'static) -> Self {
         match storage.read() {

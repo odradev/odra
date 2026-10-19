@@ -161,22 +161,22 @@ impl FromBytesFnItem {
                 let ident = &v.ident;
                 let fields = variant_ident_vec(v);
                 let deser = fields.iter()
-                    .map(|f| quote::quote!(let (#f, bytes) = odra::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;))
+                    .map(|f| quote::quote!(let (#f, #ident_bytes) = odra::casper_types::bytesrepr::FromBytes::from_bytes(#ident_bytes)?;))
                     .collect::<Vec<_>>();
                 let code = match &v.fields {
                     syn::Fields::Unit => {
-                        quote::quote!(Ok((Self::#ident, bytes)))
+                        quote::quote!(Ok((Self::#ident, #ident_bytes)))
                     },
                     syn::Fields::Named(_) => {
                         quote::quote!(
                             #(#deser)*
-                            Ok((Self::#ident { #(#fields,)* }, bytes))
+                            Ok((Self::#ident { #(#fields,)* }, #ident_bytes))
                         )
                     },
                     syn::Fields::Unnamed(_) => {
                         quote::quote!(
                             #(#deser)*
-                            Ok((Self::#ident(#(#fields,)*), bytes))
+                            Ok((Self::#ident(#(#fields,)*), #ident_bytes))
                         )
                     }
                 };
@@ -464,30 +464,30 @@ mod tests {
             }
 
             impl odra::casper_types::bytesrepr::FromBytes for MyType {
-                fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), odra::casper_types::bytesrepr::Error> {
-                    let (a, bytes) = odra::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
-                    let (b, bytes) = odra::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
+                fn from_bytes(__odra_bytes: &[u8]) -> Result<(Self, &[u8]), odra::casper_types::bytesrepr::Error> {
+                    let (a, __odra_bytes) = odra::casper_types::bytesrepr::FromBytes::from_bytes(__odra_bytes)?;
+                    let (b, __odra_bytes) = odra::casper_types::bytesrepr::FromBytes::from_bytes(__odra_bytes)?;
 
                     Ok((Self {
                         a,
                         b
-                    }, bytes))
+                    }, __odra_bytes))
                 }
             }
 
             impl odra::casper_types::bytesrepr::ToBytes for MyType {
                 fn to_bytes(&self) -> Result<odra::prelude::vec::Vec<u8>, odra::casper_types::bytesrepr::Error> {
-                    let mut result = odra::prelude::vec::Vec::with_capacity(self.serialized_length());
-                    result.extend(odra::casper_types::bytesrepr::ToBytes::to_bytes(&self.a)?);
-                    result.extend(odra::casper_types::bytesrepr::ToBytes::to_bytes(&self.b)?);
-                    Ok(result)
+                    let mut __odra_result = odra::prelude::vec::Vec::with_capacity(self.serialized_length());
+                    __odra_result.extend(odra::casper_types::bytesrepr::ToBytes::to_bytes(&self.a)?);
+                    __odra_result.extend(odra::casper_types::bytesrepr::ToBytes::to_bytes(&self.b)?);
+                    Ok(__odra_result)
                 }
 
                 fn serialized_length(&self) -> usize {
-                    let mut result = 0;
-                    result += self.a.serialized_length();
-                    result += self.b.serialized_length();
-                    result
+                    let mut __odra_result = 0;
+                    __odra_result += self.a.serialized_length();
+                    __odra_result += self.b.serialized_length();
+                    __odra_result
                 }
             }
 
@@ -525,11 +525,11 @@ mod tests {
             }
 
             impl odra::casper_types::bytesrepr::FromBytes for MyType {
-                fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), odra::casper_types::bytesrepr::Error> {
-                    let (result, bytes): (u8, _) = odra::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
-                    match result {
-                        x if x == Self::A as u8 => Ok((Self::A, bytes)),
-                        x if x == Self::B as u8 => Ok((Self::B, bytes)),
+                fn from_bytes(__odra_bytes: &[u8]) -> Result<(Self, &[u8]), odra::casper_types::bytesrepr::Error> {
+                    let (__odra_result, __odra_bytes): (u8, _) = odra::casper_types::bytesrepr::FromBytes::from_bytes(__odra_bytes)?;
+                    match __odra_result {
+                        x if x == Self::A as u8 => Ok((Self::A, __odra_bytes)),
+                        x if x == Self::B as u8 => Ok((Self::B, __odra_bytes)),
                         _ => Err(odra::casper_types::bytesrepr::Error::Formatting),
                     }
                 }
@@ -583,21 +583,21 @@ mod tests {
             }
 
             impl odra::casper_types::bytesrepr::FromBytes for MyType {
-                fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), odra::casper_types::bytesrepr::Error> {
-                    let (result, bytes): (u8, _) = odra::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
-                    match result {
+                fn from_bytes(__odra_bytes: &[u8]) -> Result<(Self, &[u8]), odra::casper_types::bytesrepr::Error> {
+                    let (__odra_result, __odra_bytes): (u8, _) = odra::casper_types::bytesrepr::FromBytes::from_bytes(__odra_bytes)?;
+                    match __odra_result {
                         0u8 => {
-                            let (a, bytes) = odra::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
-                            let (b, bytes) = odra::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
-                            Ok((Self::A { a, b }, bytes))
+                            let (a, __odra_bytes) = odra::casper_types::bytesrepr::FromBytes::from_bytes(__odra_bytes)?;
+                            let (b, __odra_bytes) = odra::casper_types::bytesrepr::FromBytes::from_bytes(__odra_bytes)?;
+                            Ok((Self::A { a, b }, __odra_bytes))
                         },
                         1u8 => {
-                            let (f0, bytes) = odra::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
-                            let (f1, bytes) = odra::casper_types::bytesrepr::FromBytes::from_bytes(bytes)?;
-                            Ok((Self::B(f0, f1), bytes))
+                            let (f0, __odra_bytes) = odra::casper_types::bytesrepr::FromBytes::from_bytes(__odra_bytes)?;
+                            let (f1, __odra_bytes) = odra::casper_types::bytesrepr::FromBytes::from_bytes(__odra_bytes)?;
+                            Ok((Self::B(f0, f1), __odra_bytes))
                         },
-                        2u8 => Ok((Self::C(), bytes)),
-                        3u8 => Ok((Self::D {}, bytes)),
+                        2u8 => Ok((Self::C(), __odra_bytes)),
+                        3u8 => Ok((Self::D {}, __odra_bytes)),
                         _ => Err(odra::casper_types::bytesrepr::Error::Formatting),
                     }
                 }
@@ -607,24 +607,24 @@ mod tests {
                 fn to_bytes(&self) -> Result<odra::prelude::vec::Vec<u8>, odra::casper_types::bytesrepr::Error> {
                     match self {
                         Self::A { a, b } => {
-                            let mut result = odra::prelude::vec![0u8];
-                            result.extend_from_slice(&a.to_bytes()?);
-                            result.extend_from_slice(&b.to_bytes()?);
-                            Ok(result)
+                            let mut __odra_result = odra::prelude::vec![0u8];
+                            __odra_result.extend_from_slice(&a.to_bytes()?);
+                            __odra_result.extend_from_slice(&b.to_bytes()?);
+                            Ok(__odra_result)
                         },
                         Self::B(f0, f1) => {
-                            let mut result = odra::prelude::vec![1u8];
-                            result.extend_from_slice(&f0.to_bytes()?);
-                            result.extend_from_slice(&f1.to_bytes()?);
-                            Ok(result)
+                            let mut __odra_result = odra::prelude::vec![1u8];
+                            __odra_result.extend_from_slice(&f0.to_bytes()?);
+                            __odra_result.extend_from_slice(&f1.to_bytes()?);
+                            Ok(__odra_result)
                         },
                         Self::C() => {
-                            let mut result = odra::prelude::vec![2u8];
-                            Ok(result)
+                            let mut __odra_result = odra::prelude::vec![2u8];
+                            Ok(__odra_result)
                         },
                         Self::D {} => {
-                            let mut result = odra::prelude::vec![3u8];
-                            Ok(result)
+                            let mut __odra_result = odra::prelude::vec![3u8];
+                            Ok(__odra_result)
                         }
                     }
                 }

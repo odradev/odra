@@ -240,6 +240,7 @@ impl CEP2612Wrapper {
 mod tests {
     use super::*;
     use crate::cep18::events::SetAllowance;
+    use core::time::Duration;
     use odra::host::{Deployer, HostEnv};
 
     const TOKEN_NAME: &str = "Test Token";
@@ -448,7 +449,7 @@ mod tests {
         let nonce: U256 = U256::zero();
 
         // Advance block time (milliseconds) to just past the deadline.
-        env.advance_block_time((deadline + 1) * 1_000);
+        env.advance_block_time(Duration::from_secs(deadline + 1));
 
         let signature = sign_permit(
             &env,
@@ -480,7 +481,7 @@ mod tests {
         } = setup();
 
         // Even after a long time, a permit with deadline = u64::MAX is valid.
-        env.advance_block_time(1_000_000);
+        env.advance_block_time(Duration::from_secs(1_000));
 
         let value: U256 = 500u64.into();
         let deadline: u64 = u64::MAX;

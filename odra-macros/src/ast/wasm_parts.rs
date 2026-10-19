@@ -49,7 +49,7 @@ impl TryFrom<&'_ ModuleImplIR> for ModuleWasmPartsItem {
             entry_points_fn: module.try_into()?,
             call_fn: module.try_into()?,
             entry_points: module
-                .functions()?
+                .onchain_functions()?
                 .iter()
                 .map(|f| (module, f))
                 .map(TryInto::try_into)
@@ -90,7 +90,7 @@ impl TryFrom<&'_ ModuleImplIR> for EntryPointsFnItem {
             use_ext_import: wasm_parts_utils::use_entity_entry_points_ext(),
             var_declaration: parse_quote!(let mut #ident_entry_points = #expr_entry_points;),
             items: module
-                .functions()?
+                .onchain_functions()?
                 .iter()
                 .map(TryInto::try_into)
                 .collect::<Result<Vec<_>, _>>()?,
@@ -302,7 +302,7 @@ mod test {
 
         let expected = quote::quote! {
             #[cfg(target_arch = "wasm32")]
-            #[cfg(odra_module = "Erc20")]
+            #[cfg(any(odra_module = "Erc20", odra_module = "unknown_crate::Erc20"))]
             mod __erc20_wasm_parts {
                 use super::*;
                 use odra::prelude::*;
@@ -377,28 +377,28 @@ mod test {
                     };
                     let is_upgrade = exec_env.get_named_arg::<bool>("odra_cfg_is_upgrade");
 
-                    let named_args = if is_upgrade {
+                    let __odra_named_args = if is_upgrade {
                         {
                             Some({
-                                let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
                                 odra::args::EntrypointArgument::insert_runtime_arg(
                                     exec_env.get_named_arg::<Option<U256>>("total_supply"),
                                     "total_supply",
-                                    &mut named_args,
+                                    &mut __odra_named_args,
                                 );
-                                named_args
+                                __odra_named_args
                             })
                         }
                     } else {
                         {
                             Some({
-                                let mut named_args = odra::casper_types::RuntimeArgs::new();
+                                let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
                                 odra::args::EntrypointArgument::insert_runtime_arg(
                                     exec_env.get_named_arg::<Option<U256>>("total_supply"),
                                     "total_supply",
-                                    &mut named_args,
+                                    &mut __odra_named_args,
                                 );
-                                named_args
+                                __odra_named_args
                             })
                         }
                     };
@@ -413,7 +413,7 @@ mod test {
                             let contract_schema: Option<&'static str> = None;
                             contract_schema
                         },
-                        named_args
+                        __odra_named_args
                     );
                 }
 
@@ -429,10 +429,10 @@ mod test {
 
                 #[no_mangle]
                 fn total_supply() {
-                    let result = __erc20_exec_parts::execute_total_supply(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
+                    let __odra_result = __erc20_exec_parts::execute_total_supply(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                     odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
                         odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
-                            odra::casper_types::CLValue::from_t(result)
+                            odra::casper_types::CLValue::from_t(__odra_result)
                         )
                     );
                 }
@@ -454,10 +454,10 @@ mod test {
 
                 #[no_mangle]
                 fn swap() {
-                    let result = __erc20_exec_parts::execute_swap(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
+                    let __odra_result = __erc20_exec_parts::execute_swap(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                     odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
                         odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
-                            odra::casper_types::CLValue::from_t(result)
+                            odra::casper_types::CLValue::from_t(__odra_result)
                         )
                     );
                 }
@@ -474,7 +474,7 @@ mod test {
 
         let expected = quote::quote! {
             #[cfg(target_arch = "wasm32")]
-            #[cfg(odra_module = "Erc20")]
+            #[cfg(any(odra_module = "Erc20", odra_module = "unknown_crate::Erc20"))]
             mod __erc20_wasm_parts {
                 use super::*;
                 use odra::prelude::*;
@@ -518,7 +518,7 @@ mod test {
                         odra::ExecutionEnv::new(env_rc)
                     };
                     let is_upgrade = exec_env.get_named_arg::<bool>("odra_cfg_is_upgrade");
-                    let named_args = if is_upgrade {
+                    let __odra_named_args = if is_upgrade {
                         Option::<odra::casper_types::RuntimeArgs>::None
                     } else {
                         Option::<odra::casper_types::RuntimeArgs>::None
@@ -533,26 +533,26 @@ mod test {
                             let contract_schema: Option<&'static str> = None;
                             contract_schema
                         },
-                        named_args
+                        __odra_named_args
                     );
                 }
 
                 #[no_mangle]
                 fn total_supply() {
-                    let result = __erc20_exec_parts::execute_total_supply(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
+                    let __odra_result = __erc20_exec_parts::execute_total_supply(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                     odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
                         odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
-                            odra::casper_types::CLValue::from_t(result)
+                            odra::casper_types::CLValue::from_t(__odra_result)
                         )
                     );
                 }
 
                 #[no_mangle]
                 fn set_total_supply() {
-                    let result = __erc20_exec_parts::execute_set_total_supply(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
+                    let __odra_result = __erc20_exec_parts::execute_set_total_supply(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                     odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
                         odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
-                            odra::casper_types::CLValue::from_t(result)
+                            odra::casper_types::CLValue::from_t(__odra_result)
                         )
                     );
                 }
@@ -574,7 +574,7 @@ mod test {
 
         let expected = quote::quote! {
             #[cfg(target_arch = "wasm32")]
-            #[cfg(odra_module = "Erc20")]
+            #[cfg(any(odra_module = "Erc20", odra_module = "unknown_crate::Erc20"))]
             mod __erc20_wasm_parts {
                 use super::*;
                 use odra::prelude::*;
@@ -632,7 +632,7 @@ mod test {
                         odra::ExecutionEnv::new(env_rc)
                     };
                     let is_upgrade = exec_env.get_named_arg::<bool>("odra_cfg_is_upgrade");
-                    let named_args = if is_upgrade {
+                    let __odra_named_args = if is_upgrade {
                         Option::<odra::casper_types::RuntimeArgs>::None
                     } else {
                         Option::<odra::casper_types::RuntimeArgs>::None
@@ -647,28 +647,28 @@ mod test {
                             let contract_schema: Option<&'static str> = None;
                             contract_schema
                         },
-                        named_args
+                        __odra_named_args
                     );
                 }
 
                 #[no_mangle]
                 fn total_supply() {
-                    let result = __erc20_exec_parts::execute_total_supply(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
+                    let __odra_result = __erc20_exec_parts::execute_total_supply(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                     odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
                         odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
-                            odra::casper_types::CLValue::from_t(result)
+                            odra::casper_types::CLValue::from_t(__odra_result)
                         )
                     );
                 }
 
                 #[no_mangle]
                 fn get_owner() {
-                    let result = __erc20_exec_parts::execute_get_owner(
+                    let __odra_result = __erc20_exec_parts::execute_get_owner(
                         odra::odra_casper_wasm_env::WasmContractEnv::new_env(),
                     );
                     odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
                         odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
-                            odra::casper_types::CLValue::from_t(result),
+                            odra::casper_types::CLValue::from_t(__odra_result),
                         ),
                     );
                 }
@@ -680,24 +680,24 @@ mod test {
 
                 #[no_mangle]
                 fn name() {
-                    let result = __erc20_exec_parts::execute_name(
+                    let __odra_result = __erc20_exec_parts::execute_name(
                         odra::odra_casper_wasm_env::WasmContractEnv::new_env(),
                     );
                     odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
                         odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
-                            odra::casper_types::CLValue::from_t(result),
+                            odra::casper_types::CLValue::from_t(__odra_result),
                         ),
                     );
                 }
 
                 #[no_mangle]
                 fn symbol() {
-                    let result = __erc20_exec_parts::execute_symbol(
+                    let __odra_result = __erc20_exec_parts::execute_symbol(
                         odra::odra_casper_wasm_env::WasmContractEnv::new_env(),
                     );
                     odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
                         odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
-                            odra::casper_types::CLValue::from_t(result),
+                            odra::casper_types::CLValue::from_t(__odra_result),
                         ),
                     );
                 }

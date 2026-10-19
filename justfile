@@ -1,5 +1,5 @@
 CARGO_ODRA_GIT_REPO := "https://github.com/odradev/cargo-odra"
-CARGO_ODRA_BRANCH := "release/0.1.7"
+CARGO_ODRA_BRANCH := "release/0.2.0"
 BINARYEN_VERSION := "version_125"
 BINARYEN_CHECKSUM := "7c3bc16599c8274a04d34a504fe4be2047884f900e0e2da2f6fb9cd667183be4"
 set dotenv-load := true
@@ -7,12 +7,12 @@ default:
     just --list
 
 clippy:
-    cargo clippy --all-targets -- -D warnings --allow unexpected_cfgs
-    cd examples && cargo clippy --all-targets -- -D warnings --allow unexpected_cfgs
-    cd examples && cargo clippy --features=livenet -- -D warnings --allow unexpected_cfgs
-    cd modules && cargo clippy --all-targets -- -D warnings --allow unexpected_cfgs
-    cd benchmark && cargo clippy --all-targets -- -D warnings --allow unexpected_cfgs
-    cd odra-casper/proxy-caller && cargo clippy --target=wasm32-unknown-unknown -- -D warnings --allow unexpected_cfgs
+    cargo clippy --all-targets -- -D warnings
+    cd examples && cargo clippy --all-targets -- -D warnings
+    cd examples && cargo clippy --features=livenet -- -D warnings
+    cd modules && cargo clippy --all-targets -- -D warnings
+    cd benchmark && cargo clippy --all-targets -- -D warnings
+    cd odra-casper/proxy-caller && cargo clippy --target=wasm32-unknown-unknown -- -D warnings
 
 lint: clippy
     cargo fmt
@@ -35,8 +35,9 @@ install-cargo-odra:
 prepare-test-env: install-cargo-odra
     rustup target add wasm32-unknown-unknown
     rustup component add llvm-tools-preview
-    cargo +stable install grcov
-    sudo apt install wabt
+    # `--locked` takes the dependency versions grcov ships, which also survive a yank of one of them.
+    cargo +stable install grcov --locked
+    sudo apt-get update && sudo apt-get install -y wabt
     wget https://github.com/WebAssembly/binaryen/releases/download/{{BINARYEN_VERSION}}/binaryen-{{BINARYEN_VERSION}}-x86_64-linux.tar.gz || { echo "Download failed"; exit 1; }
     sha256sum binaryen-{{BINARYEN_VERSION}}-x86_64-linux.tar.gz | grep {{BINARYEN_CHECKSUM}} || { echo "Checksum verification failed"; exit 1; }
     tar -xzf binaryen-{{BINARYEN_VERSION}}-x86_64-linux.tar.gz || { echo "Extraction failed"; exit 1; }
@@ -68,8 +69,6 @@ test-examples-on-odravm:
     cd examples/ourcoin && cargo odra test
 
 test-examples-on-casper:
-    mkdir -p examples/wasm
-    cp modules/wasm/Erc20.wasm examples/wasm/
     cd examples && cargo odra test -b casper
     cd examples/ourcoin && cargo odra test -b casper
 
@@ -85,13 +84,15 @@ test-modules: test-modules-on-odravm test-modules-on-casper
 
 test: test-odra test-modules test-examples
 
+# `cargo odra generate-client` only works in workspace projects, see cargo-odra issue #104.
 test-template name:
     cd tests && cargo odra new -n {{name}} --template {{name}} -s ../ \
         && cd {{name}} \
         && cargo odra test \
         && cargo odra test -b casper \
         && cargo odra schema \
-        && cargo build --bin {{name}}_cli
+        && cargo build --bin {{name}}_cli \
+        && if [ "{{name}}" = "workspace" ]; then cargo odra generate-client; fi
 
 test-templates:
     rm -rf tests
@@ -104,13 +105,17 @@ test-templates:
 run-nctl:
     docker run --rm -it --cpus=1 --name mynctl -d -p 11101:11101 -p 14101:14101 -p 18101:18101 -p 25101:25101 makesoftware/casper-nctl:v203
 
+# Wasm files the livenet suite deploys; `just test` builds them as a side effect, CI does not.
+build-livenet-wasm:
+    cd examples && cargo odra build
+
 test-livenet:
     set shell := bash
     mkdir -p examples/.node-keys
-    cp modules/wasm/Erc20.wasm examples/wasm/
     # Extract the secret keys from the local Casper node
     docker exec mynctl /bin/bash -c "cat /home/casper/casper-nctl/assets/net-1/users/user-1/secret_key.pem" > examples/.node-keys/secret_key.pem
     docker exec mynctl /bin/bash -c "cat  /home/casper/casper-nctl/assets/net-1/users/user-2/secret_key.pem" > examples/.node-keys/secret_key_1.pem
+    docker exec mynctl /bin/bash -c "cat  /home/casper/casper-nctl/assets/net-1/users/user-3/secret_key.pem" > examples/.node-keys/secret_key_2.pem
     # Run the tests
     # Livenet tests
     cd examples && ODRA_CASPER_LIVENET_SECRET_KEY_PATH=.node-keys/secret_key.pem ODRA_CASPER_LIVENET_NODE_ADDRESS=http://localhost:11101 ODRA_CASPER_LIVENET_EVENTS_URL=http://localhost:18101/events ODRA_CASPER_LIVENET_CHAIN_NAME=casper-net-1 ODRA_CASPER_LIVENET_KEY_1=.node-keys/secret_key_1.pem  cargo run --bin livenet_tests --features=livenet
@@ -118,15 +123,18 @@ test-livenet:
     cd examples && ODRA_CASPER_LIVENET_SECRET_KEY_PATH=.node-keys/secret_key.pem ODRA_CASPER_LIVENET_NODE_ADDRESS=http://localhost:11101 ODRA_CASPER_LIVENET_EVENTS_URL=http://localhost:18101/events ODRA_CASPER_LIVENET_CHAIN_NAME=casper-net-1 ODRA_CASPER_LIVENET_KEY_1=.node-keys/secret_key_1.pem  cargo run --bin validators_on_livenet --features=livenet
     # Livenet tests of upgrade
     cd examples && ODRA_CASPER_LIVENET_SECRET_KEY_PATH=.node-keys/secret_key.pem ODRA_CASPER_LIVENET_NODE_ADDRESS=http://localhost:11101 ODRA_CASPER_LIVENET_EVENTS_URL=http://localhost:18101/events ODRA_CASPER_LIVENET_CHAIN_NAME=casper-net-1 ODRA_CASPER_LIVENET_KEY_1=.node-keys/secret_key_1.pem  cargo run --bin upgrade_on_livenet --features=livenet
+    # Odra CLI: deploy script, a contract call and the scenarios
+    rm -f resources/casper-net-1-contracts.toml
+    cd examples && for cmd in "deploy" "contract DogContract name" "contract BalanceBook deposit --amount 10 --gas 3000000000" "contract BalanceBook all_balances" "scenario check --name Mantus" "scenario erc20-transfer --amount 1000" "scenario cep18-transfer --amount 1" "scenario tlw" "scenario gasless" "scenario concurrent" "scenario native-events"; do ODRA_CASPER_LIVENET_SECRET_KEY_PATH=.node-keys/secret_key.pem ODRA_CASPER_LIVENET_NODE_ADDRESS=http://localhost:11101 ODRA_CASPER_LIVENET_EVENTS_URL=http://localhost:18101/events ODRA_CASPER_LIVENET_CHAIN_NAME=casper-net-1 ODRA_CASPER_LIVENET_KEY_1=.node-keys/secret_key_1.pem ODRA_CASPER_LIVENET_KEY_2=.node-keys/secret_key_2.pem cargo run --bin odra_cli --features livenet -- $cmd || exit 1; done
     rm -rf examples/.node-keys
 
-run-example-erc20-on-livenet:
+run-example-cli +args:
     set shell := bash
     mkdir -p examples/.node-keys
-    cp modules/wasm/Erc20.wasm examples/wasm/
     docker exec mynctl /bin/bash -c "cat /home/casper/casper-nctl/assets/net-1/users/user-1/secret_key.pem" > examples/.node-keys/secret_key.pem
-    cd examples && ODRA_CASPER_LIVENET_SECRET_KEY_PATH=.node-keys/secret_key.pem ODRA_CASPER_LIVENET_NODE_ADDRESS=http://localhost:11101 ODRA_CASPER_LIVENET_EVENTS_URL=http://localhost:18101/events ODRA_CASPER_LIVENET_CHAIN_NAME=casper-net-1 ODRA_CASPER_LIVENET_KEY_1=.node-keys/secret_key.pem cargo run --bin erc20_on_livenet --features livenet
-    rm -rf examples/.node-keys
+    docker exec mynctl /bin/bash -c "cat  /home/casper/casper-nctl/assets/net-1/users/user-2/secret_key.pem" > examples/.node-keys/secret_key_1.pem
+    docker exec mynctl /bin/bash -c "cat  /home/casper/casper-nctl/assets/net-1/users/user-3/secret_key.pem" > examples/.node-keys/secret_key_2.pem
+    cd examples && ODRA_CASPER_LIVENET_SECRET_KEY_PATH=.node-keys/secret_key.pem ODRA_CASPER_LIVENET_NODE_ADDRESS=http://localhost:11101 ODRA_CASPER_LIVENET_EVENTS_URL=http://localhost:18101/events ODRA_CASPER_LIVENET_CHAIN_NAME=casper-net-1 ODRA_CASPER_LIVENET_KEY_1=.node-keys/secret_key_1.pem ODRA_CASPER_LIVENET_KEY_2=.node-keys/secret_key_2.pem cargo run --bin odra_cli --features livenet -- {{args}}
 
 clean:
     cargo clean
@@ -155,4 +163,15 @@ evaluate-benchmark: benchmark
 generate-schemas:
     cd modules && cargo odra schema
     cd examples && cargo odra schema
+
+SCHEMA_DIRS := "modules/resources examples/resources/casper_contract_schemas examples/resources/legacy"
+
+# Fail if the committed schemas differ from freshly generated ones (fix: generate-schemas, commit).
+check-schemas: generate-schemas
+    @if [ -n "$(git status --porcelain -- {{SCHEMA_DIRS}})" ]; then \
+        git status --short -- {{SCHEMA_DIRS}}; \
+        git --no-pager diff --stat -- {{SCHEMA_DIRS}}; \
+        echo "Schemas are out of date: run 'just generate-schemas' and commit the result."; \
+        exit 1; \
+    fi
 

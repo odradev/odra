@@ -3,10 +3,13 @@ use std::collections::BTreeSet;
 use anyhow::Result;
 use clap::{ArgMatches, Command};
 use odra::schema::casper_contract_schema::{CustomType, Entrypoint};
-use odra::schema::{SchemaCustomTypes, SchemaEntrypoints, SchemaEvents};
+use odra::schema::{
+    SchemaCustomTypes, SchemaEntrypoints, SchemaEvents, SchemaStorageLayout, StorageKind
+};
 use odra::{contract_def::HasIdent, host::HostEnv, OdraContract};
 use serde_derive::Serialize;
 
+use crate::cmd::storage::print_fields;
 use crate::cmd::CmdOutput;
 use crate::log;
 use crate::{
@@ -23,14 +26,16 @@ pub(crate) struct InspectCmd {
 }
 
 impl InspectCmd {
-    pub fn add_contract<T: SchemaEntrypoints + SchemaCustomTypes + SchemaEvents + OdraContract>(
+    pub fn add_contract<
+        T: SchemaEntrypoints + SchemaCustomTypes + SchemaEvents + SchemaStorageLayout + OdraContract
+    >(
         &mut self
     ) {
         self.contracts.push(ContractSchema::new::<T>(None));
     }
 
     pub fn add_contract_named<
-        T: SchemaEntrypoints + SchemaCustomTypes + SchemaEvents + OdraContract
+        T: SchemaEntrypoints + SchemaCustomTypes + SchemaEvents + SchemaStorageLayout + OdraContract
     >(
         &mut self,
         key_name: String
@@ -98,11 +103,14 @@ struct ContractSchema {
     key_name: String,
     ident: String,
     entry_points: Vec<Entrypoint>,
-    custom_types: BTreeSet<CustomType>
+    custom_types: BTreeSet<CustomType>,
+    storage_layout: StorageKind
 }
 
 impl ContractSchema {
-    fn new<T: SchemaEntrypoints + SchemaCustomTypes + SchemaEvents + OdraContract>(
+    fn new<
+        T: SchemaEntrypoints + SchemaCustomTypes + SchemaEvents + SchemaStorageLayout + OdraContract
+    >(
         key_name: Option<String>
     ) -> Self {
         let ident = T::HostRef::ident();
@@ -116,7 +124,8 @@ impl ContractSchema {
             key_name,
             ident,
             entry_points: T::schema_entrypoints(),
-            custom_types
+            custom_types,
+            storage_layout: T::storage_kind()
         }
     }
 
@@ -150,7 +159,8 @@ impl ContractSchema {
                 .custom_types
                 .iter()
                 .map(|ct| ct.name().to_string())
-                .collect()
+                .collect(),
+            storage_layout: self.storage_layout.clone()
         }
     }
 }
@@ -161,7 +171,8 @@ struct ContractSchemaReport {
     key_name: String,
     ident: String,
     entry_points: Vec<EntryPointReport>,
-    types: Vec<String>
+    types: Vec<String>,
+    storage_layout: StorageKind
 }
 
 #[derive(Serialize)]
@@ -200,6 +211,11 @@ impl CmdOutput for ContractsSchemaReport {
                 for ct in &c.types {
                     log(format!("  {}", ct));
                 }
+            }
+
+            if !c.storage_layout.fields().is_empty() {
+                log("Storage layout:");
+                print_fields(c.storage_layout.fields(), 1);
             }
         }
     }

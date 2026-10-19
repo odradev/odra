@@ -1,9 +1,12 @@
 name: Benchmark
 
+# Produces the gas report a pull request is compared against (see evaluate-benchmark.yml), so it
+# only needs to run where PRs are based: the release branches. `workflow_dispatch` covers the rest.
 on:
   push:
     branches:
-      - '**'
+      - 'release/**'
+  workflow_dispatch:
 
 run-name: Benchmarking gas costs for ${{ github.head_ref || github.ref_name }}
 

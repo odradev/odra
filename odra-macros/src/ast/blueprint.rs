@@ -71,7 +71,7 @@ mod test {
         let module = test_utils::mock::module_impl();
         let item = BlueprintItem::try_from(&module).unwrap();
         let expected = quote!(
-            #[cfg(odra_module = "Erc20")]
+            #[cfg(any(odra_module = "Erc20", odra_module = "unknown_crate::Erc20"))]
             mod __erc20_schema {
                 use super::*;
 

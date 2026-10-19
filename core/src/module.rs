@@ -1,7 +1,7 @@
 //! Module definition and implementation.
 //!
 //! An Odra module is a composition of [ModuleComponent]s (eg. other modules) and [ModulePrimitive]s
-//! ([Var](crate::var::Var), [Mapping](crate::mapping::Mapping), [List](crate::list::List)).
+//! ([Var], [Mapping], [List]).
 //!
 //! In order to create a module, you need to create a struct that implements the [Module] trait.
 //! However, most of the time you will want to use `#[odra::module]` macro to generate the module.
@@ -103,7 +103,9 @@ impl<T: Module> SubModule<T> {
         if self.module.get().is_none() {
             let _ = self.module();
         }
-        self.module.get_mut().unwrap()
+        self.module
+            .get_mut()
+            .expect("initialized by module() above")
     }
 }
 

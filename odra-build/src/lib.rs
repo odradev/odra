@@ -2,10 +2,11 @@ use serde::Serialize;
 use std::path::Path;
 
 pub fn build() {
-    // Allow the `odra_module` cfg flag to be set.
+    // Declare the cfg flags set below, so rustc's check-cfg does not report them as unexpected.
     println!("cargo::rustc-check-cfg=cfg(odra_module, values(any()))");
     // Allow the `odra_contract_schema` cfg flag to be set.
     println!("cargo::rustc-check-cfg=cfg(odra_contract_schema)");
+    println!("cargo::rustc-check-cfg=cfg(odra_backend, values(any()))");
     // Load flags.
     flags().iter().for_each(|flag| println!("{}", flag));
     contract_schema_flags()
@@ -21,7 +22,7 @@ where
     S: Serialize
 {
     let module = std::env::var("ODRA_MODULE").expect("ODRA_MODULE environment variable is not set");
-    let module = to_snake_case(&module);
+    let module = to_snake_case(module_file_name(&module));
 
     write_schema_file(CONTRACT_SCHEMAS_DIR, &module, schema);
 
@@ -41,6 +42,14 @@ where
 
     std::io::Write::write_all(&mut schema_file, &json.into_bytes())
         .expect("Failed to write to schema file");
+}
+
+/// The struct part of an `ODRA_MODULE` value.
+///
+/// `cargo odra` passes a crate-qualified module name (`odra_modules::Erc20`), while a manual
+/// build may pass the bare struct name (`Erc20`); both name the same schema file.
+fn module_file_name(module: &str) -> &str {
+    module.rsplit("::").next().unwrap_or(module)
 }
 
 fn to_snake_case(s: &str) -> String {
@@ -203,5 +212,14 @@ mod test {
         assert_eq!(flags[1], "cargo:rustc-cfg=odra_module=\"test\"");
         assert_eq!(flags[2], "cargo:rerun-if-env-changed=ODRA_BACKEND");
         assert_eq!(flags[3], "cargo:rustc-cfg=odra_backend=\"backend_test\"");
+    }
+
+    #[test]
+    fn test_schema_file_name() {
+        let name = |module| super::to_snake_case(super::module_file_name(module));
+        assert_eq!(name("Erc20"), "erc20");
+        assert_eq!(name("odra_modules::Erc20"), "erc20");
+        assert_eq!(name("odra_modules::Cep18"), "cep18");
+        assert_eq!(name("odra_examples::PartyContract"), "party_contract");
     }
 }
