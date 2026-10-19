@@ -1,0 +1,51 @@
+name: Schemas
+on:
+  pull_request:
+    branches-ignore:
+      - 'hotfix/**'
+    paths:
+      - 'core/**'
+      - 'odra/**'
+      - 'odra-build/**'
+      - 'odra-macros/**'
+      - 'odra-schema/**'
+      - 'modules/**'
+      - 'examples/**'
+      - 'Cargo.toml'
+      - 'rust-toolchain'
+      - 'justfile'
+      - '.github/workflows/check-schemas.yml'
+  push:
+    branches:
+      - 'release/**'
+run-name: Checking the committed schemas for ${{ github.head_ref }}
+
+# Generating the schemas builds the contract crate once per contract (about 20 minutes), so this
+# runs as its own workflow, only when the code the schemas are generated from changes.
+jobs:
+  check-schemas:
+    name: Committed schemas are up to date
+    runs-on: ubuntu-latest
+    steps:
+      - uses: extractions/setup-just@v1
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/release/.fingerprint
+            target/release/build
+          key: odra-cache-schemas-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            odra-cache-schemas-
+            odra-cache-
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-01-01
+          target: wasm32-unknown-unknown
+          components: rust-src
+      - name: Install cargo-odra
+        run: just install-cargo-odra
+      - name: Check the committed schemas are up to date
+        run: just check-schemas

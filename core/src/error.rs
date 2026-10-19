@@ -237,6 +237,67 @@ impl ExecutionError {
             }
         }
     }
+
+    /// Returns the Odra error with the given [code](Self::code), or `None` if the code is a user
+    /// error code or no Odra error this version knows of.
+    ///
+    /// The code of a [ContractDeploymentError](Self::ContractDeploymentError) carries no message,
+    /// it comes back empty.
+    pub fn from_code(code: u16) -> Option<Self> {
+        use ExecutionError::*;
+        let error = match code {
+            64535 => MaxUserError,
+            64536 => UserErrorTooHigh,
+            _ => match code.checked_sub(ExecutionError::UserErrorTooHigh.code())? {
+                1 => UnwrapError,
+                2 => UnexpectedError,
+                100 => AdditionOverflow,
+                101 => SubtractionOverflow,
+                102 => NonPayable,
+                103 => TransferToContract,
+                104 => ReentrantCall,
+                105 => CannotOverrideKeys,
+                106 => UnknownConstructor,
+                107 => NativeTransferError,
+                108 => IndexOutOfBounds,
+                109 => ZeroAddress,
+                110 => AddressCreationFailed,
+                111 => EarlyEndOfStream,
+                112 => Formatting,
+                113 => LeftOverBytes,
+                114 => OutOfMemory,
+                115 => NotRepresentable,
+                116 => ExceededRecursionDepth,
+                117 => KeyNotFound,
+                118 => CouldNotDeserializeSignature,
+                119 => TypeMismatch,
+                120 => CouldNotSignMessage,
+                121 => EmptyDictionaryName,
+                122 => MissingArg,
+                123 => MissingAddress,
+                124 => OutOfGas,
+                125 => MainPurseError,
+                126 => ConversionError,
+                #[cfg(target_arch = "wasm32")]
+                127 => ContractDeploymentError,
+                #[cfg(not(target_arch = "wasm32"))]
+                127 => ContractDeploymentError(String::new()),
+                128 => CannotExtractCallerInfo,
+                129 => ContractNotInstalled,
+                130 => UpgradingWithoutPreviousVersion,
+                131 => UpgradingNotAContract,
+                132 => SchemaMismatch,
+                133 => CannotDisablePreviousVersion,
+                134 => CannotUpgradeWithoutUpgrade,
+                135 => FactoryModuleCall,
+                136 => CannotGetAnImmediateCaller,
+                137 => PathIndexOutOfBounds,
+                138 => InvalidArg,
+                _ => return None
+            }
+        };
+        Some(error)
+    }
 }
 
 impl From<ExecutionError> for OdraError {
@@ -372,5 +433,126 @@ impl From<BytesReprError> for OdraError {
 impl From<anyhow::Error> for OdraError {
     fn from(value: anyhow::Error) -> Self {
         OdraError::VmError(VmError::Other(value.to_string()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ExecutionError::{self, *};
+    use super::UserError;
+    use crate::prelude::*;
+
+    #[test]
+    fn every_odra_error_is_found_by_its_code() {
+        for error in every_odra_error() {
+            assert_eq!(ExecutionError::from_code(error.code()), Some(error));
+        }
+    }
+
+    #[test]
+    fn user_and_unknown_codes_are_not_odra_errors() {
+        assert_eq!(ExecutionError::from_code(0), None);
+        assert_eq!(ExecutionError::from_code(1), None);
+        assert_eq!(ExecutionError::from_code(60_000), None);
+        assert_eq!(ExecutionError::from_code(65_535), None);
+    }
+
+    /// Every error but the user error. The match stops compiling when a variant is added: add it
+    /// here and to [ExecutionError::from_code].
+    fn every_odra_error() -> Vec<ExecutionError> {
+        let errors = vec![
+            UnwrapError,
+            UnexpectedError,
+            AdditionOverflow,
+            SubtractionOverflow,
+            NonPayable,
+            TransferToContract,
+            ReentrantCall,
+            CannotOverrideKeys,
+            UnknownConstructor,
+            NativeTransferError,
+            IndexOutOfBounds,
+            ZeroAddress,
+            AddressCreationFailed,
+            EarlyEndOfStream,
+            Formatting,
+            LeftOverBytes,
+            OutOfMemory,
+            NotRepresentable,
+            ExceededRecursionDepth,
+            KeyNotFound,
+            CouldNotDeserializeSignature,
+            TypeMismatch,
+            CouldNotSignMessage,
+            EmptyDictionaryName,
+            MissingArg,
+            MissingAddress,
+            OutOfGas,
+            MainPurseError,
+            ConversionError,
+            ContractDeploymentError(String::new()),
+            CannotExtractCallerInfo,
+            ContractNotInstalled,
+            UpgradingWithoutPreviousVersion,
+            UpgradingNotAContract,
+            SchemaMismatch,
+            CannotDisablePreviousVersion,
+            CannotUpgradeWithoutUpgrade,
+            FactoryModuleCall,
+            CannotGetAnImmediateCaller,
+            PathIndexOutOfBounds,
+            InvalidArg,
+            MaxUserError,
+            UserErrorTooHigh,
+        ];
+        for error in &errors {
+            match error {
+                UnwrapError
+                | UnexpectedError
+                | AdditionOverflow
+                | SubtractionOverflow
+                | NonPayable
+                | TransferToContract
+                | ReentrantCall
+                | CannotOverrideKeys
+                | UnknownConstructor
+                | NativeTransferError
+                | IndexOutOfBounds
+                | ZeroAddress
+                | AddressCreationFailed
+                | EarlyEndOfStream
+                | Formatting
+                | LeftOverBytes
+                | OutOfMemory
+                | NotRepresentable
+                | ExceededRecursionDepth
+                | KeyNotFound
+                | CouldNotDeserializeSignature
+                | TypeMismatch
+                | CouldNotSignMessage
+                | EmptyDictionaryName
+                | MissingArg
+                | MissingAddress
+                | OutOfGas
+                | MainPurseError
+                | ConversionError
+                | ContractDeploymentError(_)
+                | CannotExtractCallerInfo
+                | ContractNotInstalled
+                | UpgradingWithoutPreviousVersion
+                | UpgradingNotAContract
+                | SchemaMismatch
+                | CannotDisablePreviousVersion
+                | CannotUpgradeWithoutUpgrade
+                | FactoryModuleCall
+                | CannotGetAnImmediateCaller
+                | PathIndexOutOfBounds
+                | InvalidArg
+                | MaxUserError
+                | UserErrorTooHigh
+                | User(UserError { .. }) => {}
+            }
+        }
+        errors
     }
 }

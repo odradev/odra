@@ -9,7 +9,7 @@
   "repository": "https://github.com/odradev/odra",
   "homepage": "https://odra.dev/docs",
   "contract_name": "Erc20",
-  "contract_version": "2.9.1",
+  "contract_version": "2.10.0",
   "types": [
     {
       "struct": {

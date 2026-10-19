@@ -1,5 +1,5 @@
 CARGO_ODRA_GIT_REPO := "https://github.com/odradev/cargo-odra"
-CARGO_ODRA_BRANCH := "release/0.1.7"
+CARGO_ODRA_BRANCH := "release/0.2.0"
 BINARYEN_VERSION := "version_125"
 BINARYEN_CHECKSUM := "7c3bc16599c8274a04d34a504fe4be2047884f900e0e2da2f6fb9cd667183be4"
 set dotenv-load := true
@@ -7,12 +7,12 @@ default:
     just --list
 
 clippy:
-    cargo clippy --all-targets -- -D warnings --allow unexpected_cfgs
-    cd examples && cargo clippy --all-targets -- -D warnings --allow unexpected_cfgs
-    cd examples && cargo clippy --features=livenet -- -D warnings --allow unexpected_cfgs
-    cd modules && cargo clippy --all-targets -- -D warnings --allow unexpected_cfgs
-    cd benchmark && cargo clippy --all-targets -- -D warnings --allow unexpected_cfgs
-    cd odra-casper/proxy-caller && cargo clippy --target=wasm32-unknown-unknown -- -D warnings --allow unexpected_cfgs
+    cargo clippy --all-targets -- -D warnings
+    cd examples && cargo clippy --all-targets -- -D warnings
+    cd examples && cargo clippy --features=livenet -- -D warnings
+    cd modules && cargo clippy --all-targets -- -D warnings
+    cd benchmark && cargo clippy --all-targets -- -D warnings
+    cd odra-casper/proxy-caller && cargo clippy --target=wasm32-unknown-unknown -- -D warnings
 
 lint: clippy
     cargo fmt
@@ -35,8 +35,9 @@ install-cargo-odra:
 prepare-test-env: install-cargo-odra
     rustup target add wasm32-unknown-unknown
     rustup component add llvm-tools-preview
-    cargo +stable install grcov
-    sudo apt install wabt
+    # `--locked` takes the dependency versions grcov ships, which also survive a yank of one of them.
+    cargo +stable install grcov --locked
+    sudo apt-get update && sudo apt-get install -y wabt
     wget https://github.com/WebAssembly/binaryen/releases/download/{{BINARYEN_VERSION}}/binaryen-{{BINARYEN_VERSION}}-x86_64-linux.tar.gz || { echo "Download failed"; exit 1; }
     sha256sum binaryen-{{BINARYEN_VERSION}}-x86_64-linux.tar.gz | grep {{BINARYEN_CHECKSUM}} || { echo "Checksum verification failed"; exit 1; }
     tar -xzf binaryen-{{BINARYEN_VERSION}}-x86_64-linux.tar.gz || { echo "Extraction failed"; exit 1; }
@@ -162,4 +163,15 @@ evaluate-benchmark: benchmark
 generate-schemas:
     cd modules && cargo odra schema
     cd examples && cargo odra schema
+
+SCHEMA_DIRS := "modules/resources examples/resources/casper_contract_schemas examples/resources/legacy"
+
+# Fail if the committed schemas differ from freshly generated ones (fix: generate-schemas, commit).
+check-schemas: generate-schemas
+    @if [ -n "$(git status --porcelain -- {{SCHEMA_DIRS}})" ]; then \
+        git status --short -- {{SCHEMA_DIRS}}; \
+        git --no-pager diff --stat -- {{SCHEMA_DIRS}}; \
+        echo "Schemas are out of date: run 'just generate-schemas' and commit the result."; \
+        exit 1; \
+    fi
 

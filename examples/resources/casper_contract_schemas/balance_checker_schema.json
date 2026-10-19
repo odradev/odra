@@ -1,6 +1,6 @@
 {
   "casper_contract_schema_version": 1,
-  "toolchain": "rustc 1.85.0-nightly (d117b7f21 2024-12-31)",
+  "toolchain": "rustc 1.94.0-nightly (8d670b93d 2025-12-31)",
   "authors": [
     "Jakub Płaskonka <kuba@odra.dev>",
     "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
@@ -9,7 +9,7 @@
   "repository": "https://github.com/odradev/odra",
   "homepage": "https://odra.dev/docs",
   "contract_name": "BalanceChecker",
-  "contract_version": "2.5.0",
+  "contract_version": "2.10.0",
   "types": [],
   "errors": [],
   "entry_points": [
@@ -25,6 +25,31 @@
           "optional": false
         }
       ],
+      "return_ty": "U256",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "holds_tokens",
+      "description": "Checks whether the given account holds any tokens.",
+      "is_mutable": false,
+      "arguments": [
+        {
+          "name": "account",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        }
+      ],
+      "return_ty": "Bool",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "token_own_balance",
+      "description": "Returns the tokens held by the token contract itself (sent to its own address).",
+      "is_mutable": false,
+      "arguments": [],
       "return_ty": "U256",
       "is_contract_context": true,
       "access": "public"

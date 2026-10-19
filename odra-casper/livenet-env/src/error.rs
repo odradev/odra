@@ -6,7 +6,12 @@ use odra_core::prelude::*;
 use serde_json::Value;
 
 /// Finds the error message in the contract schema.
-pub fn find(error_msg: &str) -> Result<OdraError> {
+///
+/// A user error is looked up in the schema of `contract_name` first, the contract that was called.
+/// Contracts reuse small codes, so the first schema with the code could name another contract's
+/// error. The code alone does not tell which contract reverted, so if the called contract has no
+/// such error (a contract it called reverted), the schemas of all the contracts are searched.
+pub fn find(error_msg: &str, contract_name: Option<&str>) -> Result<OdraError> {
     if error_msg == "Out of gas error" {
         return Ok(ExecutionError::OutOfGas.into());
     }
@@ -17,9 +22,30 @@ pub fn find(error_msg: &str) -> Result<OdraError> {
         .parse()?;
 
     if is_internal_error(error_num) {
-        return Ok(get_internal_error_name(error_num));
+        return ExecutionError::from_code(error_num)
+            .map(Into::into)
+            .ok_or_else(|| anyhow!("Unknown Odra error code: {}", error_num));
     }
 
+    let schemas = schema_files()?;
+    let named = contract_name.and_then(|name| {
+        schemas
+            .iter()
+            .filter(|schema| schema["contract_name"].as_str() == Some(name))
+            .find_map(|schema| find_error_in_schema(schema, error_num))
+    });
+    named
+        .or_else(|| {
+            schemas
+                .iter()
+                .find_map(|schema| find_error_in_schema(schema, error_num))
+        })
+        .ok_or_else(|| anyhow!("Couldn't find error in the contract schema: {}", error_msg))
+}
+
+/// The contract schemas in the schema directory of the current directory and of its parents, up
+/// to the project root, nearest first.
+fn schema_files() -> Result<Vec<Value>> {
     let root =
         project_root::get_project_root().map_err(|_| anyhow!("Couldn't get project root"))?;
     let mut current_dir =
@@ -29,39 +55,33 @@ pub fn find(error_msg: &str) -> Result<OdraError> {
     #[cfg(not(test))]
     let schema_path = std::path::PathBuf::from("resources/casper_contract_schemas");
 
+    let mut schemas = read_schemas(current_dir.join(&schema_path));
     while current_dir != root {
-        match find_error_in_path(current_dir.join(&schema_path), error_num) {
-            Some(odra_error) => return Ok(odra_error),
-            None => {
-                current_dir = current_dir
-                    .parent()
-                    .ok_or_else(|| anyhow!("Couldn't get parent directory"))?
-                    .to_path_buf()
-            }
-        }
+        current_dir = current_dir
+            .parent()
+            .ok_or_else(|| anyhow!("Couldn't get parent directory"))?
+            .to_path_buf();
+        schemas.extend(read_schemas(current_dir.join(&schema_path)));
     }
-    match find_error_in_path(current_dir.join(&schema_path), error_num) {
-        Some(odra_error) => Ok(odra_error),
-        None => Err(anyhow!(
-            "Couldn't find error in the contract schema: {}",
-            error_msg
-        ))
-    }
+    Ok(schemas)
 }
 
-fn find_error_in_path(path: PathBuf, error_num: u16) -> Option<OdraError> {
-    let schema_path = odra_schema::find_schemas_file_paths(path).ok()?;
-    for schema_path in schema_path {
-        let schema = fs::read_to_string(schema_path).ok()?;
+fn read_schemas(path: PathBuf) -> Vec<Value> {
+    let mut paths = odra_schema::find_schemas_file_paths(path).unwrap_or_default();
+    // The directory order depends on the file system.
+    paths.sort();
+    paths
+        .into_iter()
+        .filter_map(|path| fs::read_to_string(path).ok())
+        .filter_map(|schema| serde_json::from_str(&schema).ok())
+        .collect()
+}
 
-        let schema: Value = serde_json::from_str(&schema).ok()?;
-        let errors = schema["errors"].as_array()?;
-        let f = errors.iter().find_map(|err| match_error(err, error_num));
-        if let Some(odra_error) = f {
-            return Some(odra_error);
-        }
-    }
-    None
+fn find_error_in_schema(schema: &Value, error_num: u16) -> Option<OdraError> {
+    schema["errors"]
+        .as_array()?
+        .iter()
+        .find_map(|err| match_error(err, error_num))
 }
 
 fn match_error(val: &Value, error_num: u16) -> Option<OdraError> {
@@ -77,72 +97,6 @@ fn match_error(val: &Value, error_num: u16) -> Option<OdraError> {
 #[inline]
 fn is_internal_error(error_num: u16) -> bool {
     error_num >= ExecutionError::UserErrorTooHigh.code()
-}
-
-macro_rules! match_error {
-    ($err:expr) => {
-        $err.into()
-    };
-}
-
-macro_rules! match_errors {
-    ( $num:expr, $($err:expr),* ) => {
-        match $num {
-            $(
-                x if x == $err.code() => match_error!($err),
-            )*
-            _ => panic!("Unknown execution error code: {}", $num)
-        }
-    };
-}
-
-fn get_internal_error_name(error_num: u16) -> OdraError {
-    match_errors!(
-        error_num,
-        ExecutionError::UnwrapError,
-        ExecutionError::UnexpectedError,
-        ExecutionError::AdditionOverflow,
-        ExecutionError::SubtractionOverflow,
-        ExecutionError::NonPayable,
-        ExecutionError::TransferToContract,
-        ExecutionError::ReentrantCall,
-        ExecutionError::CannotOverrideKeys,
-        ExecutionError::UnknownConstructor,
-        ExecutionError::NativeTransferError,
-        ExecutionError::IndexOutOfBounds,
-        ExecutionError::ZeroAddress,
-        ExecutionError::AddressCreationFailed,
-        ExecutionError::EarlyEndOfStream,
-        ExecutionError::Formatting,
-        ExecutionError::LeftOverBytes,
-        ExecutionError::OutOfMemory,
-        ExecutionError::NotRepresentable,
-        ExecutionError::ExceededRecursionDepth,
-        ExecutionError::KeyNotFound,
-        ExecutionError::CouldNotDeserializeSignature,
-        ExecutionError::TypeMismatch,
-        ExecutionError::CouldNotSignMessage,
-        ExecutionError::EmptyDictionaryName,
-        ExecutionError::MissingArg,
-        ExecutionError::MissingAddress,
-        ExecutionError::OutOfGas,
-        ExecutionError::MainPurseError,
-        ExecutionError::ConversionError,
-        ExecutionError::ContractDeploymentError(String::new()),
-        ExecutionError::CannotExtractCallerInfo,
-        ExecutionError::ContractNotInstalled,
-        ExecutionError::UpgradingWithoutPreviousVersion,
-        ExecutionError::UpgradingNotAContract,
-        ExecutionError::SchemaMismatch,
-        ExecutionError::CannotDisablePreviousVersion,
-        ExecutionError::CannotUpgradeWithoutUpgrade,
-        ExecutionError::FactoryModuleCall,
-        ExecutionError::CannotGetAnImmediateCaller,
-        ExecutionError::PathIndexOutOfBounds,
-        ExecutionError::InvalidArg,
-        ExecutionError::MaxUserError,
-        ExecutionError::UserErrorTooHigh
-    )
 }
 
 #[cfg(test)]
@@ -180,7 +134,38 @@ mod test {
         );
     }
 
+    #[test]
+    fn user_error_is_named_by_the_called_contract() {
+        assert_eq!(
+            find("User error: 1", Some("Second")).ok(),
+            Some(OdraError::user(1, "SecondError"))
+        );
+        assert_eq!(
+            find("User error: 1", Some("First")).ok(),
+            Some(OdraError::user(1, "FirstError"))
+        );
+    }
+
+    #[test]
+    fn user_error_of_another_contract_is_found_in_any_schema() {
+        // Second called First, which reverted.
+        assert_eq!(
+            find("User error: 2", Some("Second")).ok(),
+            Some(OdraError::user(2, "OnlyFirstError"))
+        );
+        assert_eq!(
+            find("User error: 1", Some("Unknown")).ok(),
+            Some(OdraError::user(1, "FirstError"))
+        );
+    }
+
+    #[test]
+    fn unknown_odra_error_is_an_error() {
+        assert!(call("User error: 65000").is_err());
+        assert!(call("User error: 65535").is_err());
+    }
+
     fn call(error_msg: &str) -> Result<OdraError> {
-        super::find(error_msg)
+        super::find(error_msg, None)
     }
 }

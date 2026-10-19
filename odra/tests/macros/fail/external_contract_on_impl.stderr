@@ -1,0 +1,7 @@
+error: #[external_contract] can be only applied to trait only
+ --> tests/macros/fail/external_contract_on_impl.rs:3:1
+  |
+3 | #[odra::external_contract]
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: this error originates in the attribute macro `odra::external_contract` (in Nightly builds, run with -Z macro-backtrace for more info)

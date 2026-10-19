@@ -1,17 +1,22 @@
 use crate::call_def::CallDef;
 use crate::prelude::*;
-use crate::ContractContainer;
 use crate::{casper_types::bytesrepr::Bytes, VmError};
+use crate::{ContractContainer, ContractEnv};
 
+/// The version of a contract at an address, counted from 0.
 pub type ContractVersion = u32;
 
 /// A struct representing a contract register that maps an address to a contract.
 ///
 /// A register is a central place where all contracts are stored. It is used by the
 /// host side to manage and/or call contracts.
+///
+/// The containers are shared ([Rc]): a backend takes the one it calls with
+/// [get_shared](Self::get_shared) and releases the register for the call, during which the
+/// contract may deploy or upgrade another one.
 #[derive(Default)]
 pub struct ContractRegister {
-    contracts: BTreeMap<(Address, ContractVersion), ContractContainer>,
+    contracts: BTreeMap<(Address, ContractVersion), Rc<ContractContainer>>,
     versions_count: BTreeMap<Address, ContractVersion>
 }
 
@@ -22,17 +27,30 @@ impl ContractRegister {
             Some(version_number) => version_number + 1,
             None => 0
         };
-        self.contracts.insert((addr, new_version), container);
+        self.contracts
+            .insert((addr, new_version), Rc::new(container));
         self.versions_count.insert(addr, new_version);
     }
 
-    /// Calls the entry point with the given call definition.
+    /// Whether code named `name` is registered at `addr`, as any of its versions.
+    pub fn is_registered(&self, addr: &Address, name: &str) -> bool {
+        self.contracts
+            .range((*addr, 0)..=(*addr, ContractVersion::MAX))
+            .any(|(_, contract)| contract.name() == name)
+    }
+
+    /// Calls the entry point with the given call definition in the given contract environment.
     ///
     /// Returns bytes representing the result of the call or an error if the address
     /// is not present in the register.
-    pub fn call(&self, addr: &Address, call_def: CallDef) -> OdraResult<Bytes> {
+    pub fn call(
+        &self,
+        addr: &Address,
+        contract_env: ContractEnv,
+        call_def: CallDef
+    ) -> OdraResult<Bytes> {
         if let Some(contract) = self.get(addr) {
-            return contract.call(call_def);
+            return contract.call(contract_env, call_def);
         }
         Err(OdraError::VmError(VmError::InvalidContractAddress))
     }
@@ -40,7 +58,16 @@ impl ContractRegister {
     /// Returns the latest contract container for the given address.
     pub fn get(&self, addr: &Address) -> Option<&ContractContainer> {
         let latest_version = self.versions_count.get(addr).unwrap_or(&0);
-        self.contracts.get(&(*addr, *latest_version))
+        self.contracts
+            .get(&(*addr, *latest_version))
+            .map(|container| &**container)
+    }
+
+    /// Returns the latest contract container for the given address, shared, so that the
+    /// register can be borrowed again, or changed, while the contract runs.
+    pub fn get_shared(&self, addr: &Address) -> Option<Rc<ContractContainer>> {
+        let latest_version = self.versions_count.get(addr).unwrap_or(&0);
+        self.contracts.get(&(*addr, *latest_version)).cloned()
     }
 
     /// Returns the name of the contract at the given address.
@@ -60,10 +87,27 @@ impl ContractRegister {
             .map(|a| a.0 .0)
     }
 
-    /// Returns the latest contract container for the given address.
+    /// Returns the latest contract container for the given address, to change it. A container
+    /// handed out by [get_shared](Self::get_shared) and still in use is not changed, it is replaced.
     pub fn get_mut(&mut self, addr: &Address) -> Option<&mut ContractContainer> {
         let latest_version = self.versions_count.get(addr).unwrap_or(&0);
-        self.contracts.get_mut(&(*addr, *latest_version))
+        self.contracts
+            .get_mut(&(*addr, *latest_version))
+            .map(Rc::make_mut)
+    }
+
+    /// Returns the latest version of every contract, for [revert_to](Self::revert_to).
+    pub fn versions(&self) -> BTreeMap<Address, ContractVersion> {
+        self.versions_count.clone()
+    }
+
+    /// Forgets the contracts and versions added since `versions` was taken by
+    /// [versions](Self::versions).
+    pub fn revert_to(&mut self, versions: &BTreeMap<Address, ContractVersion>) {
+        self.contracts.retain(|(addr, version), _| {
+            versions.get(addr).is_some_and(|latest| version <= latest)
+        });
+        self.versions_count = versions.clone();
     }
 
     /// Post install hook.

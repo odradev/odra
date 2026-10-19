@@ -18,7 +18,7 @@ use odra_core::consts::{
     PACKAGE_HASH_KEY_NAME_ARG
 };
 use odra_core::prelude::*;
-use odra_core::CallDef;
+use odra_core::{CallDef, DeployReport};
 
 /// Gas amount used for native transfers.
 const NATIVE_TRANSFER_GAS: u64 = 100_000_000u64;
@@ -44,7 +44,7 @@ impl super::CasperClient {
     ) -> Result<TransactionHash> {
         let transaction = self.new_transfer_transaction(to, amount, timestamp)?;
         log::debug(serde_json::to_string_pretty(&transaction).unwrap());
-        self.put_transaction(transaction).await
+        self.put_transaction(transaction, GasEntry::Transfer).await
     }
 
     /// Deploy the contract.
@@ -92,7 +92,8 @@ impl super::CasperClient {
         let transaction =
             self.new_wasm_deploy_transaction(Bytes::from(wasm_bytes), args, timestamp)?;
         log::debug(serde_json::to_string_pretty(&transaction).unwrap());
-        self.put_transaction(transaction).await?;
+        let entry = GasEntry::WasmDeploy(format!("{}.wasm", contract_name));
+        self.put_transaction(transaction, entry).await?;
 
         let address = self.get_contract_address(&package_hash_key_name).await?;
         log::info(format!(
@@ -141,6 +142,7 @@ impl super::CasperClient {
             .to_bytes()
             .expect("Should serialize to bytes");
         let entry_point = call_def.entry_point();
+        let entry = GasEntry::ContractCall(address, call_def.clone());
         let args = runtime_args! {
             PACKAGE_HASH_ARG => hash,
             ENTRY_POINT_ARG => entry_point,
@@ -168,7 +170,7 @@ impl super::CasperClient {
         .map_err(put_transaction_error)?;
         let transaction_hash = response.result.transaction_hash;
         let result = watch.wait_for_transaction_hash(&transaction_hash).await?;
-        self.process_transaction(result, transaction_hash)?;
+        self.process_transaction(result, transaction_hash, entry)?;
         Ok(self.get_proxy_result().await)
     }
 
@@ -195,6 +197,7 @@ impl super::CasperClient {
             call_def.entry_point()
         ));
 
+        let entry = GasEntry::ContractCall(addr, call_def.clone());
         let transaction = self.new_call_transaction(addr, call_def, timestamp)?;
         log::debug(serde_json::to_string_pretty(&transaction).unwrap());
         self.ensure_not_pinned()?;
@@ -212,14 +215,15 @@ impl super::CasperClient {
             .result
             .transaction_hash;
         let result = watch.wait_for_transaction_hash(&transaction_hash).await?;
-        self.process_transaction(result, transaction_hash).map(|_| {
-            ().to_bytes()
-                .expect("Couldn't serialize (). This shouldn't happen.")
-                .into()
-        })
+        self.process_transaction(result, transaction_hash, entry)
+            .map(|_| ().to_bytes().expect("Couldn't serialize (). This shouldn't happen.").into())
     }
 
-    async fn put_transaction(&self, transaction: Transaction) -> Result<TransactionHash> {
+    async fn put_transaction(
+        &self,
+        transaction: Transaction,
+        entry: GasEntry
+    ) -> Result<TransactionHash> {
         log::debug("[TX] Starting event watcher before sending transaction...");
         self.ensure_not_pinned()?;
         let watch = self.watcher.start_watching().await?;
@@ -239,18 +243,23 @@ impl super::CasperClient {
             transaction_hash.to_hex_string()
         ));
         let result = watch.wait_for_transaction_hash(&transaction_hash).await?;
-        self.process_transaction(result, transaction_hash)?;
+        self.process_transaction(result, transaction_hash, entry)?;
         Ok(transaction_hash)
     }
 
+    /// Handles the result of an executed transaction: records its messages and gas (a failed
+    /// transaction consumed gas too) and turns a failure into an error.
     fn process_transaction(
         &self,
         processed: ProcessedTransaction,
-        transaction_hash: TransactionHash
+        transaction_hash: TransactionHash,
+        entry: GasEntry
     ) -> Result<()> {
         // The transaction changed the global state; the next query must see the new root.
         self.invalidate_state_root_hash();
         self.record_messages(processed.messages);
+        let gas = consumed_gas(&processed.execution_result);
+        self.record_gas(gas, entry.into_report(gas));
         let deploy_hash_str = transaction_hash.to_hex_string();
         match processed.execution_result {
             ExecutionResult::V1(r) => match r {
@@ -386,6 +395,42 @@ impl super::CasperClient {
     }
 }
 
+/// What a transaction did, to name it in the gas report.
+enum GasEntry {
+    /// A native transfer, not part of the gas report.
+    Transfer,
+    /// A deploy of the wasm file of the given name: a contract installation or upgrade.
+    WasmDeploy(String),
+    /// A call of a contract entry point, direct or through the proxy.
+    ContractCall(Address, CallDef)
+}
+
+impl GasEntry {
+    fn into_report(self, gas: U512) -> Option<DeployReport> {
+        match self {
+            GasEntry::Transfer => None,
+            GasEntry::WasmDeploy(file_name) => Some(DeployReport::WasmDeploy { gas, file_name }),
+            GasEntry::ContractCall(contract_address, call_def) => Some(DeployReport::ContractCall {
+                gas,
+                contract_address,
+                call_def
+            })
+        }
+    }
+}
+
+/// The gas consumed by an executed transaction, in gas units like CasperVM reports it (the
+/// motes charged are this times the gas price, plus whatever of the payment limit was not
+/// refunded). A legacy (V1) result only carries its cost.
+fn consumed_gas(result: &ExecutionResult) -> U512 {
+    match result {
+        ExecutionResult::V1(Failure { cost, .. }) | ExecutionResult::V1(Success { cost, .. }) => {
+            *cost
+        }
+        ExecutionResult::V2(r) => r.consumed.value()
+    }
+}
+
 /// Maps a failed `account_put_transaction` call to a [LivenetError].
 ///
 /// The node rejects a transaction from an account that has never received CSPR with a terse
@@ -409,5 +454,126 @@ fn put_transaction_error(e: casper_client::Error) -> LivenetError {
             LivenetError::RpcRequestError(rpc_method.to_string(), data)
         }
         _ => LivenetError::ExecutionError(format!("Failed to put transaction: {}", e))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{GasEntry, ProcessedTransaction};
+    use crate::casper_client::configuration::CasperClientConfiguration;
+    use crate::casper_client::CasperClient;
+    use crate::error::LivenetError;
+    use casper_types::execution::{Effects, ExecutionResult, ExecutionResultV2};
+    use casper_types::{account::AccountHash, Gas, InitiatorAddr, TransactionHash, U512};
+    use casper_types::{contracts::ContractPackageHash, RuntimeArgs};
+    use odra_core::prelude::*;
+    use odra_core::{CallDef, DeployReport};
+
+    const CONTRACT: Address = Address::Contract(ContractPackageHash::new([1; 32]));
+
+    fn client() -> CasperClient {
+        CasperClient::new(CasperClientConfiguration {
+            node_address: "http://localhost:1".to_string(),
+            events_url: "http://localhost:1/events".to_string(),
+            chain_name: "casper-net-1".to_string(),
+            secret_keys: vec![],
+            secret_key_paths: vec![],
+            cspr_cloud_auth_token: None,
+            gas_price_tolerance: 1,
+            ttl: 300,
+            state_root_hash: None
+        })
+    }
+
+    /// An executed transaction that consumed `consumed` gas units out of a limit of 10 000 and
+    /// was charged its whole limit.
+    fn processed(consumed: u64, error_message: Option<&str>) -> ProcessedTransaction {
+        ProcessedTransaction {
+            execution_result: ExecutionResult::V2(Box::new(ExecutionResultV2 {
+                initiator: InitiatorAddr::AccountHash(AccountHash::new([7; 32])),
+                error_message: error_message.map(String::from),
+                current_price: 1,
+                limit: Gas::new(10_000),
+                consumed: Gas::new(consumed),
+                cost: U512::from(10_000),
+                refund: U512::zero(),
+                transfers: vec![],
+                size_estimate: 0,
+                effects: Effects::new()
+            })),
+            messages: vec![]
+        }
+    }
+
+    fn hash() -> TransactionHash {
+        TransactionHash::from_raw([2; 32])
+    }
+
+    fn call() -> CallDef {
+        CallDef::new("increment", true, RuntimeArgs::new())
+    }
+
+    #[test]
+    fn deploys_and_calls_are_reported_with_the_consumed_gas() {
+        let client = client();
+        let deploy = GasEntry::WasmDeploy(String::from("Counter.wasm"));
+        client
+            .process_transaction(processed(1_000, None), hash(), deploy)
+            .unwrap();
+        let call_entry = GasEntry::ContractCall(CONTRACT, call());
+        client
+            .process_transaction(processed(300, None), hash(), call_entry)
+            .unwrap();
+        assert_eq!(client.last_transaction_gas(), U512::from(300));
+
+        let report: Vec<DeployReport> = client.gas_report().into_iter().collect();
+        assert_eq!(report.len(), 2);
+        match &report[0] {
+            DeployReport::WasmDeploy { gas, file_name } => {
+                assert_eq!(*gas, U512::from(1_000));
+                assert_eq!(file_name, "Counter.wasm");
+            }
+            other => panic!("unexpected {other:?}")
+        }
+        match &report[1] {
+            DeployReport::ContractCall {
+                gas,
+                contract_address,
+                call_def
+            } => {
+                assert_eq!(*gas, U512::from(300));
+                assert_eq!(*contract_address, CONTRACT);
+                assert_eq!(*call_def, call());
+            }
+            other => panic!("unexpected {other:?}")
+        }
+    }
+
+    #[test]
+    fn failed_call_is_reported_too() {
+        let client = client();
+        let entry = GasEntry::ContractCall(CONTRACT, call());
+        let result =
+            client.process_transaction(processed(10_000, Some("Out of gas error")), hash(), entry);
+        assert!(matches!(result, Err(LivenetError::ExecutionError(_))));
+        assert_eq!(client.last_transaction_gas(), U512::from(10_000));
+        assert_eq!(client.gas_report().iter().count(), 1);
+    }
+
+    #[test]
+    fn transfer_sets_the_last_gas_but_is_not_reported() {
+        let client = client();
+        client
+            .process_transaction(
+                processed(500, None),
+                hash(),
+                GasEntry::ContractCall(CONTRACT, call())
+            )
+            .unwrap();
+        client
+            .process_transaction(processed(100, None), hash(), GasEntry::Transfer)
+            .unwrap();
+        assert_eq!(client.last_transaction_gas(), U512::from(100));
+        assert_eq!(client.gas_report().iter().count(), 1);
     }
 }

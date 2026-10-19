@@ -90,6 +90,13 @@ pub(super) fn create_host_env() -> HostEnv {
     }
 }
 
+/// Builds the livenet host environment without prompting, returning the configuration problem as
+/// a message instead of exiting. Used where a missing configuration is something to report, not to
+/// fix (e.g. `config`).
+pub(super) fn try_create_host_env() -> Result<HostEnv, String> {
+    odra_casper_livenet_env::env_safe().map_err(|err| problem_message(&err))
+}
+
 /// Reads a single trimmed line from stdin. Returns `None` on EOF, error or empty input.
 fn prompt() -> Option<String> {
     print!("  > ");
@@ -119,17 +126,22 @@ fn describe(var: &str) -> (&'static str, &'static str) {
 
 /// Prints the configuration problem and a link to the docs (used on the non-interactive path).
 fn report_problem(err: &LivenetError) {
-    match err {
-        LivenetError::EnvVariableNotSet(var) => prettycli::error(&format!(
-            "Livenet env misconfigured! {var} env var is missing."
-        )),
-        LivenetError::SecrectKeyLoadError(e) => {
-            prettycli::error(&format!("Could not load the livenet secret key: {e}"))
-        }
-        other => prettycli::error(&format!("Livenet misconfigured: {other:#}"))
-    }
+    prettycli::error(&problem_message(err));
     prettycli::info("Visit the official docs to read more:");
     prettycli::link(DOCS_URL);
+}
+
+/// One-line description of a livenet configuration problem.
+fn problem_message(err: &LivenetError) -> String {
+    match err {
+        LivenetError::EnvVariableNotSet(var) => {
+            format!("Livenet env misconfigured! {var} env var is missing.")
+        }
+        LivenetError::SecrectKeyLoadError(e) => {
+            format!("Could not load the livenet secret key: {e}")
+        }
+        other => format!("Livenet misconfigured: {other:#}")
+    }
 }
 
 /// Offers to persist the interactively-entered values to a `.env` file in the current directory.
@@ -216,8 +228,9 @@ fn fail(msg: &str) -> ! {
 
 /// Honours a global `--state-root-hash <HEX>` before the host environment exists.
 ///
-/// The environment is created once, ahead of argument parsing, so the flag is picked out of the
-/// raw arguments and handed to the livenet backend through its environment variable.
+/// The environment is created once per process (the REPL keeps it for the whole session), so the
+/// flag is picked out of the raw process arguments and handed to the livenet backend through its
+/// environment variable.
 pub(super) fn apply_state_root_hash_arg(args: impl IntoIterator<Item = String>) {
     if let Some(hash) = state_root_hash_arg(args) {
         std::env::set_var(ENV_STATE_ROOT_HASH, hash);

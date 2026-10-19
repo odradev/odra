@@ -8,6 +8,7 @@ use crate::log;
 use casper_types::bytesrepr::Bytes;
 use casper_types::contract_messages::{MessagePayload, Messages};
 use casper_types::{Digest, EntityAddr, Key, StoredValue, U512};
+use odra_core::{DeployReport, GasReport};
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::time::{Duration, Instant};
@@ -76,7 +77,12 @@ pub struct CasperClient {
     /// The messages (native events) emitted by the transactions this client sent, per emitting
     /// entity, in emission order. A message is only reported in the execution result of its
     /// transaction, so this is the only place they can be read from later.
-    native_events: RefCell<BTreeMap<EntityAddr, Vec<Bytes>>>
+    native_events: RefCell<BTreeMap<EntityAddr, Vec<Bytes>>>,
+    /// The gas consumed by the wasm deploys and contract calls this client sent, failed ones
+    /// included, in sending order.
+    gas_report: RefCell<GasReport>,
+    /// The gas consumed by the last transaction this client sent, a transfer included.
+    last_transaction_gas: RefCell<U512>
 }
 
 /// Responses of global state and dictionary queries, keyed by the state root hash they were
@@ -120,7 +126,9 @@ impl CasperClient {
             gas: U512::zero(),
             state_root_hash: RefCell::new(None),
             query_cache: RefCell::new(QueryCache::default()),
-            native_events: RefCell::new(BTreeMap::new())
+            native_events: RefCell::new(BTreeMap::new()),
+            gas_report: RefCell::new(GasReport::new()),
+            last_transaction_gas: RefCell::new(U512::zero())
         }
     }
 
@@ -137,13 +145,49 @@ impl CasperClient {
         }
     }
 
-    /// The native events recorded for `entity_addr`, see [Self::native_events].
-    pub(crate) fn recorded_native_events(&self, entity_addr: &EntityAddr) -> Vec<Bytes> {
-        self.native_events
-            .borrow()
-            .get(entity_addr)
+    /// Remembers the gas consumed by a transaction this client sent; `report` is its entry in
+    /// [Self::gas_report], a transfer has none.
+    pub(crate) fn record_gas(&self, gas: U512, report: Option<DeployReport>) {
+        *self.last_transaction_gas.borrow_mut() = gas;
+        if let Some(report) = report {
+            self.gas_report.borrow_mut().push(report);
+        }
+    }
+
+    /// The gas consumed by every wasm deploy and contract call sent by this client, failed ones
+    /// included. Transfers are left out, as on CasperVM.
+    pub fn gas_report(&self) -> GasReport {
+        self.gas_report.borrow().clone()
+    }
+
+    /// The gas consumed by the last transaction sent by this client (zero before the first one).
+    pub fn last_transaction_gas(&self) -> U512 {
+        *self.last_transaction_gas.borrow()
+    }
+
+    /// The number of native events recorded for the entities `entity_addrs` together, see
+    /// [Self::native_events].
+    pub(crate) fn recorded_native_events_count(&self, entity_addrs: &[EntityAddr]) -> usize {
+        let native_events = self.native_events.borrow();
+        entity_addrs
+            .iter()
+            .map(|entity_addr| native_events.get(entity_addr).map_or(0, Vec::len))
+            .sum()
+    }
+
+    /// The `index`-th native event recorded for the entities `entity_addrs`, counted over them in
+    /// order, see [Self::native_events].
+    pub(crate) fn recorded_native_event(
+        &self,
+        entity_addrs: &[EntityAddr],
+        index: usize
+    ) -> Option<Bytes> {
+        let native_events = self.native_events.borrow();
+        entity_addrs
+            .iter()
+            .flat_map(|entity_addr| native_events.get(entity_addr).into_iter().flatten())
+            .nth(index)
             .cloned()
-            .unwrap_or_default()
     }
 
     /// Global state query response cached at `state_root_hash`, if any.

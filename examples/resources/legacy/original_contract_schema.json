@@ -1,0 +1,38 @@
+{
+  "name": "OriginalContract",
+  "events": [],
+  "entrypoints": [
+    {
+      "name": "set_all",
+      "args": [],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "get_f1",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "U32",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "get_f10",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "U32",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "get_f15",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "U32",
+      "ty": "Public",
+      "attributes": []
+    }
+  ]
+}
