@@ -54,8 +54,7 @@ odra-wasm-client = { path = "odra-wasm-client", version = "2.10.0" }
 
 casper-client = { version = "=5.0.0", default-features = false }
 casper-contract = { version = "5.1", default-features = false }
-# casper-contract-schema = { version = "0.9.0" }
-casper-contract-schema = { git = "https://github.com/odradev/casper-contract-schema", branch = "feature/storage" }
+casper-contract-schema = { version = "0.9.0" }
 casper-engine-test-support = "8.1"
 casper-event-standard = "0.7"
 casper-execution-engine = "8.1"
