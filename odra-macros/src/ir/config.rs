@@ -125,7 +125,7 @@ impl Parse for ModuleConfiguration {
 /// An explicit storage layout of the module, overriding the one derived from its fields.
 ///
 /// Used by modules that store data outside of the Odra storage layout, e.g. under named keys:
-/// `#[odra::module(layout = odra::schema::StorageKind::named_key::<u8>("decimals"))]`.
+/// `#[odra::module(layout = odra::schema::named_key::<u8>("decimals"))]`.
 #[derive(Default, Clone, Debug)]
 pub struct ModuleLayout(Option<syn::Expr>);
 

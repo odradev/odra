@@ -1,6 +1,10 @@
 {
   "casper_contract_schema_version": 1,
   "toolchain": "rustc 1.94.0-nightly (8d670b93d 2025-12-31)",
+  "toolkit": {
+    "name": "Odra",
+    "version": "2.10.0"
+  },
   "authors": [
     "Jakub Płaskonka <kuba@odra.dev>",
     "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
@@ -280,6 +284,7 @@
       "name": "name",
       "description": "Delegated. See `self.token.name()` for details.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "String",
       "is_contract_context": true,
@@ -289,6 +294,7 @@
       "name": "symbol",
       "description": "Delegated. See `self.token.symbol()` for details.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "String",
       "is_contract_context": true,
@@ -298,6 +304,7 @@
       "name": "decimals",
       "description": "Delegated. See `self.token.decimals()` for details.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "U8",
       "is_contract_context": true,
@@ -307,6 +314,7 @@
       "name": "total_supply",
       "description": "Delegated. See `self.token.total_supply()` for details.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "U256",
       "is_contract_context": true,
@@ -316,6 +324,7 @@
       "name": "balance_of",
       "description": "Delegated. See `self.token.balance_of()` for details.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "owner",
@@ -332,6 +341,7 @@
       "name": "transfer",
       "description": "Delegated. See `self.token.transfer()` for details.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "to",
@@ -354,6 +364,7 @@
       "name": "approve",
       "description": "Delegated. See `self.token.approve()` for details.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "spender",
@@ -376,6 +387,7 @@
       "name": "allowance",
       "description": "Delegated. See `self.token.allowance()` for details.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "owner",
@@ -398,6 +410,7 @@
       "name": "transfer_from",
       "description": "Delegated. See `self.token.transfer_from()` for details.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "owner",
@@ -426,6 +439,7 @@
       "name": "decrease_allowance",
       "description": "Delegated. See `self.token.decrease_allowance()` for details.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "spender",
@@ -448,6 +462,7 @@
       "name": "increase_allowance",
       "description": "Delegated. See `self.token.increase_allowance()` for details.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "spender",
@@ -470,6 +485,7 @@
       "name": "authorization_state",
       "description": "Delegated. See `self.cep3009.authorization_state()` for details.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "authorizer",
@@ -494,6 +510,7 @@
       "name": "transfer_with_authorization",
       "description": "Delegated. See `self.cep3009.transfer_with_authorization()` for details.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "from",
@@ -556,6 +573,7 @@
       "name": "receive_with_authorization",
       "description": "Delegated. See `self.cep3009.receive_with_authorization()` for details.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "from",
@@ -618,6 +636,7 @@
       "name": "permit",
       "description": "Delegated. See `self.cep2612.permit()` for details.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "owner",
@@ -734,6 +753,238 @@
         "description": null,
         "ty": "String",
         "optional": false
+      }
+    ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "token",
+        "index": 1,
+        "kind": "module",
+        "fields": [
+          {
+            "name": "decimals",
+            "index": 1,
+            "kind": "named_key",
+            "named_key": "decimals",
+            "ty": "U8"
+          },
+          {
+            "name": "symbol",
+            "index": 2,
+            "kind": "named_key",
+            "named_key": "symbol",
+            "ty": "String"
+          },
+          {
+            "name": "name",
+            "index": 3,
+            "kind": "named_key",
+            "named_key": "name",
+            "ty": "String"
+          },
+          {
+            "name": "total_supply",
+            "index": 4,
+            "kind": "named_key",
+            "named_key": "total_supply",
+            "ty": "U256"
+          },
+          {
+            "name": "balances",
+            "index": 5,
+            "kind": "dictionary",
+            "dictionary": "balances",
+            "key": "Key",
+            "key_encoding": "base64",
+            "value": "U256"
+          },
+          {
+            "name": "allowances",
+            "index": 6,
+            "kind": "dictionary",
+            "dictionary": "allowances",
+            "key": {
+              "Tuple2": [
+                "Key",
+                "Key"
+              ]
+            },
+            "key_encoding": "hex_hash",
+            "value": "U256"
+          }
+        ]
+      },
+      {
+        "name": "cep3009",
+        "index": 2,
+        "kind": "module",
+        "fields": [
+          {
+            "name": "used_nonces",
+            "index": 1,
+            "kind": "dictionary",
+            "dictionary": "used_nonces",
+            "key": {
+              "Tuple2": [
+                "Key",
+                {
+                  "List": "U8"
+                }
+              ]
+            },
+            "key_encoding": "hex_hash",
+            "value": "Bool"
+          },
+          {
+            "name": "chain_name",
+            "index": 2,
+            "kind": "named_key",
+            "named_key": "chain_name",
+            "ty": "String"
+          },
+          {
+            "name": "token",
+            "index": 3,
+            "kind": "module",
+            "fields": [
+              {
+                "name": "decimals",
+                "index": 1,
+                "kind": "named_key",
+                "named_key": "decimals",
+                "ty": "U8"
+              },
+              {
+                "name": "symbol",
+                "index": 2,
+                "kind": "named_key",
+                "named_key": "symbol",
+                "ty": "String"
+              },
+              {
+                "name": "name",
+                "index": 3,
+                "kind": "named_key",
+                "named_key": "name",
+                "ty": "String"
+              },
+              {
+                "name": "total_supply",
+                "index": 4,
+                "kind": "named_key",
+                "named_key": "total_supply",
+                "ty": "U256"
+              },
+              {
+                "name": "balances",
+                "index": 5,
+                "kind": "dictionary",
+                "dictionary": "balances",
+                "key": "Key",
+                "key_encoding": "base64",
+                "value": "U256"
+              },
+              {
+                "name": "allowances",
+                "index": 6,
+                "kind": "dictionary",
+                "dictionary": "allowances",
+                "key": {
+                  "Tuple2": [
+                    "Key",
+                    "Key"
+                  ]
+                },
+                "key_encoding": "hex_hash",
+                "value": "U256"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "cep2612",
+        "index": 3,
+        "kind": "module",
+        "fields": [
+          {
+            "name": "permit_nonces",
+            "index": 1,
+            "kind": "dictionary",
+            "dictionary": "permit_nonces",
+            "key": "Key",
+            "key_encoding": "base64",
+            "value": "U256"
+          },
+          {
+            "name": "chain_name",
+            "index": 2,
+            "kind": "named_key",
+            "named_key": "chain_name",
+            "ty": "String"
+          },
+          {
+            "name": "token",
+            "index": 3,
+            "kind": "module",
+            "fields": [
+              {
+                "name": "decimals",
+                "index": 1,
+                "kind": "named_key",
+                "named_key": "decimals",
+                "ty": "U8"
+              },
+              {
+                "name": "symbol",
+                "index": 2,
+                "kind": "named_key",
+                "named_key": "symbol",
+                "ty": "String"
+              },
+              {
+                "name": "name",
+                "index": 3,
+                "kind": "named_key",
+                "named_key": "name",
+                "ty": "String"
+              },
+              {
+                "name": "total_supply",
+                "index": 4,
+                "kind": "named_key",
+                "named_key": "total_supply",
+                "ty": "U256"
+              },
+              {
+                "name": "balances",
+                "index": 5,
+                "kind": "dictionary",
+                "dictionary": "balances",
+                "key": "Key",
+                "key_encoding": "base64",
+                "value": "U256"
+              },
+              {
+                "name": "allowances",
+                "index": 6,
+                "kind": "dictionary",
+                "dictionary": "allowances",
+                "key": {
+                  "Tuple2": [
+                    "Key",
+                    "Key"
+                  ]
+                },
+                "key_encoding": "hex_hash",
+                "value": "U256"
+              }
+            ]
+          }
+        ]
       }
     ]
   }

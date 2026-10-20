@@ -1,6 +1,10 @@
 {
   "casper_contract_schema_version": 1,
   "toolchain": "rustc 1.94.0-nightly (8d670b93d 2025-12-31)",
+  "toolkit": {
+    "name": "Odra",
+    "version": "2.10.0"
+  },
   "authors": [
     "Jakub Płaskonka <kuba@odra.dev>",
     "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
@@ -17,6 +21,7 @@
       "name": "forward",
       "description": "Deposits the CSPR attached to this call into `wallet`.",
       "is_mutable": true,
+      "is_payable": true,
       "arguments": [
         {
           "name": "wallet",
@@ -39,6 +44,7 @@
       "name": "forward_balance",
       "description": "Deposits everything this contract holds into `wallet`.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "wallet",
@@ -55,6 +61,7 @@
       "name": "fund",
       "description": "Accepts CSPR to be forwarded later with [Self::forward_balance].",
       "is_mutable": true,
+      "is_payable": true,
       "arguments": [
         {
           "name": "__cargo_purse",
@@ -98,5 +105,9 @@
         "optional": false
       }
     ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": []
   }
 }

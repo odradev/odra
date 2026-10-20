@@ -1,6 +1,10 @@
 {
   "casper_contract_schema_version": 1,
   "toolchain": "rustc 1.94.0-nightly (8d670b93d 2025-12-31)",
+  "toolkit": {
+    "name": "Odra",
+    "version": "2.10.0"
+  },
   "authors": [
     "Jakub Płaskonka <kuba@odra.dev>",
     "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
@@ -208,6 +212,7 @@
       "name": "mint",
       "description": "Mints a new token with the given ID and metadata to the specified address.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "to",
@@ -243,6 +248,7 @@
       "name": "burn",
       "description": "Burns the token with the given ID.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "token_id",
@@ -259,6 +265,7 @@
       "name": "name",
       "description": "Delegated. See `self.token.name()` for details.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "String",
       "is_contract_context": true,
@@ -268,6 +275,7 @@
       "name": "symbol",
       "description": "Delegated. See `self.token.symbol()` for details.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "String",
       "is_contract_context": true,
@@ -277,6 +285,7 @@
       "name": "balance_of",
       "description": "Delegated. See `self.token.balance_of()` for details.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "owner",
@@ -293,6 +302,7 @@
       "name": "owner_of",
       "description": "Delegated. See `self.token.owner_of()` for details.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "token_id",
@@ -311,6 +321,7 @@
       "name": "safe_transfer_from",
       "description": "Delegated. See `self.token.safe_transfer_from()` for details.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "from",
@@ -349,6 +360,7 @@
       "name": "transfer_from",
       "description": "Delegated. See `self.token.transfer_from()` for details.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "from",
@@ -377,6 +389,7 @@
       "name": "approve",
       "description": "Delegated. See `self.token.approve()` for details.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "spender",
@@ -399,6 +412,7 @@
       "name": "revoke_approval",
       "description": "Delegated. See `self.token.revoke_approval()` for details.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "token_id",
@@ -415,6 +429,7 @@
       "name": "approved_for",
       "description": "Delegated. See `self.token.approved_for()` for details.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "token_id",
@@ -433,6 +448,7 @@
       "name": "approve_for_all",
       "description": "Delegated. See `self.token.approve_for_all()` for details.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "operator",
@@ -449,6 +465,7 @@
       "name": "revoke_approval_for_all",
       "description": "Delegated. See `self.token.revoke_approval_for_all()` for details.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "operator",
@@ -465,6 +482,7 @@
       "name": "is_approved_for_all",
       "description": "Delegated. See `self.token.is_approved_for_all()` for details.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "owner",
@@ -487,6 +505,7 @@
       "name": "token_metadata",
       "description": "Delegated. See `self.token.token_metadata()` for details.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "token_id",
@@ -510,6 +529,7 @@
       "name": "contract_name",
       "description": "Delegated. See `self.metadata.contract_name()` for details.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": {
         "Option": "String"
@@ -521,6 +541,7 @@
       "name": "contract_description",
       "description": "Delegated. See `self.metadata.contract_description()` for details.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": {
         "Option": "String"
@@ -532,6 +553,7 @@
       "name": "contract_icon_uri",
       "description": "Delegated. See `self.metadata.contract_icon_uri()` for details.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": {
         "Option": "String"
@@ -543,6 +565,7 @@
       "name": "contract_project_uri",
       "description": "Delegated. See `self.metadata.contract_project_uri()` for details.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": {
         "Option": "String"
@@ -656,6 +679,122 @@
           "Option": "String"
         },
         "optional": false
+      }
+    ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "token",
+        "index": 1,
+        "kind": "module",
+        "fields": [
+          {
+            "name": "name",
+            "index": 1,
+            "kind": "named_key",
+            "named_key": "name",
+            "ty": "String"
+          },
+          {
+            "name": "symbol",
+            "index": 2,
+            "kind": "named_key",
+            "named_key": "symbol",
+            "ty": "String"
+          },
+          {
+            "name": "balances",
+            "index": 3,
+            "kind": "dictionary",
+            "dictionary": "balances",
+            "key": "Key",
+            "key_encoding": "base64",
+            "value": "U256"
+          },
+          {
+            "name": "owners",
+            "index": 4,
+            "kind": "dictionary",
+            "dictionary": "owners",
+            "key": "U256",
+            "key_encoding": "base64",
+            "value": {
+              "Option": "Key"
+            }
+          },
+          {
+            "name": "approvals",
+            "index": 5,
+            "kind": "dictionary",
+            "dictionary": "approvals",
+            "key": "U256",
+            "key_encoding": "base64",
+            "value": {
+              "Option": "Key"
+            }
+          },
+          {
+            "name": "operators",
+            "index": 6,
+            "kind": "dictionary",
+            "dictionary": "operators",
+            "key": {
+              "Tuple2": [
+                "Key",
+                "Key"
+              ]
+            },
+            "key_encoding": "hex_hash",
+            "value": "Bool"
+          },
+          {
+            "name": "metadata",
+            "index": 7,
+            "kind": "dictionary",
+            "dictionary": "token_metadata",
+            "key": "U256",
+            "key_encoding": "base64",
+            "value": {
+              "Map": {
+                "key": "String",
+                "value": "String"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "metadata",
+        "index": 2,
+        "kind": "module",
+        "fields": [
+          {
+            "name": "contract_name",
+            "index": 1,
+            "kind": "module",
+            "fields": []
+          },
+          {
+            "name": "contract_description",
+            "index": 2,
+            "kind": "module",
+            "fields": []
+          },
+          {
+            "name": "contract_icon_uri",
+            "index": 3,
+            "kind": "module",
+            "fields": []
+          },
+          {
+            "name": "contract_project_uri",
+            "index": 4,
+            "kind": "module",
+            "fields": []
+          }
+        ]
       }
     ]
   }

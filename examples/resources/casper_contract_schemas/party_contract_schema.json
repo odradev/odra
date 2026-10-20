@@ -1,6 +1,10 @@
 {
   "casper_contract_schema_version": 1,
   "toolchain": "rustc 1.94.0-nightly (8d670b93d 2025-12-31)",
+  "toolkit": {
+    "name": "Odra",
+    "version": "2.10.0"
+  },
   "authors": [
     "Jakub Płaskonka <kuba@odra.dev>",
     "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
@@ -60,6 +64,7 @@
       "name": "emit",
       "description": "Emits the events.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "Unit",
       "is_contract_context": true,
@@ -69,6 +74,7 @@
       "name": "emit_and_revert",
       "description": "Emits the events and reverts, so the events are never emitted.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "Unit",
       "is_contract_context": true,
@@ -114,5 +120,9 @@
         "optional": false
       }
     ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": []
   }
 }

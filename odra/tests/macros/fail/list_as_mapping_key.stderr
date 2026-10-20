@@ -44,5 +44,8 @@ error[E0277]: the trait bound `odra::prelude::Mapping<odra::prelude::List<u32>, 
 help: the trait `SchemaStorageLayout` is implemented for `odra::prelude::Mapping<K, V>`
  --> $WORKSPACE/odra-schema/src/storage_layout.rs
   |
-  | impl<K: NamedCLTyped + ToBytes, V: SchemaStorageLayout> SchemaStorageLayout for Mapping<K, V> {
-  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  | / impl<K, V> SchemaStorageLayout for Mapping<K, V>
+  | | where
+  | |     K: NamedCLTyped + SchemaCustomTypes + ToBytes,
+  | |     V: SchemaStorageLayout
+  | |__________________________^

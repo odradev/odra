@@ -1,6 +1,10 @@
 {
   "casper_contract_schema_version": 1,
   "toolchain": "rustc 1.94.0-nightly (8d670b93d 2025-12-31)",
+  "toolkit": {
+    "name": "Odra",
+    "version": "2.10.0"
+  },
   "authors": [
     "Jakub Płaskonka <kuba@odra.dev>",
     "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
@@ -17,6 +21,7 @@
       "name": "deposit",
       "description": "Credits the caller with `amount`.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "amount",
@@ -33,6 +38,7 @@
       "name": "balance_of",
       "description": "The balance of `owner`.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "owner",
@@ -74,6 +80,27 @@
         "description": "The arg name for telling the installer that the contract is being upgraded.",
         "ty": "Bool",
         "optional": false
+      }
+    ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "balances",
+        "index": 1,
+        "kind": "mapping",
+        "key": "Key",
+        "value": {
+          "kind": "value",
+          "ty": "U256"
+        }
+      },
+      {
+        "name": "holders",
+        "index": 2,
+        "kind": "list",
+        "item": "Key"
       }
     ]
   }

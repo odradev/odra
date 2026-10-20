@@ -1,6 +1,10 @@
 {
   "casper_contract_schema_version": 1,
   "toolchain": "rustc 1.94.0-nightly (8d670b93d 2025-12-31)",
+  "toolkit": {
+    "name": "Odra",
+    "version": "2.10.0"
+  },
   "authors": [
     "Jakub Płaskonka <kuba@odra.dev>",
     "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
@@ -17,6 +21,7 @@
       "name": "set_owner",
       "description": "Replaces the owner.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "contract",
@@ -33,6 +38,7 @@
       "name": "owner",
       "description": "The owner.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "Key",
       "is_contract_context": true,
@@ -42,6 +48,7 @@
       "name": "value",
       "description": "The stored value.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "U32",
       "is_contract_context": true,
@@ -51,6 +58,7 @@
       "name": "add",
       "description": "Adds both arguments to the stored value and returns it.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "exec_env",
@@ -73,6 +81,7 @@
       "name": "deposit",
       "description": "The attached value plus `exec_env`.",
       "is_mutable": true,
+      "is_payable": true,
       "arguments": [
         {
           "name": "exec_env",
@@ -95,6 +104,7 @@
       "name": "echo",
       "description": "Combines the arguments, so that each of them must arrive in its place.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "named_args",
@@ -129,6 +139,7 @@
       "name": "guarded",
       "description": "Stores `named_args` minus `contract`.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "named_args",
@@ -151,6 +162,7 @@
       "name": "echo_of",
       "description": "Calls [ArgNamesExt::echo] of the contract at `contract`.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "contract",
@@ -216,6 +228,23 @@
         "description": null,
         "ty": "Key",
         "optional": false
+      }
+    ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "value",
+        "index": 1,
+        "kind": "value",
+        "ty": "U32"
+      },
+      {
+        "name": "owner",
+        "index": 2,
+        "kind": "value",
+        "ty": "Key"
       }
     ]
   }

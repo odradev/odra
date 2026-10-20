@@ -1,6 +1,10 @@
 {
   "casper_contract_schema_version": 1,
   "toolchain": "rustc 1.94.0-nightly (8d670b93d 2025-12-31)",
+  "toolkit": {
+    "name": "Odra",
+    "version": "2.10.0"
+  },
   "authors": [
     "Jakub Płaskonka <kuba@odra.dev>",
     "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
@@ -17,6 +21,7 @@
       "name": "add_task",
       "description": "Adds a task id to the caller's schedule.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "owner",
@@ -39,6 +44,7 @@
       "name": "task_count",
       "description": "Returns the number of tasks scheduled for the given address.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "owner",
@@ -55,6 +61,7 @@
       "name": "task_at",
       "description": "Returns the n-th task id scheduled for the given address.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "owner",
@@ -104,6 +111,21 @@
         "description": "The arg name for telling the installer that the contract is being upgraded.",
         "ty": "Bool",
         "optional": false
+      }
+    ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "schedules",
+        "index": 1,
+        "kind": "mapping",
+        "key": "Key",
+        "value": {
+          "kind": "list",
+          "item": "U32"
+        }
       }
     ]
   }

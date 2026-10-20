@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 
 use casper_contract_schema::CustomType;
 use casper_types::bytesrepr::{FromBytes, ToBytes};
+use casper_types::contracts::ContractHash;
 use casper_types::{bytesrepr::Bytes, CLTyped, PublicKey, U128, U256, U512};
 use casper_types::{Key, URef};
 use num_traits::{Num, One, Zero};
@@ -114,6 +115,8 @@ impl<T1: SchemaCustomTypes, T2: SchemaCustomTypes, T3: SchemaCustomTypes> Schema
 }
 
 impl SchemaCustomTypes for Key {}
+
+impl SchemaCustomTypes for ContractHash {}
 
 impl<const COUNT: usize> SchemaCustomTypes for [u8; COUNT] {}
 

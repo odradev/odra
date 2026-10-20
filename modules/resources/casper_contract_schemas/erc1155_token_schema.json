@@ -1,6 +1,10 @@
 {
   "casper_contract_schema_version": 1,
   "toolchain": "rustc 1.94.0-nightly (8d670b93d 2025-12-31)",
+  "toolkit": {
+    "name": "Odra",
+    "version": "2.10.0"
+  },
   "authors": [
     "Jakub Płaskonka <kuba@odra.dev>",
     "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
@@ -201,6 +205,7 @@
       "name": "balance_of",
       "description": "",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "owner",
@@ -223,6 +228,7 @@
       "name": "balance_of_batch",
       "description": "",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "owners",
@@ -251,6 +257,7 @@
       "name": "set_approval_for_all",
       "description": "",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "operator",
@@ -273,6 +280,7 @@
       "name": "is_approved_for_all",
       "description": "",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "owner",
@@ -295,6 +303,7 @@
       "name": "safe_transfer_from",
       "description": "",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "from",
@@ -339,6 +348,7 @@
       "name": "safe_batch_transfer_from",
       "description": "",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "from",
@@ -387,6 +397,7 @@
       "name": "renounce_ownership",
       "description": "",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "Unit",
       "is_contract_context": true,
@@ -396,6 +407,7 @@
       "name": "transfer_ownership",
       "description": "",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "new_owner",
@@ -412,6 +424,7 @@
       "name": "owner",
       "description": "",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "Key",
       "is_contract_context": true,
@@ -421,6 +434,7 @@
       "name": "mint",
       "description": "",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "to",
@@ -459,6 +473,7 @@
       "name": "mint_batch",
       "description": "",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "to",
@@ -501,6 +516,7 @@
       "name": "burn",
       "description": "",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "from",
@@ -529,6 +545,7 @@
       "name": "burn_batch",
       "description": "",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "from",
@@ -603,6 +620,63 @@
         "description": "The arg name for telling the installer that the contract is being upgraded.",
         "ty": "Bool",
         "optional": false
+      }
+    ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "core",
+        "index": 1,
+        "kind": "module",
+        "fields": [
+          {
+            "name": "balances",
+            "index": 1,
+            "kind": "mapping",
+            "key": {
+              "Tuple2": [
+                "Key",
+                "U256"
+              ]
+            },
+            "value": {
+              "kind": "value",
+              "ty": "U256"
+            }
+          },
+          {
+            "name": "approvals",
+            "index": 2,
+            "kind": "mapping",
+            "key": {
+              "Tuple2": [
+                "Key",
+                "Key"
+              ]
+            },
+            "value": {
+              "kind": "value",
+              "ty": "Bool"
+            }
+          }
+        ]
+      },
+      {
+        "name": "ownable",
+        "index": 2,
+        "kind": "module",
+        "fields": [
+          {
+            "name": "owner",
+            "index": 1,
+            "kind": "value",
+            "ty": {
+              "Option": "Key"
+            }
+          }
+        ]
       }
     ]
   }

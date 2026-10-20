@@ -1,14 +1,14 @@
 //! A module providing functionality for defining the Casper Contract Schema.
 //!
-//! It includes traits for defining entrypoints, events, custom types, and errors, as well as functions
-//! for creating various schema elements such as arguments, entrypoints, struct members, enum variants, custom types,
-//! events, and errors.
+//! It includes traits for defining entrypoints, events, custom types, errors and the storage layout, as well
+//! as functions for creating various schema elements such as arguments, entrypoints, struct members, enum
+//! variants, custom types, events, and errors.
 use std::{collections::BTreeSet, env, path::PathBuf};
 
 pub use casper_contract_schema;
 use casper_contract_schema::{
     Access, Argument, CallMethod, ContractSchema, CustomType, Entrypoint, EnumVariant, Event,
-    NamedCLType, StructMember, UserError
+    NamedCLType, StructMember, Toolkit, UserError
 };
 
 use convert_case::{Boundary, Case, Casing};
@@ -16,14 +16,17 @@ use convert_case::{Boundary, Case, Casing};
 use odra_core::args::EntrypointArgument;
 
 const CCSV: u8 = 1;
+/// The version of Odra the contract is built with (odra-schema is versioned together with odra).
+const ODRA_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 mod custom_type;
 mod storage_layout;
 mod ty;
 
+pub use casper_contract_schema::{KeyEncoding, StorageField, StorageKind};
 pub use storage_layout::{
-    resolve_storage, resolve_storage_with, KeyEncoding, SchemaStorageLayout, StorageField,
-    StorageKind, StorageLayoutError, StorageLocation, StorageQuery
+    dictionary, named_key, resolve_storage, resolve_storage_with, SchemaStorageLayout,
+    StorageLayoutError, StorageLocation, StorageQuery
 };
 pub use ty::NamedCLTyped;
 
@@ -91,12 +94,14 @@ pub fn entry_point<T: NamedCLTyped>(
     name: &str,
     description: &str,
     is_mutable: bool,
+    is_payable: bool,
     arguments: Vec<Argument>
 ) -> Entrypoint {
     Entrypoint {
         name: name.into(),
         description: Some(description.to_string()),
         is_mutable,
+        is_payable,
         arguments,
         return_ty: T::ty().into(),
         is_contract_context: true,
@@ -176,19 +181,28 @@ pub fn error(name: &str, description: &str, discriminant: u16) -> UserError {
 /// Creates an instance of [ContractSchema].
 ///
 /// A contract schema is a representation of a smart contract's schema. It includes information about
-/// the contract's metadata, entrypoints, events, custom types, and errors.
-pub fn schema<T: SchemaEntrypoints + SchemaEvents + SchemaCustomTypes + SchemaErrors>(
+/// the contract's metadata, entrypoints, events, custom types, errors and the storage layout.
+///
+/// The custom types are collected from the entrypoints, the events and the storage, so a type that
+/// is only stored and never passed to or returned from an entrypoint is described as well.
+pub fn schema<T>(
     module_name: &str,
     contract_name: &str,
     contract_version: &str,
     authors: Vec<String>,
     repository: &str,
     homepage: &str
-) -> ContractSchema {
+) -> ContractSchema
+where
+    T: SchemaEntrypoints + SchemaEvents + SchemaCustomTypes + SchemaErrors + SchemaStorageLayout
+{
     let entry_points = T::schema_entrypoints();
     let events = T::schema_events();
     let errors = T::schema_errors();
-    let types = BTreeSet::from_iter(T::schema_types())
+    let types = T::schema_types()
+        .into_iter()
+        .chain(<T as SchemaStorageLayout>::custom_types())
+        .collect::<BTreeSet<_>>()
         .into_iter()
         .flatten()
         .collect();
@@ -219,6 +233,10 @@ pub fn schema<T: SchemaEntrypoints + SchemaEvents + SchemaCustomTypes + SchemaEr
     ContractSchema {
         casper_contract_schema_version: CCSV,
         toolchain: env!("RUSTC_VERSION").to_string(),
+        toolkit: Toolkit {
+            name: "Odra".to_string(),
+            version: ODRA_VERSION.to_string()
+        },
         contract_name: contract_name.to_string(),
         contract_version: contract_version.to_string(),
         types,
@@ -228,7 +246,8 @@ pub fn schema<T: SchemaEntrypoints + SchemaEvents + SchemaCustomTypes + SchemaEr
         authors,
         repository,
         homepage,
-        errors
+        errors,
+        storage: T::storage_kind()
     }
 }
 
@@ -346,10 +365,12 @@ mod test {
     #[test]
     fn test_entry_point() {
         let arg = super::argument::<u32>("arg1");
-        let entry_point = super::entry_point::<u32>("entry1", "description", true, vec![arg]);
+        let entry_point =
+            super::entry_point::<u32>("entry1", "description", true, false, vec![arg]);
         assert_eq!(entry_point.name, "entry1");
         assert_eq!(entry_point.description, Some("description".to_string()));
         assert!(entry_point.is_mutable);
+        assert!(!entry_point.is_payable);
         assert_eq!(entry_point.arguments.len(), 1);
         assert_eq!(
             entry_point.return_ty,
@@ -435,6 +456,7 @@ mod test {
                     "entry1",
                     "description",
                     true,
+                    false,
                     vec![super::argument::<u32>("arg1")]
                 )]
             }
@@ -464,6 +486,24 @@ mod test {
             }
         }
 
+        // `Stored` lives only in the storage, no entrypoint takes or returns it.
+        impl SchemaStorageLayout for TestSchema {
+            fn storage_kind() -> StorageKind {
+                StorageKind::module(vec![StorageField::new(
+                    "stored",
+                    1,
+                    StorageKind::value(NamedCLType::Custom("Stored".into()))
+                )])
+            }
+
+            fn custom_types() -> Vec<Option<CustomType>> {
+                vec![Some(custom_struct(
+                    "Stored",
+                    vec![struct_member::<u32>("value")]
+                ))]
+            }
+        }
+
         let schema = super::schema::<TestSchema>(
             "module_name",
             "contract_name",
@@ -475,12 +515,16 @@ mod test {
 
         assert_eq!(schema.contract_name, "contract_name");
         assert_eq!(schema.contract_version, "contract_version");
+        assert_eq!(schema.toolkit.name, "Odra");
+        assert_eq!(schema.toolkit.version, env!("CARGO_PKG_VERSION"));
         assert_eq!(schema.authors, vec!["author".to_string()]);
         assert_eq!(schema.repository, Some("repository".to_string()));
         assert_eq!(schema.homepage, Some("homepage".to_string()));
         assert_eq!(schema.entry_points.len(), 1);
-        assert_eq!(schema.types.len(), 2);
+        assert_eq!(schema.types.len(), 3);
+        assert!(schema.types.iter().any(|t| t.name() == "Stored"));
         assert_eq!(schema.errors.len(), 0);
         assert_eq!(schema.events.len(), 1);
+        assert_eq!(schema.storage, TestSchema::storage_kind());
     }
 }

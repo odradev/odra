@@ -1,6 +1,10 @@
 {
   "casper_contract_schema_version": 1,
   "toolchain": "rustc 1.94.0-nightly (8d670b93d 2025-12-31)",
+  "toolkit": {
+    "name": "Odra",
+    "version": "2.10.0"
+  },
   "authors": [
     "Jakub Płaskonka <kuba@odra.dev>",
     "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
@@ -17,6 +21,7 @@
       "name": "name",
       "description": "Returns the dog's name.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "String",
       "is_contract_context": true,
@@ -26,6 +31,7 @@
       "name": "visit",
       "description": "Adds a visit to the friend's visits.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "friend_name",
@@ -42,6 +48,7 @@
       "name": "visits",
       "description": "Returns the total visits of the friend.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "friend_name",
@@ -89,6 +96,27 @@
         "description": null,
         "ty": "String",
         "optional": false
+      }
+    ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "name",
+        "index": 1,
+        "kind": "value",
+        "ty": "String"
+      },
+      {
+        "name": "friends",
+        "index": 2,
+        "kind": "mapping",
+        "key": "String",
+        "value": {
+          "kind": "value",
+          "ty": "U32"
+        }
       }
     ]
   }

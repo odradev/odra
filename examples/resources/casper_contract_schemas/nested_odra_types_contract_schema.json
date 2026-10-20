@@ -1,6 +1,10 @@
 {
   "casper_contract_schema_version": 1,
   "toolchain": "rustc 1.94.0-nightly (8d670b93d 2025-12-31)",
+  "toolkit": {
+    "name": "Odra",
+    "version": "2.10.0"
+  },
   "authors": [
     "Jakub Płaskonka <kuba@odra.dev>",
     "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
@@ -84,6 +88,7 @@
       "name": "save_operation_result",
       "description": "Saves the operation result in the storage.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "operation_result",
@@ -100,6 +105,7 @@
       "name": "latest_result",
       "description": "Returns the latest operation result.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": {
         "Option": "OperationResult"
@@ -111,6 +117,7 @@
       "name": "current_generation",
       "description": "Returns the current generation of operation results.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": {
         "List": "OperationResult"
@@ -152,6 +159,40 @@
         "description": "The arg name for telling the installer that the contract is being upgraded.",
         "ty": "Bool",
         "optional": false
+      }
+    ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "latest_result",
+        "index": 1,
+        "kind": "value",
+        "ty": "OperationResult"
+      },
+      {
+        "name": "current_generation_storage",
+        "index": 2,
+        "kind": "module",
+        "fields": [
+          {
+            "name": "results",
+            "index": 1,
+            "kind": "mapping",
+            "key": "U32",
+            "value": {
+              "kind": "value",
+              "ty": "OperationResult"
+            }
+          },
+          {
+            "name": "results_count",
+            "index": 2,
+            "kind": "value",
+            "ty": "U32"
+          }
+        ]
       }
     ]
   }

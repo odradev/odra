@@ -1,6 +1,10 @@
 {
   "casper_contract_schema_version": 1,
   "toolchain": "rustc 1.94.0-nightly (8d670b93d 2025-12-31)",
+  "toolkit": {
+    "name": "Odra",
+    "version": "2.10.0"
+  },
   "authors": [
     "Jakub Płaskonka <kuba@odra.dev>",
     "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
@@ -280,6 +284,7 @@
       "name": "authorization_state",
       "description": "Delegated. See `self.cep3009.authorization_state()` for details.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "authorizer",
@@ -304,6 +309,7 @@
       "name": "transfer_with_authorization",
       "description": "Delegated. See `self.cep3009.transfer_with_authorization()` for details.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "from",
@@ -366,6 +372,7 @@
       "name": "receive_with_authorization",
       "description": "Delegated. See `self.cep3009.receive_with_authorization()` for details.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "from",
@@ -428,6 +435,7 @@
       "name": "cancel_authorization",
       "description": "Delegated. See `self.cep3009.cancel_authorization()` for details.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "authorizer",
@@ -466,6 +474,7 @@
       "name": "balance_of",
       "description": "Delegated. See `self.token.balance_of()` for details.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "address",
@@ -574,6 +583,157 @@
         "description": null,
         "ty": "U256",
         "optional": false
+      }
+    ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "cep3009",
+        "index": 1,
+        "kind": "module",
+        "fields": [
+          {
+            "name": "used_nonces",
+            "index": 1,
+            "kind": "dictionary",
+            "dictionary": "used_nonces",
+            "key": {
+              "Tuple2": [
+                "Key",
+                {
+                  "List": "U8"
+                }
+              ]
+            },
+            "key_encoding": "hex_hash",
+            "value": "Bool"
+          },
+          {
+            "name": "chain_name",
+            "index": 2,
+            "kind": "named_key",
+            "named_key": "chain_name",
+            "ty": "String"
+          },
+          {
+            "name": "token",
+            "index": 3,
+            "kind": "module",
+            "fields": [
+              {
+                "name": "decimals",
+                "index": 1,
+                "kind": "named_key",
+                "named_key": "decimals",
+                "ty": "U8"
+              },
+              {
+                "name": "symbol",
+                "index": 2,
+                "kind": "named_key",
+                "named_key": "symbol",
+                "ty": "String"
+              },
+              {
+                "name": "name",
+                "index": 3,
+                "kind": "named_key",
+                "named_key": "name",
+                "ty": "String"
+              },
+              {
+                "name": "total_supply",
+                "index": 4,
+                "kind": "named_key",
+                "named_key": "total_supply",
+                "ty": "U256"
+              },
+              {
+                "name": "balances",
+                "index": 5,
+                "kind": "dictionary",
+                "dictionary": "balances",
+                "key": "Key",
+                "key_encoding": "base64",
+                "value": "U256"
+              },
+              {
+                "name": "allowances",
+                "index": 6,
+                "kind": "dictionary",
+                "dictionary": "allowances",
+                "key": {
+                  "Tuple2": [
+                    "Key",
+                    "Key"
+                  ]
+                },
+                "key_encoding": "hex_hash",
+                "value": "U256"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "token",
+        "index": 2,
+        "kind": "module",
+        "fields": [
+          {
+            "name": "decimals",
+            "index": 1,
+            "kind": "named_key",
+            "named_key": "decimals",
+            "ty": "U8"
+          },
+          {
+            "name": "symbol",
+            "index": 2,
+            "kind": "named_key",
+            "named_key": "symbol",
+            "ty": "String"
+          },
+          {
+            "name": "name",
+            "index": 3,
+            "kind": "named_key",
+            "named_key": "name",
+            "ty": "String"
+          },
+          {
+            "name": "total_supply",
+            "index": 4,
+            "kind": "named_key",
+            "named_key": "total_supply",
+            "ty": "U256"
+          },
+          {
+            "name": "balances",
+            "index": 5,
+            "kind": "dictionary",
+            "dictionary": "balances",
+            "key": "Key",
+            "key_encoding": "base64",
+            "value": "U256"
+          },
+          {
+            "name": "allowances",
+            "index": 6,
+            "kind": "dictionary",
+            "dictionary": "allowances",
+            "key": {
+              "Tuple2": [
+                "Key",
+                "Key"
+              ]
+            },
+            "key_encoding": "hex_hash",
+            "value": "U256"
+          }
+        ]
       }
     ]
   }

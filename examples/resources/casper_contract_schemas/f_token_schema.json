@@ -1,6 +1,10 @@
 {
   "casper_contract_schema_version": 1,
   "toolchain": "rustc 1.94.0-nightly (8d670b93d 2025-12-31)",
+  "toolkit": {
+    "name": "Odra",
+    "version": "2.10.0"
+  },
   "authors": [
     "Jakub Płaskonka <kuba@odra.dev>",
     "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
@@ -247,6 +251,7 @@
       "name": "transfer",
       "description": "Delegated. See `self.token.transfer()` for details.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "to",
@@ -269,6 +274,7 @@
       "name": "balance_of",
       "description": "Delegated. See `self.token.balance_of()` for details.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "owner",
@@ -285,6 +291,7 @@
       "name": "total_supply",
       "description": "Delegated. See `self.token.total_supply()` for details.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "U256",
       "is_contract_context": true,
@@ -294,6 +301,7 @@
       "name": "name",
       "description": "Delegated. See `self.token.name()` for details.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "String",
       "is_contract_context": true,
@@ -303,6 +311,7 @@
       "name": "symbol",
       "description": "Delegated. See `self.token.symbol()` for details.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "String",
       "is_contract_context": true,
@@ -312,6 +321,7 @@
       "name": "get_owner",
       "description": "Delegated. See `self.ownable.get_owner()` for details.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "Key",
       "is_contract_context": true,
@@ -403,6 +413,84 @@
         "description": null,
         "ty": "U256",
         "optional": false
+      }
+    ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "token",
+        "index": 1,
+        "kind": "module",
+        "fields": [
+          {
+            "name": "decimals",
+            "index": 1,
+            "kind": "named_key",
+            "named_key": "decimals",
+            "ty": "U8"
+          },
+          {
+            "name": "symbol",
+            "index": 2,
+            "kind": "named_key",
+            "named_key": "symbol",
+            "ty": "String"
+          },
+          {
+            "name": "name",
+            "index": 3,
+            "kind": "named_key",
+            "named_key": "name",
+            "ty": "String"
+          },
+          {
+            "name": "total_supply",
+            "index": 4,
+            "kind": "named_key",
+            "named_key": "total_supply",
+            "ty": "U256"
+          },
+          {
+            "name": "balances",
+            "index": 5,
+            "kind": "dictionary",
+            "dictionary": "balances",
+            "key": "Key",
+            "key_encoding": "base64",
+            "value": "U256"
+          },
+          {
+            "name": "allowances",
+            "index": 6,
+            "kind": "dictionary",
+            "dictionary": "allowances",
+            "key": {
+              "Tuple2": [
+                "Key",
+                "Key"
+              ]
+            },
+            "key_encoding": "hex_hash",
+            "value": "U256"
+          }
+        ]
+      },
+      {
+        "name": "ownable",
+        "index": 2,
+        "kind": "module",
+        "fields": [
+          {
+            "name": "owner",
+            "index": 1,
+            "kind": "value",
+            "ty": {
+              "Option": "Key"
+            }
+          }
+        ]
       }
     ]
   }

@@ -1,6 +1,10 @@
 {
   "casper_contract_schema_version": 1,
   "toolchain": "rustc 1.94.0-nightly (8d670b93d 2025-12-31)",
+  "toolkit": {
+    "name": "Odra",
+    "version": "2.10.0"
+  },
   "authors": [
     "Jakub Płaskonka <kuba@odra.dev>",
     "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
@@ -200,6 +204,7 @@
       "name": "name",
       "description": "Returns the name of the token.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "String",
       "is_contract_context": true,
@@ -209,6 +214,7 @@
       "name": "symbol",
       "description": "Returns the symbol of the token.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "String",
       "is_contract_context": true,
@@ -218,6 +224,7 @@
       "name": "decimals",
       "description": "Returns the number of decimals the token uses.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "U8",
       "is_contract_context": true,
@@ -227,6 +234,7 @@
       "name": "total_supply",
       "description": "Returns the total supply of the token.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "U256",
       "is_contract_context": true,
@@ -236,6 +244,7 @@
       "name": "balance_of",
       "description": "Returns the balance of the given address.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "address",
@@ -252,6 +261,7 @@
       "name": "allowance",
       "description": "Returns the amount of tokens the owner has allowed the spender to spend.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "owner",
@@ -274,6 +284,7 @@
       "name": "approve",
       "description": "Approves the spender to spend the given amount of tokens on behalf of the caller.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "spender",
@@ -296,6 +307,7 @@
       "name": "decrease_allowance",
       "description": "Decreases the allowance of the spender by the given amount.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "spender",
@@ -318,6 +330,7 @@
       "name": "increase_allowance",
       "description": "Increases the allowance of the spender by the given amount.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "spender",
@@ -340,6 +353,7 @@
       "name": "transfer",
       "description": "Transfers tokens from the caller to the recipient.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "recipient",
@@ -362,6 +376,7 @@
       "name": "transfer_from",
       "description": "Transfers tokens from the owner to the recipient using the spender's allowance.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "owner",
@@ -468,6 +483,62 @@
         "description": null,
         "ty": "U256",
         "optional": false
+      }
+    ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "decimals",
+        "index": 1,
+        "kind": "named_key",
+        "named_key": "decimals",
+        "ty": "U8"
+      },
+      {
+        "name": "symbol",
+        "index": 2,
+        "kind": "named_key",
+        "named_key": "symbol",
+        "ty": "String"
+      },
+      {
+        "name": "name",
+        "index": 3,
+        "kind": "named_key",
+        "named_key": "name",
+        "ty": "String"
+      },
+      {
+        "name": "total_supply",
+        "index": 4,
+        "kind": "named_key",
+        "named_key": "total_supply",
+        "ty": "U256"
+      },
+      {
+        "name": "balances",
+        "index": 5,
+        "kind": "dictionary",
+        "dictionary": "balances",
+        "key": "Key",
+        "key_encoding": "base64",
+        "value": "U256"
+      },
+      {
+        "name": "allowances",
+        "index": 6,
+        "kind": "dictionary",
+        "dictionary": "allowances",
+        "key": {
+          "Tuple2": [
+            "Key",
+            "Key"
+          ]
+        },
+        "key_encoding": "hex_hash",
+        "value": "U256"
       }
     ]
   }

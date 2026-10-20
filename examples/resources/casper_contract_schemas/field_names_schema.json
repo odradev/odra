@@ -1,6 +1,10 @@
 {
   "casper_contract_schema_version": 1,
   "toolchain": "rustc 1.94.0-nightly (8d670b93d 2025-12-31)",
+  "toolkit": {
+    "name": "Odra",
+    "version": "2.10.0"
+  },
   "authors": [
     "Jakub Płaskonka <kuba@odra.dev>",
     "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
@@ -117,6 +121,7 @@
       "name": "set_env",
       "description": "Replaces the number and emits [FieldsSet].",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "value",
@@ -133,6 +138,7 @@
       "name": "env_value",
       "description": "The number.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "U32",
       "is_contract_context": true,
@@ -142,6 +148,7 @@
       "name": "result",
       "description": "The stored type.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": {
         "Option": "NamedFields"
@@ -153,6 +160,7 @@
       "name": "set_bytes",
       "description": "Stores a variant under `key`.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "key",
@@ -175,6 +183,7 @@
       "name": "bytes",
       "description": "The variant under `key`.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "key",
@@ -235,6 +244,33 @@
         "description": null,
         "ty": "NamedFields",
         "optional": false
+      }
+    ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "env",
+        "index": 1,
+        "kind": "value",
+        "ty": "U32"
+      },
+      {
+        "name": "result",
+        "index": 2,
+        "kind": "value",
+        "ty": "NamedFields"
+      },
+      {
+        "name": "bytes",
+        "index": 3,
+        "kind": "mapping",
+        "key": "U32",
+        "value": {
+          "kind": "value",
+          "ty": "NamedVariants"
+        }
       }
     ]
   }

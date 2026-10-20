@@ -1,6 +1,10 @@
 {
   "casper_contract_schema_version": 1,
   "toolchain": "rustc 1.94.0-nightly (8d670b93d 2025-12-31)",
+  "toolkit": {
+    "name": "Odra",
+    "version": "2.10.0"
+  },
   "authors": [
     "Jakub Płaskonka <kuba@odra.dev>",
     "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
@@ -17,6 +21,7 @@
       "name": "add_token",
       "description": "Adds a new token to the contract.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "name",
@@ -45,6 +50,7 @@
       "name": "balance_of",
       "description": "Returns the balance of the given account for the given token.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "token_name",
@@ -67,6 +73,7 @@
       "name": "mint",
       "description": "Mints new tokens and assigns them to the given address.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "token_name",
@@ -95,6 +102,7 @@
       "name": "tokens_count",
       "description": "Returns the number of tokens managed by the contract.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "U32",
       "is_contract_context": true,
@@ -104,6 +112,7 @@
       "name": "get_owner",
       "description": "Returns the owner of the given token.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "token_name",
@@ -120,6 +129,7 @@
       "name": "set_owner",
       "description": "Transfers the ownership of the given token to the new owner.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "token_name",
@@ -167,6 +177,99 @@
         "description": "The arg name for telling the installer that the contract is being upgraded.",
         "ty": "Bool",
         "optional": false
+      }
+    ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "tokens",
+        "index": 1,
+        "kind": "mapping",
+        "key": "String",
+        "value": {
+          "kind": "module",
+          "fields": [
+            {
+              "name": "ownable",
+              "index": 1,
+              "kind": "module",
+              "fields": [
+                {
+                  "name": "owner",
+                  "index": 1,
+                  "kind": "value",
+                  "ty": {
+                    "Option": "Key"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "erc20",
+              "index": 2,
+              "kind": "module",
+              "fields": [
+                {
+                  "name": "decimals",
+                  "index": 1,
+                  "kind": "value",
+                  "ty": "U8"
+                },
+                {
+                  "name": "symbol",
+                  "index": 2,
+                  "kind": "value",
+                  "ty": "String"
+                },
+                {
+                  "name": "name",
+                  "index": 3,
+                  "kind": "value",
+                  "ty": "String"
+                },
+                {
+                  "name": "total_supply",
+                  "index": 4,
+                  "kind": "value",
+                  "ty": "U256"
+                },
+                {
+                  "name": "balances",
+                  "index": 5,
+                  "kind": "mapping",
+                  "key": "Key",
+                  "value": {
+                    "kind": "value",
+                    "ty": "U256"
+                  }
+                },
+                {
+                  "name": "allowances",
+                  "index": 6,
+                  "kind": "mapping",
+                  "key": {
+                    "Tuple2": [
+                      "Key",
+                      "Key"
+                    ]
+                  },
+                  "value": {
+                    "kind": "value",
+                    "ty": "U256"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "name": "count",
+        "index": 2,
+        "kind": "value",
+        "ty": "U32"
       }
     ]
   }
