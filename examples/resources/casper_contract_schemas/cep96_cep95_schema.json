@@ -681,5 +681,121 @@
         "optional": false
       }
     ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "token",
+        "index": 1,
+        "kind": "module",
+        "fields": [
+          {
+            "name": "name",
+            "index": 1,
+            "kind": "named_key",
+            "named_key": "name",
+            "ty": "String"
+          },
+          {
+            "name": "symbol",
+            "index": 2,
+            "kind": "named_key",
+            "named_key": "symbol",
+            "ty": "String"
+          },
+          {
+            "name": "balances",
+            "index": 3,
+            "kind": "dictionary",
+            "dictionary": "balances",
+            "key": "Key",
+            "key_encoding": "base64",
+            "value": "U256"
+          },
+          {
+            "name": "owners",
+            "index": 4,
+            "kind": "dictionary",
+            "dictionary": "owners",
+            "key": "U256",
+            "key_encoding": "base64",
+            "value": {
+              "Option": "Key"
+            }
+          },
+          {
+            "name": "approvals",
+            "index": 5,
+            "kind": "dictionary",
+            "dictionary": "approvals",
+            "key": "U256",
+            "key_encoding": "base64",
+            "value": {
+              "Option": "Key"
+            }
+          },
+          {
+            "name": "operators",
+            "index": 6,
+            "kind": "dictionary",
+            "dictionary": "operators",
+            "key": {
+              "Tuple2": [
+                "Key",
+                "Key"
+              ]
+            },
+            "key_encoding": "hex_hash",
+            "value": "Bool"
+          },
+          {
+            "name": "metadata",
+            "index": 7,
+            "kind": "dictionary",
+            "dictionary": "token_metadata",
+            "key": "U256",
+            "key_encoding": "base64",
+            "value": {
+              "Map": {
+                "key": "String",
+                "value": "String"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "metadata",
+        "index": 2,
+        "kind": "module",
+        "fields": [
+          {
+            "name": "contract_name",
+            "index": 1,
+            "kind": "module",
+            "fields": []
+          },
+          {
+            "name": "contract_description",
+            "index": 2,
+            "kind": "module",
+            "fields": []
+          },
+          {
+            "name": "contract_icon_uri",
+            "index": 3,
+            "kind": "module",
+            "fields": []
+          },
+          {
+            "name": "contract_project_uri",
+            "index": 4,
+            "kind": "module",
+            "fields": []
+          }
+        ]
+      }
+    ]
   }
 }

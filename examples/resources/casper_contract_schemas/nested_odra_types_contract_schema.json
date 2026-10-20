@@ -161,5 +161,39 @@
         "optional": false
       }
     ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "latest_result",
+        "index": 1,
+        "kind": "value",
+        "ty": "OperationResult"
+      },
+      {
+        "name": "current_generation_storage",
+        "index": 2,
+        "kind": "module",
+        "fields": [
+          {
+            "name": "results",
+            "index": 1,
+            "kind": "mapping",
+            "key": "U32",
+            "value": {
+              "kind": "value",
+              "ty": "OperationResult"
+            }
+          },
+          {
+            "name": "results_count",
+            "index": 2,
+            "kind": "value",
+            "ty": "U32"
+          }
+        ]
+      }
+    ]
   }
 }

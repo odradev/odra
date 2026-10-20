@@ -84,5 +84,28 @@
         "optional": false
       }
     ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "name",
+        "index": 1,
+        "kind": "value",
+        "ty": "String"
+      },
+      {
+        "name": "created_at",
+        "index": 2,
+        "kind": "value",
+        "ty": "U64"
+      },
+      {
+        "name": "created_by",
+        "index": 3,
+        "kind": "value",
+        "ty": "Key"
+      }
+    ]
   }
 }

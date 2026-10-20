@@ -265,5 +265,34 @@
         "optional": false
       }
     ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "ip",
+        "index": 1,
+        "kind": "value",
+        "ty": "IP"
+      },
+      {
+        "name": "fieldless",
+        "index": 2,
+        "kind": "value",
+        "ty": "Fieldless"
+      },
+      {
+        "name": "unit",
+        "index": 3,
+        "kind": "value",
+        "ty": "Unit"
+      },
+      {
+        "name": "my_struct",
+        "index": 4,
+        "kind": "value",
+        "ty": "MyStruct"
+      }
+    ]
   }
 }

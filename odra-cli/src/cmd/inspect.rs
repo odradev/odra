@@ -119,6 +119,11 @@ impl ContractSchema {
         let mut custom_types = BTreeSet::new();
         custom_types.extend(T::schema_types().into_iter().flatten());
         custom_types.extend(<T as SchemaEvents>::custom_types().into_iter().flatten());
+        custom_types.extend(
+            <T as SchemaStorageLayout>::custom_types()
+                .into_iter()
+                .flatten()
+        );
 
         Self {
             key_name,

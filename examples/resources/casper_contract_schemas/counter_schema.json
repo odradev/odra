@@ -74,5 +74,16 @@
         "optional": false
       }
     ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "value",
+        "index": 1,
+        "kind": "value",
+        "ty": "U32"
+      }
+    ]
   }
 }

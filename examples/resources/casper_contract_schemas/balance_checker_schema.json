@@ -98,5 +98,16 @@
         "optional": false
       }
     ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "token",
+        "index": 1,
+        "kind": "value",
+        "ty": "Key"
+      }
+    ]
   }
 }

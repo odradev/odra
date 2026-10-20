@@ -116,5 +116,35 @@
         "optional": false
       }
     ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "last_call_data",
+        "index": 1,
+        "kind": "value",
+        "ty": {
+          "Tuple2": [
+            {
+              "Tuple2": [
+                "Key",
+                "Key"
+              ]
+            },
+            {
+              "Tuple2": [
+                "U256",
+                {
+                  "Option": {
+                    "List": "U8"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
   }
 }

@@ -70,5 +70,22 @@
         "optional": true
       }
     ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "name",
+        "index": 1,
+        "kind": "value",
+        "ty": "String"
+      },
+      {
+        "name": "metadata",
+        "index": 2,
+        "kind": "value",
+        "ty": "String"
+      }
+    ]
   }
 }

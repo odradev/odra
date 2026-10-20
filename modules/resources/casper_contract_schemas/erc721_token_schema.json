@@ -578,5 +578,106 @@
         "optional": false
       }
     ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "core",
+        "index": 1,
+        "kind": "module",
+        "fields": [
+          {
+            "name": "balances",
+            "index": 1,
+            "kind": "mapping",
+            "key": "Key",
+            "value": {
+              "kind": "value",
+              "ty": "U256"
+            }
+          },
+          {
+            "name": "owners",
+            "index": 2,
+            "kind": "mapping",
+            "key": "U256",
+            "value": {
+              "kind": "value",
+              "ty": {
+                "Option": "Key"
+              }
+            }
+          },
+          {
+            "name": "token_approvals",
+            "index": 3,
+            "kind": "mapping",
+            "key": "U256",
+            "value": {
+              "kind": "value",
+              "ty": {
+                "Option": "Key"
+              }
+            }
+          },
+          {
+            "name": "operator_approvals",
+            "index": 4,
+            "kind": "mapping",
+            "key": {
+              "Tuple2": [
+                "Key",
+                "Key"
+              ]
+            },
+            "value": {
+              "kind": "value",
+              "ty": "Bool"
+            }
+          }
+        ]
+      },
+      {
+        "name": "metadata",
+        "index": 2,
+        "kind": "module",
+        "fields": [
+          {
+            "name": "name",
+            "index": 1,
+            "kind": "value",
+            "ty": "String"
+          },
+          {
+            "name": "symbol",
+            "index": 2,
+            "kind": "value",
+            "ty": "String"
+          },
+          {
+            "name": "base_uri",
+            "index": 3,
+            "kind": "value",
+            "ty": "String"
+          }
+        ]
+      },
+      {
+        "name": "ownable",
+        "index": 3,
+        "kind": "module",
+        "fields": [
+          {
+            "name": "owner",
+            "index": 1,
+            "kind": "value",
+            "ty": {
+              "Option": "Key"
+            }
+          }
+        ]
+      }
+    ]
   }
 }

@@ -101,5 +101,22 @@
         "optional": false
       }
     ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "name",
+        "index": 1,
+        "kind": "value",
+        "ty": "String"
+      },
+      {
+        "name": "walks",
+        "index": 2,
+        "kind": "list",
+        "item": "U32"
+      }
+    ]
   }
 }

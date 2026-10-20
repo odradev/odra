@@ -47,5 +47,9 @@
         "optional": false
       }
     ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": []
   }
 }

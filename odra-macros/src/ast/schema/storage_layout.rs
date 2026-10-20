@@ -7,6 +7,9 @@ use crate::ir::{EnumeratedTypedField, ModuleStructIR};
 /// By default the layout is a module composed of the struct fields, each described by its
 /// own `SchemaStorageLayout` implementation. A module can override it with the
 /// `layout = <expr>` attribute argument (used by named-key storage modules).
+///
+/// The custom types of the stored values are always collected from the struct fields, so a
+/// type that lives only in the storage ends up in the `types` section of the schema.
 pub struct SchemaStorageLayoutItem {
     module_ident: syn::Ident,
     layout: Option<syn::Expr>,
@@ -36,12 +39,26 @@ impl ToTokens for SchemaStorageLayoutItem {
             }
         };
 
+        let types_chain = self.fields.iter().map(|f| {
+            let ty = &f.ty;
+            quote::quote!(.chain(<#ty as odra::schema::SchemaStorageLayout>::custom_types()))
+        });
+
         let item = quote::quote! {
             #[automatically_derived]
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::SchemaStorageLayout for #module_ident {
                 fn storage_kind() -> odra::schema::StorageKind {
                     #kind
+                }
+
+                fn custom_types() -> odra::prelude::vec::Vec<Option<odra::schema::casper_contract_schema::CustomType>> {
+                    odra::prelude::vec::Vec::<Option<odra::schema::casper_contract_schema::CustomType>>::new()
+                        .into_iter()
+                        #(#types_chain)*
+                        .collect::<odra::prelude::BTreeSet<Option<odra::schema::casper_contract_schema::CustomType>>>()
+                        .into_iter()
+                        .collect()
                 }
             }
         };
@@ -106,6 +123,19 @@ mod test {
                         ]
                     }
                 }
+
+                fn custom_types() -> odra::prelude::vec::Vec<Option<odra::schema::casper_contract_schema::CustomType>> {
+                    odra::prelude::vec::Vec::<Option<odra::schema::casper_contract_schema::CustomType>>::new()
+                        .into_iter()
+                        .chain(<SubModule<Counter> as odra::schema::SchemaStorageLayout>::custom_types())
+                        .chain(<SubModule<Counter> as odra::schema::SchemaStorageLayout>::custom_types())
+                        .chain(<SubModule<Counter> as odra::schema::SchemaStorageLayout>::custom_types())
+                        .chain(<Var<u32> as odra::schema::SchemaStorageLayout>::custom_types())
+                        .chain(<Mapping<u8, Counter> as odra::schema::SchemaStorageLayout>::custom_types())
+                        .collect::<odra::prelude::BTreeSet<Option<odra::schema::casper_contract_schema::CustomType>>>()
+                        .into_iter()
+                        .collect()
+                }
             }
         );
 
@@ -117,7 +147,7 @@ mod test {
         let module = quote::quote!(
             pub struct Decimals;
         );
-        let attr = quote::quote!(layout = odra::schema::StorageKind::named_key::<u8>("decimals"));
+        let attr = quote::quote!(layout = odra::schema::named_key::<u8>("decimals"));
         let ir = ModuleStructIR::try_from((&attr, &module)).unwrap();
         let item = SchemaStorageLayoutItem::try_from(&ir).unwrap();
         let expected = quote::quote!(
@@ -125,7 +155,15 @@ mod test {
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::SchemaStorageLayout for Decimals {
                 fn storage_kind() -> odra::schema::StorageKind {
-                    odra::schema::StorageKind::named_key::<u8>("decimals")
+                    odra::schema::named_key::<u8>("decimals")
+                }
+
+                fn custom_types() -> odra::prelude::vec::Vec<Option<odra::schema::casper_contract_schema::CustomType>> {
+                    odra::prelude::vec::Vec::<Option<odra::schema::casper_contract_schema::CustomType>>::new()
+                        .into_iter()
+                        .collect::<odra::prelude::BTreeSet<Option<odra::schema::casper_contract_schema::CustomType>>>()
+                        .into_iter()
+                        .collect()
                 }
             }
         );

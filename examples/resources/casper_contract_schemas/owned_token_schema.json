@@ -414,5 +414,81 @@
         "optional": false
       }
     ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "ownable",
+        "index": 1,
+        "kind": "module",
+        "fields": [
+          {
+            "name": "owner",
+            "index": 1,
+            "kind": "value",
+            "ty": {
+              "Option": "Key"
+            }
+          }
+        ]
+      },
+      {
+        "name": "erc20",
+        "index": 2,
+        "kind": "module",
+        "fields": [
+          {
+            "name": "decimals",
+            "index": 1,
+            "kind": "value",
+            "ty": "U8"
+          },
+          {
+            "name": "symbol",
+            "index": 2,
+            "kind": "value",
+            "ty": "String"
+          },
+          {
+            "name": "name",
+            "index": 3,
+            "kind": "value",
+            "ty": "String"
+          },
+          {
+            "name": "total_supply",
+            "index": 4,
+            "kind": "value",
+            "ty": "U256"
+          },
+          {
+            "name": "balances",
+            "index": 5,
+            "kind": "mapping",
+            "key": "Key",
+            "value": {
+              "kind": "value",
+              "ty": "U256"
+            }
+          },
+          {
+            "name": "allowances",
+            "index": 6,
+            "kind": "mapping",
+            "key": {
+              "Tuple2": [
+                "Key",
+                "Key"
+              ]
+            },
+            "value": {
+              "kind": "value",
+              "ty": "U256"
+            }
+          }
+        ]
+      }
+    ]
   }
 }

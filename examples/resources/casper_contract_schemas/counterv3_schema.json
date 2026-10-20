@@ -85,5 +85,16 @@
         "optional": false
       }
     ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "counter",
+        "index": 1,
+        "kind": "value",
+        "ty": "U32"
+      }
+    ]
   }
 }

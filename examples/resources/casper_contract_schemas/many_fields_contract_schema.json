@@ -98,5 +98,130 @@
         "optional": false
       }
     ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "f1",
+        "index": 1,
+        "kind": "value",
+        "ty": "U32"
+      },
+      {
+        "name": "f2",
+        "index": 2,
+        "kind": "value",
+        "ty": "U32"
+      },
+      {
+        "name": "f3",
+        "index": 3,
+        "kind": "value",
+        "ty": "U32"
+      },
+      {
+        "name": "f4",
+        "index": 4,
+        "kind": "value",
+        "ty": "U32"
+      },
+      {
+        "name": "f5",
+        "index": 5,
+        "kind": "value",
+        "ty": "U32"
+      },
+      {
+        "name": "f6",
+        "index": 6,
+        "kind": "value",
+        "ty": "U32"
+      },
+      {
+        "name": "f7",
+        "index": 7,
+        "kind": "value",
+        "ty": "U32"
+      },
+      {
+        "name": "f8",
+        "index": 8,
+        "kind": "value",
+        "ty": "U32"
+      },
+      {
+        "name": "f9",
+        "index": 9,
+        "kind": "value",
+        "ty": "U32"
+      },
+      {
+        "name": "f10",
+        "index": 10,
+        "kind": "value",
+        "ty": "U32"
+      },
+      {
+        "name": "f11",
+        "index": 11,
+        "kind": "value",
+        "ty": "U32"
+      },
+      {
+        "name": "f12",
+        "index": 12,
+        "kind": "value",
+        "ty": "U32"
+      },
+      {
+        "name": "f13",
+        "index": 13,
+        "kind": "value",
+        "ty": "U32"
+      },
+      {
+        "name": "f14",
+        "index": 14,
+        "kind": "value",
+        "ty": "U32"
+      },
+      {
+        "name": "f15",
+        "index": 15,
+        "kind": "value",
+        "ty": "U32"
+      },
+      {
+        "name": "f16",
+        "index": 16,
+        "kind": "value",
+        "ty": "U32"
+      },
+      {
+        "name": "f17",
+        "index": 17,
+        "kind": "value",
+        "ty": "U32"
+      },
+      {
+        "name": "f18",
+        "index": 18,
+        "kind": "value",
+        "ty": "U32"
+      },
+      {
+        "name": "f19",
+        "index": 19,
+        "kind": "value",
+        "ty": "U32"
+      },
+      {
+        "name": "f20",
+        "index": 20,
+        "kind": "value",
+        "ty": "U32"
+      }
+    ]
   }
 }

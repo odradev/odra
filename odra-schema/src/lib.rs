@@ -1,8 +1,8 @@
 //! A module providing functionality for defining the Casper Contract Schema.
 //!
-//! It includes traits for defining entrypoints, events, custom types, and errors, as well as functions
-//! for creating various schema elements such as arguments, entrypoints, struct members, enum variants, custom types,
-//! events, and errors.
+//! It includes traits for defining entrypoints, events, custom types, errors and the storage layout, as well
+//! as functions for creating various schema elements such as arguments, entrypoints, struct members, enum
+//! variants, custom types, events, and errors.
 use std::{collections::BTreeSet, env, path::PathBuf};
 
 pub use casper_contract_schema;
@@ -23,9 +23,10 @@ mod custom_type;
 mod storage_layout;
 mod ty;
 
+pub use casper_contract_schema::{KeyEncoding, StorageField, StorageKind};
 pub use storage_layout::{
-    resolve_storage, resolve_storage_with, KeyEncoding, SchemaStorageLayout, StorageField,
-    StorageKind, StorageLayoutError, StorageLocation, StorageQuery
+    dictionary, named_key, resolve_storage, resolve_storage_with, SchemaStorageLayout,
+    StorageLayoutError, StorageLocation, StorageQuery
 };
 pub use ty::NamedCLTyped;
 
@@ -180,19 +181,28 @@ pub fn error(name: &str, description: &str, discriminant: u16) -> UserError {
 /// Creates an instance of [ContractSchema].
 ///
 /// A contract schema is a representation of a smart contract's schema. It includes information about
-/// the contract's metadata, entrypoints, events, custom types, and errors.
-pub fn schema<T: SchemaEntrypoints + SchemaEvents + SchemaCustomTypes + SchemaErrors>(
+/// the contract's metadata, entrypoints, events, custom types, errors and the storage layout.
+///
+/// The custom types are collected from the entrypoints, the events and the storage, so a type that
+/// is only stored and never passed to or returned from an entrypoint is described as well.
+pub fn schema<T>(
     module_name: &str,
     contract_name: &str,
     contract_version: &str,
     authors: Vec<String>,
     repository: &str,
     homepage: &str
-) -> ContractSchema {
+) -> ContractSchema
+where
+    T: SchemaEntrypoints + SchemaEvents + SchemaCustomTypes + SchemaErrors + SchemaStorageLayout
+{
     let entry_points = T::schema_entrypoints();
     let events = T::schema_events();
     let errors = T::schema_errors();
-    let types = BTreeSet::from_iter(T::schema_types())
+    let types = T::schema_types()
+        .into_iter()
+        .chain(<T as SchemaStorageLayout>::custom_types())
+        .collect::<BTreeSet<_>>()
         .into_iter()
         .flatten()
         .collect();
@@ -236,7 +246,8 @@ pub fn schema<T: SchemaEntrypoints + SchemaEvents + SchemaCustomTypes + SchemaEr
         authors,
         repository,
         homepage,
-        errors
+        errors,
+        storage: T::storage_kind()
     }
 }
 
@@ -475,6 +486,24 @@ mod test {
             }
         }
 
+        // `Stored` lives only in the storage, no entrypoint takes or returns it.
+        impl SchemaStorageLayout for TestSchema {
+            fn storage_kind() -> StorageKind {
+                StorageKind::module(vec![StorageField::new(
+                    "stored",
+                    1,
+                    StorageKind::value(NamedCLType::Custom("Stored".into()))
+                )])
+            }
+
+            fn custom_types() -> Vec<Option<CustomType>> {
+                vec![Some(custom_struct(
+                    "Stored",
+                    vec![struct_member::<u32>("value")]
+                ))]
+            }
+        }
+
         let schema = super::schema::<TestSchema>(
             "module_name",
             "contract_name",
@@ -492,8 +521,10 @@ mod test {
         assert_eq!(schema.repository, Some("repository".to_string()));
         assert_eq!(schema.homepage, Some("homepage".to_string()));
         assert_eq!(schema.entry_points.len(), 1);
-        assert_eq!(schema.types.len(), 2);
+        assert_eq!(schema.types.len(), 3);
+        assert!(schema.types.iter().any(|t| t.name() == "Stored"));
         assert_eq!(schema.errors.len(), 0);
         assert_eq!(schema.events.len(), 1);
+        assert_eq!(schema.storage, TestSchema::storage_kind());
     }
 }

@@ -252,5 +252,43 @@
         "optional": false
       }
     ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "creator",
+        "index": 1,
+        "kind": "value",
+        "ty": "Key"
+      },
+      {
+        "name": "ownable",
+        "index": 2,
+        "kind": "module",
+        "fields": [
+          {
+            "name": "owner",
+            "index": 1,
+            "kind": "value",
+            "ty": {
+              "Option": "Key"
+            }
+          }
+        ]
+      },
+      {
+        "name": "stack",
+        "index": 3,
+        "kind": "list",
+        "item": "U64"
+      },
+      {
+        "name": "erc20_address",
+        "index": 4,
+        "kind": "value",
+        "ty": "Key"
+      }
+    ]
   }
 }

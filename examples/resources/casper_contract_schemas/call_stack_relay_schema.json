@@ -74,5 +74,16 @@
         "optional": false
       }
     ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "probe",
+        "index": 1,
+        "kind": "value",
+        "ty": "Key"
+      }
+    ]
   }
 }

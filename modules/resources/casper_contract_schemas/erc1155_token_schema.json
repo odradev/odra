@@ -622,5 +622,62 @@
         "optional": false
       }
     ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "core",
+        "index": 1,
+        "kind": "module",
+        "fields": [
+          {
+            "name": "balances",
+            "index": 1,
+            "kind": "mapping",
+            "key": {
+              "Tuple2": [
+                "Key",
+                "U256"
+              ]
+            },
+            "value": {
+              "kind": "value",
+              "ty": "U256"
+            }
+          },
+          {
+            "name": "approvals",
+            "index": 2,
+            "kind": "mapping",
+            "key": {
+              "Tuple2": [
+                "Key",
+                "Key"
+              ]
+            },
+            "value": {
+              "kind": "value",
+              "ty": "Bool"
+            }
+          }
+        ]
+      },
+      {
+        "name": "ownable",
+        "index": 2,
+        "kind": "module",
+        "fields": [
+          {
+            "name": "owner",
+            "index": 1,
+            "kind": "value",
+            "ty": {
+              "Option": "Key"
+            }
+          }
+        ]
+      }
+    ]
   }
 }

@@ -64,5 +64,16 @@
         "optional": false
       }
     ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "factory_address",
+        "index": 1,
+        "kind": "value",
+        "ty": "Key"
+      }
+    ]
   }
 }

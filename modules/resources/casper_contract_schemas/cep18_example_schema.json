@@ -582,5 +582,83 @@
         "optional": false
       }
     ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "token",
+        "index": 1,
+        "kind": "module",
+        "fields": [
+          {
+            "name": "decimals",
+            "index": 1,
+            "kind": "named_key",
+            "named_key": "decimals",
+            "ty": "U8"
+          },
+          {
+            "name": "symbol",
+            "index": 2,
+            "kind": "named_key",
+            "named_key": "symbol",
+            "ty": "String"
+          },
+          {
+            "name": "name",
+            "index": 3,
+            "kind": "named_key",
+            "named_key": "name",
+            "ty": "String"
+          },
+          {
+            "name": "total_supply",
+            "index": 4,
+            "kind": "named_key",
+            "named_key": "total_supply",
+            "ty": "U256"
+          },
+          {
+            "name": "balances",
+            "index": 5,
+            "kind": "dictionary",
+            "dictionary": "balances",
+            "key": "Key",
+            "key_encoding": "base64",
+            "value": "U256"
+          },
+          {
+            "name": "allowances",
+            "index": 6,
+            "kind": "dictionary",
+            "dictionary": "allowances",
+            "key": {
+              "Tuple2": [
+                "Key",
+                "Key"
+              ]
+            },
+            "key_encoding": "hex_hash",
+            "value": "U256"
+          }
+        ]
+      },
+      {
+        "name": "ownable",
+        "index": 2,
+        "kind": "module",
+        "fields": [
+          {
+            "name": "owner",
+            "index": 1,
+            "kind": "value",
+            "ty": {
+              "Option": "Key"
+            }
+          }
+        ]
+      }
+    ]
   }
 }

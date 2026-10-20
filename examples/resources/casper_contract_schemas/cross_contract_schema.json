@@ -64,5 +64,16 @@
         "optional": false
       }
     ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "math_engine",
+        "index": 1,
+        "kind": "value",
+        "ty": "Key"
+      }
+    ]
   }
 }

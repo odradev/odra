@@ -15,7 +15,7 @@ use std::io::Write;
 use base64::prelude::{Engine, BASE64_STANDARD};
 use blake2::digest::VariableOutput;
 use blake2::Blake2bVar;
-use casper_contract_schema::{NamedCLType, Type};
+use casper_contract_schema::{CustomType, KeyEncoding, NamedCLType, StorageKind, Type};
 use casper_types::bytesrepr::{FromBytes, ToBytes};
 use casper_types::CLTyped;
 use num_traits::{Num, One};
@@ -23,129 +23,7 @@ use odra_core::prelude::*;
 use odra_core::{utils, ContractRef};
 use serde::Serialize;
 
-use crate::NamedCLTyped;
-
-/// A single field of a module together with its index in the module.
-#[derive(Serialize, Clone, Debug, PartialEq, Eq)]
-pub struct StorageField {
-    /// The field name as written in the module struct.
-    pub name: String,
-    /// The index of the field in the module (1-based, `env` excluded).
-    pub index: u8,
-    /// What is stored under the field.
-    #[serde(flatten)]
-    pub kind: StorageKind
-}
-
-impl StorageField {
-    /// Creates a new field description.
-    pub fn new(name: &str, index: u8, kind: StorageKind) -> Self {
-        Self {
-            name: name.to_string(),
-            index,
-            kind
-        }
-    }
-}
-
-/// How a dictionary item key is derived from the key value.
-#[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum KeyEncoding {
-    /// The key is a string used as-is.
-    Utf8,
-    /// The serialized key is base64-encoded.
-    Base64,
-    /// The serialized key is hashed with `blake2b` and hex-encoded.
-    HexHash
-}
-
-/// Describes what is stored under a module element.
-#[derive(Serialize, Clone, Debug, PartialEq, Eq)]
-#[serde(tag = "kind", rename_all = "snake_case")]
-pub enum StorageKind {
-    /// A single value (`Var<T>`, `External<T>`).
-    Value {
-        /// The type of the value.
-        ty: Type
-    },
-    /// A key-value store (`Mapping<K, V>`).
-    Mapping {
-        /// The type of the key.
-        key: Type,
-        /// What is stored under a key - a value or a whole module.
-        value: Box<StorageKind>
-    },
-    /// An indexed collection (`List<T>`).
-    List {
-        /// The type of the items.
-        item: Type
-    },
-    /// A counter (`Sequence<T>`).
-    Sequence {
-        /// The type of the counter.
-        ty: Type
-    },
-    /// A composition of other modules (`SubModule<M>` or the contract itself).
-    Module {
-        /// The fields of the module.
-        fields: Vec<StorageField>
-    },
-    /// A value stored under a Casper named key.
-    NamedKey {
-        /// The name of the named key.
-        name: String,
-        /// The type of the value.
-        ty: Type
-    },
-    /// A value stored in a Casper dictionary.
-    Dictionary {
-        /// The name of the dictionary.
-        name: String,
-        /// The type of the key.
-        key: Type,
-        /// How the dictionary item key is derived from the key value.
-        key_encoding: KeyEncoding,
-        /// The type of the value.
-        value: Type
-    }
-}
-
-impl StorageKind {
-    /// A single value of type `T`.
-    pub fn value<T: NamedCLTyped>() -> Self {
-        Self::Value { ty: Type(T::ty()) }
-    }
-
-    /// A value of type `T` stored under a named key.
-    pub fn named_key<T: NamedCLTyped>(name: &str) -> Self {
-        Self::NamedKey {
-            name: name.to_string(),
-            ty: Type(T::ty())
-        }
-    }
-
-    /// A value of type `V` stored in a dictionary under a key of type `K`.
-    pub fn dictionary<K: NamedCLTyped, V: NamedCLTyped>(
-        name: &str,
-        key_encoding: KeyEncoding
-    ) -> Self {
-        Self::Dictionary {
-            name: name.to_string(),
-            key: Type(K::ty()),
-            key_encoding,
-            value: Type(V::ty())
-        }
-    }
-
-    /// The fields of a module, empty for any other kind.
-    pub fn fields(&self) -> &[StorageField] {
-        match self {
-            Self::Module { fields } => fields,
-            _ => &[]
-        }
-    }
-}
+use crate::{NamedCLTyped, SchemaCustomTypes};
 
 /// Describes the storage layout of a module element.
 ///
@@ -154,49 +32,86 @@ impl StorageKind {
 pub trait SchemaStorageLayout {
     /// Returns the layout of the element.
     fn storage_kind() -> StorageKind;
+
+    /// Returns the custom types of the values stored in the element, nested modules included.
+    ///
+    /// They go to the `types` section of the contract schema, so a type that is only stored and
+    /// never passed to or returned from an entry point is described too.
+    fn custom_types() -> Vec<Option<CustomType>>;
 }
 
-impl<T: NamedCLTyped> SchemaStorageLayout for T {
+impl<T: NamedCLTyped + SchemaCustomTypes> SchemaStorageLayout for T {
     fn storage_kind() -> StorageKind {
-        StorageKind::value::<T>()
+        StorageKind::value(T::ty())
+    }
+
+    fn custom_types() -> Vec<Option<CustomType>> {
+        T::schema_types()
     }
 }
 
-impl<T: NamedCLTyped> SchemaStorageLayout for Var<T> {
+impl<T: NamedCLTyped + SchemaCustomTypes> SchemaStorageLayout for Var<T> {
     fn storage_kind() -> StorageKind {
-        StorageKind::value::<T>()
+        StorageKind::value(T::ty())
+    }
+
+    fn custom_types() -> Vec<Option<CustomType>> {
+        T::schema_types()
     }
 }
 
-impl<K: NamedCLTyped + ToBytes, V: SchemaStorageLayout> SchemaStorageLayout for Mapping<K, V> {
+impl<K, V> SchemaStorageLayout for Mapping<K, V>
+where
+    K: NamedCLTyped + SchemaCustomTypes + ToBytes,
+    V: SchemaStorageLayout
+{
     fn storage_kind() -> StorageKind {
         StorageKind::Mapping {
             key: Type(K::ty()),
             value: Box::new(V::storage_kind())
         }
     }
+
+    fn custom_types() -> Vec<Option<CustomType>> {
+        K::schema_types()
+            .into_iter()
+            .chain(V::custom_types())
+            .collect()
+    }
 }
 
-impl<T: NamedCLTyped> SchemaStorageLayout for List<T> {
+impl<T: NamedCLTyped + SchemaCustomTypes> SchemaStorageLayout for List<T> {
     fn storage_kind() -> StorageKind {
         StorageKind::List {
             item: Type(T::ty())
         }
     }
+
+    fn custom_types() -> Vec<Option<CustomType>> {
+        T::schema_types()
+    }
 }
 
 impl<T> SchemaStorageLayout for Sequence<T>
 where
-    T: NamedCLTyped + Num + One + ToBytes + FromBytes + CLTyped
+    T: NamedCLTyped + SchemaCustomTypes + Num + One + ToBytes + FromBytes + CLTyped
 {
     fn storage_kind() -> StorageKind {
         StorageKind::Sequence { ty: Type(T::ty()) }
+    }
+
+    fn custom_types() -> Vec<Option<CustomType>> {
+        T::schema_types()
     }
 }
 
 impl<T: ContractRef> SchemaStorageLayout for External<T> {
     fn storage_kind() -> StorageKind {
-        StorageKind::value::<Address>()
+        StorageKind::value(Address::ty())
+    }
+
+    fn custom_types() -> Vec<Option<CustomType>> {
+        Vec::new()
     }
 }
 
@@ -204,6 +119,29 @@ impl<M: SchemaStorageLayout> SchemaStorageLayout for SubModule<M> {
     fn storage_kind() -> StorageKind {
         M::storage_kind()
     }
+
+    fn custom_types() -> Vec<Option<CustomType>> {
+        M::custom_types()
+    }
+}
+
+/// The layout of a value of type `T` stored under the named key `name`.
+///
+/// Meant for the `layout` argument of `#[odra::module]`:
+/// `#[odra::module(layout = odra::schema::named_key::<u8>("decimals"))]`.
+pub fn named_key<T: NamedCLTyped>(name: &str) -> StorageKind {
+    StorageKind::named_key(name, T::ty())
+}
+
+/// The layout of a value of type `V` stored in the dictionary `name` under a key of type `K`.
+///
+/// Meant for the `layout` argument of `#[odra::module]`:
+/// `#[odra::module(layout = odra::schema::dictionary::<String, U256>("balances", KeyEncoding::Utf8))]`.
+pub fn dictionary<K: NamedCLTyped, V: NamedCLTyped>(
+    name: &str,
+    key_encoding: KeyEncoding
+) -> StorageKind {
+    StorageKind::dictionary(name, K::ty(), key_encoding, V::ty())
 }
 
 /// Where a value is stored in the contract storage.
@@ -529,12 +467,13 @@ fn blake2b(bytes: &[u8]) -> [u8; 32] {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use casper_contract_schema::StorageField;
     use casper_types::U256;
 
     fn token() -> StorageKind {
         StorageKind::Module {
             fields: vec![
-                StorageField::new("name", 1, StorageKind::value::<String>()),
+                StorageField::new("name", 1, StorageKind::value(String::ty())),
                 StorageField::new(
                     "balances",
                     2,
@@ -559,11 +498,11 @@ mod tests {
             fields: vec![
                 StorageField::new("lenders", 1, token()),
                 StorageField::new("borrowers", 2, token()),
-                StorageField::new("decimals", 3, StorageKind::named_key::<u8>("decimals")),
+                StorageField::new("decimals", 3, named_key::<u8>("decimals")),
                 StorageField::new(
                     "allowances",
                     4,
-                    StorageKind::dictionary::<String, U256>("allowances", KeyEncoding::Utf8)
+                    dictionary::<String, U256>("allowances", KeyEncoding::Utf8)
                 ),
             ]
         }

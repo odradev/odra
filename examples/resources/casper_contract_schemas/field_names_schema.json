@@ -246,5 +246,32 @@
         "optional": false
       }
     ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "env",
+        "index": 1,
+        "kind": "value",
+        "ty": "U32"
+      },
+      {
+        "name": "result",
+        "index": 2,
+        "kind": "value",
+        "ty": "NamedFields"
+      },
+      {
+        "name": "bytes",
+        "index": 3,
+        "kind": "mapping",
+        "key": "U32",
+        "value": {
+          "kind": "value",
+          "ty": "NamedVariants"
+        }
+      }
+    ]
   }
 }

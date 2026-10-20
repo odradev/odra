@@ -113,5 +113,20 @@
         "optional": false
       }
     ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "schedules",
+        "index": 1,
+        "kind": "mapping",
+        "key": "Key",
+        "value": {
+          "kind": "list",
+          "item": "U32"
+        }
+      }
+    ]
   }
 }

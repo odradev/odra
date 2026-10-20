@@ -157,5 +157,36 @@
         "optional": false
       }
     ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "barks",
+        "index": 1,
+        "kind": "value",
+        "ty": "Bool"
+      },
+      {
+        "name": "weight",
+        "index": 2,
+        "kind": "value",
+        "ty": "U32"
+      },
+      {
+        "name": "name",
+        "index": 3,
+        "kind": "value",
+        "ty": "String"
+      },
+      {
+        "name": "walks",
+        "index": 4,
+        "kind": "value",
+        "ty": {
+          "List": "U32"
+        }
+      }
+    ]
   }
 }

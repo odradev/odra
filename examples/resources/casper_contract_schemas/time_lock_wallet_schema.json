@@ -177,5 +177,36 @@
         "optional": false
       }
     ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "balances",
+        "index": 1,
+        "kind": "mapping",
+        "key": "Key",
+        "value": {
+          "kind": "value",
+          "ty": "U512"
+        }
+      },
+      {
+        "name": "lock_expiration_map",
+        "index": 2,
+        "kind": "mapping",
+        "key": "Key",
+        "value": {
+          "kind": "value",
+          "ty": "U64"
+        }
+      },
+      {
+        "name": "lock_duration",
+        "index": 3,
+        "kind": "value",
+        "ty": "U64"
+      }
+    ]
   }
 }

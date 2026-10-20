@@ -82,5 +82,26 @@
         "optional": false
       }
     ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "balances",
+        "index": 1,
+        "kind": "mapping",
+        "key": "Key",
+        "value": {
+          "kind": "value",
+          "ty": "U256"
+        }
+      },
+      {
+        "name": "holders",
+        "index": 2,
+        "kind": "list",
+        "item": "Key"
+      }
+    ]
   }
 }

@@ -135,5 +135,16 @@
         "optional": false
       }
     ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "validator",
+        "index": 1,
+        "kind": "value",
+        "ty": "PublicKey"
+      }
+    ]
   }
 }

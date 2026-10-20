@@ -98,5 +98,26 @@
         "optional": false
       }
     ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "name",
+        "index": 1,
+        "kind": "value",
+        "ty": "String"
+      },
+      {
+        "name": "friends",
+        "index": 2,
+        "kind": "mapping",
+        "key": "String",
+        "value": {
+          "kind": "value",
+          "ty": "U32"
+        }
+      }
+    ]
   }
 }
