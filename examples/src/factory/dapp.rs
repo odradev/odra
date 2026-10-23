@@ -91,10 +91,6 @@ mod tests {
 
     #[test]
     fn factory_registers_spawned_contracts() {
-        // Factories work on CasperVM only; `cargo odra test -b casper` runs this test.
-        if std::env::var("ODRA_BACKEND").as_deref() != Ok("casper") {
-            return;
-        }
         let env = odra_test::env();
         let mut registry = OwnedDappRegistry::deploy(&env, NoArgs);
         let factory = DappCounterFactory::deploy(&env, NoArgs);
@@ -137,10 +133,6 @@ mod tests {
 
     #[test]
     fn factory_joins_the_dapp() {
-        // Factories work on CasperVM only; `cargo odra test -b casper` runs this test.
-        if std::env::var("ODRA_BACKEND").as_deref() != Ok("casper") {
-            return;
-        }
         let env = odra_test::env();
         let mut registry = OwnedDappRegistry::deploy(&env, NoArgs);
         let mut factory = DappCounterFactory::deploy(&env, NoArgs);

@@ -18,8 +18,8 @@ Changelog for `odra`.
   answers `get_dapp_registry`, so the registry can add it like any other contract. The factory emits
   `DappRegistryChanged`, as `DappContractBase` does. The factory shares its wasm with its children, so a child module
   with its own `get_dapp_registry` keeps answering with its registry; on a factory without a registry that call runs
-  the child's function and fails with its error. `odra::factory_dapp` holds the storage key and entry point names;
-  `ExecutionError::DappRegistryNotSet` and `DappRegistryNotAContract` are new.
+  the child's function and fails with its error. Works on OdraVM like on Casper. `odra::factory_dapp` holds the
+  storage key and entry point names; `ExecutionError::DappRegistryNotSet` and `DappRegistryNotAContract` are new.
 - `#[odra(offchain)]` on a `&self` function of a module: the function is not deployed and runs on the
   host against the contract's state, on OdraVM, CasperVM and livenet alike, for reads too expensive or
   too big for an entry point (#594).
@@ -76,8 +76,8 @@ Changelog for `odra`.
 - `cargo odra schema`, `build` and `test -b casper` are faster in projects that depend on `odra-cli`,
   which lost its build script (about 4 s less per contract).
 - Custom backends and hand-written callers only: `EntryPointsCaller` no longer holds a `HostEnv` and
-  `call` takes the `ContractEnv`; `ContractContext` gained `call_stack`, `debug`, `new_child_contract`
-  and `upgrade_child_contract`, `HostContext` gained `take_snapshot`, `restore_snapshot`,
+  `call` takes the `ContractEnv`; `ContractContext` gained `call_stack`, `debug`, `new_child_contract`,
+  `upgrade_child_contract` and `caller_holds_factory_access`, `HostContext` gained `take_snapshot`, `restore_snapshot`,
   `thread_env_factory`, `has_contract` and `take_child_contracts`, all with defaults; `EntryPoint` has
   `is_offchain` (use its constructors); `HasEvents` is a supertrait of `OdraContract`; `OdraVm::new()`
   replaces `Default`.

@@ -5,7 +5,7 @@
 
 use crate::entry_point_callback::EntryPointsCallerFn;
 use crate::prelude::*;
-use crate::{utils, CallDef, ContractEnv, ExecutionEnv, VmError};
+use crate::{factory_dapp, utils, CallDef, ContractEnv, ExecutionEnv, VmError};
 use casper_event_standard::EventInstance;
 use casper_types::bytesrepr::{Bytes, FromBytes, ToBytes};
 use casper_types::RuntimeArgs;
@@ -63,6 +63,44 @@ pub fn batch_upgrade_child_contract<E: ToBytes + EventInstance>(
             env.emit_event(event(name, address));
         }
     }
+    utils::try_serialize(&())
+}
+
+/// Runs the `get_dapp_registry` entry point: returns the dapp registry the factory was pointed to
+/// with `set_factory_dapp_registry`. Without one, it runs the `get_dapp_registry` of the child
+/// module (`child`, if the module has the function) against the factory's storage, as the wasm a
+/// factory shares with its children does, and fails with [ExecutionError::DappRegistryNotSet]
+/// otherwise.
+pub fn get_dapp_registry(
+    env: &ContractEnv,
+    call_def: &CallDef,
+    child: Option<EntryPointsCallerFn>
+) -> OdraResult<Bytes> {
+    match factory_dapp::dapp_registry(env) {
+        Some(registry) => utils::try_serialize(&registry),
+        None => match child {
+            Some(child) => child().call(env.clone(), call_def.clone()),
+            None => Err(OdraError::ExecutionError(
+                ExecutionError::DappRegistryNotSet
+            ))
+        }
+    }
+}
+
+/// Runs the `set_factory_dapp_registry` entry point: points the factory to the registry named by
+/// the `registry` argument and emits the event `event` builds from the previous and the new
+/// registry. Only the holder of the factory access may call it, see
+/// [ContractContext::caller_holds_factory_access](crate::ContractContext::caller_holds_factory_access).
+pub fn set_dapp_registry<E: ToBytes + EventInstance>(
+    env: &ContractEnv,
+    event: fn(Option<Address>, Address) -> E
+) -> OdraResult<Bytes> {
+    if !env.caller_holds_factory_access()? {
+        return Err(OdraError::VmError(VmError::InvalidContext));
+    }
+    let registry: Address = execution_env(env).get_named_arg(factory_dapp::REGISTRY_ARG);
+    let previous_registry = factory_dapp::set_dapp_registry(env, registry);
+    env.emit_event(event(previous_registry, registry));
     utils::try_serialize(&())
 }
 

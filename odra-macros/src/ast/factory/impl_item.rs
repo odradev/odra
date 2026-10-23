@@ -453,6 +453,14 @@ mod test {
                             odra::entry_point_callback::EntryPoint::new(
                                 odra::prelude::string::String::from("get_dapp_registry"),
                                 odra::prelude::vec![]
+                            ),
+                            odra::entry_point_callback::EntryPoint::new(
+                                odra::prelude::string::String::from("set_factory_dapp_registry"),
+                                odra::prelude::vec![
+                                    odra::entry_point_callback::Argument::new::<odra::prelude::Address>(
+                                        odra::prelude::string::String::from("registry")
+                                    )
+                                ]
                             )
                         ];
                         odra::entry_point_callback::EntryPointsCaller::new(entry_points, |__odra_contract_env, __odra_call_def| {
@@ -484,12 +492,18 @@ mod test {
                                         contract_address
                                     }
                                 ),
-                                odra::factory_dapp::GET_DAPP_REGISTRY => match odra::factory_dapp::dapp_registry(&__odra_contract_env) {
-                                    Some(registry) => odra::casper_types::bytesrepr::ToBytes::to_bytes(&registry)
-                                        .map(Into::into)
-                                        .map_err(|err| OdraError::ExecutionError(err.into())),
-                                    None => Err(OdraError::ExecutionError(ExecutionError::DappRegistryNotSet))
-                                },
+                                odra::factory_dapp::GET_DAPP_REGISTRY => odra::host::factory::get_dapp_registry(
+                                    &__odra_contract_env,
+                                    &__odra_call_def,
+                                    None
+                                ),
+                                odra::factory_dapp::SET_DAPP_REGISTRY => odra::host::factory::set_dapp_registry(
+                                    &__odra_contract_env,
+                                    |previous_registry, new_registry| __erc20_factory_dapp::DappRegistryChanged {
+                                        previous_registry,
+                                        new_registry
+                                    }
+                                ),
                                 name => Err(OdraError::VmError(
                                     odra::VmError::NoSuchMethod(odra::prelude::String::from(name))
                                 ))

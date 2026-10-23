@@ -67,13 +67,17 @@ impl TryFrom<&'_ ModuleImplIR> for FactoryContractEpcFn {
                 #ty_entry_point_arg::new::<#ty_batch_upgrade_args<odra::host::NoArgs>>(#args_name)
             ]
         )));
-        let get_dapp_registry = module.factory_get_dapp_registry_fn();
-        entry_points.push(utils::expr::new_entry_point(
-            get_dapp_registry.name_str(),
-            vec![],
-            false,
-            false
-        ));
+        for fun in [
+            module.factory_get_dapp_registry_fn(),
+            module.factory_set_dapp_registry_fn()
+        ] {
+            entry_points.push(utils::expr::new_entry_point(
+                fun.name_str(),
+                fun.raw_typed_args(),
+                fun.is_payable(),
+                false
+            ));
+        }
         Ok(Self {
             sig: module.try_into()?,
             entry_points_expr: utils::expr::vec(entry_points),
@@ -149,21 +153,33 @@ impl FactoryEntrypointCallerExpr {
             }
         })
         .collect::<proc_macro2::TokenStream>();
-        // The getter reads the factory's storage, on OdraVM and livenet alike; see `odra::factory_dapp`.
-        let dapp_registry_branch = quote::quote! {
-            odra::factory_dapp::GET_DAPP_REGISTRY => match odra::factory_dapp::dapp_registry(&#contract_env_ident) {
-                Some(registry) => odra::casper_types::bytesrepr::ToBytes::to_bytes(&registry)
-                    .map(Into::into)
-                    .map_err(|err| OdraError::ExecutionError(err.into())),
-                None => Err(OdraError::ExecutionError(ExecutionError::DappRegistryNotSet))
-            },
+        // The dapp registry entry points, see `odra::factory_dapp`. Without a registry the getter
+        // runs the child's `get_dapp_registry`, if the module has one, as the shared wasm does.
+        let child_get_dapp_registry = match module.child_get_dapp_registry_fn() {
+            Some(_) => quote::quote!(Some(<#child_host_ref as #ty_epc_provider>::entry_points_caller)),
+            None => quote::quote!(None)
+        };
+        let dapp_event = utils::ty::factory_dapp_registry_changed(&module.module_ident()?);
+        let dapp_registry_branches = quote::quote! {
+            odra::factory_dapp::GET_DAPP_REGISTRY => odra::host::factory::get_dapp_registry(
+                &#contract_env_ident,
+                &#call_def_ident,
+                #child_get_dapp_registry
+            ),
+            odra::factory_dapp::SET_DAPP_REGISTRY => odra::host::factory::set_dapp_registry(
+                &#contract_env_ident,
+                |previous_registry, new_registry| #dapp_event {
+                    previous_registry,
+                    new_registry
+                }
+            ),
         };
 
         Ok(parse_quote!(
             #ty_caller::new(#entry_points_ident, |#contract_env_ident, #call_def_ident| {
                 match #call_def_ident.entry_point() {
                     #branches
-                    #dapp_registry_branch
+                    #dapp_registry_branches
                     name => Err(OdraError::VmError(
                         odra::VmError::NoSuchMethod(odra::prelude::String::from(name))
                     ))
