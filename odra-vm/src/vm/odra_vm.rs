@@ -174,6 +174,14 @@ impl OdraVm {
         self.deployers.borrow().get(address).copied()
     }
 
+    /// Returns whether the caller of the factory contract being executed holds its factory
+    /// access, see
+    /// [ContractContext::caller_holds_factory_access](odra_core::ContractContext::caller_holds_factory_access).
+    /// As on Casper, where the installer of the factory holds its factory group URef.
+    pub fn caller_holds_factory_access(&self) -> bool {
+        self.deployer(&self.self_address()) == Some(self.caller())
+    }
+
     /// Deploys a child of the factory contract being executed, see
     /// [ContractContext::new_child_contract](odra_core::ContractContext::new_child_contract).
     pub fn new_child_contract(
@@ -212,9 +220,7 @@ impl OdraVm {
         upgrade_args: RuntimeArgs,
         entry_points_caller: EntryPointsCallerFn
     ) -> OdraResult<Option<Address>> {
-        // As on Casper, where the installer of the factory holds its factory group URef.
-        let factory = self.self_address();
-        if self.deployer(&factory) != Some(self.caller()) {
+        if !self.caller_holds_factory_access() {
             return Err(OdraError::VmError(VmError::InvalidContext));
         }
         let Some(address) = self
