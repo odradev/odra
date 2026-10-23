@@ -1,6 +1,11 @@
 //! A registry grouping the contracts of a dapp.
 use super::errors::Error;
 use super::events::{DappContractAdded, DappContractRemoved, DappMetadataChanged};
+use super::storage::{
+    DappContractIndicesStorage, DappContractsCountStorage, DappContractsStorage,
+    DappDescriptionStorage, DappFactoriesStorage, DappIconUrlStorage, DappNameStorage,
+    DappWebsiteUrlStorage
+};
 use super::{DappContractContractRef, DappMetadata};
 use odra::prelude::*;
 use odra::ContractRef;
@@ -31,50 +36,68 @@ pub trait DappRegistry {
 
 /// Storage and logic of a dapp registry.
 ///
-/// The read-only functions are entry points. The functions that change state live outside the
-/// `#[odra::module]` impl block and do not check who calls them: compose this module with an access module
-/// and guard them, as [`OwnedDappRegistry`](super::OwnedDappRegistry) does.
+/// The data lives under named keys and dictionaries, see [`storage`](super::storage). The read-only
+/// functions are entry points. The functions that change state live outside the `#[odra::module]` impl
+/// block and do not check who calls them: compose this module with an access module and guard them, as
+/// [`OwnedDappRegistry`](super::OwnedDappRegistry) does, and call [`init`](Self::init) from the composing
+/// contract's `init`.
 #[odra::module(
     events = [DappMetadataChanged, DappContractAdded, DappContractRemoved],
     errors = Error
 )]
 pub struct DappRegistryBase {
-    metadata: Var<DappMetadata>,
-    contracts: List<Address>,
-    /// The index of a contract in `contracts` plus one; zero means not registered.
-    indices: Mapping<Address, u32>,
-    factories: Mapping<Address, bool>
+    name: SubModule<DappNameStorage>,
+    description: SubModule<DappDescriptionStorage>,
+    website_url: SubModule<DappWebsiteUrlStorage>,
+    icon_url: SubModule<DappIconUrlStorage>,
+    contracts_count: SubModule<DappContractsCountStorage>,
+    contracts: SubModule<DappContractsStorage>,
+    indices: SubModule<DappContractIndicesStorage>,
+    factories: SubModule<DappFactoriesStorage>
 }
 
 #[odra::module]
 impl DappRegistryBase {
+    /// Creates the dictionaries of the registry.
+    pub fn init(&mut self) {
+        self.contracts.init();
+        self.indices.init();
+        self.factories.init();
+    }
+
     /// Returns the dapp metadata, or empty metadata if it has not been set.
     pub fn get_dapp_metadata(&self) -> DappMetadata {
-        self.metadata.get_or_default()
+        DappMetadata {
+            name: self.name.get().unwrap_or_default(),
+            description: self.description.get().unwrap_or_default(),
+            website_url: self.website_url.get().unwrap_or_default(),
+            icon_url: self.icon_url.get().unwrap_or_default()
+        }
     }
 
     /// Returns the contracts of the dapp, the registry first.
     pub fn get_dapp_contracts(&self) -> Vec<Address> {
-        let mut result = vec![self.env().self_address()];
-        for address in self.contracts.iter() {
-            result.push(address);
+        let count = self.contracts_count();
+        let mut result = Vec::with_capacity(count as usize + 1);
+        result.push(self.env().self_address());
+        for index in 0..count {
+            result.push(self.contract_at(index));
         }
         result
     }
 
     /// Returns true if the contract belongs to the dapp. The registry itself always does.
     pub fn is_dapp_contract(&self, dapp_contract: &Address) -> bool {
-        *dapp_contract == self.env().self_address()
-            || self.indices.get_or_default(dapp_contract) > 0
+        *dapp_contract == self.env().self_address() || self.position(dapp_contract) > 0
     }
 
     /// Returns true if the contract is a registered factory.
     pub fn is_dapp_factory(&self, dapp_contract: &Address) -> bool {
-        self.factories.get_or_default(dapp_contract)
+        self.factories.get(dapp_contract).unwrap_or_default()
     }
 
     /// Returns the registry's own address, so the registry answers the
-    /// [`DappContract`](super::DappContract) interface like every other contract of the dapp.
+    /// [`DappContract`](crate::dapp::DappContract) interface like every other contract of the dapp.
     pub fn get_dapp_registry(&self) -> Address {
         self.env().self_address()
     }
@@ -84,13 +107,16 @@ impl DappRegistryBase {
     /// Sets the dapp metadata and emits [`DappMetadataChanged`].
     /// SECURITY: Do not expose this function publicly without proper access control.
     pub fn set_dapp_metadata(&mut self, metadata: DappMetadata) {
-        self.metadata.set(metadata.clone());
         let DappMetadata {
             name,
             description,
             website_url,
             icon_url
         } = metadata;
+        self.name.set(name.clone());
+        self.description.set(description.clone());
+        self.website_url.set(website_url.clone());
+        self.icon_url.set(icon_url.clone());
         self.env().emit_event(DappMetadataChanged {
             name,
             description,
@@ -114,8 +140,10 @@ impl DappRegistryBase {
         }
         // Write first and call out last: a re-entrant add of the same contract is rejected,
         // and a revert of the verification rolls the writes back.
-        self.contracts.push(*dapp_contract);
-        self.indices.set(dapp_contract, self.contracts.len());
+        let count = self.contracts_count();
+        self.contracts.set(&count.to_string(), *dapp_contract);
+        self.contracts_count.set(count + 1);
+        self.indices.set(dapp_contract, count + 1);
         self.factories.set(dapp_contract, is_factory);
 
         let reported = DappContractContractRef::new(self.env(), *dapp_contract).get_dapp_registry();
@@ -141,15 +169,18 @@ impl DappRegistryBase {
         if *dapp_contract == self.env().self_address() {
             self.env().revert(Error::CannotRemoveDappRegistry);
         }
-        let position = self.indices.get_or_default(dapp_contract);
+        let position = self.position(dapp_contract);
         if position == 0 {
             self.env().revert(Error::DappContractNotRegistered);
         }
-        let last = self.contracts.pop().unwrap_or_revert(&self.env());
+        let count = self.contracts_count();
+        let last = self.contract_at(count - 1);
         if last != *dapp_contract {
-            self.contracts.replace(position - 1, last);
+            self.contracts.set(&(position - 1).to_string(), last);
             self.indices.set(&last, position);
         }
+        // The entry of the last contract stays behind; the count bounds the list.
+        self.contracts_count.set(count - 1);
         self.indices.set(dapp_contract, 0);
         self.factories.set(dapp_contract, false);
 
@@ -164,6 +195,21 @@ impl DappRegistryBase {
         if !self.is_dapp_factory(address) {
             self.env().revert(Error::CallerNotDappFactory);
         }
+    }
+
+    fn contracts_count(&self) -> u32 {
+        self.contracts_count.get().unwrap_or_default()
+    }
+
+    fn contract_at(&self, index: u32) -> Address {
+        self.contracts
+            .get(&index.to_string())
+            .unwrap_or_revert(&self.env())
+    }
+
+    /// The index of the contract in the list plus one; zero means not registered.
+    fn position(&self, dapp_contract: &Address) -> u32 {
+        self.indices.get(dapp_contract).unwrap_or_default()
     }
 }
 

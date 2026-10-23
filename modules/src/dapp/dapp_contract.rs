@@ -1,6 +1,7 @@
 //! A contract that belongs to a dapp.
 use super::errors::Error;
 use super::events::DappRegistryChanged;
+use super::storage::DappRegistryStorage;
 use odra::prelude::*;
 
 /// The interface of a contract that belongs to a dapp.
@@ -16,13 +17,14 @@ pub trait DappContract {
     fn get_dapp_registry(&self) -> Address;
 }
 
-/// Stores the address of the dapp registry a contract belongs to.
+/// Stores the address of the dapp registry a contract belongs to, under the `dapp_registry` named
+/// key (see [`storage`](super::storage)).
 ///
 /// The module does not check who calls it. Call [`DappContractBase::set_dapp_registry`] from the
 /// composing contract's `init`, and guard any later change with an access module.
 #[odra::module(events = [DappRegistryChanged], errors = Error)]
 pub struct DappContractBase {
-    registry: Var<Address>
+    registry: SubModule<DappRegistryStorage>
 }
 
 #[odra::module]

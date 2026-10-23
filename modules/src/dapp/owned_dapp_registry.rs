@@ -20,6 +20,7 @@ impl OwnedDappRegistry {
     pub fn init(&mut self) {
         let owner = self.env().caller();
         self.ownable.init(owner);
+        self.dapp.init();
     }
 
     /// Sets the dapp metadata. Only the owner may call it.
@@ -317,6 +318,54 @@ mod tests {
             registry.try_set_dapp_metadata(DappMetadata::default()),
             Err(AccessError::CallerNotTheOwner.into())
         );
+    }
+
+    #[test]
+    fn data_is_stored_under_named_keys() {
+        use crate::dapp::storage::{
+            DAPP_CONTRACTS_COUNT_KEY, DAPP_CONTRACTS_KEY, DAPP_NAME_KEY, DAPP_REGISTRY_KEY
+        };
+        use odra::casper_types::bytesrepr::{FromBytes, ToBytes};
+        use odra::schema::{resolve_storage, SchemaStorageLayout, StorageLocation};
+
+        let (env, mut registry) = setup();
+        let address = registry.address();
+        registry.set_dapp_metadata(metadata());
+        let member = member(&env, address).address();
+        registry.add_dapp_contract(&member, true);
+
+        fn named<T: FromBytes>(env: &HostEnv, address: &Address, name: &str) -> T {
+            let bytes = env
+                .get_named_value(address, name)
+                .unwrap_or_else(|| panic!("{name} should be stored"));
+            T::from_bytes(&bytes).unwrap().0
+        }
+        assert_eq!(named::<String>(&env, &address, DAPP_NAME_KEY), "Dapp");
+        assert_eq!(named::<u32>(&env, &address, DAPP_CONTRACTS_COUNT_KEY), 1);
+        assert_eq!(named::<Address>(&env, &member, DAPP_REGISTRY_KEY), address);
+
+        // The contracts by index, under a dictionary with plain string keys.
+        let bytes = env
+            .get_dictionary_value(&address, DAPP_CONTRACTS_KEY, b"0")
+            .expect("the first contract should be stored");
+        assert_eq!(Address::from_bytes(&bytes).unwrap().0, member);
+
+        // The dictionaries keyed by address, found through the storage layout.
+        let layout = OwnedDappRegistry::storage_kind();
+        for (path, expected) in [
+            ("dapp.indices", 1u32.to_bytes()),
+            ("dapp.factories", true.to_bytes())
+        ] {
+            let key = member.to_bytes().unwrap();
+            let query = resolve_storage(&layout, path, &[key]).unwrap();
+            let StorageLocation::Dictionary { name, key } = &query.location else {
+                panic!("{path} should be a dictionary")
+            };
+            let bytes = env
+                .get_dictionary_value(&address, name, key.as_bytes())
+                .unwrap_or_else(|| panic!("{path} should be stored"));
+            assert_eq!(bytes.to_vec(), expected.unwrap());
+        }
     }
 
     #[test]
