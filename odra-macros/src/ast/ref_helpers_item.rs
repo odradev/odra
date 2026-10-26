@@ -6,7 +6,10 @@ use syn::spanned::Spanned;
 /// `XxxHostRef`.
 ///
 /// The impl block is not emitted for `Xxx` itself; its items are copied verbatim, so a helper
-/// can call any function both refs have - the entry points.
+/// can call any function both refs have - the entry points and `contract_address()`. Each impl is
+/// emitted in an anonymous const block that brings the trait providing `contract_address()` into
+/// scope (`ContractAddress` for the contract ref, `HostRef` for the host ref), so the helper body
+/// can call it without the user importing anything and without changing what is in scope outside.
 pub struct RefHelpersItem {
     contract_ref_impl: syn::ItemImpl,
     host_ref_impl: syn::ItemImpl
@@ -61,11 +64,10 @@ impl TryFrom<&'_ TokenStream> for RefHelpersItem {
             self_ty: Box::new(with_suffix("ContractRef")),
             ..item_impl.clone()
         };
-        let mut host_ref_impl = syn::ItemImpl {
+        let host_ref_impl = syn::ItemImpl {
             self_ty: Box::new(with_suffix("HostRef")),
             ..item_impl
         };
-        host_ref_impl.attrs.push(utils::attr::not_wasm32());
         Ok(Self {
             contract_ref_impl,
             host_ref_impl
@@ -75,8 +77,21 @@ impl TryFrom<&'_ TokenStream> for RefHelpersItem {
 
 impl quote::ToTokens for RefHelpersItem {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        self.contract_ref_impl.to_tokens(tokens);
-        self.host_ref_impl.to_tokens(tokens);
+        let contract_ref_impl = &self.contract_ref_impl;
+        let host_ref_impl = &self.host_ref_impl;
+        let not_wasm32 = utils::attr::not_wasm32();
+        tokens.extend(quote::quote! {
+            const _: () = {
+                use odra::ContractAddress as _;
+                #contract_ref_impl
+            };
+
+            #not_wasm32
+            const _: () = {
+                use odra::host::HostRef as _;
+                #host_ref_impl
+            };
+        });
     }
 }
 
@@ -98,22 +113,28 @@ mod test {
         };
         let item = RefHelpersItem::try_from(&item).unwrap();
         let expected = quote::quote! {
-            /// Helpers.
-            impl crate::token::TokenContractRef {
-                /// Balance of the owner.
-                pub fn owner_balance(&self) -> U256 {
-                    self.balance_of(self.owner())
+            const _: () = {
+                use odra::ContractAddress as _;
+                /// Helpers.
+                impl crate::token::TokenContractRef {
+                    /// Balance of the owner.
+                    pub fn owner_balance(&self) -> U256 {
+                        self.balance_of(self.owner())
+                    }
                 }
-            }
+            };
 
-            /// Helpers.
             #[cfg(not(target_arch = "wasm32"))]
-            impl crate::token::TokenHostRef {
-                /// Balance of the owner.
-                pub fn owner_balance(&self) -> U256 {
-                    self.balance_of(self.owner())
+            const _: () = {
+                use odra::host::HostRef as _;
+                /// Helpers.
+                impl crate::token::TokenHostRef {
+                    /// Balance of the owner.
+                    pub fn owner_balance(&self) -> U256 {
+                        self.balance_of(self.owner())
+                    }
                 }
-            }
+            };
         };
         test_utils::assert_eq(item, expected);
     }

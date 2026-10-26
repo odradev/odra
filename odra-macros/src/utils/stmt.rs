@@ -38,9 +38,11 @@ pub fn install_or_upgrade(
     schemas: syn::Expr,
     args: syn::Expr
 ) -> syn::Stmt {
+    let contract_schema = super::expr::contract_schema();
     parse_quote!(odra::odra_casper_wasm_env::host_functions::install_or_upgrade(
         #entry_points,
         #schemas,
+        #contract_schema,
         #args
     );)
 }

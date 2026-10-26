@@ -4,8 +4,8 @@ use odra::contract_def::HasIdent;
 use odra::host::HostEnv;
 use odra::schema::casper_contract_schema::Type;
 use odra::schema::{
-    ReadableField, SchemaCustomTypes, SchemaEvents, SchemaStorageLayout, StorageField, StorageKind,
-    StorageLayoutFile, StorageLocation, STORAGE_LAYOUT_VERSION
+    readable_fields, ReadableField, SchemaCustomTypes, SchemaEvents, SchemaStorageLayout,
+    StorageField, StorageKind, StorageLayoutFile, StorageLocation, STORAGE_LAYOUT_VERSION
 };
 use odra::OdraContract;
 use odra_schema::codec::{resolve_storage_from_text, CustomTypeSet};
@@ -244,7 +244,7 @@ impl CmdOutput for StorageReport {
                     "Read with `storage {} <path> [-k <key>]...`:",
                     report.contract
                 ));
-                for field in report.layout.readable_fields() {
+                for field in readable_fields(&report.layout) {
                     log(format!("  {}", format_readable_field(&field)));
                 }
             }
@@ -443,7 +443,7 @@ mod tests {
 
         let layout = StorageKind::Module {
             fields: vec![
-                StorageField::new("decimals", 1, StorageKind::value::<u8>()),
+                StorageField::new("decimals", 1, StorageKind::value(NamedCLType::U8)),
                 StorageField::new(
                     "allowances",
                     2,
@@ -466,8 +466,7 @@ mod tests {
                 ),
             ]
         };
-        let lines: Vec<_> = layout
-            .readable_fields()
+        let lines: Vec<_> = readable_fields(&layout)
             .iter()
             .map(format_readable_field)
             .collect();

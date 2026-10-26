@@ -55,7 +55,7 @@ odra-wasm-client = { path = "odra-wasm-client", version = "2.10.0" }
 
 casper-client = { version = "=5.0.0", default-features = false }
 casper-contract = { version = "5.1", default-features = false }
-casper-contract-schema = { version = "0.6.0" }
+casper-contract-schema = { version = "0.9.0" }
 casper-engine-test-support = "8.1"
 casper-event-standard = "0.7"
 casper-execution-engine = "8.1"
@@ -106,6 +106,7 @@ syn_derive = "0.2"
 thiserror = "1.0"
 tokio = "1.48"
 toml = "0.9"
+trybuild = "1.0"
 wasm-bindgen = "=0.2.100"
 wasm-bindgen-futures = "0.4"
 web-sys = { version = "0.3"}

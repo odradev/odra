@@ -37,6 +37,14 @@ pub trait Scenario: Any {
     fn args(&self) -> Vec<CommandArg> {
         vec![]
     }
+    /// Whether the calls the scenario makes capture events, so that `last_call()` returns them.
+    ///
+    /// Off by default: capturing reads the new events of every deployed contract after every
+    /// call, which on livenet costs node requests per contract per call. Return `true` from a
+    /// scenario that checks the events of its calls.
+    fn captures_events(&self) -> bool {
+        false
+    }
     fn run(
         &self,
         env: &HostEnv,
@@ -119,7 +127,7 @@ impl OdraCommand for ScenarioCmd {
         container: &DeployedContractsContainer
     ) -> Result<Self::Output> {
         let args = ScenarioArgs::new(args);
-        env.set_captures_events(false);
+        env.set_captures_events(self.scenario.captures_events());
         self.scenario.run(env, container, args)?;
         Ok(ScenarioOutput { success: true })
     }
@@ -220,6 +228,9 @@ pub trait ScenarioMetadata {
 mod tests {
     use super::*;
     use crate::test_utils;
+    use core::cell::Cell;
+    use odra::host::{Deployer, HostRef, NoArgs};
+    use odra::prelude::*;
     use odra::schema::casper_contract_schema::NamedCLType;
 
     struct TestScenario;
@@ -249,6 +260,86 @@ mod tests {
     impl ScenarioMetadata for TestScenario {
         const NAME: &'static str = "test_scenario";
         const DESCRIPTION: &'static str = "A test scenario for unit testing";
+    }
+
+    /// Deploys an [Emitter] and records how many events `last_call()` of its `emit` call has.
+    struct EventsScenario {
+        captures: bool,
+        observed: Rc<Cell<Option<usize>>>
+    }
+
+    #[odra::event]
+    pub struct Emitted {
+        pub value: u32
+    }
+
+    #[odra::module(events = [Emitted])]
+    pub struct Emitter;
+
+    #[odra::module]
+    impl Emitter {
+        pub fn emit(&mut self) {
+            self.env().emit_event(Emitted { value: 7 });
+        }
+    }
+
+    impl Scenario for EventsScenario {
+        fn captures_events(&self) -> bool {
+            self.captures
+        }
+
+        fn run(
+            &self,
+            env: &HostEnv,
+            _container: &DeployedContractsContainer,
+            _args: ScenarioArgs
+        ) -> core::result::Result<(), ScenarioError> {
+            let mut emitter = Emitter::deploy(env, NoArgs);
+            emitter.emit();
+            let events = emitter.last_call().event_names();
+            self.observed.set(Some(events.len()));
+            Ok(())
+        }
+    }
+
+    impl ScenarioMetadata for EventsScenario {
+        const NAME: &'static str = "events";
+        const DESCRIPTION: &'static str = "Checks the events of the last call";
+    }
+
+    fn events_seen_by_scenario(captures: bool) -> usize {
+        let observed = Rc::new(Cell::new(None));
+        let cmd = ScenarioCmd::new(EventsScenario {
+            captures,
+            observed: observed.clone()
+        });
+        let matches = Command::from(&cmd)
+            .try_get_matches_from(vec!["odra-cli"])
+            .unwrap();
+        let env = odra_vm_env();
+        cmd.exec(
+            &env,
+            &matches,
+            &CustomTypeSet::default(),
+            &test_utils::mock_contracts_container()
+        )
+        .unwrap();
+        observed.get().expect("the scenario ran")
+    }
+
+    fn odra_vm_env() -> HostEnv {
+        HostEnv::new(odra_vm::OdraVmHost::new(odra_vm::OdraVm::new()))
+    }
+
+    #[test]
+    fn scenario_does_not_capture_events_by_default() {
+        assert!(!TestScenario.captures_events());
+        assert_eq!(events_seen_by_scenario(false), 0);
+    }
+
+    #[test]
+    fn scenario_captures_events_when_it_opts_in() {
+        assert_eq!(events_seen_by_scenario(true), 1);
     }
 
     #[test]

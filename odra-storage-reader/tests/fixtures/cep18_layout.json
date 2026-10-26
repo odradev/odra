@@ -9,35 +9,35 @@
         "name": "decimals",
         "index": 1,
         "kind": "named_key",
-        "key_name": "decimals",
+        "named_key": "decimals",
         "ty": "U8"
       },
       {
         "name": "symbol",
         "index": 2,
         "kind": "named_key",
-        "key_name": "symbol",
+        "named_key": "symbol",
         "ty": "String"
       },
       {
         "name": "name",
         "index": 3,
         "kind": "named_key",
-        "key_name": "name",
+        "named_key": "name",
         "ty": "String"
       },
       {
         "name": "total_supply",
         "index": 4,
         "kind": "named_key",
-        "key_name": "total_supply",
+        "named_key": "total_supply",
         "ty": "U256"
       },
       {
         "name": "balances",
         "index": 5,
         "kind": "dictionary",
-        "dictionary_name": "balances",
+        "dictionary": "balances",
         "key": "Key",
         "key_encoding": "base64",
         "value": "U256"
@@ -46,7 +46,7 @@
         "name": "allowances",
         "index": 6,
         "kind": "dictionary",
-        "dictionary_name": "allowances",
+        "dictionary": "allowances",
         "key": {
           "Tuple2": [
             "Key",

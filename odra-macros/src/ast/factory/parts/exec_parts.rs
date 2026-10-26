@@ -5,7 +5,7 @@ use crate::{
     ir::{FnIR, ModuleImplIR},
     utils
 };
-use quote::{format_ident, ToTokens, TokenStreamExt};
+use quote::{ToTokens, TokenStreamExt};
 use syn::{parse_quote, Ident};
 
 pub(crate) struct FactoryExecPartsItem {
@@ -109,14 +109,13 @@ impl TryFrom<(&'_ ModuleImplIR, &'_ FnIR)> for ExecutableFnBodyItem {
         let fn_ident = func.name();
         let result_ident = utils::ident::result();
         let env_rc_ident = utils::ident::env_rc();
-        let env_ident = utils::ident::env();
+        let env_ident = utils::ident::prefixed_env();
         let exec_env_ident = utils::ident::exec_env();
         let exec_env_stmt =
             (func.is_payable() || func.is_non_reentrant() || func.has_args() || func.is_upgrader())
                 .then(|| utils::stmt::new_execution_env(&exec_env_ident, &env_rc_ident));
         let contract_ident = utils::ident::contract();
-        let module_ident = module.module_ident()?;
-        let child_module_ident = format_ident!("{}", module_ident.to_string().strip_suffix("Factory").unwrap_or(&module_ident.to_string()));
+        let child_module_ident = module.child_module_ident()?;
 
         let fn_args = func
             .named_args()
@@ -197,7 +196,7 @@ impl TryInto<syn::Signature> for ExecFnSignature {
 impl ToTokens for ExecFnSignature {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let ident = &self.ident;
-        let env_ident = utils::ident::env();
+        let env_ident = utils::ident::prefixed_env();
         let env_type = utils::ty::contract_env();
         let ret_ty = &self.ret_ty;
 
@@ -259,46 +258,46 @@ mod test {
                 use odra::prelude::*;
 
                 #[inline]
-                pub fn execute_init(env: odra::ContractEnv) {
-                    let env_rc = Rc::new(env);
-                    let exec_env = odra::ExecutionEnv::new(env_rc.clone());
-                    let value = exec_env.get_named_arg::<u32>("value");
-                    let mut contract = <Erc20 as Module>::new(env_rc);
-                    let result = contract.init(value);
-                    return result;
+                pub fn execute_init(__odra_env: odra::ContractEnv) {
+                    let __odra_env_rc = Rc::new(__odra_env);
+                    let __odra_exec_env = odra::ExecutionEnv::new(__odra_env_rc.clone());
+                    let value = __odra_exec_env.get_named_arg::<u32>("value");
+                    let mut __odra_contract = <Erc20 as Module>::new(__odra_env_rc);
+                    let __odra_result = __odra_contract.init(value);
+                    return __odra_result;
                 }
 
                 #[inline]
-                pub fn execute_total_supply(env: odra::ContractEnv) -> U256 {
-                    let env_rc = Rc::new(env);
-                    let contract = <Erc20 as Module>::new(env_rc);
-                    let result = contract.total_supply();
-                    return result;
+                pub fn execute_total_supply(__odra_env: odra::ContractEnv) -> U256 {
+                    let __odra_env_rc = Rc::new(__odra_env);
+                    let __odra_contract = <Erc20 as Module>::new(__odra_env_rc);
+                    let __odra_result = __odra_contract.total_supply();
+                    return __odra_result;
                 }
 
                 #[inline]
-                pub fn execute_pay_to_mint(env: odra::ContractEnv) {
-                    let env_rc = Rc::new(env);
-                    let exec_env = odra::ExecutionEnv::new(env_rc.clone());
-                    exec_env.handle_attached_value();
-                    let mut contract = <Erc20 as Module>::new(env_rc);
-                    let result = contract.pay_to_mint();
-                    exec_env.clear_attached_value();
-                    return result;
+                pub fn execute_pay_to_mint(__odra_env: odra::ContractEnv) {
+                    let __odra_env_rc = Rc::new(__odra_env);
+                    let __odra_exec_env = odra::ExecutionEnv::new(__odra_env_rc.clone());
+                    __odra_exec_env.handle_attached_value();
+                    let mut __odra_contract = <Erc20 as Module>::new(__odra_env_rc);
+                    let __odra_result = __odra_contract.pay_to_mint();
+                    __odra_exec_env.clear_attached_value();
+                    return __odra_result;
                 }
 
                 #[inline]
-                pub fn execute_approve(env: odra::ContractEnv) {
-                    let env_rc = Rc::new(env);
-                    let exec_env = odra::ExecutionEnv::new(env_rc.clone());
-                    exec_env.non_reentrant_before();
-                    let to = exec_env.get_named_arg::<Address>("to");
-                    let amount = exec_env.get_named_arg::<U256>("amount");
-                    let msg = exec_env.get_named_arg::<Maybe<String>>("msg");
-                    let mut contract = <Erc20 as Module>::new(env_rc);
-                    let result = contract.approve(&to, &amount, msg);
-                    exec_env.non_reentrant_after();
-                    return result;
+                pub fn execute_approve(__odra_env: odra::ContractEnv) {
+                    let __odra_env_rc = Rc::new(__odra_env);
+                    let __odra_exec_env = odra::ExecutionEnv::new(__odra_env_rc.clone());
+                    __odra_exec_env.non_reentrant_before();
+                    let to = __odra_exec_env.get_named_arg::<Address>("to");
+                    let amount = __odra_exec_env.get_named_arg::<U256>("amount");
+                    let msg = __odra_exec_env.get_named_arg::<Maybe<String>>("msg");
+                    let mut __odra_contract = <Erc20 as Module>::new(__odra_env_rc);
+                    let __odra_result = __odra_contract.approve(&to, &amount, msg);
+                    __odra_exec_env.non_reentrant_after();
+                    return __odra_result;
                 }
             }
         };

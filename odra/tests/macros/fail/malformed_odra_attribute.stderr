@@ -1,0 +1,35 @@
+error: odra attribute `payable` takes no value
+  --> tests/macros/fail/malformed_odra_attribute.rs:11:12
+   |
+11 |     #[odra(payable = true)]
+   |            ^^^^^^^^^^^^^^
+
+error: odra attribute `offchain` takes no value
+  --> tests/macros/fail/malformed_odra_attribute.rs:24:12
+   |
+24 |     #[odra(offchain(host))]
+   |            ^^^^^^^^^^^^^^
+
+error: malformed odra attribute, expected `#[odra(..)]` with one or more of: payable, non_reentrant, offchain
+  --> tests/macros/fail/malformed_odra_attribute.rs:37:5
+   |
+37 |     #[odra]
+   |     ^^^^^^^
+
+error: empty odra attribute, expected one or more of: payable, non_reentrant, offchain
+  --> tests/macros/fail/malformed_odra_attribute.rs:50:5
+   |
+50 |     #[odra()]
+   |     ^^^^^^^^^
+
+error: malformed odra attribute, expected `#[odra(..)]` with one or more of: payable, non_reentrant, offchain
+  --> tests/macros/fail/malformed_odra_attribute.rs:63:5
+   |
+63 |     #[odra = "payable"]
+   |     ^^^^^^^^^^^^^^^^^^^
+
+error: expected `,`
+  --> tests/macros/fail/malformed_odra_attribute.rs:76:19
+   |
+76 |     #[odra(payable;)]
+   |                   ^

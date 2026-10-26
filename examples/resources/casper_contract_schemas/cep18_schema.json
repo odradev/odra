@@ -1,15 +1,19 @@
 {
   "casper_contract_schema_version": 1,
-  "toolchain": "rustc 1.78.0-nightly (98aa3624b 2024-02-08)",
+  "toolchain": "rustc 1.94.0-nightly (8d670b93d 2025-12-31)",
+  "toolkit": {
+    "name": "Odra",
+    "version": "2.10.0"
+  },
   "authors": [
     "Jakub Płaskonka <kuba@odra.dev>",
     "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
     "Maciej Zieliński <maciej@odra.dev>"
   ],
   "repository": "https://github.com/odradev/odra",
-  "homepage": null,
+  "homepage": "https://odra.dev/docs",
   "contract_name": "Cep18",
-  "contract_version": "1.0.0",
+  "contract_version": "2.10.0",
   "types": [
     {
       "struct": {
@@ -25,29 +29,6 @@
             "name": "amount",
             "description": null,
             "ty": "U256"
-          }
-        ]
-      }
-    },
-    {
-      "struct": {
-        "name": "ChangeSecurity",
-        "description": null,
-        "members": [
-          {
-            "name": "admin",
-            "description": null,
-            "ty": "Key"
-          },
-          {
-            "name": "sec_change_map",
-            "description": null,
-            "ty": {
-              "Map": {
-                "key": "Key",
-                "value": "SecurityBadge"
-              }
-            }
           }
         ]
       }
@@ -203,19 +184,9 @@
   ],
   "errors": [
     {
-      "name": "AlreadyInitialized",
-      "description": "This contract instance cannot be initialized again.",
-      "discriminant": 60015
-    },
-    {
       "name": "CannotTargetSelfUser",
       "description": "The user cannot target themselves.",
-      "discriminant": 60017
-    },
-    {
-      "name": "FailedToGetArgBytes",
-      "description": "Failed to read the runtime arguments provided.",
-      "discriminant": 60009
+      "discriminant": 60003
     },
     {
       "name": "InsufficientAllowance",
@@ -226,127 +197,14 @@
       "name": "InsufficientBalance",
       "description": "Spender does not have enough balance.",
       "discriminant": 60001
-    },
-    {
-      "name": "InsufficientRights",
-      "description": "The caller does not have sufficient security access.",
-      "discriminant": 60010
-    },
-    {
-      "name": "InvalidAdminList",
-      "description": "The list of Admin accounts provided is invalid.",
-      "discriminant": 60011
-    },
-    {
-      "name": "InvalidBurnTarget",
-      "description": "The burn target is invalid.",
-      "discriminant": 60018
-    },
-    {
-      "name": "InvalidContext",
-      "description": "CEP-18 contract called from within an invalid context.",
-      "discriminant": 60000
-    },
-    {
-      "name": "InvalidEnableMBFlag",
-      "description": "The flag to enable the mint and burn mode is invalid.",
-      "discriminant": 60014
-    },
-    {
-      "name": "InvalidEventsMode",
-      "description": "An invalid event mode was specified.",
-      "discriminant": 60006
-    },
-    {
-      "name": "InvalidMinterList",
-      "description": "The list of accounts that can mint tokens is invalid.",
-      "discriminant": 60012
-    },
-    {
-      "name": "InvalidNoneList",
-      "description": "The list of accounts with no access rights is invalid.",
-      "discriminant": 60013
-    },
-    {
-      "name": "InvalidState",
-      "description": "The contract is in an invalid state. This error should never happen.",
-      "discriminant": 60100
-    },
-    {
-      "name": "MintBurnDisabled",
-      "description": "The mint and burn mode is disabled.",
-      "discriminant": 60016
-    },
-    {
-      "name": "MissingEventsMode",
-      "description": "The event mode required was not specified.",
-      "discriminant": 60007
-    },
-    {
-      "name": "Overflow",
-      "description": "Operation would cause an integer overflow.",
-      "discriminant": 60003
-    },
-    {
-      "name": "PackageHashMissing",
-      "description": "A required package hash was not specified.",
-      "discriminant": 60004
-    },
-    {
-      "name": "PackageHashNotPackage",
-      "description": "The package hash specified does not represent a package.",
-      "discriminant": 60005
-    },
-    {
-      "name": "Phantom",
-      "description": "An unknown error occurred.",
-      "discriminant": 60008
-    },
-    {
-      "name": "_MissingPackageHashForUpgrade",
-      "description": "The package hash for the upgrade is missing.",
-      "discriminant": 60019
     }
   ],
   "entry_points": [
     {
-      "name": "change_security",
-      "description": "Admin EntryPoint to manipulate the security access granted to users.",
-      "is_mutable": true,
-      "arguments": [
-        {
-          "name": "admin_list",
-          "description": null,
-          "ty": {
-            "List": "Key"
-          },
-          "optional": false
-        },
-        {
-          "name": "minter_list",
-          "description": null,
-          "ty": {
-            "List": "Key"
-          },
-          "optional": false
-        },
-        {
-          "name": "none_list",
-          "description": null,
-          "ty": {
-            "List": "Key"
-          },
-          "optional": false
-        }
-      ],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
       "name": "name",
       "description": "Returns the name of the token.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "String",
       "is_contract_context": true,
@@ -356,6 +214,7 @@
       "name": "symbol",
       "description": "Returns the symbol of the token.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "String",
       "is_contract_context": true,
@@ -365,6 +224,7 @@
       "name": "decimals",
       "description": "Returns the number of decimals the token uses.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "U8",
       "is_contract_context": true,
@@ -374,6 +234,7 @@
       "name": "total_supply",
       "description": "Returns the total supply of the token.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "U256",
       "is_contract_context": true,
@@ -383,6 +244,7 @@
       "name": "balance_of",
       "description": "Returns the balance of the given address.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "address",
@@ -399,6 +261,7 @@
       "name": "allowance",
       "description": "Returns the amount of tokens the owner has allowed the spender to spend.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [
         {
           "name": "owner",
@@ -421,6 +284,7 @@
       "name": "approve",
       "description": "Approves the spender to spend the given amount of tokens on behalf of the caller.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "spender",
@@ -443,6 +307,7 @@
       "name": "decrease_allowance",
       "description": "Decreases the allowance of the spender by the given amount.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "spender",
@@ -465,6 +330,7 @@
       "name": "increase_allowance",
       "description": "Increases the allowance of the spender by the given amount.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "spender",
@@ -487,6 +353,7 @@
       "name": "transfer",
       "description": "Transfers tokens from the caller to the recipient.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "recipient",
@@ -509,6 +376,7 @@
       "name": "transfer_from",
       "description": "Transfers tokens from the owner to the recipient using the spender's allowance.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "owner",
@@ -532,60 +400,12 @@
       "return_ty": "Unit",
       "is_contract_context": true,
       "access": "public"
-    },
-    {
-      "name": "mint",
-      "description": "Mints new tokens and assigns them to the given address.",
-      "is_mutable": true,
-      "arguments": [
-        {
-          "name": "owner",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "amount",
-          "description": null,
-          "ty": "U256",
-          "optional": false
-        }
-      ],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "burn",
-      "description": "Burns the given amount of tokens from the given address.",
-      "is_mutable": true,
-      "arguments": [
-        {
-          "name": "owner",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        },
-        {
-          "name": "amount",
-          "description": null,
-          "ty": "U256",
-          "optional": false
-        }
-      ],
-      "return_ty": "Unit",
-      "is_contract_context": true,
-      "access": "public"
     }
   ],
   "events": [
     {
       "name": "Burn",
       "ty": "Burn"
-    },
-    {
-      "name": "ChangeSecurity",
-      "ty": "ChangeSecurity"
     },
     {
       "name": "DecreaseAllowance",
@@ -614,7 +434,7 @@
   ],
   "call": {
     "wasm_file_name": "Cep18.wasm",
-    "description": "Initializes the contract with the given metadata, initial supply, security and modality.",
+    "description": "Initializes the contract with the given metadata, initial supply.",
     "arguments": [
       {
         "name": "odra_cfg_package_hash_key_name",
@@ -624,13 +444,19 @@
       },
       {
         "name": "odra_cfg_allow_key_override",
-        "description": "The arg name for the allow key override.",
+        "description": "If true and the key specified in odra_cfg_package_hash_key_name already exists, it will be overwritten.",
         "ty": "Bool",
         "optional": false
       },
       {
         "name": "odra_cfg_is_upgradable",
         "description": "The arg name for the contract upgradeability setting.",
+        "ty": "Bool",
+        "optional": false
+      },
+      {
+        "name": "odra_cfg_is_upgrade",
+        "description": "The arg name for telling the installer that the contract is being upgraded.",
         "ty": "Bool",
         "optional": false
       },
@@ -657,30 +483,62 @@
         "description": null,
         "ty": "U256",
         "optional": false
+      }
+    ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "decimals",
+        "index": 1,
+        "kind": "named_key",
+        "named_key": "decimals",
+        "ty": "U8"
       },
       {
-        "name": "admin_list",
-        "description": null,
-        "ty": {
-          "List": "Key"
-        },
-        "optional": false
+        "name": "symbol",
+        "index": 2,
+        "kind": "named_key",
+        "named_key": "symbol",
+        "ty": "String"
       },
       {
-        "name": "minter_list",
-        "description": null,
-        "ty": {
-          "List": "Key"
-        },
-        "optional": false
+        "name": "name",
+        "index": 3,
+        "kind": "named_key",
+        "named_key": "name",
+        "ty": "String"
       },
       {
-        "name": "modality",
-        "description": null,
-        "ty": {
-          "Option": "Cep18Modality"
+        "name": "total_supply",
+        "index": 4,
+        "kind": "named_key",
+        "named_key": "total_supply",
+        "ty": "U256"
+      },
+      {
+        "name": "balances",
+        "index": 5,
+        "kind": "dictionary",
+        "dictionary": "balances",
+        "key": "Key",
+        "key_encoding": "base64",
+        "value": "U256"
+      },
+      {
+        "name": "allowances",
+        "index": 6,
+        "kind": "dictionary",
+        "dictionary": "allowances",
+        "key": {
+          "Tuple2": [
+            "Key",
+            "Key"
+          ]
         },
-        "optional": false
+        "key_encoding": "hex_hash",
+        "value": "U256"
       }
     ]
   }

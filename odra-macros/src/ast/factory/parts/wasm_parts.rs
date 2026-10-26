@@ -329,7 +329,7 @@ impl TryFrom<&'_ ModuleImplIR> for CallFnItem {
 }
 
 struct NoMangleFactoryFnItem {
-    module_ident: syn::Ident,
+    child_ident: syn::Ident,
     event_ident: syn::Ident,
     init_fn: Option<FnIR>,
     new_env_expr: syn::Expr,
@@ -339,11 +339,9 @@ impl TryFrom<&'_ ModuleImplIR> for NoMangleFactoryFnItem {
     type Error = syn::Error;
 
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
-        let module_ident = module.module_ident()?;
-        let module_str = module_ident.to_string();
-        let event_ident = format_ident!("{}ContractDeployed", module_str);
+        let event_ident = format_ident!("{}ContractDeployed", module.module_ident()?);
         Ok(Self {
-            module_ident,
+            child_ident: module.child_module_ident()?,
             event_ident,
             init_fn: module.constructor(),
             new_env_expr: utils::expr::new_wasm_contract_env(),
@@ -357,10 +355,7 @@ impl ToTokens for NoMangleFactoryFnItem {
         let ident_schemas = utils::ident::schemas();
         let address_ty = utils::ty::address();
         let string_ty = utils::ty::string();
-        let ident = &self.module_ident.to_string();
-        let contract_ident = ident.strip_suffix("Factory").unwrap_or(ident);
-        let contract_ident: syn::Ident = format_ident!("{}", contract_ident);
-        let events_expr = utils::expr::event_schemas(&contract_ident.as_type());
+        let events_expr = utils::expr::event_schemas(&self.child_ident.as_type());
         let expr_new_schemas = utils::expr::schemas(&events_expr);
         let ident_args = utils::ident::named_args();
         let new_runtime_args = utils::expr::new_runtime_args();
@@ -387,6 +382,7 @@ impl ToTokens for NoMangleFactoryFnItem {
                 let (contract_package_hash, access_uref) = odra::odra_casper_wasm_env::host_functions::install_new_contract(
                     #ident_entry_points(),
                     #ident_schemas,
+                    None,
                     Some(#ident_args)
                 );
                 let address: #address_ty = contract_package_hash.into();
@@ -407,7 +403,7 @@ impl ToTokens for NoMangleFactoryFnItem {
 }
 
 struct NoMangleFactoryUpgradeFnItem {
-    module_ident: syn::Ident,
+    child_ident: syn::Ident,
     event_ident: syn::Ident,
     upgrader_args: Vec<(String, syn::Type)>,
     new_env_expr: syn::Expr,
@@ -417,17 +413,15 @@ impl TryFrom<&'_ ModuleImplIR> for NoMangleFactoryUpgradeFnItem {
     type Error = syn::Error;
 
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
-        let module_ident = module.module_ident()?;
-        let module_str = module_ident.to_string();
         let upgrader_args = module.upgrader()
             .map(|fn_ir| fn_ir.named_args())
             .unwrap_or_default()
             .iter()
             .map(|arg| arg.name_and_ty())
             .collect::<Result<Vec<_>, _>>()?;
-        let event_ident = format_ident!("{}ContractDeployed", module_str);
+        let event_ident = format_ident!("{}ContractDeployed", module.module_ident()?);
         Ok(Self {
-            module_ident,
+            child_ident: module.child_module_ident()?,
             event_ident,
             upgrader_args,
             new_env_expr: utils::expr::new_wasm_contract_env(),
@@ -444,10 +438,7 @@ impl ToTokens for NoMangleFactoryUpgradeFnItem {
         let runtime_args_ty = utils::ty::runtime_args();
         let bytes_ty = utils::ty::bytes();
         let btree_map_str_bytes_ty = utils::ty::typed_btree_map(&string_ty, &bytes_ty);
-        let ident = &self.module_ident.to_string();
-        let contract_ident = ident.strip_suffix("Factory").unwrap_or(ident);
-        let contract_ident: syn::Ident = format_ident!("{}", contract_ident);
-        let events_expr = utils::expr::event_schemas(&contract_ident.as_type());
+        let events_expr = utils::expr::event_schemas(&self.child_ident.as_type());
         let expr_new_schemas = utils::expr::schemas(&events_expr);
         let event_ident = &self.event_ident;
         let unwrap_or_revert = quote::quote!(odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert);
@@ -482,6 +473,7 @@ impl ToTokens for NoMangleFactoryUpgradeFnItem {
                 let contract_package_hash = odra::odra_casper_wasm_env::host_functions::upgrade_contract(
                     #ident_entry_points(),
                     #ident_schemas,
+                    None,
                     Some(named_args)
                 );
 
@@ -515,6 +507,7 @@ impl ToTokens for NoMangleFactoryUpgradeFnItem {
                         let contract_package_hash = odra::odra_casper_wasm_env::host_functions::upgrade_contract(
                             #ident_entry_points(),
                             #ident_schemas.clone(),
+                            None,
                             Some(named_args)
                         );
                         let address: #address_ty = contract_package_hash.into();
@@ -637,6 +630,13 @@ mod test {
                     odra::odra_casper_wasm_env::host_functions::install_or_upgrade(
                         entry_points(),
                         schemas,
+                        {
+                            #[cfg(odra_contract_schema)]
+                            let contract_schema = Some(include_str!(env!("ODRA_CONTRACT_SCHEMA_PATH")));
+                            #[cfg(not(odra_contract_schema))]
+                            let contract_schema: Option<&'static str> = None;
+                            contract_schema
+                        },
                         Option::<odra::casper_types::RuntimeArgs>::None
                     );
                 }
@@ -653,17 +653,18 @@ mod test {
                         odra::ExecutionEnv::new(env_rc)
                     };
 
-                    let mut named_args = odra::casper_types::RuntimeArgs::new();
+                    let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
                     odra::args::EntrypointArgument::insert_runtime_arg(
                         exec_env.get_named_arg::<u32>("value"),
                         "value",
-                        &mut named_args
+                        &mut __odra_named_args
                     );
 
                     let (contract_package_hash, access_uref) = odra::odra_casper_wasm_env::host_functions::install_new_contract(
                         child_contract_entry_points(),
                         schemas,
-                        Some(named_args)
+                        None,
+                        Some(__odra_named_args)
                     );
                     let address: odra::prelude::Address = contract_package_hash.into();
 
@@ -707,6 +708,7 @@ mod test {
                     let contract_package_hash = odra::odra_casper_wasm_env::host_functions::upgrade_contract(
                         child_contract_entry_points(),
                         schemas,
+                        None,
                         Some(named_args)
                     );
 
@@ -741,6 +743,7 @@ mod test {
                             let contract_package_hash = odra::odra_casper_wasm_env::host_functions::upgrade_contract(
                                 child_contract_entry_points(),
                                 schemas.clone(),
+                                None,
                                 Some(named_args)
                             );
                             let address: odra::prelude::Address = contract_package_hash.into();
@@ -761,10 +764,10 @@ mod test {
 
                 #[no_mangle]
                 fn total_supply() {
-                    let result = __erc20_factory_exec_parts::execute_total_supply(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
+                    let __odra_result = __erc20_factory_exec_parts::execute_total_supply(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                     odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
                         odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
-                            odra::casper_types::CLValue::from_t(result)
+                            odra::casper_types::CLValue::from_t(__odra_result)
                         )
                     );
                 }

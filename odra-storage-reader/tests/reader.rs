@@ -10,6 +10,7 @@ use casper_types::{
 use odra_schema::casper_contract_schema::{
     CustomType, EnumVariant, NamedCLType, StructMember, Type, TypeName
 };
+use odra_schema::readable_fields;
 use odra_storage_reader::{current_contract_hash, Error, Location, StorageReader};
 use serde_json::{json, Value};
 
@@ -360,7 +361,7 @@ fn every_readable_field_locates() {
     };
     for name in ["erc20_layout", "cep18_layout", "nested_odra_types_layout"] {
         let reader = reader(name);
-        let fields = reader.layout().readable_fields();
+        let fields = readable_fields(reader.layout());
         assert!(!fields.is_empty(), "{name}");
         for field in fields {
             let keys: Vec<_> = field.keys.iter().map(text_key).collect();

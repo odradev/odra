@@ -26,6 +26,11 @@ impl BalanceChecker {
         // A helper defined once with `#[odra::ref_helpers]`, called on the contract ref.
         self.token.holds_tokens(account)
     }
+
+    /// Returns the tokens held by the token contract itself (sent to its own address).
+    pub fn token_own_balance(&self) -> U256 {
+        self.token.own_balance()
+    }
 }
 
 /// Token contract interface.
@@ -44,6 +49,14 @@ impl Token {
     /// Returns true if the given account holds any tokens.
     pub fn holds_tokens(&self, owner: &Address) -> bool {
         !self.balance_of(owner).is_zero()
+    }
+
+    /// Returns the tokens the token contract holds itself.
+    ///
+    /// `contract_address()` is the address of the contract on both refs - `HostRef` has it, and
+    /// `odra::prelude::ContractAddress` gives it to `ContractRef` - so no import is needed.
+    pub fn own_balance(&self) -> U256 {
+        self.balance_of(&self.contract_address())
     }
 }
 
@@ -87,6 +100,29 @@ mod tests {
         let token = TokenHostRef::new(token.address(), env.clone());
         assert!(token.holds_tokens(&owner));
         assert!(!token.holds_tokens(&second_account));
+    }
+
+    #[test]
+    fn own_balance_helper_uses_the_contract_address_on_both_refs() {
+        let mut token = setup();
+        let env = token.env().clone();
+        let balance_checker = BalanceChecker::deploy(
+            &env,
+            BalanceCheckerInitArgs {
+                address: token.address()
+            }
+        );
+        let token_ref = TokenHostRef::new(token.address(), env.clone());
+        assert!(token_ref.own_balance().is_zero());
+        assert!(balance_checker.token_own_balance().is_zero());
+
+        // Tokens sent to the token contract's own address.
+        token.transfer(&token.address(), &U256::from(25));
+
+        // On `TokenHostRef`, called by the test...
+        assert_eq!(token_ref.own_balance(), U256::from(25));
+        // ...and on `TokenContractRef`, called by the balance checker.
+        assert_eq!(balance_checker.token_own_balance(), U256::from(25));
     }
 
     #[test]

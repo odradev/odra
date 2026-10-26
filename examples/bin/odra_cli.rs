@@ -46,15 +46,17 @@ impl DeployScript for DeployScriptForExamples {
         env: &HostEnv,
         container: &mut DeployedContractsContainer
     ) -> Result<(), odra_cli::deploy::Error> {
-        DogContract::load_or_deploy(
+        _ = DogContract::load_or_deploy_with_cfg(
             env,
+            None,
             DogContractInitArgs {
                 barks: true,
                 weight: 10,
                 name: "Mantus".to_string()
             },
+            InstallConfig::upgradable::<DogContract>(),
             container,
-            cspr!(350)
+            cspr!(450)
         )?;
         Erc20::load_or_deploy(env, erc20_args(), container, cspr!(450))?;
         Cep18::load_or_deploy(
@@ -141,6 +143,38 @@ impl ScenarioMetadata for DogCheckScenario {
     const NAME: &'static str = "check";
     const DESCRIPTION: &'static str =
         "Checks if the name of the deployed dog matches the provided name";
+}
+
+/// Upgrades the deployed `DogContract` to the current wasm.
+pub struct DogUpgradeScenario;
+
+impl Scenario for DogUpgradeScenario {
+    fn args(&self) -> Vec<CommandArg> {
+        vec![]
+    }
+
+    fn run(
+        &self,
+        env: &HostEnv,
+        container: &DeployedContractsContainer,
+        _args: Args
+    ) -> Result<(), Error> {
+        let dog_contract = container.contract_ref::<DogContract>(env)?;
+        env.set_gas(cspr!(450));
+        let upgraded = DogContract::try_upgrade(env, dog_contract.address(), NoArgs);
+        env.set_gas(0);
+        let upgraded = upgraded?;
+        odra_cli::log(format!(
+            "Upgraded DogContract, name after upgrade: {}",
+            upgraded.try_name()?
+        ));
+        Ok(())
+    }
+}
+
+impl ScenarioMetadata for DogUpgradeScenario {
+    const NAME: &'static str = "upgrade";
+    const DESCRIPTION: &'static str = "Upgrades the deployed DogContract to the current wasm";
 }
 
 /// Transfers ERC20 tokens and prints both balances (formerly `erc20_on_livenet`).
@@ -535,6 +569,7 @@ pub fn main() {
         .contract::<BalanceBook>()
         .contract::<NestedOdraTypesContract>()
         .scenario(DogCheckScenario)
+        .scenario(DogUpgradeScenario)
         .scenario(Erc20TransferScenario)
         .scenario(Cep18TransferScenario)
         .scenario(TimeLockWalletScenario)

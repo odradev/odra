@@ -412,7 +412,7 @@ mod tests {
     fn layout() -> StorageKind {
         StorageKind::Module {
             fields: vec![
-                StorageField::new("total_supply", 1, StorageKind::value::<U256>()),
+                StorageField::new("total_supply", 1, StorageKind::value(NamedCLType::U256)),
                 StorageField::new(
                     "allowances",
                     2,

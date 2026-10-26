@@ -1,0 +1,40 @@
+{
+  "name": "CallStackRelay",
+  "events": [],
+  "entrypoints": [
+    {
+      "name": "init",
+      "args": [
+        {
+          "name": "probe",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Constructor",
+      "attributes": []
+    },
+    {
+      "name": "relay",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": {
+        "Tuple3": [
+          "Key",
+          {
+            "Option": "Key"
+          },
+          {
+            "List": "Key"
+          }
+        ]
+      },
+      "ty": "Public",
+      "attributes": []
+    }
+  ]
+}

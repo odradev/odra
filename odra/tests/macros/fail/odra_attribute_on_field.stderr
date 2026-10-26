@@ -1,0 +1,15 @@
+error: cannot find attribute `odra` in this scope
+  --> tests/macros/fail/odra_attribute_on_field.rs:12:7
+   |
+12 |     #[odra(payable)]
+   |       ^^^^
+   |
+   = note: `odra` is in scope, but it is a crate, not an attribute
+
+error: cannot find attribute `odra` in this scope
+ --> tests/macros/fail/odra_attribute_on_field.rs:6:7
+  |
+6 |     #[odra(using = "shared")]
+  |       ^^^^
+  |
+  = note: `odra` is in scope, but it is a crate, not an attribute

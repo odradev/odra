@@ -1,6 +1,10 @@
 {
   "casper_contract_schema_version": 1,
-  "toolchain": "rustc 1.85.0-nightly (d117b7f21 2024-12-31)",
+  "toolchain": "rustc 1.94.0-nightly (8d670b93d 2025-12-31)",
+  "toolkit": {
+    "name": "Odra",
+    "version": "2.10.0"
+  },
   "authors": [
     "Jakub Płaskonka <kuba@odra.dev>",
     "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
@@ -9,7 +13,7 @@
   "repository": "https://github.com/odradev/odra",
   "homepage": "https://odra.dev/docs",
   "contract_name": "LivenetContract",
-  "contract_version": "2.5.0",
+  "contract_version": "2.10.0",
   "types": [
     {
       "struct": {
@@ -46,6 +50,11 @@
       "discriminant": 20001
     },
     {
+      "name": "EmptyStack",
+      "description": "The stack is empty.",
+      "discriminant": 2
+    },
+    {
       "name": "MissingRole",
       "description": "The role is missing.",
       "discriminant": 20003
@@ -71,6 +80,7 @@
       "name": "transfer_ownership",
       "description": "Transfers the ownership of the contract to a new owner.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "new_owner",
@@ -87,6 +97,7 @@
       "name": "owner",
       "description": "Returns the owner of the contract.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "Key",
       "is_contract_context": true,
@@ -96,6 +107,7 @@
       "name": "push_on_stack",
       "description": "Pushes a value on the stack.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [
         {
           "name": "value",
@@ -112,6 +124,7 @@
       "name": "pop_from_stack",
       "description": "Pops a value from the stack.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "U64",
       "is_contract_context": true,
@@ -121,6 +134,37 @@
       "name": "get_stack_len",
       "description": "Returns the length of the stack.",
       "is_mutable": false,
+      "is_payable": false,
+      "arguments": [],
+      "return_ty": "U32",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "peek",
+      "description": "Returns the value on top of the stack, reverts if the stack is empty.",
+      "is_mutable": false,
+      "is_payable": false,
+      "arguments": [],
+      "return_ty": "U64",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "nested_peek",
+      "description": "Calls [peek](Self::peek) of this contract as another contract would.",
+      "is_mutable": false,
+      "is_payable": false,
+      "arguments": [],
+      "return_ty": "U64",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "call_stack_depth",
+      "description": "Returns the number of frames on the call stack.",
+      "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "U32",
       "is_contract_context": true,
@@ -130,6 +174,7 @@
       "name": "immutable_cross_call",
       "description": "Returns the total supply of the ERC20 contract. This is an example of an immutable cross-contract call.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "U256",
       "is_contract_context": true,
@@ -139,6 +184,7 @@
       "name": "mutable_cross_call",
       "description": "Transfers 1 token from the ERC20 contract to the caller. This is an example of a mutable cross-contract call.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "Unit",
       "is_contract_context": true,
@@ -148,6 +194,7 @@
       "name": "function_that_reverts",
       "description": "Function that reverts with a silly error.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "Unit",
       "is_contract_context": true,
@@ -157,6 +204,7 @@
       "name": "expensive_function",
       "description": "Function that eats up a lot of gas.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "Unit",
       "is_contract_context": true,
@@ -202,6 +250,44 @@
         "description": null,
         "ty": "Key",
         "optional": false
+      }
+    ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "creator",
+        "index": 1,
+        "kind": "value",
+        "ty": "Key"
+      },
+      {
+        "name": "ownable",
+        "index": 2,
+        "kind": "module",
+        "fields": [
+          {
+            "name": "owner",
+            "index": 1,
+            "kind": "value",
+            "ty": {
+              "Option": "Key"
+            }
+          }
+        ]
+      },
+      {
+        "name": "stack",
+        "index": 3,
+        "kind": "list",
+        "item": "U64"
+      },
+      {
+        "name": "erc20_address",
+        "index": 4,
+        "kind": "value",
+        "ty": "Key"
       }
     ]
   }

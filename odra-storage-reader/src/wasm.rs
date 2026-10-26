@@ -1,6 +1,7 @@
 //! The JavaScript bindings.
 
 use gloo_utils::format::JsValueSerdeExt;
+use odra_schema::readable_fields;
 use serde_json::Value;
 use wasm_bindgen::prelude::*;
 
@@ -39,7 +40,7 @@ impl StorageReader {
     /// types as `locate` takes them.
     #[wasm_bindgen(js_name = "readableFields")]
     pub fn readable_fields(&self) -> Result<JsValue, JsError> {
-        Ok(JsValue::from_serde(&self.0.layout().readable_fields())?)
+        Ok(JsValue::from_serde(&readable_fields(self.0.layout()))?)
     }
 
     /// The hash (`hash-...`) of the current version of a contract package, from the
