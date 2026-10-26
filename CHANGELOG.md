@@ -87,6 +87,8 @@ Changelog for `odra`.
   `release/0.2.0`.
 
 ### Fixed
+- OdraVM gave the 10th contract the address of the 1st (and the 11th, 20th, ... those of others): the
+  contract number was padded with zeros on the right. It is padded on the left now.
 - `#[odra(..)]` mistakes are compile errors at the attribute: unknown, duplicate and malformed
   arguments (they were silently ignored, `#[odra(payable, payable)]` made a function not payable),
   module arguments on an impl block or a trait (only `factory = on` is accepted on an impl), `payable`
