@@ -181,6 +181,10 @@ impl ContractContext for OdraVmContractEnv {
         self.vm
             .upgrade_child_contract(name, upgrade_args, entry_points_caller)
     }
+
+    fn caller_holds_factory_access(&self) -> OdraResult<bool> {
+        Ok(self.vm.caller_holds_factory_access())
+    }
 }
 
 impl OdraVmContractEnv {

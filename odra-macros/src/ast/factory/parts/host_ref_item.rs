@@ -28,7 +28,13 @@ impl TryFrom<&'_ ModuleImplIR> for FactoryHostRefImplItem {
     type Error = syn::Error;
 
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
-        let fns = [module.factory_fn(), module.factory_upgrade_fn(), module.factory_batch_upgrade_fn()];
+        let fns = [
+            module.factory_fn(),
+            module.factory_upgrade_fn(),
+            module.factory_batch_upgrade_fn(),
+            module.factory_set_creator_fn(),
+            module.factory_set_dapp_registry_fn()
+        ];
         Ok(Self {
             ref_ident: module.host_ref_ident()?,
             factory_fns: fns.iter().map(|f| ref_utils::host_function_item(f, false)).collect()
@@ -58,10 +64,15 @@ impl TryFrom<&'_ ModuleImplIR> for FactoryHostRefTryImplItem {
 
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         let fns = [module.factory_fn(), module.factory_upgrade_fn(), module.factory_batch_upgrade_fn()];
+        let dapp_fns = module.factory_dapp_fns();
 
         Ok(Self {
             ref_ident: module.host_ref_ident()?,
-            factory_fns: fns.iter().map(ref_utils::factory_try_function_item).collect()
+            factory_fns: fns
+                .iter()
+                .map(ref_utils::factory_try_function_item)
+                .chain(dapp_fns.iter().map(ref_utils::host_try_function_item))
+                .collect()
         })
     }
 }

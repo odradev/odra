@@ -67,6 +67,14 @@ impl TryFrom<&'_ ModuleImplIR> for FactoryContractEpcFn {
                 #ty_entry_point_arg::new::<#ty_batch_upgrade_args<odra::host::NoArgs>>(#args_name)
             ]
         )));
+        for fun in module.factory_dapp_fns() {
+            entry_points.push(utils::expr::new_entry_point(
+                fun.name_str(),
+                fun.raw_typed_args(),
+                fun.is_payable(),
+                false
+            ));
+        }
         Ok(Self {
             sig: module.try_into()?,
             entry_points_expr: utils::expr::vec(entry_points),
@@ -142,11 +150,31 @@ impl FactoryEntrypointCallerExpr {
             }
         })
         .collect::<proc_macro2::TokenStream>();
+        // The creator and dapp registry entry points, see `odra::factory_dapp`.
+        let creator_event = utils::ty::factory_creator_changed(&module.module_ident()?);
+        let dapp_event = utils::ty::factory_dapp_registry_changed(&module.module_ident()?);
+        let dapp_registry_branches = quote::quote! {
+            odra::factory_dapp::SET_CREATOR => odra::host::factory::set_creator(
+                &#contract_env_ident,
+                |previous_creator, new_creator| #creator_event {
+                    previous_creator,
+                    new_creator
+                }
+            ),
+            odra::factory_dapp::SET_DAPP_REGISTRY => odra::host::factory::set_dapp_registry(
+                &#contract_env_ident,
+                |previous_registry, new_registry| #dapp_event {
+                    previous_registry,
+                    new_registry
+                }
+            ),
+        };
 
         Ok(parse_quote!(
             #ty_caller::new(#entry_points_ident, |#contract_env_ident, #call_def_ident| {
                 match #call_def_ident.entry_point() {
                     #branches
+                    #dapp_registry_branches
                     name => Err(OdraError::VmError(
                         odra::VmError::NoSuchMethod(odra::prelude::String::from(name))
                     ))

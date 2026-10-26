@@ -25,6 +25,7 @@ pub mod entry_point;
 pub mod entry_point_callback;
 mod error;
 mod external;
+pub mod factory_dapp;
 mod gas_report;
 // TODO: consider making this not wasm32
 pub mod host;

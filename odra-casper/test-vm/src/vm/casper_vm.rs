@@ -1026,6 +1026,15 @@ fn parse_error(err: engine_state::Error) -> OdraError {
                 x if x == ExecutionError::MissingArg.code() => {
                     OdraError::ExecutionError(ExecutionError::MissingArg)
                 }
+                x if x == ExecutionError::CallerNotFactoryCreator.code() => {
+                    OdraError::ExecutionError(ExecutionError::CallerNotFactoryCreator)
+                }
+                x if x == ExecutionError::DappRegistryNotAContract.code() => {
+                    OdraError::ExecutionError(ExecutionError::DappRegistryNotAContract)
+                }
+                x if x == ExecutionError::FactoryCreatorNotSet.code() => {
+                    OdraError::ExecutionError(ExecutionError::FactoryCreatorNotSet)
+                }
                 // The exact error name is not known, so we return a generic error.
                 _ => OdraError::user(code, CASPER_ERROR_GENERIC_NAME)
             },
