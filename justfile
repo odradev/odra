@@ -61,6 +61,14 @@ build-proxy-callers:
     cp target/wasm32-unknown-unknown/release/proxy_caller_with_return.wasm \
         odra-wasm-client/resources/proxy_caller_with_return.wasm
 
+# Builds the storage reader wasm with wasm-pack (`just -f odra-storage-reader/justfile prepare` installs it).
+build-storage-reader-wasm:
+    cd odra-storage-reader && wasm-pack build --target web --out-dir pkg-web .
+    cp odra-storage-reader/pkg-web/odra_storage_reader_bg.wasm \
+        resources/odra_storage_reader.wasm
+    cp odra-storage-reader/pkg-web/odra_storage_reader.js resources/
+    cp odra-storage-reader/pkg-web/odra_storage_reader.d.ts resources/
+
 test-odra:
     cargo test
 

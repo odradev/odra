@@ -4,16 +4,16 @@ use odra::contract_def::HasIdent;
 use odra::host::HostEnv;
 use odra::schema::casper_contract_schema::Type;
 use odra::schema::{
-    resolve_storage_with, SchemaCustomTypes, SchemaEvents, SchemaStorageLayout, StorageField,
-    StorageKind, StorageLocation
+    readable_fields, ReadableField, SchemaCustomTypes, SchemaEvents, SchemaStorageLayout,
+    StorageField, StorageKind, StorageLocation, CONTRACT_SCHEMA_VERSION
 };
 use odra::OdraContract;
+use odra_schema::codec::{resolve_storage_from_text, CustomTypeSet};
 use serde_derive::Serialize;
 
 use crate::cmd::{CmdOutput, STORAGE_SUBCOMMAND};
 use crate::container::ContractProvider;
-use crate::custom_types::CustomTypeSet;
-use crate::{log, types, DeployedContractsContainer};
+use crate::{log, DeployedContractsContainer};
 
 use super::OdraCommand;
 
@@ -21,11 +21,12 @@ const PATH_ARG: &str = "path";
 const KEY_ARG: &str = "key";
 const RAW_ARG: &str = "raw";
 
-/// Reads the storage of a deployed contract directly, without calling any entry point.
+/// Reads the storage of a contract directly, without calling any entry point.
 ///
 /// `storage <Contract>` prints the storage layout of the contract, `storage <Contract> <path>`
-/// resolves the dotted field path against the layout, computes the storage key and reads the
-/// value from the host.
+/// resolves the dotted field path against the layout and computes the storage key, so this works
+/// before the contract is deployed too; the value is read from the host, and printed, only if the
+/// contract is deployed.
 #[derive(Default)]
 pub(crate) struct StorageCmd {
     contracts: Vec<StorageContract>
@@ -84,10 +85,12 @@ impl OdraCommand for StorageCmd {
             })?;
 
         let Some(path) = args.get_one::<String>(PATH_ARG) else {
-            return Ok(StorageReport::Layout(LayoutReport {
-                contract: contract.key_name.clone(),
-                ident: contract.ident.clone(),
-                layout: contract.layout.clone()
+            return Ok(StorageReport::Schema(StorageSchemaReport {
+                casper_contract_schema_version: CONTRACT_SCHEMA_VERSION,
+                key_name: contract.key_name.clone(),
+                contract_name: contract.ident.clone(),
+                storage: contract.layout.clone(),
+                types: contract.custom_types.clone()
             }));
         };
 
@@ -125,7 +128,7 @@ impl From<&StorageCmd> for Command {
                 )
         });
         Command::new(STORAGE_SUBCOMMAND)
-            .about("Reads the storage of a deployed contract without calling it")
+            .about("Reads the storage of a contract without calling it")
             .subcommand_required(true)
             .arg_required_else_help(true)
             .subcommands(subcommands)
@@ -149,6 +152,11 @@ impl StorageContract {
         let mut custom_types = CustomTypeSet::new();
         custom_types.extend(T::schema_types().into_iter().flatten());
         custom_types.extend(<T as SchemaEvents>::custom_types().into_iter().flatten());
+        custom_types.extend(
+            <T as SchemaStorageLayout>::custom_types()
+                .into_iter()
+                .flatten()
+        );
 
         Self {
             key_name,
@@ -166,43 +174,36 @@ impl StorageContract {
         keys: &[String],
         raw: bool
     ) -> Result<StorageReport> {
-        let address = container
-            .address_by_name(&self.key_name)
-            .ok_or_else(|| anyhow::anyhow!("Contract '{}' is not deployed", self.key_name))?;
+        let query = resolve_storage_from_text(&self.layout, path, keys)
+            .map_err(|e| anyhow::anyhow!("Cannot resolve `{path}`: {e}"))?;
 
-        let mut pending_keys = keys.iter();
-        let query = resolve_storage_with(&self.layout, path, |ty: &Type| {
-            let Some(key) = pending_keys.next() else {
-                return Ok(None);
-            };
-            types::into_bytes(&ty.0, key).map(Some).map_err(|e| {
-                format!(
-                    "cannot parse `{key}` as {}: {e}",
-                    types::format_type_hint(&ty.0)
-                )
-            })
-        })
-        .map_err(|e| anyhow::anyhow!("Cannot resolve `{path}`: {e}"))?;
-        let unused = pending_keys.count();
-        if unused > 0 {
-            anyhow::bail!("Cannot resolve `{path}`: {unused} key(s) were given but not used");
-        }
+        let address = container.address_by_name(&self.key_name);
 
-        let bytes = match &query.location {
-            StorageLocation::State { key } => env.get_storage_value(&address, key.as_bytes()),
-            StorageLocation::NamedKey { name } => env.get_named_value(&address, name),
-            StorageLocation::Dictionary { name, key } => {
-                env.get_dictionary_value(&address, name, key.as_bytes())
-            }
-        };
-
-        let (value, raw_value) = match bytes {
+        let (value, raw_value) = match &address {
             None => (None, None),
-            Some(bytes) if raw => (None, Some(hex::encode(&bytes))),
-            Some(bytes) => {
-                let (decoded, _) = types::decode(&bytes, &query.ty, &self.custom_types)
-                    .map_err(|e| anyhow::anyhow!("Cannot decode the stored value: {e}"))?;
-                (Some(decoded), None)
+            Some(address) => {
+                let bytes = match &query.location {
+                    StorageLocation::State { key } => {
+                        env.get_storage_value(address, key.as_bytes())
+                    }
+                    StorageLocation::NamedKey { name } => env.get_named_value(address, name),
+                    StorageLocation::Dictionary { name, key } => {
+                        env.get_dictionary_value(address, name, key.as_bytes())
+                    }
+                };
+
+                match bytes {
+                    None => (None, None),
+                    Some(bytes) if raw => (None, Some(hex::encode(&bytes))),
+                    Some(bytes) => {
+                        let (decoded, _) =
+                            odra_schema::codec::decode(&bytes, &query.ty, &self.custom_types)
+                                .map_err(|e| {
+                                    anyhow::anyhow!("Cannot decode the stored value: {e}")
+                                })?;
+                        (Some(decoded), None)
+                    }
+                }
             }
         };
 
@@ -210,27 +211,34 @@ impl StorageContract {
             contract: self.key_name.clone(),
             path: path.to_string(),
             keys: keys.to_vec(),
-            ty: types::format_type_hint(&query.ty.0),
+            ty: odra_schema::codec::format_type_hint(&query.ty.0),
             location: query.location,
+            deployed: address.is_some(),
             value,
             raw: raw_value
         }))
     }
 }
 
-/// The output of the `storage` command: either the layout or a single value.
+/// The output of the `storage` command: either the contract's storage schema or a single value.
 #[derive(Serialize)]
 #[serde(untagged)]
 pub(crate) enum StorageReport {
-    Layout(LayoutReport),
+    Schema(StorageSchemaReport),
     Value(ValueReport)
 }
 
+/// The slice of the contract schema needed to describe a contract's storage: the same
+/// `casper_contract_schema_version`, `storage` and `types` fields as a `*_schema.json` `odra-build`
+/// writes, so this is a valid input to `odra-storage-reader`'s `StorageReader::from_json` too.
 #[derive(Serialize)]
-pub(crate) struct LayoutReport {
-    contract: String,
-    ident: String,
-    layout: StorageKind
+pub(crate) struct StorageSchemaReport {
+    casper_contract_schema_version: u8,
+    /// The name the contract is registered under.
+    key_name: String,
+    contract_name: String,
+    storage: StorageKind,
+    types: CustomTypeSet
 }
 
 #[derive(Serialize)]
@@ -243,22 +251,37 @@ pub(crate) struct ValueReport {
     ty: String,
     #[serde(flatten)]
     location: StorageLocation,
-    /// The decoded value, `None` if nothing is stored (or `--raw` was used).
+    /// Whether the contract is deployed; `value` and `raw` are always `None` when it is not.
+    #[serde(skip_serializing_if = "is_true")]
+    deployed: bool,
+    /// The decoded value, `None` if nothing is stored, the contract is not deployed, or
+    /// `--raw` was used.
     value: Option<String>,
     /// The hex-encoded stored bytes, only with `--raw`.
     #[serde(skip_serializing_if = "Option::is_none")]
     raw: Option<String>
 }
 
+fn is_true(deployed: &bool) -> bool {
+    *deployed
+}
+
 impl CmdOutput for StorageReport {
     fn pretty_print(&self) {
         match self {
-            StorageReport::Layout(report) => {
+            StorageReport::Schema(report) => {
                 log(format!(
                     "Storage layout of {} ({}):",
-                    report.contract, report.ident
+                    report.key_name, report.contract_name
                 ));
-                print_fields(report.layout.fields(), 1);
+                print_fields(report.storage.fields(), 1);
+                log(format!(
+                    "Read with `storage {} <path> [-k <key>]...`:",
+                    report.key_name
+                ));
+                for field in readable_fields(&report.storage) {
+                    log(format!("  {}", format_readable_field(&field)));
+                }
             }
             StorageReport::Value(report) => {
                 log(format!("Contract: {}", report.contract));
@@ -268,10 +291,11 @@ impl CmdOutput for StorageReport {
                 }
                 log(format!("Type:     {}", report.ty));
                 log(format!("Location: {}", format_location(&report.location)));
-                match (&report.value, &report.raw) {
-                    (Some(value), _) => log(format!("Value:    {value}")),
-                    (None, Some(raw)) => log(format!("Raw:      0x{raw}")),
-                    (None, None) => log("Value:    <not set>")
+                match (report.deployed, &report.value, &report.raw) {
+                    (false, _, _) => log("Value:    <contract not deployed>"),
+                    (true, Some(value), _) => log(format!("Value:    {value}")),
+                    (true, None, Some(raw)) => log(format!("Raw:      0x{raw}")),
+                    (true, None, None) => log("Value:    <not set>")
                 }
             }
         }
@@ -284,6 +308,17 @@ fn format_location(location: &StorageLocation) -> String {
         StorageLocation::NamedKey { name } => format!("named key `{name}`"),
         StorageLocation::Dictionary { name, key } => format!("dictionary `{name}`[{key}]")
     }
+}
+
+/// A readable field as the arguments to read it, e.g. `balances -k <hash-...|account-hash-...>: DECIMAL`.
+fn format_readable_field(field: &ReadableField) -> String {
+    let hint = |t: &Type| odra_schema::codec::format_type_hint(&t.0);
+    let keys: String = field
+        .keys
+        .iter()
+        .map(|key| format!(" -k <{}>", hint(key)))
+        .collect();
+    format!("{}{keys}: {}", field.path, hint(&field.ty))
 }
 
 /// Prints the fields of a module as an indented tree.
@@ -300,7 +335,7 @@ pub(crate) fn print_fields(fields: &[StorageField], depth: usize) {
 
 /// Describes a storage kind in one line and returns the nested fields to print below, if any.
 fn describe(kind: &StorageKind) -> (String, Option<&[StorageField]>) {
-    let ty = |t: &Type| types::format_type_hint(&t.0);
+    let ty = |t: &Type| odra_schema::codec::format_type_hint(&t.0);
     match kind {
         StorageKind::Value { ty: t } => (format!(": {}", ty(t)), None),
         StorageKind::List { item } => (format!(": List<{}>", ty(item)), None),
@@ -439,6 +474,50 @@ mod tests {
     }
 
     #[test]
+    fn formats_readable_fields() {
+        use odra::schema::casper_contract_schema::NamedCLType;
+
+        let layout = StorageKind::Module {
+            fields: vec![
+                StorageField::new("decimals", 1, StorageKind::value(NamedCLType::U8)),
+                StorageField::new(
+                    "allowances",
+                    2,
+                    StorageKind::Mapping {
+                        key: Type(NamedCLType::Tuple2([
+                            Box::new(NamedCLType::Key),
+                            Box::new(NamedCLType::Key)
+                        ])),
+                        value: Box::new(StorageKind::Value {
+                            ty: Type(NamedCLType::U256)
+                        })
+                    }
+                ),
+                StorageField::new(
+                    "holders",
+                    3,
+                    StorageKind::List {
+                        item: Type(NamedCLType::Key)
+                    }
+                ),
+            ]
+        };
+        let lines: Vec<_> = readable_fields(&layout)
+            .iter()
+            .map(format_readable_field)
+            .collect();
+        assert_eq!(
+            lines,
+            vec![
+                "decimals: 0-255|0x00|0b00000000",
+                "allowances -k <hash-...|account-hash-...:hash-...|account-hash-...>: DECIMAL",
+                "holders -k <UINT>: hash-...|account-hash-...",
+                "holders.len: UINT",
+            ]
+        );
+    }
+
+    #[test]
     fn prints_layout_without_path() {
         let mut cmd = StorageCmd::default();
         cmd.add_contract::<TestContract>();
@@ -452,6 +531,52 @@ mod tests {
         let report = cmd
             .exec(&env, &matches, &CustomTypeSet::new(), &container)
             .unwrap();
-        assert!(matches!(report, StorageReport::Layout(_)));
+        assert!(matches!(report, StorageReport::Schema(_)));
+
+        let json = serde_json::to_value(&report).unwrap();
+        assert_eq!(
+            json["casper_contract_schema_version"],
+            CONTRACT_SCHEMA_VERSION
+        );
+        assert_eq!(json["contract_name"], "TestContract");
+        assert_eq!(json["storage"]["kind"], "module");
+        assert!(json["types"].is_array());
+    }
+
+    #[test]
+    fn resolves_a_path_without_a_deployed_contract() {
+        use odra::schema::casper_contract_schema::NamedCLType;
+
+        let contract = StorageContract {
+            key_name: "Vault".to_string(),
+            ident: "Vault".to_string(),
+            layout: StorageKind::Module {
+                fields: vec![StorageField::new(
+                    "balance",
+                    1,
+                    StorageKind::value(NamedCLType::U256)
+                )]
+            },
+            custom_types: CustomTypeSet::new()
+        };
+
+        let env = crate::test_utils::mock_host_env();
+        let container = crate::test_utils::mock_contracts_container();
+        let report = contract
+            .read(&env, &container, "balance", &[], false)
+            .unwrap();
+        let StorageReport::Value(report) = report else {
+            panic!("expected a value report")
+        };
+
+        assert!(!report.deployed);
+        assert_eq!(report.value, None);
+        assert_eq!(report.raw, None);
+        assert_eq!(report.ty, "DECIMAL");
+        assert!(matches!(report.location, StorageLocation::State { .. }));
+
+        let json = serde_json::to_value(&report).unwrap();
+        assert_eq!(json["deployed"], false);
+        assert!(json["value"].is_null());
     }
 }

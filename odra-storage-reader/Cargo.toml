@@ -1,0 +1,32 @@
+[package]
+name = "odra-storage-reader"
+description = "Reads the storage of a deployed Odra contract from a frontend, without calling it."
+
+authors = { workspace = true }
+edition = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+readme = { workspace = true }
+repository = { workspace = true }
+version = { workspace = true }
+
+[dependencies]
+odra-core = { workspace = true }
+odra-schema = { workspace = true, features = ["codec"] }
+
+casper-types = { workspace = true }
+
+gloo-utils = { workspace = true, features = ["serde"] }
+hex = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true, features = ["std", "preserve_order"] }
+thiserror = { workspace = true }
+wasm-bindgen = { workspace = true }
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+name = "odra_storage_reader"
+path = "src/lib.rs"
+
+[lints.rust]
+missing_docs = "warn"

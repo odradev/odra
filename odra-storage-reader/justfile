@@ -1,0 +1,35 @@
+prepare:
+    cargo install wasm-pack
+
+build:
+    wasm-pack build --target web --out-dir pkg-web .
+
+# Copies the schema file of every contract in resources/casper-net-1-contracts.toml into
+# example/schemas, for the storage explorer. Schemas come from
+# examples/resources/casper_contract_schemas (written by building the examples with odra-build),
+# so build the examples first.
+export-schemas:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd ..
+    out=odra-storage-reader/example/schemas
+    mkdir -p "$out"
+    for name in $(grep '^name = ' resources/casper-net-1-contracts.toml | cut -d'"' -f2); do
+        snake=$(echo "$name" | sed -E 's/([a-z])([A-Z])/\1_\2/g' | tr '[:upper:]' '[:lower:]')
+        src="examples/resources/casper_contract_schemas/${snake}_schema.json"
+        if [ -f "$src" ]; then
+            cp "$src" "$out/$name.json"
+            echo "exported $name"
+        else
+            rm -f "$out/$name.json"
+            echo "skipped $name (no schema file, build the examples first)"
+        fi
+    done
+
+# Reads a value from the command line, see example/read.ts.
+read *args:
+    cd example && npm install && npm run read -- {{args}}
+
+# The storage explorer on http://localhost:3000.
+serve:
+    cd example && npm install && npm run serve

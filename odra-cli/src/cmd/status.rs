@@ -1,12 +1,12 @@
 use anyhow::Result;
 use clap::{ArgMatches, Command};
 use odra::{contract_def::HasIdent, host::HostEnv, OdraContract};
+use odra_schema::codec::CustomTypeSet;
 use serde_derive::Serialize;
 
 use crate::{
     cmd::{CmdOutput, STATUS_SUBCOMMAND},
     container::{ContractProvider, ContractStorageSource},
-    custom_types::CustomTypeSet,
     log, DeployedContractsContainer
 };
 
