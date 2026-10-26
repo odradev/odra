@@ -33,6 +33,9 @@ Changelog for `odra`.
   a dotted field path into the storage key, `HostEnv::get_storage_value`, `get_named_value` and
   `get_dictionary_value` read raw storage on every backend, `#[odra::module]` takes a `layout`
   argument, and odra-cli has a `storage` command.
+- `odra-cli storage <Contract> <path>` works before the contract is deployed too: it still resolves
+  the path, the storage key and the type, so `storage` can compute a storage key on its own; it prints
+  the value only if the contract is deployed.
 - The contract schema has a `storage` section with the storage layout of the contract, and its `types`
   section describes the types that are only stored and never passed to or returned from an entry point.
 - odra-cli: `ContractLoaderExt` (`load_from_file`, `load_from_file_named`, `load_from_default_file`)
