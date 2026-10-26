@@ -1,7 +1,7 @@
 // The readable fields and their types, formatted for display.
 // Pure functions: no reader, no node, no DOM.
 
-/** A NamedCLType as serialized in the layout file: `"U256"`, `"MyStruct"`, `{ "Option": "U8" }`, ... */
+/** A NamedCLType as serialized in the schema file: `"U256"`, `"MyStruct"`, `{ "Option": "U8" }`, ... */
 export type Ty = string | { [variant: string]: any };
 
 /** A value that can be read, as `StorageReader.readableFields` returns it. */

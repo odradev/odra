@@ -1,0 +1,545 @@
+{
+  "casper_contract_schema_version": 1,
+  "toolchain": "rustc 1.94.0-nightly (8d670b93d 2025-12-31)",
+  "toolkit": {
+    "name": "Odra",
+    "version": "2.10.0"
+  },
+  "authors": [
+    "Jakub Płaskonka <kuba@odra.dev>",
+    "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
+    "Maciej Zieliński <maciej@odra.dev>"
+  ],
+  "repository": "https://github.com/odradev/odra",
+  "homepage": "https://odra.dev/docs",
+  "contract_name": "Cep18",
+  "contract_version": "2.10.0",
+  "types": [
+    {
+      "struct": {
+        "name": "Burn",
+        "description": null,
+        "members": [
+          {
+            "name": "owner",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "amount",
+            "description": null,
+            "ty": "U256"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "DecreaseAllowance",
+        "description": null,
+        "members": [
+          {
+            "name": "owner",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "spender",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "allowance",
+            "description": null,
+            "ty": "U256"
+          },
+          {
+            "name": "decr_by",
+            "description": null,
+            "ty": "U256"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "IncreaseAllowance",
+        "description": null,
+        "members": [
+          {
+            "name": "owner",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "spender",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "allowance",
+            "description": null,
+            "ty": "U256"
+          },
+          {
+            "name": "inc_by",
+            "description": null,
+            "ty": "U256"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "Mint",
+        "description": null,
+        "members": [
+          {
+            "name": "recipient",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "amount",
+            "description": null,
+            "ty": "U256"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "SetAllowance",
+        "description": null,
+        "members": [
+          {
+            "name": "owner",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "spender",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "allowance",
+            "description": null,
+            "ty": "U256"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "Transfer",
+        "description": null,
+        "members": [
+          {
+            "name": "sender",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "recipient",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "amount",
+            "description": null,
+            "ty": "U256"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "TransferFrom",
+        "description": null,
+        "members": [
+          {
+            "name": "spender",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "owner",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "recipient",
+            "description": null,
+            "ty": "Key"
+          },
+          {
+            "name": "amount",
+            "description": null,
+            "ty": "U256"
+          }
+        ]
+      }
+    }
+  ],
+  "errors": [
+    {
+      "name": "CannotTargetSelfUser",
+      "description": "The user cannot target themselves.",
+      "discriminant": 60003
+    },
+    {
+      "name": "InsufficientAllowance",
+      "description": "Spender does not have enough allowance approved.",
+      "discriminant": 60002
+    },
+    {
+      "name": "InsufficientBalance",
+      "description": "Spender does not have enough balance.",
+      "discriminant": 60001
+    }
+  ],
+  "entry_points": [
+    {
+      "name": "name",
+      "description": "Returns the name of the token.",
+      "is_mutable": false,
+      "is_payable": false,
+      "arguments": [],
+      "return_ty": "String",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "symbol",
+      "description": "Returns the symbol of the token.",
+      "is_mutable": false,
+      "is_payable": false,
+      "arguments": [],
+      "return_ty": "String",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "decimals",
+      "description": "Returns the number of decimals the token uses.",
+      "is_mutable": false,
+      "is_payable": false,
+      "arguments": [],
+      "return_ty": "U8",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "total_supply",
+      "description": "Returns the total supply of the token.",
+      "is_mutable": false,
+      "is_payable": false,
+      "arguments": [],
+      "return_ty": "U256",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "balance_of",
+      "description": "Returns the balance of the given address.",
+      "is_mutable": false,
+      "is_payable": false,
+      "arguments": [
+        {
+          "name": "address",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        }
+      ],
+      "return_ty": "U256",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "allowance",
+      "description": "Returns the amount of tokens the owner has allowed the spender to spend.",
+      "is_mutable": false,
+      "is_payable": false,
+      "arguments": [
+        {
+          "name": "owner",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "spender",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        }
+      ],
+      "return_ty": "U256",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "approve",
+      "description": "Approves the spender to spend the given amount of tokens on behalf of the caller.",
+      "is_mutable": true,
+      "is_payable": false,
+      "arguments": [
+        {
+          "name": "spender",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "amount",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "decrease_allowance",
+      "description": "Decreases the allowance of the spender by the given amount.",
+      "is_mutable": true,
+      "is_payable": false,
+      "arguments": [
+        {
+          "name": "spender",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "decr_by",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "increase_allowance",
+      "description": "Increases the allowance of the spender by the given amount.",
+      "is_mutable": true,
+      "is_payable": false,
+      "arguments": [
+        {
+          "name": "spender",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "inc_by",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "transfer",
+      "description": "Transfers tokens from the caller to the recipient.",
+      "is_mutable": true,
+      "is_payable": false,
+      "arguments": [
+        {
+          "name": "recipient",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "amount",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "transfer_from",
+      "description": "Transfers tokens from the owner to the recipient using the spender's allowance.",
+      "is_mutable": true,
+      "is_payable": false,
+      "arguments": [
+        {
+          "name": "owner",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "recipient",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
+        {
+          "name": "amount",
+          "description": null,
+          "ty": "U256",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    }
+  ],
+  "events": [
+    {
+      "name": "Burn",
+      "ty": "Burn"
+    },
+    {
+      "name": "DecreaseAllowance",
+      "ty": "DecreaseAllowance"
+    },
+    {
+      "name": "IncreaseAllowance",
+      "ty": "IncreaseAllowance"
+    },
+    {
+      "name": "Mint",
+      "ty": "Mint"
+    },
+    {
+      "name": "SetAllowance",
+      "ty": "SetAllowance"
+    },
+    {
+      "name": "Transfer",
+      "ty": "Transfer"
+    },
+    {
+      "name": "TransferFrom",
+      "ty": "TransferFrom"
+    }
+  ],
+  "call": {
+    "wasm_file_name": "Cep18.wasm",
+    "description": "Initializes the contract with the given metadata, initial supply.",
+    "arguments": [
+      {
+        "name": "odra_cfg_package_hash_key_name",
+        "description": "The arg name for the package hash key name.",
+        "ty": "String",
+        "optional": false
+      },
+      {
+        "name": "odra_cfg_allow_key_override",
+        "description": "If true and the key specified in odra_cfg_package_hash_key_name already exists, it will be overwritten.",
+        "ty": "Bool",
+        "optional": false
+      },
+      {
+        "name": "odra_cfg_is_upgradable",
+        "description": "The arg name for the contract upgradeability setting.",
+        "ty": "Bool",
+        "optional": false
+      },
+      {
+        "name": "odra_cfg_is_upgrade",
+        "description": "The arg name for telling the installer that the contract is being upgraded.",
+        "ty": "Bool",
+        "optional": false
+      },
+      {
+        "name": "symbol",
+        "description": null,
+        "ty": "String",
+        "optional": false
+      },
+      {
+        "name": "name",
+        "description": null,
+        "ty": "String",
+        "optional": false
+      },
+      {
+        "name": "decimals",
+        "description": null,
+        "ty": "U8",
+        "optional": false
+      },
+      {
+        "name": "initial_supply",
+        "description": null,
+        "ty": "U256",
+        "optional": false
+      }
+    ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "decimals",
+        "index": 1,
+        "kind": "named_key",
+        "named_key": "decimals",
+        "ty": "U8"
+      },
+      {
+        "name": "symbol",
+        "index": 2,
+        "kind": "named_key",
+        "named_key": "symbol",
+        "ty": "String"
+      },
+      {
+        "name": "name",
+        "index": 3,
+        "kind": "named_key",
+        "named_key": "name",
+        "ty": "String"
+      },
+      {
+        "name": "total_supply",
+        "index": 4,
+        "kind": "named_key",
+        "named_key": "total_supply",
+        "ty": "U256"
+      },
+      {
+        "name": "balances",
+        "index": 5,
+        "kind": "dictionary",
+        "dictionary": "balances",
+        "key": "Key",
+        "key_encoding": "base64",
+        "value": "U256"
+      },
+      {
+        "name": "allowances",
+        "index": 6,
+        "kind": "dictionary",
+        "dictionary": "allowances",
+        "key": {
+          "Tuple2": [
+            "Key",
+            "Key"
+          ]
+        },
+        "key_encoding": "hex_hash",
+        "value": "U256"
+      }
+    ]
+  }
+}

@@ -1,8 +1,7 @@
 {
-  "version": 1,
-  "contract": "NestedOdraTypesContract",
-  "ident": "NestedOdraTypesContract",
-  "layout": {
+  "casper_contract_schema_version": 1,
+  "contract_name": "NestedOdraTypesContract",
+  "storage": {
     "kind": "module",
     "fields": [
       {

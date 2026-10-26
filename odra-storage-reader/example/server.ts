@@ -16,13 +16,13 @@ const PORT = Number(process.env.PORT ?? 3000);
 const NODE_URL = new URL(process.env.NODE_URL ?? "http://localhost:11101/rpc");
 const CONTRACTS_FILE =
   process.env.CONTRACTS_FILE ?? path.join(here, "../../resources/casper-net-1-contracts.toml");
-// Written by `just export-layouts`.
-const LAYOUTS_DIR = path.join(here, "layouts");
+// Written by `just export-schemas`.
+const SCHEMAS_DIR = path.join(here, "schemas");
 
 interface Contract {
   name: string;
   packageHash: string;
-  hasLayout: boolean;
+  hasSchema: boolean;
 }
 
 // Reads the `[[contracts]]` tables odra-cli writes; they only hold string values.
@@ -42,7 +42,7 @@ function readContracts(): Contract[] {
   return tables.map((table) => ({
     name: table.name,
     packageHash: table.package_hash,
-    hasLayout: existsSync(path.join(LAYOUTS_DIR, `${table.name}.json`))
+    hasSchema: existsSync(path.join(SCHEMAS_DIR, `${table.name}.json`))
   }));
 }
 

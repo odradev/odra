@@ -4,7 +4,7 @@ use casper_types::{bytesrepr::Bytes, CLType, CLTyped, CLValue, Key, StoredValue}
 use odra_core::consts::STATE_KEY;
 use odra_schema::casper_contract_schema::Type;
 use odra_schema::codec::{self, CustomTypeSet, DecodeError};
-use odra_schema::{StorageKind, StorageLayoutFile, StorageLocation, STORAGE_LAYOUT_VERSION};
+use odra_schema::{StorageKind, StorageLocation, CONTRACT_SCHEMA_VERSION};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -55,7 +55,7 @@ impl Location {
     }
 }
 
-/// Reads the storage of a single contract, described by a layout file.
+/// Reads the storage of a single contract, described by its contract schema file.
 #[derive(Debug)]
 pub struct StorageReader {
     contract: String,
@@ -64,20 +64,42 @@ pub struct StorageReader {
 }
 
 impl StorageReader {
-    /// Creates a reader from the layout file (the output of `odra-cli --json storage <Contract>`).
+    /// Creates a reader from the contract schema file (the `*_schema.json` `odra-build` writes).
     pub fn from_json(json: &Value) -> Result<Self, Error> {
-        match json.get("version").map(|v| v.as_u64()) {
+        match json
+            .get("casper_contract_schema_version")
+            .map(|v| v.as_u64())
+        {
             None => return Err(Error::MissingVersion),
-            Some(Some(version)) if version == STORAGE_LAYOUT_VERSION as u64 => {}
+            Some(Some(version)) if version == CONTRACT_SCHEMA_VERSION as u64 => {}
             Some(Some(version)) => return Err(Error::UnsupportedVersion(version)),
-            Some(None) => return Err(Error::InvalidLayout("`version` is not a number".into()))
+            Some(None) => {
+                return Err(Error::InvalidSchema(
+                    "`casper_contract_schema_version` is not a number".into()
+                ))
+            }
         }
-        let file = StorageLayoutFile::deserialize(json)
-            .map_err(|e| Error::InvalidLayout(e.to_string()))?;
+        let contract = json
+            .get("contract_name")
+            .and_then(Value::as_str)
+            .ok_or_else(|| Error::InvalidSchema("missing `contract_name`".into()))?
+            .to_string();
+        let layout = json
+            .get("storage")
+            .ok_or_else(|| Error::InvalidSchema("missing `storage`".into()))
+            .and_then(|storage| {
+                StorageKind::deserialize(storage).map_err(|e| Error::InvalidSchema(e.to_string()))
+            })?;
+        let types = json
+            .get("types")
+            .ok_or_else(|| Error::InvalidSchema("missing `types`".into()))
+            .and_then(|types| {
+                CustomTypeSet::deserialize(types).map_err(|e| Error::InvalidSchema(e.to_string()))
+            })?;
         Ok(Self {
-            contract: file.contract,
-            layout: file.layout,
-            types: file.types
+            contract,
+            layout,
+            types
         })
     }
 
@@ -128,7 +150,7 @@ impl StorageReader {
             .map_err(|e| Error::Decode {
                 reason: match e {
                     DecodeError::UnknownType(name) => {
-                        format!("type `{name}` is not defined in the layout file")
+                        format!("type `{name}` is not defined in the schema file")
                     }
                     e => e.to_string()
                 },
@@ -137,7 +159,7 @@ impl StorageReader {
     }
 
     /// The hex-encoded bytes of the value read from `location`, without decoding them, e.g. for
-    /// a type that is not in the layout file.
+    /// a type that is not in the schema file.
     ///
     /// `cl_value` is the node's `CLValue` JSON as is (`stored_value.CLValue` of the RPC result).
     pub fn decode_raw(&self, cl_value: &Value, location: &Location) -> Result<String, Error> {

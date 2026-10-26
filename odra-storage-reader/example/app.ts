@@ -1,6 +1,6 @@
 // The storage explorer page: lists the deployed contracts and reads any field of their storage.
 // Presentation only - see storage.ts for how the storage is read.
-import { keyHint, storageLabel, typeName, type Field } from "./layout.js";
+import { keyHint, storageLabel, typeName, type Field } from "./schema.js";
 import {
   ContractStorage,
   fetchContracts,
@@ -31,19 +31,19 @@ async function contractsView() {
 
 function contractCard(contract: Contract) {
   return h(
-    contract.hasLayout ? "a" : "div",
+    contract.hasSchema ? "a" : "div",
     {
-      class: `card${contract.hasLayout ? "" : " disabled"}`,
-      href: contract.hasLayout ? `#/${encodeURIComponent(contract.name)}` : undefined
+      class: `card${contract.hasSchema ? "" : " disabled"}`,
+      href: contract.hasSchema ? `#/${encodeURIComponent(contract.name)}` : undefined
     },
     h("span", { class: "name" }, contract.name),
     h("code", { title: contract.packageHash }, short(contract.packageHash)),
-    contract.hasLayout ? null : h("span", { class: "badge" }, "no layout")
+    contract.hasSchema ? null : h("span", { class: "badge" }, "no schema")
   );
 }
 
 async function readerView(name: string) {
-  show(h("p", { class: "muted" }, "Loading layout…"));
+  show(h("p", { class: "muted" }, "Loading schema…"));
   let storage: ContractStorage;
   try {
     const contract = (await contracts).find((c) => c.name === name);

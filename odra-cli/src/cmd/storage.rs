@@ -5,7 +5,7 @@ use odra::host::HostEnv;
 use odra::schema::casper_contract_schema::Type;
 use odra::schema::{
     readable_fields, ReadableField, SchemaCustomTypes, SchemaEvents, SchemaStorageLayout,
-    StorageField, StorageKind, StorageLayoutFile, StorageLocation, STORAGE_LAYOUT_VERSION
+    StorageField, StorageKind, StorageLocation, CONTRACT_SCHEMA_VERSION
 };
 use odra::OdraContract;
 use odra_schema::codec::{resolve_storage_from_text, CustomTypeSet};
@@ -84,11 +84,11 @@ impl OdraCommand for StorageCmd {
             })?;
 
         let Some(path) = args.get_one::<String>(PATH_ARG) else {
-            return Ok(StorageReport::Layout(StorageLayoutFile {
-                version: STORAGE_LAYOUT_VERSION,
-                contract: contract.key_name.clone(),
-                ident: contract.ident.clone(),
-                layout: contract.layout.clone(),
+            return Ok(StorageReport::Schema(StorageSchemaReport {
+                casper_contract_schema_version: CONTRACT_SCHEMA_VERSION,
+                key_name: contract.key_name.clone(),
+                contract_name: contract.ident.clone(),
+                storage: contract.layout.clone(),
                 types: contract.custom_types.clone()
             }));
         };
@@ -151,6 +151,11 @@ impl StorageContract {
         let mut custom_types = CustomTypeSet::new();
         custom_types.extend(T::schema_types().into_iter().flatten());
         custom_types.extend(<T as SchemaEvents>::custom_types().into_iter().flatten());
+        custom_types.extend(
+            <T as SchemaStorageLayout>::custom_types()
+                .into_iter()
+                .flatten()
+        );
 
         Self {
             key_name,
@@ -206,12 +211,25 @@ impl StorageContract {
     }
 }
 
-/// The output of the `storage` command: either the layout or a single value.
+/// The output of the `storage` command: either the contract's storage schema or a single value.
 #[derive(Serialize)]
 #[serde(untagged)]
 pub(crate) enum StorageReport {
-    Layout(StorageLayoutFile),
+    Schema(StorageSchemaReport),
     Value(ValueReport)
+}
+
+/// The slice of the contract schema needed to describe a contract's storage: the same
+/// `casper_contract_schema_version`, `storage` and `types` fields as a `*_schema.json` `odra-build`
+/// writes, so this is a valid input to `odra-storage-reader`'s `StorageReader::from_json` too.
+#[derive(Serialize)]
+pub(crate) struct StorageSchemaReport {
+    casper_contract_schema_version: u8,
+    /// The name the contract is registered under.
+    key_name: String,
+    contract_name: String,
+    storage: StorageKind,
+    types: CustomTypeSet
 }
 
 #[derive(Serialize)]
@@ -234,17 +252,17 @@ pub(crate) struct ValueReport {
 impl CmdOutput for StorageReport {
     fn pretty_print(&self) {
         match self {
-            StorageReport::Layout(report) => {
+            StorageReport::Schema(report) => {
                 log(format!(
                     "Storage layout of {} ({}):",
-                    report.contract, report.ident
+                    report.key_name, report.contract_name
                 ));
-                print_fields(report.layout.fields(), 1);
+                print_fields(report.storage.fields(), 1);
                 log(format!(
                     "Read with `storage {} <path> [-k <key>]...`:",
-                    report.contract
+                    report.key_name
                 ));
-                for field in readable_fields(&report.layout) {
+                for field in readable_fields(&report.storage) {
                     log(format!("  {}", format_readable_field(&field)));
                 }
             }
@@ -495,12 +513,15 @@ mod tests {
         let report = cmd
             .exec(&env, &matches, &CustomTypeSet::new(), &container)
             .unwrap();
-        assert!(matches!(report, StorageReport::Layout(_)));
+        assert!(matches!(report, StorageReport::Schema(_)));
 
         let json = serde_json::to_value(&report).unwrap();
-        assert_eq!(json["version"], STORAGE_LAYOUT_VERSION);
-        assert_eq!(json["contract"], "TestContract");
-        assert_eq!(json["layout"]["kind"], "module");
+        assert_eq!(
+            json["casper_contract_schema_version"],
+            CONTRACT_SCHEMA_VERSION
+        );
+        assert_eq!(json["contract_name"], "TestContract");
+        assert_eq!(json["storage"]["kind"], "module");
         assert!(json["types"].is_array());
     }
 }

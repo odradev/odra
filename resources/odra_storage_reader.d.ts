@@ -7,7 +7,7 @@ export class StorageReader {
   free(): void;
   /**
    * The hex-encoded bytes of the value read from `location`, without decoding them, e.g. for a
-   * type that is not in the layout file. Takes the same arguments as `decode`.
+   * type that is not in the schema file. Takes the same arguments as `decode`.
    */
   decodeRaw(clValue: any, location: any): string;
   /**
@@ -21,10 +21,10 @@ export class StorageReader {
    */
   currentContractHash(stored_value: any): string;
   /**
-   * Creates a reader from the layout file (`odra-cli --json storage <Contract>`), given as a
-   * JSON string or an object.
+   * Creates a reader from the contract's schema file (the `*_schema.json` `odra-build`
+   * writes), given as a JSON string or an object.
    */
-  constructor(layout: any);
+  constructor(schema: any);
   /**
    * Decodes the value read from `location` (the result of `locate`). `clValue` is the
    * `rawJSON.stored_value.CLValue` of the RPC result.

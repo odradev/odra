@@ -1,5 +1,5 @@
-//! Tests against layouts exported with `odra-cli --json storage <Contract>` and node responses
-//! captured from NCTL (`tests/fixtures`), so the expected values come from a real chain.
+//! Tests against contract schema files (`*_schema.json`, as `odra-build` writes them) and node
+//! responses captured from NCTL (`tests/fixtures`), so the expected values come from a real chain.
 
 use std::collections::BTreeSet;
 
@@ -44,7 +44,7 @@ fn dictionary(name: &str, key: &str, ty: NamedCLType) -> Location {
 
 #[test]
 fn reads_erc20_balance_from_state() {
-    let reader = reader("erc20_layout");
+    let reader = reader("erc20_schema");
     assert_eq!(reader.contract(), "Erc20");
 
     let location = reader.locate("balances", &keys(&[ACCOUNT])).unwrap();
@@ -66,7 +66,7 @@ fn reads_erc20_balance_from_state() {
 
 #[test]
 fn reads_cep18_named_key_and_dictionary() {
-    let reader = reader("cep18_layout");
+    let reader = reader("cep18_schema");
 
     let location = reader.locate("decimals", &[]).unwrap();
     assert_eq!(
@@ -103,7 +103,7 @@ fn reads_cep18_named_key_and_dictionary() {
 
 #[test]
 fn decode_accepts_the_whole_stored_value() {
-    let reader = reader("erc20_layout");
+    let reader = reader("erc20_schema");
     let location = reader.locate("balances", &keys(&[ACCOUNT])).unwrap();
     let stored_value = fixture("erc20_balance_item")["stored_value"].clone();
     assert_eq!(reader.decode(&stored_value, &location).unwrap(), "10000");
@@ -111,7 +111,7 @@ fn decode_accepts_the_whole_stored_value() {
 
 #[test]
 fn tuple_key_is_a_single_key() {
-    let reader = reader("erc20_layout");
+    let reader = reader("erc20_schema");
     let pair = format!("{ACCOUNT}:{ACCOUNT}");
     let location = reader.locate("allowances", &keys(&[&pair])).unwrap();
     assert!(
@@ -130,7 +130,7 @@ fn tuple_key_is_a_single_key() {
 
 #[test]
 fn location_json_matches_the_rpc_params() {
-    let reader = reader("erc20_layout");
+    let reader = reader("erc20_schema");
     let location = reader.locate("balances", &keys(&[ACCOUNT])).unwrap();
     assert_eq!(
         serde_json::to_value(&location).unwrap(),
@@ -145,7 +145,7 @@ fn location_json_matches_the_rpc_params() {
     let back: Location = serde_json::from_value(serde_json::to_value(&location).unwrap()).unwrap();
     assert_eq!(back, location);
 
-    let named_key = self::reader("cep18_layout")
+    let named_key = self::reader("cep18_schema")
         .locate("decimals", &[])
         .unwrap();
     assert_eq!(
@@ -200,7 +200,7 @@ fn rejects_a_value_that_is_not_a_package() {
 
 #[test]
 fn reports_path_and_key_errors() {
-    let reader = reader("erc20_layout");
+    let reader = reader("erc20_schema");
     let message = |path: &str, k: &[&str]| reader.locate(path, &keys(k)).unwrap_err().to_string();
 
     assert_eq!(
@@ -225,49 +225,51 @@ fn reports_path_and_key_errors() {
 }
 
 #[test]
-fn checks_the_layout_version() {
-    let mut layout = fixture("erc20_layout");
-    layout.as_object_mut().unwrap().remove("version");
+fn checks_the_schema_version() {
+    let mut schema = fixture("erc20_schema");
+    schema
+        .as_object_mut()
+        .unwrap()
+        .remove("casper_contract_schema_version");
     assert!(matches!(
-        StorageReader::from_json(&layout),
+        StorageReader::from_json(&schema),
         Err(Error::MissingVersion)
     ));
 
-    layout["version"] = json!(2);
-    let err = StorageReader::from_json(&layout).unwrap_err();
+    schema["casper_contract_schema_version"] = json!(2);
+    let err = StorageReader::from_json(&schema).unwrap_err();
     assert_eq!(
         err.to_string(),
-        "Unsupported layout file version 2, expected 1"
+        "Unsupported schema file version 2, expected 1"
     );
 }
 
 #[test]
-fn reports_a_type_missing_from_the_layout_file() {
-    let layout = json!({
-        "version": 1,
-        "contract": "Vault",
-        "ident": "Vault",
-        "layout": {
+fn reports_a_type_missing_from_the_schema_file() {
+    let schema = json!({
+        "casper_contract_schema_version": 1,
+        "contract_name": "Vault",
+        "storage": {
             "kind": "module",
             "fields": [{ "name": "config", "index": 1, "kind": "value", "ty": { "Custom": "Config" } }]
         },
         "types": []
     });
-    let reader = StorageReader::from_json(&layout).unwrap();
+    let reader = StorageReader::from_json(&schema).unwrap();
     let location = reader.locate("config", &[]).unwrap();
     let value = json!({ "cl_type": { "List": "U8" }, "bytes": "020000000102", "parsed": [1, 2] });
 
     let err = reader.decode(&value, &location).unwrap_err();
     assert_eq!(
         err.to_string(),
-        "Cannot decode the stored value: type `Config` is not defined in the layout file (raw: 0x0102)"
+        "Cannot decode the stored value: type `Config` is not defined in the schema file (raw: 0x0102)"
     );
     assert_eq!(reader.decode_raw(&value, &location).unwrap(), "0102");
 }
 
 #[test]
 fn rejects_an_invalid_cl_value() {
-    let reader = reader("erc20_layout");
+    let reader = reader("erc20_schema");
     let location = reader.locate("total_supply", &[]).unwrap();
     let err = reader
         .decode(&json!({ "bytes": "00" }), &location)
@@ -311,17 +313,16 @@ fn decodes_a_struct_to_json() {
                 .collect()
         },
     ];
-    let layout = json!({
-        "version": 1,
-        "contract": "Vault",
-        "ident": "Vault",
-        "layout": {
+    let schema = json!({
+        "casper_contract_schema_version": 1,
+        "contract_name": "Vault",
+        "storage": {
             "kind": "module",
             "fields": [{ "name": "config", "index": 1, "kind": "value", "ty": { "Custom": "Config" } }]
         },
         "types": types
     });
-    let reader = StorageReader::from_json(&layout).unwrap();
+    let reader = StorageReader::from_json(&schema).unwrap();
     let location = reader.locate("config", &[]).unwrap();
 
     let mut bytes = "say \"hi\"".to_bytes().unwrap();
@@ -359,7 +360,7 @@ fn every_readable_field_locates() {
         NamedCLType::Tuple2(_) => format!("{ACCOUNT}:{ACCOUNT}"),
         other => panic!("no sample key for {other:?}")
     };
-    for name in ["erc20_layout", "cep18_layout", "nested_odra_types_layout"] {
+    for name in ["erc20_schema", "cep18_schema", "nested_odra_types_schema"] {
         let reader = reader(name);
         let fields = readable_fields(reader.layout());
         assert!(!fields.is_empty(), "{name}");

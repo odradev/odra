@@ -8,13 +8,13 @@
 //! 2. `locate("balances", ["account-hash-..."])` - a dictionary item or a named key.
 //! 3. `decode(item.rawJSON.stored_value.CLValue, location)` - the value, formatted like `odra-cli`.
 //!
-//! The contract is described by its layout file, the output of
-//! `odra-cli --json storage <Contract>`.
+//! The contract is described by its contract schema file, the `*_schema.json` `odra-build`
+//! writes next to the wasm.
 
 mod error;
 mod reader;
 mod wasm;
 
 pub use error::Error;
-pub use odra_schema::STORAGE_LAYOUT_VERSION;
+pub use odra_schema::CONTRACT_SCHEMA_VERSION;
 pub use reader::{current_contract_hash, Location, StorageReader};

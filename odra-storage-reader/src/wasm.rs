@@ -13,15 +13,15 @@ pub struct StorageReader(reader::StorageReader);
 
 #[wasm_bindgen]
 impl StorageReader {
-    /// Creates a reader from the layout file (`odra-cli --json storage <Contract>`), given as a
-    /// JSON string or an object.
+    /// Creates a reader from the contract's schema file (the `*_schema.json` `odra-build`
+    /// writes), given as a JSON string or an object.
     #[wasm_bindgen(constructor)]
-    pub fn new(layout: JsValue) -> Result<StorageReader, JsError> {
-        let json = match layout.as_string() {
+    pub fn new(schema: JsValue) -> Result<StorageReader, JsError> {
+        let json = match schema.as_string() {
             Some(json) => serde_json::from_str(&json),
-            None => layout.into_serde::<Value>()
+            None => schema.into_serde::<Value>()
         }
-        .map_err(|e| Error::InvalidLayout(e.to_string()))?;
+        .map_err(|e| Error::InvalidSchema(e.to_string()))?;
         Ok(Self(reader::StorageReader::from_json(&json)?))
     }
 
@@ -70,7 +70,7 @@ impl StorageReader {
     }
 
     /// The hex-encoded bytes of the value read from `location`, without decoding them, e.g. for a
-    /// type that is not in the layout file. Takes the same arguments as `decode`.
+    /// type that is not in the schema file. Takes the same arguments as `decode`.
     #[wasm_bindgen(js_name = "decodeRaw")]
     pub fn decode_raw(
         &self,

@@ -9,7 +9,6 @@
 //! the exact location the value is stored under, so the state of a deployed contract can be read
 //! without calling any entry point. That is what `odra-cli storage` does under the hood.
 
-use std::collections::BTreeSet;
 use std::fmt::{self, Display, Formatter};
 use std::io::Write;
 
@@ -25,26 +24,6 @@ use odra_core::{utils, ContractRef};
 use serde::{Deserialize, Serialize};
 
 use crate::{NamedCLTyped, SchemaCustomTypes};
-
-/// The version of the [StorageLayoutFile] format, bumped on breaking changes so readers can
-/// reject files they cannot read.
-pub const STORAGE_LAYOUT_VERSION: u8 = 1;
-
-/// The storage layout of a contract with the custom types needed to decode its values: what
-/// `odra-cli --json storage <Contract>` exports and `odra-storage-reader` reads.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
-pub struct StorageLayoutFile {
-    /// The format version, [STORAGE_LAYOUT_VERSION].
-    pub version: u8,
-    /// The name the contract is registered under.
-    pub contract: String,
-    /// The name of the contract type.
-    pub ident: String,
-    /// The storage layout.
-    pub layout: StorageKind,
-    /// The custom types of the contract.
-    pub types: BTreeSet<CustomType>
-}
 
 /// Every value that can be read from a `layout`: its path and the types of the keys it needs,
 /// as [resolve_storage] takes them.

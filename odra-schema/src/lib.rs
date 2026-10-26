@@ -15,7 +15,9 @@ use convert_case::{Boundary, Case, Casing};
 
 use odra_core::args::EntrypointArgument;
 
-const CCSV: u8 = 1;
+/// The version of the [ContractSchema] format, bumped on breaking changes so readers (e.g.
+/// `odra-storage-reader`) can reject schema files they cannot read.
+pub const CONTRACT_SCHEMA_VERSION: u8 = 1;
 /// The version of Odra the contract is built with (odra-schema is versioned together with odra).
 const ODRA_VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -28,8 +30,7 @@ mod ty;
 pub use casper_contract_schema::{KeyEncoding, StorageField, StorageKind};
 pub use storage_layout::{
     dictionary, named_key, readable_fields, resolve_storage, resolve_storage_with, FieldStorage,
-    ReadableField, SchemaStorageLayout, StorageLayoutError, StorageLayoutFile, StorageLocation,
-    StorageQuery, STORAGE_LAYOUT_VERSION
+    ReadableField, SchemaStorageLayout, StorageLayoutError, StorageLocation, StorageQuery
 };
 pub use ty::NamedCLTyped;
 
@@ -234,7 +235,7 @@ where
     };
 
     ContractSchema {
-        casper_contract_schema_version: CCSV,
+        casper_contract_schema_version: CONTRACT_SCHEMA_VERSION,
         toolchain: env!("RUSTC_VERSION").to_string(),
         toolkit: Toolkit {
             name: "Odra".to_string(),

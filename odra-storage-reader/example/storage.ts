@@ -5,7 +5,7 @@
 import type * as Casper from "casper-js-sdk";
 import init, { StorageReader } from "odra-storage-reader";
 
-import type { Field, Ty } from "./layout.js";
+import type { Field, Ty } from "./schema.js";
 
 // The browser build of casper-js-sdk (loaded in index.html) defines its classes as globals.
 const sdk = globalThis as unknown as typeof Casper;
@@ -20,8 +20,8 @@ const isNotSet = (e: any) => (e?.sourceErr?.code ?? e?.code) === QUERY_FAILED;
 export interface Contract {
   name: string;
   packageHash: string;
-  /** Whether `just export-layouts` wrote its layout file. */
-  hasLayout: boolean;
+  /** Whether `just export-schemas` wrote its schema file. */
+  hasSchema: boolean;
 }
 
 /** Where a value is stored, as `StorageReader.locate` returns it. */
@@ -71,9 +71,9 @@ export class ContractStorage {
   }
 
   private static async load(contract: Contract): Promise<ContractStorage> {
-    // 1. The reader is created from the layout file, `odra-cli --json storage <Contract>`.
-    const response = await fetch(`layouts/${contract.name}.json`);
-    if (!response.ok) throw new Error(`No layout for ${contract.name}, run \`just export-layouts\``);
+    // 1. The reader is created from the contract's schema file (`*_schema.json`, odra-build).
+    const response = await fetch(`schemas/${contract.name}.json`);
+    if (!response.ok) throw new Error(`No schema for ${contract.name}, run \`just export-schemas\``);
     const reader = new StorageReader(await response.text());
 
     // 2. The package resolves to its current contract, the one that holds the storage.
@@ -108,7 +108,7 @@ export class ContractStorage {
       throw e;
     }
 
-    // 5. The reader decodes it with the layout's types.
+    // 5. The reader decodes it with the schema's types.
     const value = raw
       ? this.reader.decodeRaw(clValue, location)
       : this.reader.decode(clValue, location);

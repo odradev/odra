@@ -139,7 +139,7 @@ export class StorageReader {
     }
     /**
      * The hex-encoded bytes of the value read from `location`, without decoding them, e.g. for a
-     * type that is not in the layout file. Takes the same arguments as `decode`.
+     * type that is not in the schema file. Takes the same arguments as `decode`.
      * @param {any} clValue
      * @param {any} location
      * @returns {string}
@@ -199,12 +199,12 @@ export class StorageReader {
         }
     }
     /**
-     * Creates a reader from the layout file (`odra-cli --json storage <Contract>`), given as a
-     * JSON string or an object.
-     * @param {any} layout
+     * Creates a reader from the contract's schema file (the `*_schema.json` `odra-build`
+     * writes), given as a JSON string or an object.
+     * @param {any} schema
      */
-    constructor(layout) {
-        const ret = wasm.storagereader_new(layout);
+    constructor(schema) {
+        const ret = wasm.storagereader_new(schema);
         if (ret[2]) {
             throw takeFromExternrefTable0(ret[1]);
         }

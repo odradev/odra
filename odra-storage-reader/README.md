@@ -4,15 +4,12 @@ A wasm library that reads the storage of a deployed Odra contract from a fronten
 calling the contract.
 
 It does not talk to the node. It tells you where a value is stored and decodes what you fetched
-with your own RPC client (e.g. `casper-js-sdk`). It works for any contract that has a layout file.
+with your own RPC client (e.g. `casper-js-sdk`). It works for any contract that has a schema file.
 
-## Layout file
+## Schema file
 
-Export it with the contract's `odra-cli`:
-
-```sh
-cargo run --bin odra_cli -- --json storage Erc20 > erc20_layout.json
-```
+`cargo odra build` (or any `odra-build`-based build) writes it next to the wasm, as
+`resources/casper_contract_schemas/<contract>_schema.json`.
 
 ## Usage
 
@@ -20,7 +17,7 @@ cargo run --bin odra_cli -- --json storage Erc20 > erc20_layout.json
 import init, { StorageReader } from "odra-storage-reader";
 
 await init();
-const reader = new StorageReader(layoutJson);
+const reader = new StorageReader(schemaJson);
 
 // The current contract of the package.
 const pkg = await rpc.queryLatestGlobalState(packageHash, []);
@@ -57,11 +54,11 @@ just build     # pkg-web/
 **Storage explorer**: a web page listing the contracts deployed with the examples' `odra-cli`.
 Click a contract to see its fields and read any of them.
 [`example/storage.ts`](example/storage.ts) is the file to read: it holds all of the reader and
-`casper-js-sdk` usage, as five numbered steps. `layout.ts` turns the layout into the field list,
-and `app.ts` is the page.
+`casper-js-sdk` usage, as five numbered steps. `schema.ts` turns the schema's storage tree into
+the field list, and `app.ts` is the page.
 
 ```sh
-just export-layouts   # example/layouts/<Contract>.json, node settings from <repo>/.env.nctl
+just export-schemas   # example/schemas/<Contract>.json, copied from the built examples' schemas
 just serve            # http://localhost:3000
 ```
 
@@ -72,12 +69,10 @@ or `PORT` to change the defaults.
 **Command line** ([`example/read.ts`](example/read.ts)): the same flow in one script.
 
 ```sh
-just read layouts/Erc20.json <package-hash> balances <account-hash>
+just read schemas/Erc20.json <package-hash> balances <account-hash>
 ```
 
 ## Limitations
 
-- **Custom types:** only types that appear in entry points or events are in the layout file. A
-  struct or enum that is only stored can't be decoded; use `decodeRaw` for it.
 - **Value format:** values come back as `odra-cli` formatted strings, not structured JSON.
 - **Copied code:** the key parsing and value decoding are copied from `odra-cli/src/types`.

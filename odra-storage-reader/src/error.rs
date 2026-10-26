@@ -1,19 +1,19 @@
 use thiserror::Error;
 
-use odra_schema::STORAGE_LAYOUT_VERSION;
+use odra_schema::CONTRACT_SCHEMA_VERSION;
 
 /// Errors of the storage reader. In the wasm build they are thrown as `JsError`s.
 #[derive(Debug, Error)]
 pub enum Error {
-    /// The layout file has no `version` field.
-    #[error("The layout file has no `version`, export it again with `odra-cli --json storage <Contract>`")]
+    /// The schema file has no `casper_contract_schema_version` field.
+    #[error("The schema file has no `casper_contract_schema_version`, rebuild the contract to get an up to date schema file")]
     MissingVersion,
-    /// The layout file has a version this reader does not support.
-    #[error("Unsupported layout file version {0}, expected {STORAGE_LAYOUT_VERSION}")]
+    /// The schema file has a version this reader does not support.
+    #[error("Unsupported schema file version {0}, expected {CONTRACT_SCHEMA_VERSION}")]
     UnsupportedVersion(u64),
-    /// The layout file does not match the expected format.
-    #[error("Invalid layout file: {0}")]
-    InvalidLayout(String),
+    /// The schema file does not match the expected format.
+    #[error("Invalid schema file: {0}")]
+    InvalidSchema(String),
     /// The path cannot be resolved against the layout, or the keys do not match it.
     #[error("Cannot resolve `{path}`: {reason}")]
     Resolve {

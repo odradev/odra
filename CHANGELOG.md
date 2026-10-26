@@ -72,6 +72,10 @@ Changelog for `odra`.
   replaces `Default`.
 - The livenet examples are scenarios of the examples' `odra_cli` binary (#631, #520); `cargo-odra` is
   `release/0.2.0`.
+- `odra-storage-reader` reads the contract's schema file (the `*_schema.json` `odra-build` writes)
+  instead of a separate layout file; `StorageReader::from_json`/`new` take its JSON. `odra-cli storage
+  <Contract>` (no path) now prints/exports the same `casper_contract_schema_version`, `contract_name`,
+  `storage` and `types` fields instead of the removed `StorageLayoutFile`/`STORAGE_LAYOUT_VERSION`.
 
 ### Fixed
 - `#[odra(..)]` mistakes are compile errors at the attribute: unknown, duplicate and malformed

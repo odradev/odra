@@ -1,8 +1,7 @@
 {
-  "version": 1,
-  "contract": "Erc20",
-  "ident": "Erc20",
-  "layout": {
+  "casper_contract_schema_version": 1,
+  "contract_name": "Erc20",
+  "storage": {
     "kind": "module",
     "fields": [
       {
