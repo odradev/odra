@@ -37,11 +37,17 @@ pub struct DappContractRemoved {
     pub registrar: Address
 }
 
-/// Emitted when a dapp contract points to a new dapp registry.
+/// Emitted when a contract starts recognizing a dapp registry, see
+/// [`DappMember`](super::DappMember).
 #[odra::event]
-pub struct DappRegistryChanged {
-    /// The previous registry, if any.
-    pub previous_registry: Option<Address>,
-    /// The new registry.
-    pub new_registry: Address
+pub struct DappRegistryRecognized {
+    /// The recognized registry.
+    pub registry: Address
+}
+
+/// Emitted when a contract stops recognizing a dapp registry, see [`DappMember`](super::DappMember).
+#[odra::event]
+pub struct DappRegistryForgotten {
+    /// The forgotten registry.
+    pub registry: Address
 }

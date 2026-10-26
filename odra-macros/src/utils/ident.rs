@@ -122,7 +122,7 @@ pub fn error() -> syn::Ident {
     format_ident!("error")
 }
 
-/// The module holding the `DappRegistryChanged` event of a factory module.
+/// The module holding the `DappRegistryChanged` and `FactoryCreatorChanged` events of a factory module.
 pub fn factory_dapp_mod(factory_module_ident: &syn::Ident) -> syn::Ident {
     format_ident!(
         "__{}_dapp",

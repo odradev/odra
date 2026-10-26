@@ -48,6 +48,26 @@
           }
         ]
       }
+    },
+    {
+      "struct": {
+        "name": "FactoryCreatorChanged",
+        "description": null,
+        "members": [
+          {
+            "name": "previous_creator",
+            "description": null,
+            "ty": {
+              "Option": "Key"
+            }
+          },
+          {
+            "name": "new_creator",
+            "description": null,
+            "ty": "Key"
+          }
+        ]
+      }
     }
   ],
   "errors": [],
@@ -61,12 +81,6 @@
           "name": "contract_name",
           "description": null,
           "ty": "String",
-          "optional": false
-        },
-        {
-          "name": "registry",
-          "description": null,
-          "ty": "Key",
           "optional": false
         }
       ],
@@ -114,17 +128,24 @@
       "access": "public"
     },
     {
-      "name": "get_dapp_registry",
-      "description": "Returns the dapp registry the factory belongs to.",
-      "is_mutable": false,
-      "arguments": [],
-      "return_ty": "Key",
+      "name": "set_factory_creator",
+      "description": "Lets only the creator create children. Only the factory access holder may call it.",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "creator",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
       "is_contract_context": true,
       "access": "public"
     },
     {
       "name": "set_factory_dapp_registry",
-      "description": "Points the factory to the dapp registry. Only the factory access holder may call it.",
+      "description": "Adds the children created from now on to the dapp registry. Only the factory access holder may call it.",
       "is_mutable": true,
       "arguments": [
         {
@@ -145,13 +166,17 @@
       "ty": "DappCounterFactoryContractDeployed"
     },
     {
+      "name": "FactoryCreatorChanged",
+      "ty": "FactoryCreatorChanged"
+    },
+    {
       "name": "DappRegistryChanged",
       "ty": "DappRegistryChanged"
     }
   ],
   "call": {
     "wasm_file_name": "DappCounterFactory.wasm",
-    "description": "",
+    "description": null,
     "arguments": [
       {
         "name": "odra_cfg_package_hash_key_name",

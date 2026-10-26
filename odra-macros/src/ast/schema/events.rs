@@ -99,6 +99,7 @@ impl ToTokens for FactorySchemaEventsItem {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let module_ident = &self.module_ident;
         let event_ident = &self.event_ident;
+        let creator_event = crate::utils::ty::factory_creator_changed(module_ident);
         let dapp_event = crate::utils::ty::factory_dapp_registry_changed(module_ident);
         let item = quote::quote! {
             #[automatically_derived]
@@ -110,6 +111,9 @@ impl ToTokens for FactorySchemaEventsItem {
                             &<#event_ident as odra::casper_event_standard::EventInstance>::name()
                         ),
                         odra::schema::event(
+                            &<#creator_event as odra::casper_event_standard::EventInstance>::name()
+                        ),
+                        odra::schema::event(
                             &<#dapp_event as odra::casper_event_standard::EventInstance>::name()
                         )
                     ]
@@ -118,6 +122,7 @@ impl ToTokens for FactorySchemaEventsItem {
                 fn custom_types() -> odra::prelude::Vec<Option<odra::schema::casper_contract_schema::CustomType>> {
                     <#event_ident as odra::schema::SchemaCustomTypes>::schema_types()
                         .into_iter()
+                        .chain(<#creator_event as odra::schema::SchemaCustomTypes>::schema_types())
                         .chain(<#dapp_event as odra::schema::SchemaCustomTypes>::schema_types())
                         .collect()
                 }
@@ -204,6 +209,9 @@ mod test {
                             &<CounterPackContractDeployed as odra::casper_event_standard::EventInstance>::name()
                         ),
                         odra::schema::event(
+                            &<__counter_pack_dapp::FactoryCreatorChanged as odra::casper_event_standard::EventInstance>::name()
+                        ),
+                        odra::schema::event(
                             &<__counter_pack_dapp::DappRegistryChanged as odra::casper_event_standard::EventInstance>::name()
                         )
                     ]
@@ -214,6 +222,7 @@ mod test {
                 {
                     <CounterPackContractDeployed as odra::schema::SchemaCustomTypes>::schema_types()
                         .into_iter()
+                        .chain(<__counter_pack_dapp::FactoryCreatorChanged as odra::schema::SchemaCustomTypes>::schema_types())
                         .chain(<__counter_pack_dapp::DappRegistryChanged as odra::schema::SchemaCustomTypes>::schema_types())
                         .collect()
                 }

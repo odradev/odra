@@ -9,9 +9,11 @@
 use odra::named_keys::{base64_encoded_key_value_storage, key_value_storage, single_value_storage};
 use odra::prelude::*;
 
-/// The dapp registry a contract belongs to. A factory contract stores its registry under the same
-/// named key, see `odra::factory_dapp`.
+/// The dapp registry a factory contract adds its children to, see `odra::factory_dapp`.
 pub const DAPP_REGISTRY_KEY: &str = odra::factory_dapp::DAPP_REGISTRY_KEY;
+/// The dapp registries a [`DappMember`](super::DappMember) contract recognizes, keyed by the base64
+/// encoded address.
+pub const DAPP_REGISTRIES_KEY: &str = "__dapp_registries";
 /// The name of the dapp.
 pub const DAPP_NAME_KEY: &str = "__dapp_name";
 /// A short description of the dapp.
@@ -31,7 +33,6 @@ pub const DAPP_CONTRACT_INDICES_KEY: &str = "__dapp_contract_indices";
 /// Whether a registered contract is a factory, keyed by the base64 encoded address.
 pub const DAPP_FACTORIES_KEY: &str = "__dapp_factories";
 
-single_value_storage!(DappRegistryStorage, Address, DAPP_REGISTRY_KEY);
 single_value_storage!(DappNameStorage, String, DAPP_NAME_KEY);
 single_value_storage!(DappDescriptionStorage, String, DAPP_DESCRIPTION_KEY);
 single_value_storage!(DappWebsiteUrlStorage, String, DAPP_WEBSITE_URL_KEY);
@@ -45,3 +46,4 @@ base64_encoded_key_value_storage!(
     u32
 );
 base64_encoded_key_value_storage!(DappFactoriesStorage, DAPP_FACTORIES_KEY, Address, bool);
+base64_encoded_key_value_storage!(DappRegistriesStorage, DAPP_REGISTRIES_KEY, Address, bool);

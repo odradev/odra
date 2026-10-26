@@ -6,14 +6,15 @@ use super::storage::{
     DappDescriptionStorage, DappFactoriesStorage, DappIconUrlStorage, DappNameStorage,
     DappWebsiteUrlStorage
 };
-use super::{DappContractContractRef, DappMetadata};
+use super::DappMetadata;
 use odra::prelude::*;
-use odra::ContractRef;
 
 /// The interface of a dapp registry.
 ///
 /// A registry keeps the dapp's metadata and the contracts that belong to the dapp. The registry itself is
-/// always part of the dapp.
+/// always part of the dapp. The registry alone decides which contracts belong to it: it does not call
+/// them, so any contract can be added, and a contract can belong to several dapps. A contract may confirm
+/// the membership from its side through [`DappMember`](super::DappMember).
 #[odra::external_contract]
 pub trait DappRegistry {
     /// Sets the dapp metadata.
@@ -21,8 +22,6 @@ pub trait DappRegistry {
     /// Returns the dapp metadata.
     fn get_dapp_metadata(&self) -> DappMetadata;
     /// Adds a contract to the dapp. A factory can register other contracts.
-    ///
-    /// The registry calls `get_dapp_registry` on the contract to verify it points back to the registry.
     fn add_dapp_contract(&mut self, dapp_contract: &Address, is_factory: bool);
     /// Returns the contracts of the dapp, the registry first.
     fn get_dapp_contracts(&self) -> Vec<Address>;
@@ -95,12 +94,6 @@ impl DappRegistryBase {
     pub fn is_dapp_factory(&self, dapp_contract: &Address) -> bool {
         self.factories.get(dapp_contract).unwrap_or_default()
     }
-
-    /// Returns the registry's own address, so the registry answers the
-    /// [`DappContract`](crate::dapp::DappContract) interface like every other contract of the dapp.
-    pub fn get_dapp_registry(&self) -> Address {
-        self.env().self_address()
-    }
 }
 
 impl DappRegistryBase {
@@ -127,8 +120,7 @@ impl DappRegistryBase {
 
     /// Adds a contract to the dapp and emits [`DappContractAdded`].
     ///
-    /// Calls `get_dapp_registry` on the contract and reverts with [`Error::DappRegistryMismatch`] unless it
-    /// returns this registry. Reverts with [`Error::NotAContract`] for an account address and with
+    /// Reverts with [`Error::NotAContract`] for an account address and with
     /// [`Error::DappContractAlreadyRegistered`] if the contract already belongs to the dapp.
     /// SECURITY: Do not expose this function publicly without proper access control.
     pub fn add_dapp_contract(&mut self, dapp_contract: &Address, is_factory: bool) {
@@ -138,19 +130,11 @@ impl DappRegistryBase {
         if self.is_dapp_contract(dapp_contract) {
             self.env().revert(Error::DappContractAlreadyRegistered);
         }
-        // Write first and call out last: a re-entrant add of the same contract is rejected,
-        // and a revert of the verification rolls the writes back.
         let count = self.contracts_count();
         self.contracts.set(&count.to_string(), *dapp_contract);
         self.contracts_count.set(count + 1);
         self.indices.set(dapp_contract, count + 1);
         self.factories.set(dapp_contract, is_factory);
-
-        let reported = DappContractContractRef::new(self.env(), *dapp_contract).get_dapp_registry();
-        if reported != self.env().self_address() {
-            self.env().revert(Error::DappRegistryMismatch);
-        }
-
         self.env().emit_event(DappContractAdded {
             contract: *dapp_contract,
             is_factory,
@@ -227,7 +211,6 @@ mod tests {
         assert!(registry.is_dapp_contract(&address));
         assert!(!registry.is_dapp_contract(&env.get_account(0)));
         assert!(!registry.is_dapp_factory(&address));
-        assert_eq!(registry.get_dapp_registry(), address);
         assert_eq!(registry.get_dapp_metadata(), DappMetadata::default());
     }
 }

@@ -67,10 +67,7 @@ impl TryFrom<&'_ ModuleImplIR> for FactoryContractEpcFn {
                 #ty_entry_point_arg::new::<#ty_batch_upgrade_args<odra::host::NoArgs>>(#args_name)
             ]
         )));
-        for fun in [
-            module.factory_get_dapp_registry_fn(),
-            module.factory_set_dapp_registry_fn()
-        ] {
+        for fun in module.factory_dapp_fns() {
             entry_points.push(utils::expr::new_entry_point(
                 fun.name_str(),
                 fun.raw_typed_args(),
@@ -153,18 +150,16 @@ impl FactoryEntrypointCallerExpr {
             }
         })
         .collect::<proc_macro2::TokenStream>();
-        // The dapp registry entry points, see `odra::factory_dapp`. Without a registry the getter
-        // runs the child's `get_dapp_registry`, if the module has one, as the shared wasm does.
-        let child_get_dapp_registry = match module.child_get_dapp_registry_fn() {
-            Some(_) => quote::quote!(Some(<#child_host_ref as #ty_epc_provider>::entry_points_caller)),
-            None => quote::quote!(None)
-        };
+        // The creator and dapp registry entry points, see `odra::factory_dapp`.
+        let creator_event = utils::ty::factory_creator_changed(&module.module_ident()?);
         let dapp_event = utils::ty::factory_dapp_registry_changed(&module.module_ident()?);
         let dapp_registry_branches = quote::quote! {
-            odra::factory_dapp::GET_DAPP_REGISTRY => odra::host::factory::get_dapp_registry(
+            odra::factory_dapp::SET_CREATOR => odra::host::factory::set_creator(
                 &#contract_env_ident,
-                &#call_def_ident,
-                #child_get_dapp_registry
+                |previous_creator, new_creator| #creator_event {
+                    previous_creator,
+                    new_creator
+                }
             ),
             odra::factory_dapp::SET_DAPP_REGISTRY => odra::host::factory::set_dapp_registry(
                 &#contract_env_ident,

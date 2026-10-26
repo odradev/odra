@@ -47,7 +47,7 @@ impl TryFrom<&ModuleImplIR> for FactorySchemaEntrypointsItem {
                     module.factory_fn(),
                     module.factory_upgrade_fn(),
                     module.factory_batch_upgrade_fn(),
-                    module.factory_get_dapp_registry_fn(),
+                    module.factory_set_creator_fn(),
                     module.factory_set_dapp_registry_fn(),
                 ])
                 .collect(),
@@ -364,15 +364,15 @@ mod test {
                                 odra::casper_types::bytesrepr::Bytes
                             >("args")]
                         ),
-                        odra::schema::entry_point::<odra::prelude::Address>(
-                            "get_dapp_registry",
-                            "Returns the dapp registry the factory belongs to.",
-                            false,
-                            odra::prelude::vec![]
+                        odra::schema::entry_point::<()>(
+                            "set_factory_creator",
+                            "Lets only the creator create children. Only the factory access holder may call it.",
+                            true,
+                            odra::prelude::vec![odra::schema::argument::<odra::prelude::Address>("creator")]
                         ),
                         odra::schema::entry_point::<()>(
                             "set_factory_dapp_registry",
-                            "Points the factory to the dapp registry. Only the factory access holder may call it.",
+                            "Adds the children created from now on to the dapp registry. Only the factory access holder may call it.",
                             true,
                             odra::prelude::vec![odra::schema::argument::<odra::prelude::Address>("registry")]
                         )

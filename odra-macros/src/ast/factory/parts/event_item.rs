@@ -33,10 +33,19 @@ impl ToTokens for FactoryEventItem {
                 pub contract_address: #ty_address
             }
 
-            /// The event of the factory joining a dapp registry, named like the one of `DappContract`s.
+            /// The events of the factory's creator and dapp registry, see `odra::factory_dapp`.
             #[doc(hidden)]
             pub mod #dapp_mod_ident {
                 use odra::prelude::*;
+
+                /// Emitted when the factory gets a new creator.
+                #[odra::event]
+                pub struct FactoryCreatorChanged {
+                    /// The previous creator, if any.
+                    pub previous_creator: Option<#ty_address>,
+                    /// The new creator.
+                    pub new_creator: #ty_address
+                }
 
                 /// Emitted when the factory points to a new dapp registry.
                 #[odra::event]
@@ -61,10 +70,11 @@ impl TryFrom<&'_ ModuleStructIR> for FactoryHasEventsImplItem {
 
     fn try_from(ir: &'_ ModuleStructIR) -> Result<Self, Self::Error> {
         let event_ident = format_ident!("{}ContractDeployed", ir.module_ident());
+        let creator_event = utils::ty::factory_creator_changed(&ir.module_ident());
         let dapp_event = utils::ty::factory_dapp_registry_changed(&ir.module_ident());
         Ok(Self {
             impl_item: ImplItem::has_events(ir)?,
-            event_ident: EventsFnsItem::many(&[event_ident.as_type(), dapp_event])
+            event_ident: EventsFnsItem::many(&[event_ident.as_type(), creator_event, dapp_event])
         })
     }
 }
@@ -95,6 +105,7 @@ mod test {
                 fn events() -> odra::prelude::vec::Vec<odra::contract_def::Event> {
                     odra::prelude::vec![
                         <CounterPackContractDeployed as odra::contract_def::IntoEvent>::into_event(),
+                        <__counter_pack_dapp::FactoryCreatorChanged as odra::contract_def::IntoEvent>::into_event(),
                         <__counter_pack_dapp::DappRegistryChanged as odra::contract_def::IntoEvent>::into_event()
                     ]
                 }
@@ -104,6 +115,9 @@ mod test {
                         odra::prelude::vec![(
                             <CounterPackContractDeployed as odra::casper_event_standard::EventInstance>::name(), 
                             <CounterPackContractDeployed as odra::casper_event_standard::EventInstance>::schema()
+                        ), (
+                            <__counter_pack_dapp::FactoryCreatorChanged as odra::casper_event_standard::EventInstance>::name(),
+                            <__counter_pack_dapp::FactoryCreatorChanged as odra::casper_event_standard::EventInstance>::schema()
                         ), (
                             <__counter_pack_dapp::DappRegistryChanged as odra::casper_event_standard::EventInstance>::name(),
                             <__counter_pack_dapp::DappRegistryChanged as odra::casper_event_standard::EventInstance>::schema()

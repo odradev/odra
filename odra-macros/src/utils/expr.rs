@@ -229,8 +229,8 @@ pub fn factory_batch_upgrade_ep() -> syn::Expr {
     parse_quote!(odra::entry_point::EntryPoint::FactoryBatchUpgrade)
 }
 
-pub fn factory_get_dapp_registry_ep() -> syn::Expr {
-    parse_quote!(odra::entry_point::EntryPoint::FactoryGetDappRegistry)
+pub fn factory_set_creator_ep() -> syn::Expr {
+    parse_quote!(odra::entry_point::EntryPoint::FactorySetCreator)
 }
 
 pub fn factory_set_dapp_registry_ep() -> syn::Expr {

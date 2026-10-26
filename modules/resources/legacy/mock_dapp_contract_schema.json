@@ -2,19 +2,22 @@
   "name": "MockDappContract",
   "events": [
     {
-      "name": "DappRegistryChanged",
+      "name": "DappRegistryRecognized",
       "args": [
         {
-          "name": "previous_registry",
-          "ty": {
-            "Option": "Key"
-          },
+          "name": "registry",
+          "ty": "Key",
           "is_ref": false,
           "is_slice": false,
           "is_required": true
-        },
+        }
+      ]
+    },
+    {
+      "name": "DappRegistryForgotten",
+      "args": [
         {
-          "name": "new_registry",
+          "name": "registry",
           "ty": "Key",
           "is_ref": false,
           "is_slice": false,
@@ -49,6 +52,14 @@
   "entrypoints": [
     {
       "name": "init",
+      "args": [],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Constructor",
+      "attributes": []
+    },
+    {
+      "name": "recognize_dapp_registry",
       "args": [
         {
           "name": "registry",
@@ -60,11 +71,11 @@
       ],
       "is_mutable": true,
       "return_ty": "Unit",
-      "ty": "Constructor",
+      "ty": "Public",
       "attributes": []
     },
     {
-      "name": "set_dapp_registry",
+      "name": "forget_dapp_registry",
       "args": [
         {
           "name": "registry",
@@ -82,6 +93,13 @@
     {
       "name": "register_in_dapp",
       "args": [
+        {
+          "name": "registry",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
         {
           "name": "dapp_contract",
           "ty": "Key",
@@ -103,10 +121,18 @@
       "attributes": []
     },
     {
-      "name": "get_dapp_registry",
-      "args": [],
+      "name": "recognizes_dapp_registry",
+      "args": [
+        {
+          "name": "registry",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
       "is_mutable": false,
-      "return_ty": "Key",
+      "return_ty": "Bool",
       "ty": "Public",
       "attributes": []
     },

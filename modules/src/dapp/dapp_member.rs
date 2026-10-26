@@ -1,74 +1,78 @@
-//! A contract that belongs to a dapp.
+//! A contract that recognizes the dapps it belongs to.
 use super::errors::Error;
-use super::events::DappRegistryChanged;
-use super::storage::DappRegistryStorage;
+use super::events::{DappRegistryForgotten, DappRegistryRecognized};
+use super::storage::DappRegistriesStorage;
 use odra::prelude::*;
 
-/// The interface of a contract that belongs to a dapp.
+/// The optional interface of a contract that says which dapps it belongs to.
 ///
-/// Every contract added to a [`DappRegistry`](super::DappRegistry) must expose `get_dapp_registry`,
-/// which the registry calls to verify the contract points back to it. Adding a contract that lacks this
-/// entry point fails with a VM error.
+/// A [`DappRegistry`](super::DappRegistry) decides on its own which contracts belong to the dapp: it does
+/// not call its contracts, so any contract can be added, including one deployed before the registry, and
+/// a contract can belong to several dapps. A contract implementing this interface confirms the
+/// membership from its side, which users and explorers can check off-chain against the registry's list.
 #[odra::external_contract]
-pub trait DappContract {
-    /// Points the contract to the given dapp registry.
-    fn set_dapp_registry(&mut self, registry: &Address);
-    /// Returns the dapp registry the contract belongs to.
-    fn get_dapp_registry(&self) -> Address;
+pub trait DappMember {
+    /// Returns true if the contract recognizes the dapp registry, that is, considers itself part of
+    /// that dapp.
+    fn recognizes_dapp_registry(&self, registry: &Address) -> bool;
 }
 
-/// Stores the address of the dapp registry a contract belongs to, under the `__dapp_registry` named
-/// key (see [`storage`](super::storage)).
+/// Keeps the dapp registries a contract recognizes, implementing [`DappMember`].
 ///
-/// The module does not check who calls it. Call [`DappContractBase::set_dapp_registry`] from the
-/// composing contract's `init`, and guard any later change with an access module.
-#[odra::module(events = [DappRegistryChanged], errors = Error)]
-pub struct DappContractBase {
-    registry: SubModule<DappRegistryStorage>
+/// The registries live in the `__dapp_registries` dictionary, keyed by the base64 encoded address (see
+/// [`storage`](super::storage)), so they can also be read from the chain without calling the contract.
+///
+/// The module does not check who calls it. Call [`init`](Self::init) from the composing contract's
+/// `init` (or from its `upgrade`, for a contract deployed before), and guard
+/// [`recognize_dapp_registry`](Self::recognize_dapp_registry) and
+/// [`forget_dapp_registry`](Self::forget_dapp_registry) with an access module.
+#[odra::module(events = [DappRegistryRecognized, DappRegistryForgotten], errors = Error)]
+pub struct DappMemberBase {
+    registries: SubModule<DappRegistriesStorage>
 }
 
 #[odra::module]
-impl DappContractBase {
-    /// Returns the dapp registry the contract belongs to.
-    ///
-    /// Reverts with [`Error::DappRegistryNotSet`] if the registry has not been set.
-    pub fn get_dapp_registry(&self) -> Address {
-        self.registry
-            .get()
-            .unwrap_or_revert_with(&self.env(), Error::DappRegistryNotSet)
+impl DappMemberBase {
+    /// Creates the dictionary of the recognized registries.
+    pub fn init(&mut self) {
+        self.registries.init();
+    }
+
+    /// Returns true if the contract recognizes the dapp registry.
+    pub fn recognizes_dapp_registry(&self, registry: &Address) -> bool {
+        self.registries.get(registry).unwrap_or_default()
     }
 }
 
-impl DappContractBase {
-    /// Points the contract to the given dapp registry and emits [`DappRegistryChanged`].
+impl DappMemberBase {
+    /// Recognizes the dapp registry and emits [`DappRegistryRecognized`]. Does nothing if the registry is
+    /// already recognized.
     ///
     /// Reverts with [`Error::NotAContract`] if `registry` is not a contract.
     /// SECURITY: Do not expose this function publicly without proper access control.
-    pub fn set_dapp_registry(&mut self, registry: &Address) {
+    pub fn recognize_dapp_registry(&mut self, registry: &Address) {
         if !registry.is_contract() {
             self.env().revert(Error::NotAContract);
         }
-        let previous_registry = self.registry.get();
-        self.registry.set(*registry);
-        self.env().emit_event(DappRegistryChanged {
-            previous_registry,
-            new_registry: *registry
+        if self.recognizes_dapp_registry(registry) {
+            return;
+        }
+        self.registries.set(registry, true);
+        self.env().emit_event(DappRegistryRecognized {
+            registry: *registry
         });
     }
-}
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use odra::host::{Deployer, NoArgs};
-
-    #[test]
-    fn register_not_set() {
-        let env = odra_test::odra_env();
-        let contract = DappContractBase::deploy(&env, NoArgs);
-        assert_eq!(
-            contract.try_get_dapp_registry(),
-            Err(Error::DappRegistryNotSet.into())
-        );
+    /// Stops recognizing the dapp registry and emits [`DappRegistryForgotten`]. Does nothing if the
+    /// registry is not recognized.
+    /// SECURITY: Do not expose this function publicly without proper access control.
+    pub fn forget_dapp_registry(&mut self, registry: &Address) {
+        if !self.recognizes_dapp_registry(registry) {
+            return;
+        }
+        self.registries.set(registry, false);
+        self.env().emit_event(DappRegistryForgotten {
+            registry: *registry
+        });
     }
 }

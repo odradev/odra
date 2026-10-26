@@ -32,7 +32,7 @@ impl TryFrom<&'_ ModuleImplIR> for FactoryHostRefImplItem {
             module.factory_fn(),
             module.factory_upgrade_fn(),
             module.factory_batch_upgrade_fn(),
-            module.factory_get_dapp_registry_fn(),
+            module.factory_set_creator_fn(),
             module.factory_set_dapp_registry_fn()
         ];
         Ok(Self {
@@ -64,7 +64,7 @@ impl TryFrom<&'_ ModuleImplIR> for FactoryHostRefTryImplItem {
 
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         let fns = [module.factory_fn(), module.factory_upgrade_fn(), module.factory_batch_upgrade_fn()];
-        let dapp_fns = [module.factory_get_dapp_registry_fn(), module.factory_set_dapp_registry_fn()];
+        let dapp_fns = module.factory_dapp_fns();
 
         Ok(Self {
             ref_ident: module.host_ref_ident()?,

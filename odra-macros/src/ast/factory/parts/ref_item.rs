@@ -29,7 +29,7 @@ impl TryFrom<&'_ ModuleImplIR> for ContractRefImplItem {
 
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         let fns = [module.factory_fn(), module.factory_upgrade_fn(), module.factory_batch_upgrade_fn()];
-        let dapp_fns = [module.factory_get_dapp_registry_fn(), module.factory_set_dapp_registry_fn()];
+        let dapp_fns = module.factory_dapp_fns();
         Ok(Self {
             ref_ident: module.contract_ref_ident()?,
             factory_fns: fns
@@ -161,25 +161,26 @@ mod test {
                         )
                 }
 
-                /// Returns the dapp registry the factory belongs to.
-                pub fn get_dapp_registry(&self) -> odra::prelude::Address {
+                /// Lets only the creator create children. Only the factory access holder may call it.
+                pub fn set_factory_creator(&mut self, creator: odra::prelude::Address) {
                     self.env.call_contract(
                         self.address,
                         odra::CallDef::new(
-                            odra::prelude::string::String::from("get_dapp_registry"),
-                            false,
+                            odra::prelude::string::String::from("set_factory_creator"),
+                            true,
                             {
                                 let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
                                 if self.attached_value > odra::casper_types::U512::zero() {
                                     let _ = __odra_named_args.insert("amount", self.attached_value);
                                 }
+                                odra::args::EntrypointArgument::insert_runtime_arg(creator, "creator", &mut __odra_named_args);
                                 __odra_named_args
                             }
                         ).with_amount(self.attached_value)
                     )
                 }
 
-                /// Points the factory to the dapp registry. Only the factory access holder may call it.
+                /// Adds the children created from now on to the dapp registry. Only the factory access holder may call it.
                 pub fn set_factory_dapp_registry(&mut self, registry: odra::prelude::Address) {
                     self.env.call_contract(
                         self.address,

@@ -491,12 +491,13 @@ impl ModuleImplIR {
         }))
     }
 
-    /// The factory entry point returning the factory's dapp registry, see `odra::factory_dapp`.
-    pub fn factory_get_dapp_registry_fn(&self) -> FnIR {
+    /// The factory entry point setting the only address allowed to create children, see
+    /// `odra::factory_dapp`.
+    pub fn factory_set_creator_fn(&self) -> FnIR {
         let ty_address = utils::ty::address();
         FnIR::Impl(FnImplIR::new(parse_quote! {
-            /// Returns the dapp registry the factory belongs to.
-            pub fn get_dapp_registry(&self) -> #ty_address {
+            /// Lets only the creator create children. Only the factory access holder may call it.
+            pub fn set_factory_creator(&mut self, creator: #ty_address) {
             }
         }))
     }
@@ -505,19 +506,18 @@ impl ModuleImplIR {
     pub fn factory_set_dapp_registry_fn(&self) -> FnIR {
         let ty_address = utils::ty::address();
         FnIR::Impl(FnImplIR::new(parse_quote! {
-            /// Points the factory to the dapp registry. Only the factory access holder may call it.
+            /// Adds the children created from now on to the dapp registry. Only the factory access holder may call it.
             pub fn set_factory_dapp_registry(&mut self, registry: #ty_address) {
             }
         }))
     }
 
-    /// Returns the child module's `get_dapp_registry`, which shares the exported function with the
-    /// factory's one.
-    pub fn child_get_dapp_registry_fn(&self) -> Option<FnIR> {
-        self.functions()
-            .unwrap_or_default()
-            .into_iter()
-            .find(|f| f.name_str() == "get_dapp_registry")
+    /// The factory entry points of `odra::factory_dapp`.
+    pub fn factory_dapp_fns(&self) -> [FnIR; 2] {
+        [
+            self.factory_set_creator_fn(),
+            self.factory_set_dapp_registry_fn()
+        ]
     }
 
     pub fn upgrader(&self) -> Option<FnIR> {
@@ -680,13 +680,14 @@ impl FnIR {
     }
 }
 
-const PROTECTED_FUNCTIONS: [&str; 7] = [
+const PROTECTED_FUNCTIONS: [&str; 8] = [
     "new",
     "env",
     "address",
     "new_contract",
     "upgrade_child_contract",
     "batch_upgrade_child_contract",
+    "set_factory_creator",
     "set_factory_dapp_registry"
 ];
 const PROTECTED_ARGS: [&str; 2] = ["gas", "attached_value"];

@@ -83,8 +83,6 @@ impl TryFrom<&'_ ModuleImplIR> for FactoryWasmPartsItem {
             entry_points: module
                 .functions()?
                 .iter()
-                // The child's `get_dapp_registry` shares the exported function with the factory's one.
-                .filter(|f| f.name_str() != GET_DAPP_REGISTRY)
                 .map(|f| (module, f))
                 .map(TryInto::try_into)
                 .collect::<Result<Vec<_>, _>>()?
@@ -143,7 +141,7 @@ impl ToTokens for FactoryEntrypointsFnItem {
         let add_factory_upgrade_entry_point = &self.add_factory_upgrade_entry_point;
         let add_factory_batch_upgrade_entry_point = &self.add_factory_batch_upgrade_entry_point;
         let add_ep_fn = utils::ident::add_entry_point();
-        let get_dapp_registry_ep = utils::expr::factory_get_dapp_registry_ep();
+        let set_creator_ep = utils::expr::factory_set_creator_ep();
         let set_dapp_registry_ep = utils::expr::factory_set_dapp_registry_ep();
         let use_ext_import = wasm_parts_utils::use_entity_entry_points_ext();
         tokens.append_all(quote::quote! {
@@ -155,8 +153,7 @@ impl ToTokens for FactoryEntrypointsFnItem {
                 #add_factory_entry_point
                 #add_factory_upgrade_entry_point
                 #add_factory_batch_upgrade_entry_point
-                // Added last, so it replaces the child's `get_dapp_registry` template.
-                #ident_entry_points.#add_ep_fn(#get_dapp_registry_ep);
+                #ident_entry_points.#add_ep_fn(#set_creator_ep);
                 #ident_entry_points.#add_ep_fn(#set_dapp_registry_ep);
                 #ident_entry_points
             }
@@ -381,7 +378,9 @@ impl ToTokens for NoMangleFactoryFnItem {
         tokens.append_all(quote::quote! {
             #[no_mangle]
             fn new_contract() {
-                 odra::odra_casper_wasm_env::host_functions::override_factory_caller();
+                // Checked against the immediate caller, before the caller is overridden for the child.
+                odra::factory_dapp::assert_creator(&#new_env_expr);
+                odra::odra_casper_wasm_env::host_functions::override_factory_caller();
                 let #ident_schemas = #expr_new_schemas;
                 let exec_env = {
                     let env = #new_env_expr;
@@ -397,6 +396,7 @@ impl ToTokens for NoMangleFactoryFnItem {
                     Some(#ident_args)
                 );
                 let address: #address_ty = contract_package_hash.into();
+                odra::factory_dapp::register_child(&#new_env_expr, address);
 
                 exec_env.emit_event(#event_ident {
                     contract_name: exec_env.get_named_arg::<#string_ty>("contract_name"),
@@ -413,23 +413,21 @@ impl ToTokens for NoMangleFactoryFnItem {
     }
 }
 
-const GET_DAPP_REGISTRY: &str = "get_dapp_registry";
-
-/// The exported functions of the factory's dapp registry, see `odra::factory_dapp`.
+/// The exported functions setting the factory's creator and dapp registry, see `odra::factory_dapp`.
+/// Both are restricted to the factory access holder by the `factory_group` of their entry points.
 struct NoMangleFactoryDappFnsItem {
-    exec_parts_ident: syn::Ident,
-    event_ty: syn::Type,
-    child_fn: Option<FnIR>
+    creator_event_ty: syn::Type,
+    registry_event_ty: syn::Type
 }
 
 impl TryFrom<&'_ ModuleImplIR> for NoMangleFactoryDappFnsItem {
     type Error = syn::Error;
 
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
+        let module_ident = module.module_ident()?;
         Ok(Self {
-            exec_parts_ident: module.exec_parts_mod_ident()?,
-            event_ty: utils::ty::factory_dapp_registry_changed(&module.module_ident()?),
-            child_fn: module.child_get_dapp_registry_fn()
+            creator_event_ty: utils::ty::factory_creator_changed(&module_ident),
+            registry_event_ty: utils::ty::factory_dapp_registry_changed(&module_ident)
         })
     }
 }
@@ -438,33 +436,19 @@ impl ToTokens for NoMangleFactoryDappFnsItem {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let new_env_expr = utils::expr::new_wasm_contract_env();
         let address_ty = utils::ty::address();
-        let event_ty = &self.event_ty;
-        let result_ident = utils::ident::result();
-        let ret_registry = utils::stmt::runtime_return(&format_ident!("registry"));
-        // A child contract has no registry stored under the factory key and runs its own function;
-        // without one, the factory reverts.
-        let fallback = match &self.child_fn {
-            Some(func) => {
-                let exec_parts_ident = &self.exec_parts_ident;
-                let exec_fn = func.execute_name();
-                let ret_stmt = utils::stmt::runtime_return(&result_ident);
-                quote::quote! {
-                    let #result_ident = #exec_parts_ident::#exec_fn(env);
-                    #ret_stmt
-                }
-            }
-            None => quote::quote! {
-                env.revert(ExecutionError::DappRegistryNotSet);
-            }
-        };
+        let creator_event_ty = &self.creator_event_ty;
+        let registry_event_ty = &self.registry_event_ty;
         tokens.append_all(quote::quote! {
             #[no_mangle]
-            fn get_dapp_registry() {
-                let env = #new_env_expr;
-                if let Some(registry) = odra::factory_dapp::dapp_registry(&env) {
-                    #ret_registry
-                }
-                #fallback
+            fn set_factory_creator() {
+                let env = Rc::new(#new_env_expr);
+                let exec_env = odra::ExecutionEnv::new(env.clone());
+                let creator = exec_env.get_named_arg::<#address_ty>(odra::factory_dapp::CREATOR_ARG);
+                let previous_creator = odra::factory_dapp::set_creator(&env, creator);
+                env.emit_event(#creator_event_ty {
+                    previous_creator,
+                    new_creator: creator
+                });
             }
 
             #[no_mangle]
@@ -473,7 +457,7 @@ impl ToTokens for NoMangleFactoryDappFnsItem {
                 let exec_env = odra::ExecutionEnv::new(env.clone());
                 let registry = exec_env.get_named_arg::<#address_ty>(odra::factory_dapp::REGISTRY_ARG);
                 let previous_registry = odra::factory_dapp::set_dapp_registry(&env, registry);
-                env.emit_event(#event_ty {
+                env.emit_event(#registry_event_ty {
                     previous_registry,
                     new_registry: registry
                 });
@@ -656,7 +640,7 @@ mod test {
                         args: vec![odra::args::parameter::<odra::prelude::string::String>("contract_name")],
                     });
                     entry_points.add(odra::entry_point::EntryPoint::FactoryBatchUpgrade);
-                    entry_points.add(odra::entry_point::EntryPoint::FactoryGetDappRegistry);
+                    entry_points.add(odra::entry_point::EntryPoint::FactorySetCreator);
                     entry_points.add(odra::entry_point::EntryPoint::FactorySetDappRegistry);
                     entry_points
                 }
@@ -716,6 +700,7 @@ mod test {
 
                 #[no_mangle]
                 fn new_contract() {
+                    odra::factory_dapp::assert_creator(&odra::odra_casper_wasm_env::WasmContractEnv::new_env());
                     odra::odra_casper_wasm_env::host_functions::override_factory_caller();
                     let schemas = odra::casper_event_standard::Schemas(
                         <Erc20 as odra::contract_def::HasEvents>::event_schemas()
@@ -739,6 +724,7 @@ mod test {
                         Some(__odra_named_args)
                     );
                     let address: odra::prelude::Address = contract_package_hash.into();
+                    odra::factory_dapp::register_child(&odra::odra_casper_wasm_env::WasmContractEnv::new_env(), address);
 
                     exec_env.emit_event(Erc20FactoryContractDeployed {
                         contract_name: exec_env.get_named_arg::<odra::prelude::string::String>("contract_name"),
@@ -827,16 +813,15 @@ mod test {
                 }
 
                 #[no_mangle]
-                fn get_dapp_registry() {
-                    let env = odra::odra_casper_wasm_env::WasmContractEnv::new_env();
-                    if let Some(registry) = odra::factory_dapp::dapp_registry(&env) {
-                        odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
-                            odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
-                                odra::casper_types::CLValue::from_t(registry)
-                            )
-                        );
-                    }
-                    env.revert(ExecutionError::DappRegistryNotSet);
+                fn set_factory_creator() {
+                    let env = Rc::new(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
+                    let exec_env = odra::ExecutionEnv::new(env.clone());
+                    let creator = exec_env.get_named_arg::<odra::prelude::Address>(odra::factory_dapp::CREATOR_ARG);
+                    let previous_creator = odra::factory_dapp::set_creator(&env, creator);
+                    env.emit_event(__erc20_factory_dapp::FactoryCreatorChanged {
+                        previous_creator,
+                        new_creator: creator
+                    });
                 }
 
                 #[no_mangle]

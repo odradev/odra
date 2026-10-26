@@ -13,18 +13,24 @@
   "types": [
     {
       "struct": {
-        "name": "DappRegistryChanged",
+        "name": "DappRegistryForgotten",
         "description": null,
         "members": [
           {
-            "name": "previous_registry",
+            "name": "registry",
             "description": null,
-            "ty": {
-              "Option": "Key"
-            }
-          },
+            "ty": "Key"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "DappRegistryRecognized",
+        "description": null,
+        "members": [
           {
-            "name": "new_registry",
+            "name": "registry",
             "description": null,
             "ty": "Key"
           }
@@ -86,16 +92,6 @@
       "discriminant": 22002
     },
     {
-      "name": "DappRegistryMismatch",
-      "description": "The contract points to a different dapp registry.",
-      "discriminant": 22003
-    },
-    {
-      "name": "DappRegistryNotSet",
-      "description": "The dapp registry has not been set.",
-      "discriminant": 22005
-    },
-    {
       "name": "MissingRole",
       "description": "The role is missing.",
       "discriminant": 20003
@@ -118,7 +114,23 @@
   ],
   "entry_points": [
     {
-      "name": "set_dapp_registry",
+      "name": "recognize_dapp_registry",
+      "description": "",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "registry",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "forget_dapp_registry",
       "description": "",
       "is_mutable": true,
       "arguments": [
@@ -135,9 +147,15 @@
     },
     {
       "name": "register_in_dapp",
-      "description": "Registers `contract` in this contract's registry, as a factory would.",
+      "description": "Registers `dapp_contract` in `registry`, as a factory would.",
       "is_mutable": true,
       "arguments": [
+        {
+          "name": "registry",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        },
         {
           "name": "dapp_contract",
           "description": null,
@@ -156,11 +174,18 @@
       "access": "public"
     },
     {
-      "name": "get_dapp_registry",
-      "description": "Delegated. See `self.dapp.get_dapp_registry()` for details.",
+      "name": "recognizes_dapp_registry",
+      "description": "Delegated. See `self.dapp.recognizes_dapp_registry()` for details.",
       "is_mutable": false,
-      "arguments": [],
-      "return_ty": "Key",
+      "arguments": [
+        {
+          "name": "registry",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        }
+      ],
+      "return_ty": "Bool",
       "is_contract_context": true,
       "access": "public"
     },
@@ -176,8 +201,12 @@
   ],
   "events": [
     {
-      "name": "DappRegistryChanged",
-      "ty": "DappRegistryChanged"
+      "name": "DappRegistryForgotten",
+      "ty": "DappRegistryForgotten"
+    },
+    {
+      "name": "DappRegistryRecognized",
+      "ty": "DappRegistryRecognized"
     },
     {
       "name": "OwnershipTransferred",
@@ -210,12 +239,6 @@
         "name": "odra_cfg_is_upgrade",
         "description": "The arg name for telling the installer that the contract is being upgraded.",
         "ty": "Bool",
-        "optional": false
-      },
-      {
-        "name": "registry",
-        "description": null,
-        "ty": "Key",
         "optional": false
       }
     ]

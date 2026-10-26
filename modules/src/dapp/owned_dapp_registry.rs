@@ -61,8 +61,6 @@ impl OwnedDappRegistry {
             fn is_dapp_contract(&self, dapp_contract: &Address) -> bool;
             /// Returns true if the contract is a registered factory.
             fn is_dapp_factory(&self, dapp_contract: &Address) -> bool;
-            /// Returns the registry's own address.
-            fn get_dapp_registry(&self) -> Address;
         }
         to self.ownable {
             /// Returns the owner.
@@ -86,9 +84,10 @@ mod tests {
     use super::*;
     use crate::dapp::errors::Error;
     use crate::dapp::events::{
-        DappContractAdded, DappContractRemoved, DappMetadataChanged, DappRegistryChanged
+        DappContractAdded, DappContractRemoved, DappMetadataChanged, DappRegistryForgotten,
+        DappRegistryRecognized
     };
-    use crate::dapp::utils::{MockDappContract, MockDappContractHostRef, MockDappContractInitArgs};
+    use crate::dapp::utils::{MockDappContract, MockDappContractHostRef};
     use odra::host::{Deployer, HostEnv, NoArgs};
 
     fn setup() -> (HostEnv, OwnedDappRegistryHostRef) {
@@ -97,8 +96,8 @@ mod tests {
         (env, registry)
     }
 
-    fn member(env: &HostEnv, registry: Address) -> MockDappContractHostRef {
-        MockDappContract::deploy(env, MockDappContractInitArgs { registry })
+    fn member(env: &HostEnv) -> MockDappContractHostRef {
+        MockDappContract::deploy(env, NoArgs)
     }
 
     fn metadata() -> DappMetadata {
@@ -117,7 +116,6 @@ mod tests {
         assert_eq!(registry.get_owner(), env.get_account(0));
         assert_eq!(registry.get_dapp_contracts(), vec![address]);
         assert!(registry.is_dapp_contract(&address));
-        assert_eq!(registry.get_dapp_registry(), address);
         assert_eq!(registry.get_dapp_metadata(), DappMetadata::default());
     }
 
@@ -146,7 +144,7 @@ mod tests {
     #[test]
     fn owner_adds_contract() {
         let (env, mut registry) = setup();
-        let member = member(&env, registry.address());
+        let member = member(&env);
         registry.add_dapp_contract(&member.address(), false);
 
         assert!(registry.is_dapp_contract(&member.address()));
@@ -175,22 +173,28 @@ mod tests {
     }
 
     #[test]
-    fn cannot_add_contract_of_another_registry() {
+    fn adds_any_contract() {
+        // The registry does not call the contracts it adds: a contract that knows nothing about dapps
+        // can be added, and a contract can belong to several dapps.
         let (env, mut registry) = setup();
-        let other = OwnedDappRegistry::deploy(&env, NoArgs);
-        let member = member(&env, other.address());
+        let mut other = OwnedDappRegistry::deploy(&env, NoArgs);
+        let unaware = OwnedDappRegistry::deploy(&env, NoArgs).address();
+        registry.add_dapp_contract(&unaware, false);
+        other.add_dapp_contract(&unaware, false);
+        assert!(registry.is_dapp_contract(&unaware));
+        assert!(other.is_dapp_contract(&unaware));
+        // Registries can list each other.
+        registry.add_dapp_contract(&other.address(), false);
         assert_eq!(
-            registry.try_add_dapp_contract(&member.address(), false),
-            Err(Error::DappRegistryMismatch.into())
+            registry.get_dapp_contracts(),
+            vec![registry.address(), unaware, other.address()]
         );
-        assert_eq!(registry.get_dapp_contracts(), vec![registry.address()]);
-        assert!(!registry.is_dapp_contract(&member.address()));
     }
 
     #[test]
     fn cannot_add_twice() {
         let (env, mut registry) = setup();
-        let member = member(&env, registry.address());
+        let member = member(&env);
         registry.add_dapp_contract(&member.address(), false);
         assert_eq!(
             registry.try_add_dapp_contract(&member.address(), true),
@@ -206,7 +210,7 @@ mod tests {
     #[test]
     fn non_owner_cannot_add() {
         let (env, mut registry) = setup();
-        let member = member(&env, registry.address());
+        let member = member(&env);
         env.set_caller(env.get_account(1));
         assert_eq!(
             registry.try_add_dapp_contract(&member.address(), false),
@@ -217,12 +221,12 @@ mod tests {
     #[test]
     fn factory_adds_contracts() {
         let (env, mut registry) = setup();
-        let mut factory = member(&env, registry.address());
-        let child = member(&env, registry.address());
+        let mut factory = member(&env);
+        let child = member(&env);
         registry.add_dapp_contract(&factory.address(), true);
         assert!(registry.is_dapp_factory(&factory.address()));
 
-        factory.register_in_dapp(&child.address(), false);
+        factory.register_in_dapp(&registry.address(), &child.address(), false);
         assert!(registry.is_dapp_contract(&child.address()));
         assert!(env.emitted_event(
             &registry,
@@ -234,21 +238,21 @@ mod tests {
         ));
 
         // A factory cannot register another factory.
-        let other = member(&env, registry.address());
+        let other = member(&env);
         assert_eq!(
-            factory.try_register_in_dapp(&other.address(), true),
+            factory.try_register_in_dapp(&registry.address(), &other.address(), true),
             Err(AccessError::CallerNotTheOwner.into())
         );
 
         // A contract that is not a registered factory cannot register anything.
-        let mut not_factory = member(&env, registry.address());
+        let mut not_factory = member(&env);
         assert_eq!(
-            not_factory.try_register_in_dapp(&other.address(), false),
+            not_factory.try_register_in_dapp(&registry.address(), &other.address(), false),
             Err(Error::CallerNotDappFactory.into())
         );
         registry.add_dapp_contract(&not_factory.address(), false);
         assert_eq!(
-            not_factory.try_register_in_dapp(&other.address(), false),
+            not_factory.try_register_in_dapp(&registry.address(), &other.address(), false),
             Err(Error::CallerNotDappFactory.into())
         );
     }
@@ -257,9 +261,9 @@ mod tests {
     fn remove_contracts() {
         let (env, mut registry) = setup();
         let reg = registry.address();
-        let a = member(&env, reg).address();
-        let b = member(&env, reg).address();
-        let c = member(&env, reg).address();
+        let a = member(&env).address();
+        let b = member(&env).address();
+        let c = member(&env).address();
         registry.add_dapp_contract(&a, true);
         registry.add_dapp_contract(&b, false);
         registry.add_dapp_contract(&c, false);
@@ -322,16 +326,14 @@ mod tests {
 
     #[test]
     fn data_is_stored_under_named_keys() {
-        use crate::dapp::storage::{
-            DAPP_CONTRACTS_COUNT_KEY, DAPP_CONTRACTS_KEY, DAPP_NAME_KEY, DAPP_REGISTRY_KEY
-        };
+        use crate::dapp::storage::{DAPP_CONTRACTS_COUNT_KEY, DAPP_CONTRACTS_KEY, DAPP_NAME_KEY};
         use odra::casper_types::bytesrepr::{FromBytes, ToBytes};
         use odra::schema::{resolve_storage, SchemaStorageLayout, StorageLocation};
 
         let (env, mut registry) = setup();
         let address = registry.address();
         registry.set_dapp_metadata(metadata());
-        let member = member(&env, address).address();
+        let member = member(&env).address();
         registry.add_dapp_contract(&member, true);
 
         fn named<T: FromBytes>(env: &HostEnv, address: &Address, name: &str) -> T {
@@ -342,7 +344,6 @@ mod tests {
         }
         assert_eq!(named::<String>(&env, &address, DAPP_NAME_KEY), "Dapp");
         assert_eq!(named::<u32>(&env, &address, DAPP_CONTRACTS_COUNT_KEY), 1);
-        assert_eq!(named::<Address>(&env, &member, DAPP_REGISTRY_KEY), address);
 
         // The contracts by index, under a dictionary with plain string keys.
         let bytes = env
@@ -369,37 +370,69 @@ mod tests {
     }
 
     #[test]
-    fn member_registry() {
+    fn member_recognizes_registries() {
         let (env, registry) = setup();
-        let mut member = member(&env, registry.address());
-        assert_eq!(member.get_dapp_registry(), registry.address());
+        let other = OwnedDappRegistry::deploy(&env, NoArgs);
+        let mut member = member(&env);
+        assert!(!member.recognizes_dapp_registry(&registry.address()));
+
+        // A member may recognize several registries.
+        member.recognize_dapp_registry(&registry.address());
+        member.recognize_dapp_registry(&other.address());
+        assert!(member.recognizes_dapp_registry(&registry.address()));
+        assert!(member.recognizes_dapp_registry(&other.address()));
         assert!(env.emitted_event(
             &member,
-            DappRegistryChanged {
-                previous_registry: None,
-                new_registry: registry.address()
+            DappRegistryRecognized {
+                registry: registry.address()
             }
         ));
 
-        let other = OwnedDappRegistry::deploy(&env, NoArgs);
-        member.set_dapp_registry(&other.address());
-        assert_eq!(member.get_dapp_registry(), other.address());
+        member.forget_dapp_registry(&other.address());
+        assert!(!member.recognizes_dapp_registry(&other.address()));
         assert!(env.emitted_event(
             &member,
-            DappRegistryChanged {
-                previous_registry: Some(registry.address()),
-                new_registry: other.address()
+            DappRegistryForgotten {
+                registry: other.address()
             }
         ));
+        // Recognizing twice or forgetting an unknown registry changes nothing.
+        let events = env.events_count(&member);
+        member.recognize_dapp_registry(&registry.address());
+        member.forget_dapp_registry(&other.address());
+        assert_eq!(env.events_count(&member), events);
 
         assert_eq!(
-            member.try_set_dapp_registry(&env.get_account(1)),
+            member.try_recognize_dapp_registry(&env.get_account(1)),
             Err(Error::NotAContract.into())
         );
         env.set_caller(env.get_account(1));
         assert_eq!(
-            member.try_set_dapp_registry(&registry.address()),
+            member.try_recognize_dapp_registry(&registry.address()),
             Err(AccessError::CallerNotTheOwner.into())
         );
+    }
+
+    #[test]
+    fn member_registries_are_stored_under_named_keys() {
+        use crate::dapp::storage::DAPP_REGISTRIES_KEY;
+        use odra::casper_types::bytesrepr::ToBytes;
+        use odra::schema::{resolve_storage, SchemaStorageLayout, StorageLocation};
+
+        let (env, registry) = setup();
+        let mut member = member(&env);
+        member.recognize_dapp_registry(&registry.address());
+
+        let layout = MockDappContract::storage_kind();
+        let key = registry.address().to_bytes().unwrap();
+        let query = resolve_storage(&layout, "dapp.registries", &[key]).unwrap();
+        let StorageLocation::Dictionary { name, key } = &query.location else {
+            panic!("the registries should be a dictionary")
+        };
+        assert_eq!(name, DAPP_REGISTRIES_KEY);
+        let bytes = env
+            .get_dictionary_value(&member.address(), name, key.as_bytes())
+            .expect("the registry should be stored");
+        assert_eq!(bytes.to_vec(), true.to_bytes().unwrap());
     }
 }

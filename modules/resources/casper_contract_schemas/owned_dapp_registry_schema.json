@@ -163,16 +163,6 @@
       "discriminant": 22002
     },
     {
-      "name": "DappRegistryMismatch",
-      "description": "The contract points to a different dapp registry.",
-      "discriminant": 22003
-    },
-    {
-      "name": "DappRegistryNotSet",
-      "description": "The dapp registry has not been set.",
-      "discriminant": 22005
-    },
-    {
       "name": "MissingRole",
       "description": "The role is missing.",
       "discriminant": 20003
@@ -297,15 +287,6 @@
         }
       ],
       "return_ty": "Bool",
-      "is_contract_context": true,
-      "access": "public"
-    },
-    {
-      "name": "get_dapp_registry",
-      "description": "Returns the registry's own address.",
-      "is_mutable": false,
-      "arguments": [],
-      "return_ty": "Key",
       "is_contract_context": true,
       "access": "public"
     },

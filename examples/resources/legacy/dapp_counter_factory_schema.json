@@ -21,6 +21,27 @@
       ]
     },
     {
+      "name": "FactoryCreatorChanged",
+      "args": [
+        {
+          "name": "previous_creator",
+          "ty": {
+            "Option": "Key"
+          },
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        },
+        {
+          "name": "new_creator",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ]
+    },
+    {
       "name": "DappRegistryChanged",
       "args": [
         {
@@ -44,26 +65,11 @@
   ],
   "entrypoints": [
     {
-      "name": "init",
-      "args": [],
-      "is_mutable": true,
-      "return_ty": "Unit",
-      "ty": "Constructor",
-      "attributes": []
-    },
-    {
       "name": "new_contract",
       "args": [
         {
           "name": "contract_name",
           "ty": "String",
-          "is_ref": false,
-          "is_slice": false,
-          "is_required": true
-        },
-        {
-          "name": "registry",
-          "ty": "Key",
           "is_ref": false,
           "is_slice": false,
           "is_required": true
@@ -114,10 +120,18 @@
       "attributes": []
     },
     {
-      "name": "get_dapp_registry",
-      "args": [],
-      "is_mutable": false,
-      "return_ty": "Key",
+      "name": "set_factory_creator",
+      "args": [
+        {
+          "name": "creator",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": true,
+      "return_ty": "Unit",
       "ty": "Public",
       "attributes": []
     },
