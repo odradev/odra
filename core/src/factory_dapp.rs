@@ -15,7 +15,7 @@ use crate::prelude::*;
 use crate::ContractEnv;
 
 /// The named key of a contract's dapp registry.
-pub const DAPP_REGISTRY_KEY: &str = "dapp_registry";
+pub const DAPP_REGISTRY_KEY: &str = "__dapp_registry";
 /// The entry point returning the dapp registry, the same as in the `DappContract` interface.
 pub const GET_DAPP_REGISTRY: &str = "get_dapp_registry";
 /// The entry point setting the factory's dapp registry; only the factory access holder may call it.

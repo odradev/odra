@@ -17,7 +17,7 @@ pub trait DappContract {
     fn get_dapp_registry(&self) -> Address;
 }
 
-/// Stores the address of the dapp registry a contract belongs to, under the `dapp_registry` named
+/// Stores the address of the dapp registry a contract belongs to, under the `__dapp_registry` named
 /// key (see [`storage`](super::storage)).
 ///
 /// The module does not check who calls it. Call [`DappContractBase::set_dapp_registry`] from the
