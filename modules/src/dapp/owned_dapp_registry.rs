@@ -7,7 +7,7 @@ use odra::prelude::*;
 /// A ready-to-deploy dapp registry built from [`Ownable`] and [`DappRegistryBase`].
 ///
 /// The deployer becomes the owner. The owner sets the metadata and adds or removes contracts. A contract
-/// the owner registered as a factory may add contracts too, but not further factories.
+/// the owner registered as a registrar may add contracts too, but not further registrars.
 #[odra::module]
 pub struct OwnedDappRegistry {
     ownable: SubModule<Ownable>,
@@ -31,18 +31,18 @@ impl OwnedDappRegistry {
 
     /// Adds a contract to the dapp.
     ///
-    /// The owner may add any contract. A registered factory may add contracts that are not factories.
+    /// The owner may add any contract. A registrar may add contracts that are not registrars.
     /// Anyone else is rejected with `CallerNotTheOwner`, and an unregistered contract with
-    /// `CallerNotDappFactory`.
-    pub fn add_dapp_contract(&mut self, dapp_contract: &Address, is_factory: bool) {
+    /// `CallerNotDappRegistrar`.
+    pub fn add_dapp_contract(&mut self, dapp_contract: &Address, is_registrar: bool) {
         let caller = self.env().caller();
         if self.ownable.get_optional_owner() != Some(caller) {
-            if is_factory || !caller.is_contract() {
+            if is_registrar || !caller.is_contract() {
                 self.env().revert(AccessError::CallerNotTheOwner);
             }
-            self.dapp.assert_dapp_factory(&caller);
+            self.dapp.assert_dapp_registrar(&caller);
         }
-        self.dapp.add_dapp_contract(dapp_contract, is_factory);
+        self.dapp.add_dapp_contract(dapp_contract, is_registrar);
     }
 
     /// Removes a contract from the dapp. Only the owner may call it.
@@ -59,8 +59,8 @@ impl OwnedDappRegistry {
             fn get_dapp_contracts(&self) -> Vec<Address>;
             /// Returns true if the contract belongs to the dapp.
             fn is_dapp_contract(&self, dapp_contract: &Address) -> bool;
-            /// Returns true if the contract is a registered factory.
-            fn is_dapp_factory(&self, dapp_contract: &Address) -> bool;
+            /// Returns true if the contract is a registrar: it may add other contracts.
+            fn is_dapp_registrar(&self, dapp_contract: &Address) -> bool;
         }
         to self.ownable {
             /// Returns the owner.
@@ -148,7 +148,7 @@ mod tests {
         registry.add_dapp_contract(&member.address(), false);
 
         assert!(registry.is_dapp_contract(&member.address()));
-        assert!(!registry.is_dapp_factory(&member.address()));
+        assert!(!registry.is_dapp_registrar(&member.address()));
         assert_eq!(
             registry.get_dapp_contracts(),
             vec![registry.address(), member.address()]
@@ -157,7 +157,7 @@ mod tests {
             &registry,
             DappContractAdded {
                 contract: member.address(),
-                is_factory: false,
+                is_registrar: false,
                 registrar: env.get_account(0)
             }
         ));
@@ -219,41 +219,41 @@ mod tests {
     }
 
     #[test]
-    fn factory_adds_contracts() {
+    fn registrar_adds_contracts() {
         let (env, mut registry) = setup();
-        let mut factory = member(&env);
+        let mut registrar = member(&env);
         let child = member(&env);
-        registry.add_dapp_contract(&factory.address(), true);
-        assert!(registry.is_dapp_factory(&factory.address()));
+        registry.add_dapp_contract(&registrar.address(), true);
+        assert!(registry.is_dapp_registrar(&registrar.address()));
 
-        factory.register_in_dapp(&registry.address(), &child.address(), false);
+        registrar.register_in_dapp(&registry.address(), &child.address(), false);
         assert!(registry.is_dapp_contract(&child.address()));
         assert!(env.emitted_event(
             &registry,
             DappContractAdded {
                 contract: child.address(),
-                is_factory: false,
-                registrar: factory.address()
+                is_registrar: false,
+                registrar: registrar.address()
             }
         ));
 
-        // A factory cannot register another factory.
+        // A registrar cannot add another registrar.
         let other = member(&env);
         assert_eq!(
-            factory.try_register_in_dapp(&registry.address(), &other.address(), true),
+            registrar.try_register_in_dapp(&registry.address(), &other.address(), true),
             Err(AccessError::CallerNotTheOwner.into())
         );
 
-        // A contract that is not a registered factory cannot register anything.
-        let mut not_factory = member(&env);
+        // A contract that is not a registrar cannot add anything.
+        let mut not_registrar = member(&env);
         assert_eq!(
-            not_factory.try_register_in_dapp(&registry.address(), &other.address(), false),
-            Err(Error::CallerNotDappFactory.into())
+            not_registrar.try_register_in_dapp(&registry.address(), &other.address(), false),
+            Err(Error::CallerNotDappRegistrar.into())
         );
-        registry.add_dapp_contract(&not_factory.address(), false);
+        registry.add_dapp_contract(&not_registrar.address(), false);
         assert_eq!(
-            not_factory.try_register_in_dapp(&registry.address(), &other.address(), false),
-            Err(Error::CallerNotDappFactory.into())
+            not_registrar.try_register_in_dapp(&registry.address(), &other.address(), false),
+            Err(Error::CallerNotDappRegistrar.into())
         );
     }
 
@@ -272,7 +272,7 @@ mod tests {
         registry.remove_dapp_contract(&a);
         assert_eq!(registry.get_dapp_contracts(), vec![reg, c, b]);
         assert!(!registry.is_dapp_contract(&a));
-        assert!(!registry.is_dapp_factory(&a));
+        assert!(!registry.is_dapp_registrar(&a));
         assert!(env.emitted_event(
             &registry,
             DappContractRemoved {
@@ -288,7 +288,7 @@ mod tests {
         // A removed contract can be added again.
         registry.add_dapp_contract(&a, false);
         assert_eq!(registry.get_dapp_contracts(), vec![reg, c, a]);
-        assert!(!registry.is_dapp_factory(&a));
+        assert!(!registry.is_dapp_registrar(&a));
         registry.remove_dapp_contract(&c);
         assert_eq!(registry.get_dapp_contracts(), vec![reg, a]);
         assert!(registry.is_dapp_contract(&a));
@@ -324,10 +324,35 @@ mod tests {
         );
     }
 
+    /// Reads the item `key` of the `__dapp` dictionary of the contract at `address`.
+    fn dapp_item<T: odra::casper_types::bytesrepr::FromBytes>(
+        env: &HostEnv,
+        address: &Address,
+        key: &str
+    ) -> T {
+        use crate::dapp::storage::DAPP_KEY;
+        let bytes = env
+            .get_dictionary_value(address, DAPP_KEY, key.as_bytes())
+            .unwrap_or_else(|| panic!("{DAPP_KEY}->{key} should be stored"));
+        T::from_bytes(&bytes).unwrap().0
+    }
+
+    /// The `__dapp` item key of an address in the map under `prefix`.
+    fn address_key(prefix: &str, address: &Address) -> String {
+        use base64::prelude::{Engine, BASE64_STANDARD};
+        use odra::casper_types::bytesrepr::ToBytes;
+        format!(
+            "{prefix}{}",
+            BASE64_STANDARD.encode(address.to_bytes().unwrap())
+        )
+    }
+
     #[test]
-    fn data_is_stored_under_named_keys() {
-        use crate::dapp::storage::{DAPP_CONTRACTS_COUNT_KEY, DAPP_CONTRACTS_KEY, DAPP_NAME_KEY};
-        use odra::casper_types::bytesrepr::{FromBytes, ToBytes};
+    fn data_is_stored_in_the_dapp_dictionary() {
+        use crate::dapp::storage::{
+            CONTRACTS_COUNT_KEY, CONTRACT_INDICES_PREFIX, DAPP_KEY, NAME_KEY, REGISTRARS_PREFIX
+        };
+        use odra::casper_types::bytesrepr::ToBytes;
         use odra::schema::{resolve_storage, SchemaStorageLayout, StorageLocation};
 
         let (env, mut registry) = setup();
@@ -336,36 +361,38 @@ mod tests {
         let member = member(&env).address();
         registry.add_dapp_contract(&member, true);
 
-        fn named<T: FromBytes>(env: &HostEnv, address: &Address, name: &str) -> T {
-            let bytes = env
-                .get_named_value(address, name)
-                .unwrap_or_else(|| panic!("{name} should be stored"));
-            T::from_bytes(&bytes).unwrap().0
-        }
-        assert_eq!(named::<String>(&env, &address, DAPP_NAME_KEY), "Dapp");
-        assert_eq!(named::<u32>(&env, &address, DAPP_CONTRACTS_COUNT_KEY), 1);
+        assert_eq!(dapp_item::<String>(&env, &address, NAME_KEY), "Dapp");
+        assert_eq!(dapp_item::<u32>(&env, &address, CONTRACTS_COUNT_KEY), 1);
+        assert_eq!(dapp_item::<Address>(&env, &address, "contracts->0"), member);
+        let indices_key = address_key(CONTRACT_INDICES_PREFIX, &member);
+        let registrars_key = address_key(REGISTRARS_PREFIX, &member);
+        assert_eq!(dapp_item::<u32>(&env, &address, &indices_key), 1);
+        assert!(dapp_item::<bool>(&env, &address, &registrars_key));
+        // No other named keys.
+        assert_eq!(env.get_named_value(&address, "__dapp_name"), None);
 
-        // The contracts by index, under a dictionary with plain string keys.
-        let bytes = env
-            .get_dictionary_value(&address, DAPP_CONTRACTS_KEY, b"0")
-            .expect("the first contract should be stored");
-        assert_eq!(Address::from_bytes(&bytes).unwrap().0, member);
-
-        // The dictionaries keyed by address, found through the storage layout.
+        // The storage layout points to the same items.
         let layout = OwnedDappRegistry::storage_kind();
-        for (path, expected) in [
-            ("dapp.indices", 1u32.to_bytes()),
-            ("dapp.factories", true.to_bytes())
+        let member_key = member.to_bytes().unwrap();
+        for (path, keys, expected) in [
+            ("dapp.name", vec![], NAME_KEY.to_string()),
+            (
+                "dapp.contracts",
+                vec![0u32.to_string().to_bytes().unwrap()],
+                "contracts->0".to_string()
+            ),
+            ("dapp.indices", vec![member_key.clone()], indices_key),
+            ("dapp.registrars", vec![member_key], registrars_key)
         ] {
-            let key = member.to_bytes().unwrap();
-            let query = resolve_storage(&layout, path, &[key]).unwrap();
-            let StorageLocation::Dictionary { name, key } = &query.location else {
-                panic!("{path} should be a dictionary")
-            };
-            let bytes = env
-                .get_dictionary_value(&address, name, key.as_bytes())
-                .unwrap_or_else(|| panic!("{path} should be stored"));
-            assert_eq!(bytes.to_vec(), expected.unwrap());
+            let query = resolve_storage(&layout, path, &keys).unwrap();
+            assert_eq!(
+                query.location,
+                StorageLocation::Dictionary {
+                    name: DAPP_KEY.to_string(),
+                    key: expected
+                },
+                "{path}"
+            );
         }
     }
 
@@ -414,8 +441,8 @@ mod tests {
     }
 
     #[test]
-    fn member_registries_are_stored_under_named_keys() {
-        use crate::dapp::storage::DAPP_REGISTRIES_KEY;
+    fn member_registries_are_stored_in_the_dapp_dictionary() {
+        use crate::dapp::storage::{DAPP_KEY, REGISTRIES_PREFIX};
         use odra::casper_types::bytesrepr::ToBytes;
         use odra::schema::{resolve_storage, SchemaStorageLayout, StorageLocation};
 
@@ -423,16 +450,22 @@ mod tests {
         let mut member = member(&env);
         member.recognize_dapp_registry(&registry.address());
 
+        let key = address_key(REGISTRIES_PREFIX, &registry.address());
+        assert!(dapp_item::<bool>(&env, &member.address(), &key));
+
         let layout = MockDappContract::storage_kind();
-        let key = registry.address().to_bytes().unwrap();
-        let query = resolve_storage(&layout, "dapp.registries", &[key]).unwrap();
-        let StorageLocation::Dictionary { name, key } = &query.location else {
-            panic!("the registries should be a dictionary")
-        };
-        assert_eq!(name, DAPP_REGISTRIES_KEY);
-        let bytes = env
-            .get_dictionary_value(&member.address(), name, key.as_bytes())
-            .expect("the registry should be stored");
-        assert_eq!(bytes.to_vec(), true.to_bytes().unwrap());
+        let query = resolve_storage(
+            &layout,
+            "dapp.registries",
+            &[registry.address().to_bytes().unwrap()]
+        )
+        .unwrap();
+        assert_eq!(
+            query.location,
+            StorageLocation::Dictionary {
+                name: DAPP_KEY.to_string(),
+                key
+            }
+        );
     }
 }

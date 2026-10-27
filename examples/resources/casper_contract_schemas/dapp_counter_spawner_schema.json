@@ -40,8 +40,8 @@
   ],
   "errors": [
     {
-      "name": "CallerNotDappFactory",
-      "description": "The caller is not a registered dapp factory.",
+      "name": "CallerNotDappRegistrar",
+      "description": "The caller is not a registrar of the dapp.",
       "discriminant": 22004
     },
     {

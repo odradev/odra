@@ -10,8 +10,8 @@ pub enum Error {
     DappContractAlreadyRegistered = 22_001,
     /// The contract is not registered.
     DappContractNotRegistered = 22_002,
-    /// The caller is not a registered dapp factory.
-    CallerNotDappFactory = 22_004,
+    /// The caller is not a registrar of the dapp.
+    CallerNotDappRegistrar = 22_004,
     /// The dapp registry cannot remove itself.
     CannotRemoveDappRegistry = 22_006
 }

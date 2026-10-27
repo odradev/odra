@@ -62,8 +62,8 @@
   ],
   "errors": [
     {
-      "name": "CallerNotDappFactory",
-      "description": "The caller is not a registered dapp factory.",
+      "name": "CallerNotDappRegistrar",
+      "description": "The caller is not a registrar of the dapp.",
       "discriminant": 22004
     },
     {
@@ -147,7 +147,7 @@
     },
     {
       "name": "register_in_dapp",
-      "description": "Registers `dapp_contract` in `registry`, as a factory would.",
+      "description": "Registers `dapp_contract` in `registry`, as a registrar would.",
       "is_mutable": true,
       "arguments": [
         {
@@ -163,7 +163,7 @@
           "optional": false
         },
         {
-          "name": "is_factory",
+          "name": "is_registrar",
           "description": null,
           "ty": "Bool",
           "optional": false

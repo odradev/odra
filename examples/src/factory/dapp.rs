@@ -3,7 +3,7 @@
 //! `DappCounterSpawner` keeps track of the counters of a dapp and creates them through
 //! `DappCounterFactory`. The deployer of the factory lets only the spawner create counters
 //! (`set_factory_creator`) and points the factory to the dapp's `OwnedDappRegistry`
-//! (`set_factory_dapp_registry`), where the factory is registered as a dapp factory: every counter the
+//! (`set_factory_dapp_registry`), where the factory is a registrar: every counter the
 //! spawner creates joins the dapp, and nobody else can add contracts through the factory.
 //!
 //! The counters know nothing about the dapp. The spawner confirms its membership from its side with
@@ -120,12 +120,12 @@ mod tests {
                 second
             ]
         );
-        assert!(!registry.is_dapp_factory(&first));
+        assert!(!registry.is_dapp_registrar(&first));
         assert!(env.emitted_event(
             &registry,
             DappContractAdded {
                 contract: first,
-                is_factory: false,
+                is_registrar: false,
                 registrar: factory.address()
             }
         ));

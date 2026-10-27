@@ -22,8 +22,8 @@ pub struct DappMetadataChanged {
 pub struct DappContractAdded {
     /// The added contract.
     pub contract: Address,
-    /// Whether the contract can register other contracts.
-    pub is_factory: bool,
+    /// Whether the contract may add other contracts.
+    pub is_registrar: bool,
     /// The address that added the contract.
     pub registrar: Address
 }

@@ -108,7 +108,7 @@
           "is_required": true
         },
         {
-          "name": "is_factory",
+          "name": "is_registrar",
           "ty": "Bool",
           "is_ref": false,
           "is_slice": false,

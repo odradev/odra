@@ -45,7 +45,7 @@
           "is_required": true
         },
         {
-          "name": "is_factory",
+          "name": "is_registrar",
           "ty": "Bool",
           "is_ref": false,
           "is_slice": false,
@@ -139,7 +139,7 @@
           "is_required": true
         },
         {
-          "name": "is_factory",
+          "name": "is_registrar",
           "ty": "Bool",
           "is_ref": false,
           "is_slice": false,
@@ -202,7 +202,7 @@
       "attributes": []
     },
     {
-      "name": "is_dapp_factory",
+      "name": "is_dapp_registrar",
       "args": [
         {
           "name": "dapp_contract",

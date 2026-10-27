@@ -4,7 +4,7 @@ use crate::access::Ownable;
 use odra::prelude::*;
 use odra::ContractRef;
 
-/// A contract that recognizes the registries its owner picks, and can act as a factory by registering
+/// A contract that recognizes the registries its owner picks, and can act as a registrar by adding
 /// other contracts in a registry.
 #[odra::module]
 pub struct MockDappContract {
@@ -39,14 +39,14 @@ impl MockDappContract {
         }
     }
 
-    /// Registers `dapp_contract` in `registry`, as a factory would.
+    /// Registers `dapp_contract` in `registry`, as a registrar would.
     pub fn register_in_dapp(
         &mut self,
         registry: &Address,
         dapp_contract: &Address,
-        is_factory: bool
+        is_registrar: bool
     ) {
         DappRegistryContractRef::new(self.env(), *registry)
-            .add_dapp_contract(dapp_contract, is_factory);
+            .add_dapp_contract(dapp_contract, is_registrar);
     }
 }

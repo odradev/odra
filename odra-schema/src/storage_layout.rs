@@ -106,8 +106,20 @@ pub enum StorageKind {
         key: Type,
         /// How the dictionary item key is derived from the key value.
         key_encoding: KeyEncoding,
+        /// Prepended to the encoded key, so several maps can share one dictionary.
+        #[serde(default, skip_serializing_if = "String::is_empty")]
+        key_prefix: String,
         /// The type of the value.
         value: Type
+    },
+    /// A single value stored in a Casper dictionary under a fixed item key, next to other values.
+    DictionaryItem {
+        /// The name of the dictionary.
+        name: String,
+        /// The dictionary item key.
+        key: String,
+        /// The type of the value.
+        ty: Type
     }
 }
 
@@ -134,7 +146,33 @@ impl StorageKind {
             name: name.to_string(),
             key: Type(K::ty()),
             key_encoding,
+            key_prefix: String::new(),
             value: Type(V::ty())
+        }
+    }
+
+    /// A value of type `V` stored in a dictionary under a key of type `K`, with `key_prefix`
+    /// prepended to the encoded key, so the map can share the dictionary with other values.
+    pub fn prefixed_dictionary<K: NamedCLTyped, V: NamedCLTyped>(
+        name: &str,
+        key_prefix: &str,
+        key_encoding: KeyEncoding
+    ) -> Self {
+        Self::Dictionary {
+            name: name.to_string(),
+            key: Type(K::ty()),
+            key_encoding,
+            key_prefix: key_prefix.to_string(),
+            value: Type(V::ty())
+        }
+    }
+
+    /// A value of type `T` stored in a dictionary under the fixed item key `key`.
+    pub fn dictionary_item<T: NamedCLTyped>(name: &str, key: &str) -> Self {
+        Self::DictionaryItem {
+            name: name.to_string(),
+            key: key.to_string(),
+            ty: Type(T::ty())
         }
     }
 
@@ -472,6 +510,7 @@ where
                 name,
                 key,
                 key_encoding,
+                key_prefix,
                 value
             } => {
                 let key_bytes = self.next_key(&key)?;
@@ -483,9 +522,16 @@ where
                 })?;
                 Ok(StorageQuery {
                     ty: value,
-                    location: StorageLocation::Dictionary { name, key }
+                    location: StorageLocation::Dictionary {
+                        name,
+                        key: format!("{key_prefix}{key}")
+                    }
                 })
             }
+            StorageKind::DictionaryItem { name, key, ty } => Ok(StorageQuery {
+                ty,
+                location: StorageLocation::Dictionary { name, key }
+            }),
             StorageKind::Module { fields } => Err(StorageLayoutError::NotAValue {
                 path: self.location(),
                 available: fields.iter().map(|f| f.name.clone()).collect()

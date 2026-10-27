@@ -19,7 +19,7 @@ pub trait DappMember {
 
 /// Keeps the dapp registries a contract recognizes, implementing [`DappMember`].
 ///
-/// The registries live in the `__dapp_registries` dictionary, keyed by the base64 encoded address (see
+/// The registries live in the `__dapp` dictionary under `registries-><base64 encoded address>` (see
 /// [`storage`](super::storage)), so they can also be read from the chain without calling the contract.
 ///
 /// The module does not check who calls it. Call [`init`](Self::init) from the composing contract's
@@ -33,7 +33,7 @@ pub struct DappMemberBase {
 
 #[odra::module]
 impl DappMemberBase {
-    /// Creates the dictionary of the recognized registries.
+    /// Creates the `__dapp` dictionary holding the recognized registries.
     pub fn init(&mut self) {
         self.registries.init();
     }

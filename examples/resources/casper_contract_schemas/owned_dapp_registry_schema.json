@@ -22,7 +22,7 @@
             "ty": "Key"
           },
           {
-            "name": "is_factory",
+            "name": "is_registrar",
             "description": null,
             "ty": "Bool"
           },
@@ -133,8 +133,8 @@
   ],
   "errors": [
     {
-      "name": "CallerNotDappFactory",
-      "description": "The caller is not a registered dapp factory.",
+      "name": "CallerNotDappRegistrar",
+      "description": "The caller is not a registrar of the dapp.",
       "discriminant": 22004
     },
     {
@@ -212,7 +212,7 @@
           "optional": false
         },
         {
-          "name": "is_factory",
+          "name": "is_registrar",
           "description": null,
           "ty": "Bool",
           "optional": false
@@ -275,8 +275,8 @@
       "access": "public"
     },
     {
-      "name": "is_dapp_factory",
-      "description": "Returns true if the contract is a registered factory.",
+      "name": "is_dapp_registrar",
+      "description": "Returns true if the contract is a registrar: it may add other contracts.",
       "is_mutable": false,
       "arguments": [
         {

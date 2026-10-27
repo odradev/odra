@@ -5,18 +5,21 @@
 //! - `set_factory_creator` lets only the given address create children, e.g. the contract that keeps
 //!   track of them;
 //! - `set_factory_dapp_registry` points the factory to a dapp registry, and every child the factory
-//!   creates from then on is added to it. The factory must be registered in the registry as a dapp
-//!   factory. A factory gets a registry only after a creator: otherwise anyone could add contracts to
-//!   the dapp.
+//!   creates from then on is added to it. The factory must be a registrar of the registry. A factory
+//!   gets a registry only after a creator: otherwise anyone could add contracts to the dapp.
 //!
-//! Both live under named keys, [`CREATOR_KEY`] and [`DAPP_REGISTRY_KEY`], so they can be read from the
-//! chain. OdraVM runs the entry points natively through `odra::host::factory`, with the same rules.
+//! The creator lives under the [`CREATOR_KEY`] named key and the registry under the [`REGISTRY_KEY`]
+//! item of the [`DAPP_KEY`] dictionary, the dictionary of the dapp modules of `odra-modules`, so both
+//! can be read from the chain. OdraVM runs the entry points natively through `odra::host::factory`,
+//! with the same rules.
 use crate::prelude::*;
 use crate::{CallDef, ContractEnv};
 use casper_types::RuntimeArgs;
 
-/// The named key of the dapp registry the factory adds its children to.
-pub const DAPP_REGISTRY_KEY: &str = "__dapp_registry";
+/// The named key of the dictionary holding a contract's dapp data.
+pub const DAPP_KEY: &str = "__dapp";
+/// The item of the [`DAPP_KEY`] dictionary holding the dapp registry the factory adds its children to.
+pub const REGISTRY_KEY: &str = "registry";
 /// The named key of the only address allowed to create the factory's children.
 pub const CREATOR_KEY: &str = "__factory_creator";
 /// The entry point setting the factory's dapp registry; only the factory access holder may call it.
@@ -32,11 +35,14 @@ pub const ADD_DAPP_CONTRACT: &str = "add_dapp_contract";
 /// The arguments of [`ADD_DAPP_CONTRACT`].
 pub const DAPP_CONTRACT_ARG: &str = "dapp_contract";
 /// See [`DAPP_CONTRACT_ARG`].
-pub const IS_FACTORY_ARG: &str = "is_factory";
+pub const IS_REGISTRAR_ARG: &str = "is_registrar";
 
 /// Returns the dapp registry the factory adds its children to, if any.
 pub fn dapp_registry(env: &ContractEnv) -> Option<Address> {
-    env.get_named_value(DAPP_REGISTRY_KEY)
+    // A factory without a creator has no registry; checking first keeps the dictionary, which a read
+    // creates in wasm, out of factories that are not part of a dapp.
+    creator(env)?;
+    env.get_dictionary_value(DAPP_KEY, REGISTRY_KEY.as_bytes())
 }
 
 /// Returns the only address allowed to create the factory's children, if any.
@@ -56,7 +62,7 @@ pub fn set_dapp_registry(env: &ContractEnv, registry: Address) -> Option<Address
         env.revert(ExecutionError::FactoryCreatorNotSet);
     }
     let previous = dapp_registry(env);
-    env.set_named_value(DAPP_REGISTRY_KEY, registry);
+    env.set_dictionary_value(DAPP_KEY, REGISTRY_KEY.as_bytes(), registry);
     previous
 }
 
@@ -84,7 +90,7 @@ pub fn register_child(env: &ContractEnv, child: Address) {
     if let Some(registry) = dapp_registry(env) {
         let mut args = RuntimeArgs::new();
         let _ = args.insert(DAPP_CONTRACT_ARG, child);
-        let _ = args.insert(IS_FACTORY_ARG, false);
+        let _ = args.insert(IS_REGISTRAR_ARG, false);
         env.call_contract::<()>(
             registry,
             CallDef::new(String::from(ADD_DAPP_CONTRACT), true, args)
