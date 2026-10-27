@@ -65,11 +65,7 @@ impl ToTokens for SchemaEntrypointsItem {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let module_ident = &self.module_ident;
         let entry_point_tokens = |f: &FnIR| {
-                let desc = f
-                    .docs()
-                    .first()
-                    .map(|s| s.trim().to_string())
-                    .unwrap_or_default();
+                let desc = utils::syn::docs_description(&f.docs());
                 let name = f.name_str();
                 let ret_ty = match f.return_type() {
                     syn::ReturnType::Default => quote::quote! { () },
@@ -234,6 +230,38 @@ mod test {
                             ]
                         )
                     ]
+                }
+            }
+        );
+        let actual = SchemaEntrypointsItem::try_from(&module).unwrap();
+        test_utils::assert_eq(actual, expected);
+    }
+
+    #[test]
+    fn test_entrypoint_with_multiline_docs() {
+        let module = quote!(
+            impl Erc20 {
+                /// Initializes the contract.
+                /// More details about init.
+                pub fn init(&mut self) {}
+            }
+        );
+        let attr = quote!();
+        let module = crate::ir::ModuleImplIR::try_from((&attr, &module)).unwrap();
+        let expected = quote!(
+            #[automatically_derived]
+            #[cfg(not(target_arch = "wasm32"))]
+            impl odra::schema::SchemaEntrypoints for Erc20 {
+                fn schema_entrypoints(
+                ) -> odra::prelude::vec::Vec<odra::schema::casper_contract_schema::Entrypoint>
+                {
+                    odra::prelude::vec![odra::schema::entry_point::<()>(
+                        "init",
+                        "Initializes the contract. More details about init.",
+                        true,
+                        false,
+                        odra::prelude::vec![]
+                    )]
                 }
             }
         );

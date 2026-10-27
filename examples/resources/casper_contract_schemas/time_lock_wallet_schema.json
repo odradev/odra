@@ -55,17 +55,17 @@
   "errors": [
     {
       "name": "CannotLockTwice",
-      "description": "A user deposit funds the second and the next time.",
+      "description": "A user deposit funds the second and the next time. Each account may only have a single active deposit.",
       "discriminant": 2
     },
     {
       "name": "InsufficientBalance",
-      "description": "A user deposits more funds he/she owns.",
+      "description": "A user deposits more funds he/she owns. The withdrawal amount exceeds the account's balance.",
       "discriminant": 3
     },
     {
       "name": "LockIsNotOver",
-      "description": "Cannot withdraw funds, the lock period is not over.",
+      "description": "Cannot withdraw funds, the lock period is not over. Wait until the lock expires before withdrawing again.",
       "discriminant": 1
     }
   ],

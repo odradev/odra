@@ -94,7 +94,7 @@ impl TryFrom<&TypeIR> for SchemaErrorItem {
 
 fn enum_variants(variants: &[syn::Variant]) -> proc_macro2::TokenStream {
     utils::syn::transform_variants(variants, |name, _, discriminant, docs| {
-        let description = docs.first().cloned().unwrap_or_default().trim().to_string();
+        let description = utils::syn::docs_description(&docs);
         quote::quote!(odra::schema::error(#name, #description, #discriminant),)
     })
 }
@@ -175,6 +175,25 @@ mod test {
                 fn schema_errors() -> odra::prelude::Vec<odra::schema::casper_contract_schema::UserError> {
                     odra::prelude::vec![
                         odra::schema::error("A", "Description of A", 10u16),
+                        odra::schema::error("B", "Description of B", 11u16),
+                    ]
+                }
+            }
+        };
+        test_utils::assert_eq(item, expected);
+    }
+
+    #[test]
+    fn test_odra_error_item_with_multiline_docs() {
+        let ty = test_utils::mock::custom_enum_with_multiline_docs();
+        let item = SchemaErrorItem::try_from(&ty).unwrap();
+        let expected = quote::quote! {
+            #[automatically_derived]
+            #[cfg(not(target_arch = "wasm32"))]
+            impl odra::schema::SchemaErrors for MyType {
+                fn schema_errors() -> odra::prelude::Vec<odra::schema::casper_contract_schema::UserError> {
+                    odra::prelude::vec![
+                        odra::schema::error("A", "Description of A. More details about A.", 10u16),
                         odra::schema::error("B", "Description of B", 11u16),
                     ]
                 }
