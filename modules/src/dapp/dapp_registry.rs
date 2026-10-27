@@ -2,9 +2,8 @@
 use super::errors::Error;
 use super::events::{DappContractAdded, DappContractRemoved, DappMetadataChanged};
 use super::storage::{
-    DappContractIndicesStorage, DappContractsCountStorage, DappContractsStorage,
-    DappDescriptionStorage, DappIconUrlStorage, DappNameStorage, DappRegistrarsStorage,
-    DappWebsiteUrlStorage
+    DappContractsStorage, DappDescriptionStorage, DappIconUrlStorage, DappNameStorage,
+    DappRegistrarsStorage, DappWebsiteUrlStorage
 };
 use super::DappMetadata;
 use odra::prelude::*;
@@ -49,9 +48,7 @@ pub struct DappRegistryBase {
     description: SubModule<DappDescriptionStorage>,
     website_url: SubModule<DappWebsiteUrlStorage>,
     icon_url: SubModule<DappIconUrlStorage>,
-    contracts_count: SubModule<DappContractsCountStorage>,
     contracts: SubModule<DappContractsStorage>,
-    indices: SubModule<DappContractIndicesStorage>,
     registrars: SubModule<DappRegistrarsStorage>
 }
 
@@ -74,23 +71,19 @@ impl DappRegistryBase {
 
     /// Returns the contracts of the dapp, the registry first.
     pub fn get_dapp_contracts(&self) -> Vec<Address> {
-        let count = self.contracts_count();
-        let mut result = Vec::with_capacity(count as usize + 1);
-        result.push(self.env().self_address());
-        for index in 0..count {
-            result.push(self.contract_at(index));
-        }
+        let mut result = vec![self.env().self_address()];
+        result.extend(self.contracts());
         result
     }
 
     /// Returns true if the contract belongs to the dapp. The registry itself always does.
     pub fn is_dapp_contract(&self, dapp_contract: &Address) -> bool {
-        *dapp_contract == self.env().self_address() || self.position(dapp_contract) > 0
+        *dapp_contract == self.env().self_address() || self.contracts().contains(dapp_contract)
     }
 
     /// Returns true if the contract is a registrar: it may add other contracts.
     pub fn is_dapp_registrar(&self, dapp_contract: &Address) -> bool {
-        self.registrars.get(dapp_contract).unwrap_or_default()
+        self.registrars().contains(dapp_contract)
     }
 }
 
@@ -128,11 +121,14 @@ impl DappRegistryBase {
         if self.is_dapp_contract(dapp_contract) {
             self.env().revert(Error::DappContractAlreadyRegistered);
         }
-        let count = self.contracts_count();
-        self.contracts.set(&count.to_string(), *dapp_contract);
-        self.contracts_count.set(count + 1);
-        self.indices.set(dapp_contract, count + 1);
-        self.registrars.set(dapp_contract, is_registrar);
+        let mut contracts = self.contracts();
+        contracts.push(*dapp_contract);
+        self.contracts.set(contracts);
+        if is_registrar {
+            let mut registrars = self.registrars();
+            registrars.push(*dapp_contract);
+            self.registrars.set(registrars);
+        }
         self.env().emit_event(DappContractAdded {
             contract: *dapp_contract,
             is_registrar,
@@ -142,8 +138,7 @@ impl DappRegistryBase {
 
     /// Removes a contract from the dapp and emits [`DappContractRemoved`].
     ///
-    /// The last contract takes the place of the removed one, so the order of
-    /// [`get_dapp_contracts`](Self::get_dapp_contracts) changes. Reverts with
+    /// The other contracts keep their order. Reverts with
     /// [`Error::CannotRemoveDappRegistry`] for the registry itself and with
     /// [`Error::DappContractNotRegistered`] for a contract that does not belong to the dapp.
     /// SECURITY: Do not expose this function publicly without proper access control.
@@ -151,20 +146,17 @@ impl DappRegistryBase {
         if *dapp_contract == self.env().self_address() {
             self.env().revert(Error::CannotRemoveDappRegistry);
         }
-        let position = self.position(dapp_contract);
-        if position == 0 {
-            self.env().revert(Error::DappContractNotRegistered);
+        let mut contracts = self.contracts();
+        let Some(position) = contracts.iter().position(|c| c == dapp_contract) else {
+            self.env().revert(Error::DappContractNotRegistered)
+        };
+        contracts.remove(position);
+        self.contracts.set(contracts);
+        let mut registrars = self.registrars();
+        if let Some(position) = registrars.iter().position(|c| c == dapp_contract) {
+            registrars.remove(position);
+            self.registrars.set(registrars);
         }
-        let count = self.contracts_count();
-        let last = self.contract_at(count - 1);
-        if last != *dapp_contract {
-            self.contracts.set(&(position - 1).to_string(), last);
-            self.indices.set(&last, position);
-        }
-        // The entry of the last contract stays behind; the count bounds the list.
-        self.contracts_count.set(count - 1);
-        self.indices.set(dapp_contract, 0);
-        self.registrars.set(dapp_contract, false);
 
         self.env().emit_event(DappContractRemoved {
             contract: *dapp_contract,
@@ -179,19 +171,13 @@ impl DappRegistryBase {
         }
     }
 
-    fn contracts_count(&self) -> u32 {
-        self.contracts_count.get().unwrap_or_default()
+    /// The registered contracts, the registry not included.
+    fn contracts(&self) -> Vec<Address> {
+        self.contracts.get().unwrap_or_default()
     }
 
-    fn contract_at(&self, index: u32) -> Address {
-        self.contracts
-            .get(&index.to_string())
-            .unwrap_or_revert(&self.env())
-    }
-
-    /// The index of the contract in the list plus one; zero means not registered.
-    fn position(&self, dapp_contract: &Address) -> u32 {
-        self.indices.get(dapp_contract).unwrap_or_default()
+    fn registrars(&self) -> Vec<Address> {
+        self.registrars.get().unwrap_or_default()
     }
 }
 

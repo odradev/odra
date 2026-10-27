@@ -310,26 +310,15 @@ fn describe(kind: &StorageKind) -> (String, Option<&[StorageField]>) {
             (format!(": {} (named key `{name}`)", ty(t)), None)
         }
         StorageKind::Dictionary {
-            name,
-            key,
-            key_prefix,
-            value,
-            ..
-        } => {
-            let prefix = if key_prefix.is_empty() {
-                String::new()
-            } else {
-                format!(", keys `{key_prefix}...`")
-            };
-            (
-                format!(
-                    ": Dictionary<{}, {}> (dictionary `{name}`{prefix})",
-                    ty(key),
-                    ty(value)
-                ),
-                None
-            )
-        }
+            name, key, value, ..
+        } => (
+            format!(
+                ": Dictionary<{}, {}> (dictionary `{name}`)",
+                ty(key),
+                ty(value)
+            ),
+            None
+        ),
         StorageKind::DictionaryItem { name, key, ty: t } => (
             format!(": {} (dictionary `{name}`, key `{key}`)", ty(t)),
             None
@@ -439,7 +428,6 @@ mod tests {
                     name: "balances".to_string(),
                     key: ty(NamedCLType::Key),
                     key_encoding: KeyEncoding::Base64,
-                    key_prefix: String::new(),
                     value: ty(NamedCLType::U256)
                 },
                 ": Dictionary<hash-...|account-hash-..., DECIMAL> (dictionary `balances`)",

@@ -268,9 +268,9 @@ mod tests {
         registry.add_dapp_contract(&b, false);
         registry.add_dapp_contract(&c, false);
 
-        // The last contract takes the place of the removed one.
+        // The other contracts keep their order.
         registry.remove_dapp_contract(&a);
-        assert_eq!(registry.get_dapp_contracts(), vec![reg, c, b]);
+        assert_eq!(registry.get_dapp_contracts(), vec![reg, b, c]);
         assert!(!registry.is_dapp_contract(&a));
         assert!(!registry.is_dapp_registrar(&a));
         assert!(env.emitted_event(
@@ -281,7 +281,6 @@ mod tests {
             }
         ));
 
-        // Removing the last contract.
         registry.remove_dapp_contract(&b);
         assert_eq!(registry.get_dapp_contracts(), vec![reg, c]);
 
@@ -337,59 +336,45 @@ mod tests {
         T::from_bytes(&bytes).unwrap().0
     }
 
-    /// The `__dapp` item key of an address in the map under `prefix`.
-    fn address_key(prefix: &str, address: &Address) -> String {
-        use base64::prelude::{Engine, BASE64_STANDARD};
-        use odra::casper_types::bytesrepr::ToBytes;
-        format!(
-            "{prefix}{}",
-            BASE64_STANDARD.encode(address.to_bytes().unwrap())
-        )
-    }
-
     #[test]
     fn data_is_stored_in_the_dapp_dictionary() {
-        use crate::dapp::storage::{
-            CONTRACTS_COUNT_KEY, CONTRACT_INDICES_PREFIX, DAPP_KEY, NAME_KEY, REGISTRARS_PREFIX
-        };
-        use odra::casper_types::bytesrepr::ToBytes;
+        use crate::dapp::storage::{CONTRACTS_KEY, DAPP_KEY, NAME_KEY, REGISTRARS_KEY};
         use odra::schema::{resolve_storage, SchemaStorageLayout, StorageLocation};
 
         let (env, mut registry) = setup();
         let address = registry.address();
         registry.set_dapp_metadata(metadata());
-        let member = member(&env).address();
-        registry.add_dapp_contract(&member, true);
+        let registrar = member(&env).address();
+        let other = member(&env).address();
+        registry.add_dapp_contract(&registrar, true);
+        registry.add_dapp_contract(&other, false);
 
+        // Every item holds a whole value; the collections are lists.
         assert_eq!(dapp_item::<String>(&env, &address, NAME_KEY), "Dapp");
-        assert_eq!(dapp_item::<u32>(&env, &address, CONTRACTS_COUNT_KEY), 1);
-        assert_eq!(dapp_item::<Address>(&env, &address, "contracts->0"), member);
-        let indices_key = address_key(CONTRACT_INDICES_PREFIX, &member);
-        let registrars_key = address_key(REGISTRARS_PREFIX, &member);
-        assert_eq!(dapp_item::<u32>(&env, &address, &indices_key), 1);
-        assert!(dapp_item::<bool>(&env, &address, &registrars_key));
+        assert_eq!(
+            dapp_item::<Vec<Address>>(&env, &address, CONTRACTS_KEY),
+            vec![registrar, other]
+        );
+        assert_eq!(
+            dapp_item::<Vec<Address>>(&env, &address, REGISTRARS_KEY),
+            vec![registrar]
+        );
         // No other named keys.
         assert_eq!(env.get_named_value(&address, "__dapp_name"), None);
 
         // The storage layout points to the same items.
         let layout = OwnedDappRegistry::storage_kind();
-        let member_key = member.to_bytes().unwrap();
-        for (path, keys, expected) in [
-            ("dapp.name", vec![], NAME_KEY.to_string()),
-            (
-                "dapp.contracts",
-                vec![0u32.to_string().to_bytes().unwrap()],
-                "contracts->0".to_string()
-            ),
-            ("dapp.indices", vec![member_key.clone()], indices_key),
-            ("dapp.registrars", vec![member_key], registrars_key)
+        for (path, key) in [
+            ("dapp.name", NAME_KEY),
+            ("dapp.contracts", CONTRACTS_KEY),
+            ("dapp.registrars", REGISTRARS_KEY)
         ] {
-            let query = resolve_storage(&layout, path, &keys).unwrap();
+            let query = resolve_storage(&layout, path, &[]).unwrap();
             assert_eq!(
                 query.location,
                 StorageLocation::Dictionary {
                     name: DAPP_KEY.to_string(),
-                    key: expected
+                    key: key.to_string()
                 },
                 "{path}"
             );
@@ -442,29 +427,27 @@ mod tests {
 
     #[test]
     fn member_registries_are_stored_in_the_dapp_dictionary() {
-        use crate::dapp::storage::{DAPP_KEY, REGISTRIES_PREFIX};
-        use odra::casper_types::bytesrepr::ToBytes;
+        use crate::dapp::storage::{DAPP_KEY, REGISTRIES_KEY};
         use odra::schema::{resolve_storage, SchemaStorageLayout, StorageLocation};
 
         let (env, registry) = setup();
+        let other = OwnedDappRegistry::deploy(&env, NoArgs);
         let mut member = member(&env);
         member.recognize_dapp_registry(&registry.address());
+        member.recognize_dapp_registry(&other.address());
 
-        let key = address_key(REGISTRIES_PREFIX, &registry.address());
-        assert!(dapp_item::<bool>(&env, &member.address(), &key));
+        assert_eq!(
+            dapp_item::<Vec<Address>>(&env, &member.address(), REGISTRIES_KEY),
+            vec![registry.address(), other.address()]
+        );
 
         let layout = MockDappContract::storage_kind();
-        let query = resolve_storage(
-            &layout,
-            "dapp.registries",
-            &[registry.address().to_bytes().unwrap()]
-        )
-        .unwrap();
+        let query = resolve_storage(&layout, "dapp.registries", &[]).unwrap();
         assert_eq!(
             query.location,
             StorageLocation::Dictionary {
                 name: DAPP_KEY.to_string(),
-                key
+                key: REGISTRIES_KEY.to_string()
             }
         );
     }

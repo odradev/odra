@@ -110,7 +110,7 @@ macro_rules! base64_encoded_key_value_storage {
 }
 
 /// Creates an Odra module that stores a single value under a given key of a given dictionary, so
-/// several values can share one dictionary (and one named key).
+/// several values, collections included, can share one dictionary (and one named key).
 ///
 /// The module has three methods: `set`, `get` and `init`. The dictionary is created by `init`, or on
 /// the first access otherwise.
@@ -132,84 +132,6 @@ macro_rules! dictionary_value_storage {
 
             pub fn init(&self) {
                 self.env().init_dictionary($dict);
-            }
-        }
-    };
-}
-
-/// Creates an Odra module that stores values in a given dictionary under keys starting with a given
-/// prefix, so several maps can share one dictionary.
-///
-/// The module has three methods: `set`, `get` and `init`.
-/// The `key` argument of `set` and `get` is appended to the prefix to make the dictionary key.
-#[macro_export]
-macro_rules! prefixed_key_value_storage {
-    ($name:ident, $dict:expr, $prefix:expr, $value_type:ty) => {
-        #[odra::module(layout = odra::schema::StorageKind::prefixed_dictionary::<odra::prelude::String, $value_type>(
-            $dict,
-            $prefix,
-            odra::schema::KeyEncoding::Utf8
-        ))]
-        pub struct $name;
-
-        impl $name {
-            pub fn set(&self, key: &str, value: $value_type) {
-                let key = odra::prelude::format!("{}{}", $prefix, key);
-                self.env()
-                    .set_dictionary_value($dict, key.as_bytes(), value);
-            }
-
-            pub fn get(&self, key: &str) -> Option<$value_type> {
-                let key = odra::prelude::format!("{}{}", $prefix, key);
-                self.env().get_dictionary_value($dict, key.as_bytes())
-            }
-
-            pub fn init(&self) {
-                self.env().init_dictionary($dict);
-            }
-        }
-    };
-}
-
-/// Creates an Odra module that stores values in a given dictionary under keys starting with a given
-/// prefix, so several maps can share one dictionary.
-///
-/// The module has three methods: `set`, `get` and `init`.
-/// The `key` argument of `set` and `get` is serialized, base64-encoded and appended to the prefix to
-/// make the dictionary key.
-#[macro_export]
-macro_rules! base64_encoded_prefixed_key_value_storage {
-    ($name:ident, $dict:expr, $prefix:expr, $key:ty, $value_type:ty) => {
-        #[odra::module(layout = odra::schema::StorageKind::prefixed_dictionary::<$key, $value_type>(
-                    $dict,
-                    $prefix,
-                    odra::schema::KeyEncoding::Base64
-                ))]
-        pub struct $name;
-
-        impl $name {
-            pub fn set(&self, key: &$key, value: $value_type) {
-                let encoded_key = Self::key(self, key);
-                self.env()
-                    .set_dictionary_value($dict, encoded_key.as_bytes(), value);
-            }
-
-            pub fn get(&self, key: &$key) -> Option<$value_type> {
-                let encoded_key = Self::key(self, key);
-                self.env()
-                    .get_dictionary_value($dict, encoded_key.as_bytes())
-            }
-
-            pub fn init(&self) {
-                self.env().init_dictionary($dict);
-            }
-
-            #[inline]
-            fn key<R: odra::module::Revertible>(rev: &R, key: &$key) -> String {
-                use base64::prelude::{Engine, BASE64_STANDARD};
-                let key = odra::casper_types::bytesrepr::ToBytes::to_bytes(key);
-                let preimage = key.unwrap_or_revert(rev);
-                odra::prelude::format!("{}{}", $prefix, BASE64_STANDARD.encode(preimage))
             }
         }
     };

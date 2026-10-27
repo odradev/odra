@@ -19,7 +19,7 @@ pub trait DappMember {
 
 /// Keeps the dapp registries a contract recognizes, implementing [`DappMember`].
 ///
-/// The registries live in the `__dapp` dictionary under `registries-><base64 encoded address>` (see
+/// The registries live in the `registries` list of the `__dapp` dictionary (see
 /// [`storage`](super::storage)), so they can also be read from the chain without calling the contract.
 ///
 /// The module does not check who calls it. Call [`init`](Self::init) from the composing contract's
@@ -40,7 +40,7 @@ impl DappMemberBase {
 
     /// Returns true if the contract recognizes the dapp registry.
     pub fn recognizes_dapp_registry(&self, registry: &Address) -> bool {
-        self.registries.get(registry).unwrap_or_default()
+        self.registries().contains(registry)
     }
 }
 
@@ -57,7 +57,9 @@ impl DappMemberBase {
         if self.recognizes_dapp_registry(registry) {
             return;
         }
-        self.registries.set(registry, true);
+        let mut registries = self.registries();
+        registries.push(*registry);
+        self.registries.set(registries);
         self.env().emit_event(DappRegistryRecognized {
             registry: *registry
         });
@@ -70,9 +72,15 @@ impl DappMemberBase {
         if !self.recognizes_dapp_registry(registry) {
             return;
         }
-        self.registries.set(registry, false);
+        let mut registries = self.registries();
+        registries.retain(|r| r != registry);
+        self.registries.set(registries);
         self.env().emit_event(DappRegistryForgotten {
             registry: *registry
         });
+    }
+
+    fn registries(&self) -> Vec<Address> {
+        self.registries.get().unwrap_or_default()
     }
 }

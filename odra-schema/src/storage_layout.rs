@@ -106,9 +106,6 @@ pub enum StorageKind {
         key: Type,
         /// How the dictionary item key is derived from the key value.
         key_encoding: KeyEncoding,
-        /// Prepended to the encoded key, so several maps can share one dictionary.
-        #[serde(default, skip_serializing_if = "String::is_empty")]
-        key_prefix: String,
         /// The type of the value.
         value: Type
     },
@@ -146,23 +143,6 @@ impl StorageKind {
             name: name.to_string(),
             key: Type(K::ty()),
             key_encoding,
-            key_prefix: String::new(),
-            value: Type(V::ty())
-        }
-    }
-
-    /// A value of type `V` stored in a dictionary under a key of type `K`, with `key_prefix`
-    /// prepended to the encoded key, so the map can share the dictionary with other values.
-    pub fn prefixed_dictionary<K: NamedCLTyped, V: NamedCLTyped>(
-        name: &str,
-        key_prefix: &str,
-        key_encoding: KeyEncoding
-    ) -> Self {
-        Self::Dictionary {
-            name: name.to_string(),
-            key: Type(K::ty()),
-            key_encoding,
-            key_prefix: key_prefix.to_string(),
             value: Type(V::ty())
         }
     }
@@ -510,7 +490,6 @@ where
                 name,
                 key,
                 key_encoding,
-                key_prefix,
                 value
             } => {
                 let key_bytes = self.next_key(&key)?;
@@ -522,10 +501,7 @@ where
                 })?;
                 Ok(StorageQuery {
                     ty: value,
-                    location: StorageLocation::Dictionary {
-                        name,
-                        key: format!("{key_prefix}{key}")
-                    }
+                    location: StorageLocation::Dictionary { name, key }
                 })
             }
             StorageKind::DictionaryItem { name, key, ty } => Ok(StorageQuery {
