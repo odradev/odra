@@ -257,7 +257,7 @@
   "entry_points": [
     {
       "name": "mint",
-      "description": "Mints a new token with the given ID and metadata to the specified address.",
+      "description": "Mints a new token with the given ID and metadata to the specified address. Only the contract owner can call this function.",
       "is_mutable": true,
       "is_payable": false,
       "arguments": [
@@ -293,7 +293,7 @@
     },
     {
       "name": "burn",
-      "description": "Burns the token with the given ID.",
+      "description": "Burns the token with the given ID. Only the token owner can call this function. This function will remove the token from the owner's balance and delete its metadata.",
       "is_mutable": true,
       "is_payable": false,
       "arguments": [
