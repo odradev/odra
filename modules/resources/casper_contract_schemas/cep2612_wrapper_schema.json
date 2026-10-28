@@ -202,7 +202,7 @@
   "entry_points": [
     {
       "name": "permit",
-      "description": "Delegated. See `self.cep2612.permit()` for details.",
+      "description": "Consumes an off-chain permit signature and sets `spender`'s allowance over `owner`'s tokens to `value`.  The caller (typically a relayer, not `owner`) supplies the signed `Permit(owner, spender, value, nonce, deadline)` typed-data digest. The contract:  1. Rejects the call if `deadline != u64::MAX` and the current block time (in seconds) is past `deadline`, a Unix timestamp in seconds (`PermitExpired`). 2. Rejects the call if `Address::from(public_key) != owner` (`InvalidPublicKey`). 3. Recomputes the EIP-712 digest using the on-chain nonce for `owner` and verifies `signature` against `public_key`. A mismatch — wrong field value or a replayed signature whose nonce has already been consumed — yields `InvalidSignature`. 4. Increments the owner's nonce and overwrites the allowance via [`Cep18::raw_approve`] (it does not add to the existing allowance).",
       "is_mutable": true,
       "is_payable": false,
       "arguments": [
@@ -251,7 +251,7 @@
     },
     {
       "name": "allowance",
-      "description": "Delegated. See `self.token.allowance()` for details.",
+      "description": "Returns the amount of tokens the owner has allowed the spender to spend.",
       "is_mutable": false,
       "is_payable": false,
       "arguments": [

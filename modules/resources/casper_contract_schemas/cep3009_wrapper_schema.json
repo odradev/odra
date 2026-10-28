@@ -282,7 +282,7 @@
   "entry_points": [
     {
       "name": "authorization_state",
-      "description": "Delegated. See `self.cep3009.authorization_state()` for details.",
+      "description": "Returns `true` if `(authorizer, nonce)` has been consumed by a previous transfer or burned by [`Self::cancel_authorization`]. Useful for off-chain clients to check before submitting a relayed transfer.",
       "is_mutable": false,
       "is_payable": false,
       "arguments": [
@@ -307,7 +307,7 @@
     },
     {
       "name": "transfer_with_authorization",
-      "description": "Delegated. See `self.cep3009.transfer_with_authorization()` for details.",
+      "description": "Consumes a signed `TransferWithAuthorization` and moves `value` tokens from `from` to `to`. Any account may submit this call — the signature, not the caller, is what authorizes the transfer.  Reverts with [`Error::InvalidNonceLength`], [`Error::NonceAlreadyUsed`], [`Error::AuthorizationNotYetValid`], [`Error::AuthorizationExpired`], [`Error::InvalidPublicKey`], or [`Error::InvalidSignature`] if the corresponding precondition fails. On success, marks the nonce used, emits [`AuthorizationUsed`], and performs the transfer via [`Cep18::raw_transfer`].",
       "is_mutable": true,
       "is_payable": false,
       "arguments": [
@@ -370,7 +370,7 @@
     },
     {
       "name": "receive_with_authorization",
-      "description": "Delegated. See `self.cep3009.receive_with_authorization()` for details.",
+      "description": "Like [`Self::transfer_with_authorization`], but requires `caller == to`. This lets a receiving contract atomically accept a pre-signed transfer and act on it within the same call (e.g. a \"deposit then mint LP token\" flow), while preventing any other account from triggering the transfer at a moment of their choosing.  Reverts with [`Error::InvalidCaller`] if `caller != to`. All other checks and effects mirror `transfer_with_authorization`.",
       "is_mutable": true,
       "is_payable": false,
       "arguments": [
@@ -433,7 +433,7 @@
     },
     {
       "name": "cancel_authorization",
-      "description": "Delegated. See `self.cep3009.cancel_authorization()` for details.",
+      "description": "Burns an unused authorization nonce by consuming a signed `CancelAuthorization` message. Once a nonce is cancelled, any previously distributed signature for the same `(authorizer, nonce)` pair becomes unredeemable — the canonical way for an authorizer to revoke a leaked or otherwise unwanted authorization.  Reverts with [`Error::InvalidNonceLength`] if `nonce` is not 32 bytes, with [`Error::AuthorizationUsed`] if the nonce has already been consumed (a cancelled nonce cannot be re-cancelled either), with [`Error::InvalidPublicKey`] if `public_key` does not hash to `authorizer`, or with [`Error::InvalidSignature`] if signature verification fails. On success, marks the nonce used and emits [`AuthorizationCanceled`].",
       "is_mutable": true,
       "is_payable": false,
       "arguments": [
@@ -472,7 +472,7 @@
     },
     {
       "name": "balance_of",
-      "description": "Delegated. See `self.token.balance_of()` for details.",
+      "description": "Returns the balance of the given address.",
       "is_mutable": false,
       "is_payable": false,
       "arguments": [

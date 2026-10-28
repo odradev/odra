@@ -295,7 +295,7 @@
     },
     {
       "name": "name",
-      "description": "Delegated. See `self.token.name()` for details.",
+      "description": "Returns the name of the token.",
       "is_mutable": false,
       "is_payable": false,
       "arguments": [],
@@ -305,7 +305,7 @@
     },
     {
       "name": "symbol",
-      "description": "Delegated. See `self.token.symbol()` for details.",
+      "description": "Returns the symbol of the token.",
       "is_mutable": false,
       "is_payable": false,
       "arguments": [],
@@ -315,7 +315,7 @@
     },
     {
       "name": "decimals",
-      "description": "Delegated. See `self.token.decimals()` for details.",
+      "description": "Returns the number of decimals the token uses.",
       "is_mutable": false,
       "is_payable": false,
       "arguments": [],
@@ -325,7 +325,7 @@
     },
     {
       "name": "total_supply",
-      "description": "Delegated. See `self.token.total_supply()` for details.",
+      "description": "Returns the total supply of the token.",
       "is_mutable": false,
       "is_payable": false,
       "arguments": [],
@@ -335,7 +335,7 @@
     },
     {
       "name": "balance_of",
-      "description": "Delegated. See `self.token.balance_of()` for details.",
+      "description": "Returns the balance of the given address.",
       "is_mutable": false,
       "is_payable": false,
       "arguments": [
@@ -352,7 +352,7 @@
     },
     {
       "name": "allowance",
-      "description": "Delegated. See `self.token.allowance()` for details.",
+      "description": "Returns the amount of tokens the owner has allowed the spender to spend.",
       "is_mutable": false,
       "is_payable": false,
       "arguments": [
@@ -375,7 +375,7 @@
     },
     {
       "name": "approve",
-      "description": "Delegated. See `self.token.approve()` for details.",
+      "description": "Approves the spender to spend the given amount of tokens on behalf of the caller.",
       "is_mutable": true,
       "is_payable": false,
       "arguments": [
@@ -398,7 +398,7 @@
     },
     {
       "name": "decrease_allowance",
-      "description": "Delegated. See `self.token.decrease_allowance()` for details.",
+      "description": "Decreases the allowance of the spender by the given amount.",
       "is_mutable": true,
       "is_payable": false,
       "arguments": [
@@ -421,7 +421,7 @@
     },
     {
       "name": "increase_allowance",
-      "description": "Delegated. See `self.token.increase_allowance()` for details.",
+      "description": "Increases the allowance of the spender by the given amount.",
       "is_mutable": true,
       "is_payable": false,
       "arguments": [
@@ -444,7 +444,7 @@
     },
     {
       "name": "transfer",
-      "description": "Delegated. See `self.token.transfer()` for details.",
+      "description": "Transfers tokens from the caller to the recipient.",
       "is_mutable": true,
       "is_payable": false,
       "arguments": [
@@ -467,7 +467,7 @@
     },
     {
       "name": "transfer_from",
-      "description": "Delegated. See `self.token.transfer_from()` for details.",
+      "description": "Transfers tokens from the owner to the recipient using the spender's allowance.",
       "is_mutable": true,
       "is_payable": false,
       "arguments": [

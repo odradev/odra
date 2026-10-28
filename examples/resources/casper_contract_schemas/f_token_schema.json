@@ -249,7 +249,7 @@
   "entry_points": [
     {
       "name": "transfer",
-      "description": "Delegated. See `self.token.transfer()` for details.",
+      "description": "Transfers tokens from the caller to the recipient.",
       "is_mutable": true,
       "is_payable": false,
       "arguments": [
@@ -272,7 +272,7 @@
     },
     {
       "name": "balance_of",
-      "description": "Delegated. See `self.token.balance_of()` for details.",
+      "description": "Returns the balance of the given address.",
       "is_mutable": false,
       "is_payable": false,
       "arguments": [
@@ -289,7 +289,7 @@
     },
     {
       "name": "total_supply",
-      "description": "Delegated. See `self.token.total_supply()` for details.",
+      "description": "Returns the total supply of the token.",
       "is_mutable": false,
       "is_payable": false,
       "arguments": [],
@@ -299,7 +299,7 @@
     },
     {
       "name": "name",
-      "description": "Delegated. See `self.token.name()` for details.",
+      "description": "Returns the name of the token.",
       "is_mutable": false,
       "is_payable": false,
       "arguments": [],
@@ -309,7 +309,7 @@
     },
     {
       "name": "symbol",
-      "description": "Delegated. See `self.token.symbol()` for details.",
+      "description": "Returns the symbol of the token.",
       "is_mutable": false,
       "is_payable": false,
       "arguments": [],
@@ -319,7 +319,7 @@
     },
     {
       "name": "get_owner",
-      "description": "Delegated. See `self.ownable.get_owner()` for details.",
+      "description": "Returns the address of the current owner.",
       "is_mutable": false,
       "is_payable": false,
       "arguments": [],

@@ -166,7 +166,7 @@
     },
     {
       "name": "transfer",
-      "description": "Delegated. See `self.erc20.transfer()` for details.",
+      "description": "Transfers tokens from the caller to the recipient.",
       "is_mutable": true,
       "is_payable": false,
       "arguments": [
@@ -189,7 +189,7 @@
     },
     {
       "name": "transfer_from",
-      "description": "Delegated. See `self.erc20.transfer_from()` for details.",
+      "description": "Transfers tokens from the owner to the recipient using the spender's allowance.",
       "is_mutable": true,
       "is_payable": false,
       "arguments": [
@@ -218,7 +218,7 @@
     },
     {
       "name": "approve",
-      "description": "Delegated. See `self.erc20.approve()` for details.",
+      "description": "Approves the spender to spend the given amount of tokens on behalf of the caller.",
       "is_mutable": true,
       "is_payable": false,
       "arguments": [
@@ -241,7 +241,7 @@
     },
     {
       "name": "name",
-      "description": "Delegated. See `self.erc20.name()` for details.",
+      "description": "Returns the name of the token.",
       "is_mutable": false,
       "is_payable": false,
       "arguments": [],
@@ -251,7 +251,7 @@
     },
     {
       "name": "symbol",
-      "description": "Delegated. See `self.erc20.symbol()` for details.",
+      "description": "Returns the symbol of the token.",
       "is_mutable": false,
       "is_payable": false,
       "arguments": [],
@@ -261,7 +261,7 @@
     },
     {
       "name": "decimals",
-      "description": "Delegated. See `self.erc20.decimals()` for details.",
+      "description": "Returns the number of decimals the token uses.",
       "is_mutable": false,
       "is_payable": false,
       "arguments": [],
@@ -271,7 +271,7 @@
     },
     {
       "name": "total_supply",
-      "description": "Delegated. See `self.erc20.total_supply()` for details.",
+      "description": "Returns the total supply of the token.",
       "is_mutable": false,
       "is_payable": false,
       "arguments": [],
@@ -281,7 +281,7 @@
     },
     {
       "name": "balance_of",
-      "description": "Delegated. See `self.erc20.balance_of()` for details.",
+      "description": "Returns the balance of the given address.",
       "is_mutable": false,
       "is_payable": false,
       "arguments": [
@@ -298,7 +298,7 @@
     },
     {
       "name": "allowance",
-      "description": "Delegated. See `self.erc20.allowance()` for details.",
+      "description": "Returns the amount of tokens the owner has allowed the spender to spend.",
       "is_mutable": false,
       "is_payable": false,
       "arguments": [
@@ -321,7 +321,7 @@
     },
     {
       "name": "get_owner",
-      "description": "Delegated. See `self.ownable.get_owner()` for details.",
+      "description": "Returns the address of the current owner.",
       "is_mutable": false,
       "is_payable": false,
       "arguments": [],
@@ -331,7 +331,7 @@
     },
     {
       "name": "transfer_ownership",
-      "description": "Delegated. See `self.ownable.transfer_ownership()` for details.",
+      "description": "Transfers ownership of the module to `new_owner`. This function can only be accessed by the current owner of the module.",
       "is_mutable": true,
       "is_payable": false,
       "arguments": [
