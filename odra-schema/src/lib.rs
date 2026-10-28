@@ -14,6 +14,7 @@ use casper_contract_schema::{
 use convert_case::{Boundary, Case, Casing};
 
 use odra_core::args::EntrypointArgument;
+use odra_core::module::SubModule;
 
 /// The version of the [ContractSchema] format, bumped on breaking changes so readers (e.g.
 /// `odra-storage-reader`) can reject schema files they cannot read.
@@ -111,6 +112,25 @@ pub fn entry_point<T: NamedCLTyped>(
         is_contract_context: true,
         access: Access::Public
     }
+}
+
+/// Returns the description of the `name` entry point of the submodule a `delegate!` block
+/// forwards to, or `fallback` if the submodule does not describe it.
+///
+/// The `#[odra::module]` macro cannot see the submodule's source, so the description is looked
+/// up in the submodule's [SchemaEntrypoints] instead. The closure is never called: it only lets
+/// the compiler infer the submodule type `M` from the delegation target, e.g. `|m| &m.metadata`.
+pub fn delegated_description<P, M: SchemaEntrypoints>(
+    _target: impl FnOnce(&P) -> &SubModule<M>,
+    name: &str,
+    fallback: &str
+) -> String {
+    M::schema_entrypoints()
+        .into_iter()
+        .find(|ep| ep.name == name)
+        .and_then(|ep| ep.description)
+        .filter(|description| !description.is_empty())
+        .unwrap_or_else(|| fallback.to_string())
 }
 
 /// Creates a new struct member.
