@@ -276,6 +276,19 @@ pub mod mock {
         TypeIR::try_from(&ty).unwrap()
     }
 
+    pub fn custom_enum_with_multiline_docs() -> TypeIR {
+        let ty = quote!(
+            enum MyType {
+                /// Description of A.
+                /// More details about A.
+                A = 10,
+                /// Description of B
+                B
+            }
+        );
+        TypeIR::try_from(&ty).unwrap()
+    }
+
     pub fn custom_complex_enum() -> TypeIR {
         let ty = quote!(
             enum MyType {

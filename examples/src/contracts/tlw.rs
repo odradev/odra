@@ -82,10 +82,13 @@ impl TimeLockWallet {
 #[odra::odra_error]
 pub enum Error {
     /// Cannot withdraw funds, the lock period is not over.
+    /// Wait until the lock expires before withdrawing again.
     LockIsNotOver = 1,
     /// A user deposit funds the second and the next time.
+    /// Each account may only have a single active deposit.
     CannotLockTwice = 2,
     /// A user deposits more funds he/she owns.
+    /// The withdrawal amount exceeds the account's balance.
     InsufficientBalance = 3
 }
 

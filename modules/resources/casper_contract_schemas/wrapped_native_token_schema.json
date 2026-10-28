@@ -272,7 +272,7 @@
     },
     {
       "name": "withdraw_to",
-      "description": "Withdraws native tokens from the contract to a specific recipient.",
+      "description": "Withdraws native tokens from the contract to a specific recipient. This allows the caller to burn their wrapped tokens and send the native tokens directly to a different address, avoiding the need for intermediate transfers.",
       "is_mutable": true,
       "is_payable": false,
       "arguments": [

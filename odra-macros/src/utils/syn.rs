@@ -116,6 +116,17 @@ pub fn docs_attrs(attrs: &[syn::Attribute]) -> Vec<syn::Attribute> {
         .collect()
 }
 
+/// Joins every doc-comment line into a single description, trimming each line.
+///
+/// `///` doc comments are often wrapped across several lines; using only the first one truncates
+/// the description, so all lines are folded into one space-separated sentence.
+pub fn docs_description(docs: &[String]) -> String {
+    docs.iter()
+        .map(|line| line.trim())
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
 pub fn string_docs(attrs: &[syn::Attribute]) -> Vec<String> {
     let attrs = docs_attrs(attrs);
 
