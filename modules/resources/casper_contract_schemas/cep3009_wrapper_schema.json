@@ -225,17 +225,17 @@
   "errors": [
     {
       "name": "AuthorizationExpired",
-      "description": "The current block time is past `valid_before` — the authorization has",
+      "description": "The current block time is past `valid_before` — the authorization has expired.",
       "discriminant": 37001
     },
     {
       "name": "AuthorizationNotYetValid",
-      "description": "The current block time is at or before `valid_after` — the",
+      "description": "The current block time is at or before `valid_after` — the authorization is not yet in its validity window.",
       "discriminant": 37002
     },
     {
       "name": "AuthorizationUsed",
-      "description": "Attempted to cancel an authorization whose `(authorizer, nonce)` pair",
+      "description": "Attempted to cancel an authorization whose `(authorizer, nonce)` pair has already been consumed.",
       "discriminant": 37006
     },
     {
@@ -255,27 +255,27 @@
     },
     {
       "name": "InvalidCaller",
-      "description": "`receive_with_authorization` was submitted by an account other than",
+      "description": "`receive_with_authorization` was submitted by an account other than `to`. See the module-level docs for why this restriction exists.",
       "discriminant": 37005
     },
     {
       "name": "InvalidNonceLength",
-      "description": "The supplied `nonce` is not exactly 32 bytes. ERC-3009 nonces are",
+      "description": "The supplied `nonce` is not exactly 32 bytes. ERC-3009 nonces are `bytes32`; the EIP-712 digest only covers 32 bytes, so accepting a shorter or longer nonce would let an attacker craft length aliases that share a digest (and thus a signature) while occupying distinct replay-protection storage keys.",
       "discriminant": 37007
     },
     {
       "name": "InvalidPublicKey",
-      "description": "The supplied `public_key` does not hash to the declared `from` /",
+      "description": "The supplied `public_key` does not hash to the declared `from` / `authorizer` address. Guards against using a valid signature from a different keypair to move someone else's tokens or burn their nonce.",
       "discriminant": 37004
     },
     {
       "name": "InvalidSignature",
-      "description": "Signature verification against the supplied public key failed, or the",
+      "description": "Signature verification against the supplied public key failed, or the recomputed digest does not match what the signer signed (e.g. wrong `value`, `to`, or `nonce`).",
       "discriminant": 37003
     },
     {
       "name": "NonceAlreadyUsed",
-      "description": "The `(from, nonce)` pair has already been consumed by a transfer or",
+      "description": "The `(from, nonce)` pair has already been consumed by a transfer or burned by a cancel. Authorizations are single-use.",
       "discriminant": 37000
     }
   ],
@@ -528,7 +528,7 @@
   ],
   "call": {
     "wasm_file_name": "CEP3009Wrapper.wasm",
-    "description": "Initializes both the authorization module (storing the EIP-712 chain",
+    "description": "Initializes both the authorization module (storing the EIP-712 chain id) and the underlying CEP-18 token (symbol, name, decimals, supply).",
     "arguments": [
       {
         "name": "odra_cfg_package_hash_key_name",

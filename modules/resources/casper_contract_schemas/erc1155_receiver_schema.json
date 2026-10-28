@@ -106,7 +106,7 @@
   "entry_points": [
     {
       "name": "on_erc1155_received",
-      "description": "This function is called at the end of a [safe_transfer_from](crate::erc1155::Erc1155::safe_transfer_from),",
+      "description": "This function is called at the end of a [safe_transfer_from](crate::erc1155::Erc1155::safe_transfer_from), after the balance has been updated.  To accept the transfer, this must return true.  Emits [SingleReceived].",
       "is_mutable": true,
       "is_payable": false,
       "arguments": [
@@ -151,7 +151,7 @@
     },
     {
       "name": "on_erc1155_batch_received",
-      "description": "This function is called at the end of a [safe_batch_transfer_from](crate::erc1155::Erc1155::safe_batch_transfer_from)",
+      "description": "This function is called at the end of a [safe_batch_transfer_from](crate::erc1155::Erc1155::safe_batch_transfer_from) after the balances have been updated. To accept the transfer(s), this must return true.  Emits [BatchReceived].",
       "is_mutable": true,
       "is_payable": false,
       "arguments": [

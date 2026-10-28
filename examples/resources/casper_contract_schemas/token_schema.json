@@ -31,7 +31,7 @@
   "events": [],
   "call": {
     "wasm_file_name": "Token.wasm",
-    "description": "Initializes the contract with the given name and optional metadata.",
+    "description": "Initializes the contract with the given name and optional metadata. Maybe is different from Option in that the Option value is always present, but it can be either Some or None.",
     "arguments": [
       {
         "name": "odra_cfg_package_hash_key_name",
