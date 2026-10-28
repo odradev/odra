@@ -23,7 +23,7 @@ use odra_core::{
         PublicKey, SecretKey, U512
     }
 };
-use odra_core::{CallDef, ContractEnv};
+use odra_core::{factory_dapp, CallDef, ContractEnv};
 use odra_core::{ContractContainer, ContractRegister, ContractVersion};
 const NAMED_KEY_PREFIX: &str = "NAMED_KEY";
 /// The dictionary of a factory contract mapping the names of its children to their addresses.
@@ -43,6 +43,9 @@ pub struct OdraVm {
     /// The children deployed by factories, not yet handed to the host, see
     /// [take_child_contracts](Self::take_child_contracts).
     child_contracts: RefCell<Vec<Address>>,
+    /// Every contract deployed by a factory, which answers `get_dapp_registry` like in wasm, see
+    /// [call_contract](Self::call_contract).
+    factory_children: RefCell<BTreeSet<Address>>,
     /// This VM, to build the environment the contracts are called in.
     this: Weak<OdraVm>
 }
@@ -69,6 +72,7 @@ impl OdraVm {
             call_snapshot: RefCell::new(None),
             deployers: RefCell::new(BTreeMap::new()),
             child_contracts: RefCell::new(Vec::new()),
+            factory_children: RefCell::new(BTreeSet::new()),
             this: this.clone()
         })
     }
@@ -197,6 +201,8 @@ impl OdraVm {
         let address = self.new_contract(name, init_args.clone(), entry_points_caller);
         // Let the host track the events of the child.
         self.child_contracts.borrow_mut().push(address);
+        self.factory_children.borrow_mut().insert(address);
+        self.point_child_to_dapp_registry(&address);
         self.set_dict_value(
             FACTORY_CHILDREN_DICT,
             name.as_bytes(),
@@ -210,6 +216,31 @@ impl OdraVm {
 
         let access_uref = URef::new(address.value(), AccessRights::READ_ADD_WRITE);
         Ok((address, access_uref))
+    }
+
+    /// Points the child of the factory contract being executed to the factory's dapp registry, if any,
+    /// as the factory does in wasm, see `odra::factory_dapp`.
+    fn point_child_to_dapp_registry(&self, child: &Address) {
+        let factory = self.self_address();
+        let has_creator = self
+            .get_named_value(&factory, factory_dapp::CREATOR_KEY)
+            .is_some();
+        if !has_creator {
+            return;
+        }
+        let registry = self.get_dictionary_value(
+            &factory,
+            factory_dapp::DAPP_KEY,
+            factory_dapp::REGISTRY_KEY.as_bytes()
+        );
+        if let Some(registry) = registry {
+            self.state.borrow_mut().set_dict_value_of(
+                child,
+                factory_dapp::DAPP_KEY.as_bytes(),
+                factory_dapp::REGISTRY_KEY.as_bytes(),
+                registry
+            );
+        }
     }
 
     /// Upgrades a child of the factory contract being executed, see
@@ -235,6 +266,7 @@ impl OdraVm {
         let has_upgrade = entry_points_caller.has_entry_point("upgrade");
 
         self.upgrade_contract(name, address, upgrade_args.clone(), entry_points_caller);
+        self.point_child_to_dapp_registry(&address);
         if has_upgrade {
             self.call_factory_child(address, CallDef::new("upgrade", true, upgrade_args))?;
             self.post_install(address);
@@ -264,9 +296,28 @@ impl OdraVm {
         }
         // The register is not borrowed during the call, the contract may deploy another one.
         let contract = self.contract_register.borrow().get_shared(&address);
+        let entry_point = call_def.entry_point().to_string();
         let result = match contract {
             Some(contract) => contract.call(self.contract_env(), call_def),
             None => Err(OdraError::VmError(VmError::InvalidContractAddress))
+        };
+        // A factory child runs the factory's wasm, which exports `get_dapp_registry`; the child
+        // module may not have it.
+        let result = match result {
+            Err(OdraError::VmError(VmError::NoSuchMethod(_)))
+                if entry_point == factory_dapp::GET_DAPP_REGISTRY
+                    && self.factory_children.borrow().contains(&address) =>
+            {
+                self.get_dictionary_value(
+                    &address,
+                    factory_dapp::DAPP_KEY,
+                    factory_dapp::REGISTRY_KEY.as_bytes()
+                )
+                .ok_or(OdraError::ExecutionError(
+                    ExecutionError::DappRegistryNotSet
+                ))
+            }
+            result => result
         };
 
         match result {

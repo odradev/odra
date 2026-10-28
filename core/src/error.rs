@@ -198,6 +198,8 @@ pub enum ExecutionError {
     DappRegistryNotAContract = 140,
     /// The factory needs a creator before it gets a dapp registry.
     FactoryCreatorNotSet = 141,
+    /// The contract does not belong to a dapp registry.
+    DappRegistryNotSet = 142,
     /// Maximum code for user errors
     MaxUserError = 64535,
     /// User error too high. The code should be in range 0..32767.
@@ -302,6 +304,7 @@ impl ExecutionError {
                 139 => CallerNotFactoryCreator,
                 140 => DappRegistryNotAContract,
                 141 => FactoryCreatorNotSet,
+                142 => DappRegistryNotSet,
                 _ => return None
             }
         };
@@ -514,6 +517,7 @@ mod tests {
             CallerNotFactoryCreator,
             DappRegistryNotAContract,
             FactoryCreatorNotSet,
+            DappRegistryNotSet,
             MaxUserError,
             UserErrorTooHigh,
         ];
@@ -563,6 +567,7 @@ mod tests {
                 | CallerNotFactoryCreator
                 | DappRegistryNotAContract
                 | FactoryCreatorNotSet
+                | DappRegistryNotSet
                 | MaxUserError
                 | UserErrorTooHigh
                 | User(UserError { .. }) => {}

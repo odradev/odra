@@ -154,6 +154,9 @@ impl FactoryEntrypointCallerExpr {
         let creator_event = utils::ty::factory_creator_changed(&module.module_ident()?);
         let dapp_event = utils::ty::factory_dapp_registry_changed(&module.module_ident()?);
         let dapp_registry_branches = quote::quote! {
+            odra::factory_dapp::GET_DAPP_REGISTRY => odra::host::factory::get_dapp_registry(
+                &#contract_env_ident
+            ),
             odra::factory_dapp::SET_CREATOR => odra::host::factory::set_creator(
                 &#contract_env_ident,
                 |previous_creator, new_creator| #creator_event {

@@ -1035,6 +1035,9 @@ fn parse_error(err: engine_state::Error) -> OdraError {
                 x if x == ExecutionError::FactoryCreatorNotSet.code() => {
                     OdraError::ExecutionError(ExecutionError::FactoryCreatorNotSet)
                 }
+                x if x == ExecutionError::DappRegistryNotSet.code() => {
+                    OdraError::ExecutionError(ExecutionError::DappRegistryNotSet)
+                }
                 // The exact error name is not known, so we return a generic error.
                 _ => OdraError::user(code, CASPER_ERROR_GENERIC_NAME)
             },

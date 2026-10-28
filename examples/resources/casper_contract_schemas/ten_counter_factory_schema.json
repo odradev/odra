@@ -140,6 +140,15 @@
       "access": "public"
     },
     {
+      "name": "get_dapp_registry",
+      "description": "Returns the dapp registry the factory belongs to.",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "Key",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
       "name": "set_factory_creator",
       "description": "Lets only the creator create children. Only the factory access holder may call it.",
       "is_mutable": true,

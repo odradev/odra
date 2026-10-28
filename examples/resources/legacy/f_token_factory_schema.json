@@ -156,6 +156,14 @@
       "attributes": []
     },
     {
+      "name": "get_dapp_registry",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "Key",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
       "name": "set_factory_creator",
       "args": [
         {

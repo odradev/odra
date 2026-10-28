@@ -1,45 +1,40 @@
 //! A dapp contract used in tests.
-use super::{DappMemberBase, DappRegistryContractRef};
+use super::{DappContractBase, DappRegistryContractRef};
 use crate::access::Ownable;
 use odra::prelude::*;
 use odra::ContractRef;
 
-/// A contract that recognizes the registries its owner picks, and can act as a registrar by adding
-/// other contracts in a registry.
+/// A member contract: the owner may point it to another registry, and it can act as a registrar by
+/// adding other contracts to a registry.
 #[odra::module]
 pub struct MockDappContract {
     ownable: SubModule<Ownable>,
-    dapp: SubModule<DappMemberBase>
+    dapp: SubModule<DappContractBase>
 }
 
 #[odra::module]
 impl MockDappContract {
-    pub fn init(&mut self) {
+    pub fn init(&mut self, registry: Address) {
         let owner = self.env().caller();
         self.ownable.init(owner);
-        self.dapp.init();
+        self.dapp.set_dapp_registry(&registry);
     }
 
-    pub fn recognize_dapp_registry(&mut self, registry: &Address) {
+    pub fn set_dapp_registry(&mut self, registry: &Address) {
         self.ownable.assert_owner(&self.env().caller());
-        self.dapp.recognize_dapp_registry(registry);
-    }
-
-    pub fn forget_dapp_registry(&mut self, registry: &Address) {
-        self.ownable.assert_owner(&self.env().caller());
-        self.dapp.forget_dapp_registry(registry);
+        self.dapp.set_dapp_registry(registry);
     }
 
     delegate! {
         to self.dapp {
-            fn recognizes_dapp_registry(&self, registry: &Address) -> bool;
+            fn get_dapp_registry(&self) -> Address;
         }
         to self.ownable {
             fn get_owner(&self) -> Address;
         }
     }
 
-    /// Registers `dapp_contract` in `registry`, as a registrar would.
+    /// Adds `dapp_contract` to `registry`, as a registrar would.
     pub fn register_in_dapp(
         &mut self,
         registry: &Address,

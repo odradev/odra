@@ -2,22 +2,19 @@
   "name": "MockDappContract",
   "events": [
     {
-      "name": "DappRegistryRecognized",
+      "name": "DappRegistryChanged",
       "args": [
         {
-          "name": "registry",
-          "ty": "Key",
+          "name": "previous_registry",
+          "ty": {
+            "Option": "Key"
+          },
           "is_ref": false,
           "is_slice": false,
           "is_required": true
-        }
-      ]
-    },
-    {
-      "name": "DappRegistryForgotten",
-      "args": [
+        },
         {
-          "name": "registry",
+          "name": "new_registry",
           "ty": "Key",
           "is_ref": false,
           "is_slice": false,
@@ -52,14 +49,6 @@
   "entrypoints": [
     {
       "name": "init",
-      "args": [],
-      "is_mutable": true,
-      "return_ty": "Unit",
-      "ty": "Constructor",
-      "attributes": []
-    },
-    {
-      "name": "recognize_dapp_registry",
       "args": [
         {
           "name": "registry",
@@ -71,11 +60,11 @@
       ],
       "is_mutable": true,
       "return_ty": "Unit",
-      "ty": "Public",
+      "ty": "Constructor",
       "attributes": []
     },
     {
-      "name": "forget_dapp_registry",
+      "name": "set_dapp_registry",
       "args": [
         {
           "name": "registry",
@@ -121,18 +110,10 @@
       "attributes": []
     },
     {
-      "name": "recognizes_dapp_registry",
-      "args": [
-        {
-          "name": "registry",
-          "ty": "Key",
-          "is_ref": false,
-          "is_slice": false,
-          "is_required": true
-        }
-      ],
+      "name": "get_dapp_registry",
+      "args": [],
       "is_mutable": false,
-      "return_ty": "Bool",
+      "return_ty": "Key",
       "ty": "Public",
       "attributes": []
     },

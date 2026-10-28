@@ -161,6 +161,24 @@ mod test {
                         )
                 }
 
+                /// Returns the dapp registry the factory belongs to.
+                pub fn get_dapp_registry(&self) -> odra::prelude::Address {
+                    self.env.call_contract(
+                        self.address,
+                        odra::CallDef::new(
+                            odra::prelude::string::String::from("get_dapp_registry"),
+                            false,
+                            {
+                                let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
+                                if self.attached_value > odra::casper_types::U512::zero() {
+                                    let _ = __odra_named_args.insert("amount", self.attached_value);
+                                }
+                                __odra_named_args
+                            }
+                        ).with_amount(self.attached_value)
+                    )
+                }
+
                 /// Lets only the creator create children. Only the factory access holder may call it.
                 pub fn set_factory_creator(&mut self, creator: odra::prelude::Address) {
                     self.env.call_contract(

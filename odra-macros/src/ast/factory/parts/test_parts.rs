@@ -138,7 +138,12 @@ mod test {
                         self.try_batch_upgrade_child_contract(args).unwrap()
                     }
 
-                    /// Lets only the creator create children. Only the factory access holder may call it.
+                    /// Returns the dapp registry the factory belongs to.
+                    pub fn get_dapp_registry(&self) -> odra::prelude::Address {
+                        self.try_get_dapp_registry().unwrap()
+                    }
+
+                /// Lets only the creator create children. Only the factory access holder may call it.
                     pub fn set_factory_creator(&mut self, creator: odra::prelude::Address) {
                         self.try_set_factory_creator(creator).unwrap()
                     }
@@ -222,7 +227,26 @@ mod test {
                             )
                     }
 
-                    /// Lets only the creator create children. Only the factory access holder may call it.
+                    /// Returns the dapp registry the factory belongs to.
+                    /// Does not fail in case of error, returns `odra::OdraResult` instead.
+                    pub fn try_get_dapp_registry(&self) -> OdraResult<odra::prelude::Address> {
+                        self.env.call_contract(
+                            self.address,
+                            odra::CallDef::new(
+                                odra::prelude::string::String::from("get_dapp_registry"),
+                                false,
+                                {
+                                    let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
+                                    if self.attached_value > odra::casper_types::U512::zero() {
+                                        let _ = __odra_named_args.insert("amount", self.attached_value);
+                                    }
+                                    __odra_named_args
+                                }
+                            ).with_amount(self.attached_value)
+                        )
+                    }
+
+                /// Lets only the creator create children. Only the factory access holder may call it.
                     /// Does not fail in case of error, returns `odra::OdraResult` instead.
                     pub fn try_set_factory_creator(&mut self, creator: odra::prelude::Address) -> OdraResult<()> {
                         self.env.call_contract(
@@ -303,6 +327,10 @@ mod test {
                                 ]
                             ),
                             odra::entry_point_callback::EntryPoint::new(
+                                odra::prelude::string::String::from("get_dapp_registry"),
+                                odra::prelude::vec![]
+                            ),
+                            odra::entry_point_callback::EntryPoint::new(
                                 odra::prelude::string::String::from("set_factory_creator"),
                                 odra::prelude::vec![
                                     odra::entry_point_callback::Argument::new::<odra::prelude::Address>(
@@ -347,6 +375,9 @@ mod test {
                                         contract_name,
                                         contract_address
                                     }
+                                ),
+                                odra::factory_dapp::GET_DAPP_REGISTRY => odra::host::factory::get_dapp_registry(
+                                    &__odra_contract_env
                                 ),
                                 odra::factory_dapp::SET_CREATOR => odra::host::factory::set_creator(
                                     &__odra_contract_env,

@@ -69,6 +69,17 @@ pub fn batch_upgrade_child_contract<E: ToBytes + EventInstance>(
     utils::try_serialize(&())
 }
 
+/// Runs the `get_dapp_registry` entry point of the factory: returns the dapp registry it belongs to and
+/// fails with [ExecutionError::DappRegistryNotSet] without one.
+pub fn get_dapp_registry(env: &ContractEnv) -> OdraResult<Bytes> {
+    match factory_dapp::contract_dapp_registry(env) {
+        Some(registry) => utils::try_serialize(&registry),
+        None => Err(OdraError::ExecutionError(
+            ExecutionError::DappRegistryNotSet
+        ))
+    }
+}
+
 /// Runs the `set_factory_creator` entry point: lets only the address named by the `creator`
 /// argument create children and emits the event `event` builds from the previous and the new
 /// creator. Only the holder of the factory access may call it, see

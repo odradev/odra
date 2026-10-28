@@ -4,12 +4,13 @@
 //! `DappCounterFactory`. The deployer of the factory lets only the spawner create counters
 //! (`set_factory_creator`) and points the factory to the dapp's `OwnedDappRegistry`
 //! (`set_factory_dapp_registry`), where the factory is a registrar: every counter the
-//! spawner creates joins the dapp, and nobody else can add contracts through the factory.
+//! spawner creates points to the registry and joins the dapp, and nobody else can add contracts
+//! through the factory.
 //!
-//! The counters know nothing about the dapp. The spawner confirms its membership from its side with
-//! `DappMemberBase`, which users can check against the registry's list.
+//! The counters know nothing about the dapp: the factory points them to the registry. The spawner
+//! points to it with `DappContractBase`.
 use odra::{prelude::*, ContractRef};
-use odra_modules::dapp::DappMemberBase;
+use odra_modules::dapp::DappContractBase;
 
 /// A counter created by the factory.
 #[odra::module(factory=on)]
@@ -33,17 +34,16 @@ impl DappCounter {
 /// Creates counters through the factory.
 #[odra::module]
 pub struct DappCounterSpawner {
-    dapp: SubModule<DappMemberBase>,
+    dapp: SubModule<DappContractBase>,
     factory: Var<Address>,
     spawned: Var<u32>
 }
 
 #[odra::module]
 impl DappCounterSpawner {
-    /// Points the spawner to the counter factory; the spawner recognizes the dapp registry.
+    /// Points the spawner to the dapp registry and to the counter factory.
     pub fn init(&mut self, registry: Address, factory: Address) {
-        self.dapp.init();
-        self.dapp.recognize_dapp_registry(&registry);
+        self.dapp.set_dapp_registry(&registry);
         self.factory.set(factory);
     }
 
@@ -54,11 +54,11 @@ impl DappCounterSpawner {
 
     delegate! {
         to self.dapp {
-            fn recognizes_dapp_registry(&self, registry: &Address) -> bool;
+            fn get_dapp_registry(&self) -> Address;
         }
     }
 
-    /// Creates a new counter. The factory adds it to the dapp.
+    /// Creates a new counter. The factory points it to the dapp registry and adds it to the dapp.
     pub fn spawn(&mut self) -> Address {
         let factory = self.factory.get().unwrap_or_revert(self);
         let n = self.spawned.get_or_default();
@@ -75,8 +75,9 @@ mod tests {
     use super::*;
     use odra::host::{Deployer, HostEnv, HostRef, NoArgs};
     use odra::prelude::ExecutionError;
+    use odra_modules::dapp::errors::Error;
     use odra_modules::dapp::events::DappContractAdded;
-    use odra_modules::dapp::{OwnedDappRegistry, OwnedDappRegistryHostRef};
+    use odra_modules::dapp::{DappContractHostRef, OwnedDappRegistry, OwnedDappRegistryHostRef};
 
     fn setup() -> (
         HostEnv,
@@ -100,9 +101,15 @@ mod tests {
     #[test]
     fn factory_adds_children_to_the_dapp() {
         let (env, mut registry, mut factory, mut spawner) = setup();
+        // The factory points to the registry before the registry accepts it.
         factory.set_factory_creator(spawner.address());
-        registry.add_dapp_contract(&factory.address(), true);
+        assert_eq!(
+            registry.try_add_dapp_contract(&factory.address(), true),
+            Err(ExecutionError::DappRegistryNotSet.into())
+        );
         factory.set_factory_dapp_registry(registry.address());
+        assert_eq!(factory.get_dapp_registry(), registry.address());
+        registry.add_dapp_contract(&factory.address(), true);
         registry.add_dapp_contract(&spawner.address(), false);
 
         let first = spawner.spawn();
@@ -134,16 +141,41 @@ mod tests {
         counter.increment();
         assert_eq!(counter.value(), 1);
 
-        // The spawner recognizes the dapp; the counters do not have to.
-        assert!(spawner.recognizes_dapp_registry(&registry.address()));
+        // The counters point to the registry without code of their own.
+        let counter = DappContractHostRef::new(first, env.clone());
+        assert_eq!(counter.get_dapp_registry(), registry.address());
     }
 
     #[test]
     fn factory_without_a_registry_adds_nothing() {
-        let (_env, registry, mut factory, mut spawner) = setup();
+        let (env, mut registry, mut factory, mut spawner) = setup();
         factory.set_factory_creator(spawner.address());
-        spawner.spawn();
+        let counter = spawner.spawn();
         assert_eq!(registry.get_dapp_contracts(), vec![registry.address()]);
+
+        // The counter does not point to a registry, so the registry does not accept it.
+        let counter_ref = DappContractHostRef::new(counter, env.clone());
+        assert_eq!(
+            counter_ref.try_get_dapp_registry(),
+            Err(ExecutionError::DappRegistryNotSet.into())
+        );
+        assert_eq!(
+            registry.try_add_dapp_contract(&counter, false),
+            Err(ExecutionError::DappRegistryNotSet.into())
+        );
+
+        // Upgrading the counter after the factory got a registry points it to the registry.
+        factory.set_factory_dapp_registry(registry.address());
+        factory.upgrade_child_contract("DappCounter0".to_string());
+        assert_eq!(counter_ref.get_dapp_registry(), registry.address());
+        registry.add_dapp_contract(&counter, false);
+
+        // A counter pointing to another registry is rejected.
+        let mut other = OwnedDappRegistry::deploy(&env, NoArgs);
+        assert_eq!(
+            other.try_add_dapp_contract(&counter, false),
+            Err(Error::DappRegistryMismatch.into())
+        );
     }
 
     #[test]
@@ -181,8 +213,7 @@ mod tests {
 
     #[test]
     fn registry_needs_a_creator() {
-        let (env, mut registry, mut factory, spawner) = setup();
-        registry.add_dapp_contract(&factory.address(), true);
+        let (env, registry, mut factory, spawner) = setup();
 
         // Without a creator anyone could add contracts to the dapp through the factory.
         assert_eq!(

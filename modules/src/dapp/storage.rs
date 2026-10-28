@@ -12,7 +12,8 @@ use odra::prelude::*;
 
 /// The named key of the dictionary holding the dapp data.
 pub const DAPP_KEY: &str = odra::factory_dapp::DAPP_KEY;
-/// The dapp registry a factory contract adds its children to, see `odra::factory_dapp`.
+/// The dapp registry a contract belongs to. A factory module stores its registry, and gives its
+/// children theirs, under the same item, see `odra::factory_dapp`.
 pub const REGISTRY_KEY: &str = odra::factory_dapp::REGISTRY_KEY;
 /// The name of the dapp.
 pub const NAME_KEY: &str = "name";
@@ -26,8 +27,6 @@ pub const ICON_URL_KEY: &str = "icon_url";
 pub const CONTRACTS_KEY: &str = "contracts";
 /// The registered contracts that may add other contracts.
 pub const REGISTRARS_KEY: &str = "registrars";
-/// The dapp registries a [`DappMember`](super::DappMember) contract recognizes.
-pub const REGISTRIES_KEY: &str = "registries";
 
 dictionary_value_storage!(DappNameStorage, String, DAPP_KEY, NAME_KEY);
 dictionary_value_storage!(DappDescriptionStorage, String, DAPP_KEY, DESCRIPTION_KEY);
@@ -40,9 +39,4 @@ dictionary_value_storage!(
     DAPP_KEY,
     REGISTRARS_KEY
 );
-dictionary_value_storage!(
-    DappRegistriesStorage,
-    Vec<Address>,
-    DAPP_KEY,
-    REGISTRIES_KEY
-);
+dictionary_value_storage!(DappRegistryStorage, Address, DAPP_KEY, REGISTRY_KEY);

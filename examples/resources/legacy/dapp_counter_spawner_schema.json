@@ -2,22 +2,19 @@
   "name": "DappCounterSpawner",
   "events": [
     {
-      "name": "DappRegistryRecognized",
+      "name": "DappRegistryChanged",
       "args": [
         {
-          "name": "registry",
-          "ty": "Key",
+          "name": "previous_registry",
+          "ty": {
+            "Option": "Key"
+          },
           "is_ref": false,
           "is_slice": false,
           "is_required": true
-        }
-      ]
-    },
-    {
-      "name": "DappRegistryForgotten",
-      "args": [
+        },
         {
-          "name": "registry",
+          "name": "new_registry",
           "ty": "Key",
           "is_ref": false,
           "is_slice": false,
@@ -67,18 +64,10 @@
       "attributes": []
     },
     {
-      "name": "recognizes_dapp_registry",
-      "args": [
-        {
-          "name": "registry",
-          "ty": "Key",
-          "is_ref": false,
-          "is_slice": false,
-          "is_required": true
-        }
-      ],
+      "name": "get_dapp_registry",
+      "args": [],
       "is_mutable": false,
-      "return_ty": "Bool",
+      "return_ty": "Key",
       "ty": "Public",
       "attributes": []
     }

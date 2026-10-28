@@ -96,6 +96,7 @@ fn struct_entrypoints_expr(ir: &ModuleImplIR) -> syn::Result<syn::Expr> {
             Ok(expr)
         })
         .chain([
+            Ok(utils::expr::factory_get_dapp_registry_ep()),
             Ok(utils::expr::factory_set_creator_ep()),
             Ok(utils::expr::factory_set_dapp_registry_ep())
         ])
@@ -132,6 +133,7 @@ mod test {
                             ],
                         },
                         odra::entry_point::EntryPoint::FactoryBatchUpgrade,
+                        odra::entry_point::EntryPoint::FactoryGetDappRegistry,
                         odra::entry_point::EntryPoint::FactorySetCreator,
                         odra::entry_point::EntryPoint::FactorySetDappRegistry
                     ].into_iter().map(TryInto::try_into).collect::<Result<_, _>>().unwrap_or_default()

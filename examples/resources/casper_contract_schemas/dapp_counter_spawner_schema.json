@@ -13,24 +13,18 @@
   "types": [
     {
       "struct": {
-        "name": "DappRegistryForgotten",
+        "name": "DappRegistryChanged",
         "description": null,
         "members": [
           {
-            "name": "registry",
+            "name": "previous_registry",
             "description": null,
-            "ty": "Key"
-          }
-        ]
-      }
-    },
-    {
-      "struct": {
-        "name": "DappRegistryRecognized",
-        "description": null,
-        "members": [
+            "ty": {
+              "Option": "Key"
+            }
+          },
           {
-            "name": "registry",
+            "name": "new_registry",
             "description": null,
             "ty": "Key"
           }
@@ -60,6 +54,16 @@
       "discriminant": 22002
     },
     {
+      "name": "DappRegistryMismatch",
+      "description": "The contract points to a different dapp registry.",
+      "discriminant": 22003
+    },
+    {
+      "name": "DappRegistryNotSet",
+      "description": "The dapp registry has not been set.",
+      "discriminant": 22005
+    },
+    {
       "name": "NotAContract",
       "description": "The address is not a contract address.",
       "discriminant": 22000
@@ -77,7 +81,7 @@
     },
     {
       "name": "spawn",
-      "description": "Creates a new counter. The factory adds it to the dapp.",
+      "description": "Creates a new counter. The factory points it to the dapp registry and adds it to the dapp.",
       "is_mutable": true,
       "arguments": [],
       "return_ty": "Key",
@@ -85,35 +89,24 @@
       "access": "public"
     },
     {
-      "name": "recognizes_dapp_registry",
-      "description": "Delegated. See `self.dapp.recognizes_dapp_registry()` for details.",
+      "name": "get_dapp_registry",
+      "description": "Delegated. See `self.dapp.get_dapp_registry()` for details.",
       "is_mutable": false,
-      "arguments": [
-        {
-          "name": "registry",
-          "description": null,
-          "ty": "Key",
-          "optional": false
-        }
-      ],
-      "return_ty": "Bool",
+      "arguments": [],
+      "return_ty": "Key",
       "is_contract_context": true,
       "access": "public"
     }
   ],
   "events": [
     {
-      "name": "DappRegistryForgotten",
-      "ty": "DappRegistryForgotten"
-    },
-    {
-      "name": "DappRegistryRecognized",
-      "ty": "DappRegistryRecognized"
+      "name": "DappRegistryChanged",
+      "ty": "DappRegistryChanged"
     }
   ],
   "call": {
     "wasm_file_name": "DappCounterSpawner.wasm",
-    "description": "Points the spawner to the counter factory; the spawner recognizes the dapp registry.",
+    "description": "Points the spawner to the dapp registry and to the counter factory.",
     "arguments": [
       {
         "name": "odra_cfg_package_hash_key_name",
