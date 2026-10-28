@@ -574,7 +574,7 @@
     },
     {
       "name": "get_owner",
-      "description": "Delegated. See `self.ownable.get_owner()` for details.",
+      "description": "Returns the address of the current owner.",
       "is_mutable": false,
       "is_payable": false,
       "arguments": [],
@@ -584,7 +584,7 @@
     },
     {
       "name": "transfer_ownership",
-      "description": "Delegated. See `self.ownable.transfer_ownership()` for details.",
+      "description": "Transfers ownership of the module to `new_owner`. This function can only be accessed by the current owner of the module.",
       "is_mutable": true,
       "is_payable": false,
       "arguments": [

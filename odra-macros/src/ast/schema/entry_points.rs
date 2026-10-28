@@ -67,6 +67,22 @@ impl ToTokens for SchemaEntrypointsItem {
         let entry_point_tokens = |f: &FnIR| {
                 let desc = utils::syn::docs_description(&f.docs());
                 let name = f.name_str();
+                // A delegated entry point without docs of its own takes the description of the
+                // submodule's entry point; the generated "Delegated. See ..." text is the fallback.
+                let desc = match f.inherits_description_from() {
+                    Some(target) => {
+                        let module = quote::format_ident!("__module");
+                        let target = rebase_field(target, &module);
+                        quote::quote! {
+                            &odra::schema::delegated_description::<Self, _>(
+                                |#module| &#target,
+                                #name,
+                                #desc
+                            )
+                        }
+                    }
+                    None => quote::quote!(#desc)
+                };
                 let ret_ty = match f.return_type() {
                     syn::ReturnType::Default => quote::quote! { () },
                     syn::ReturnType::Type(_, t) => quote::quote! { #t }
@@ -121,6 +137,19 @@ impl ToTokens for SchemaEntrypointsItem {
         };
 
         item.to_tokens(tokens);
+    }
+}
+
+/// Rewrites a `delegate!` target such as `self.a.b` to `<base>.a.b`, so it can be used
+/// inside a closure where `self` is not available.
+fn rebase_field(expr: &syn::ExprField, base: &syn::Ident) -> syn::Expr {
+    let member = &expr.member;
+    match &*expr.base {
+        syn::Expr::Field(inner) => {
+            let inner = rebase_field(inner, base);
+            parse_quote!(#inner.#member)
+        }
+        _ => parse_quote!(#base.#member)
     }
 }
 
@@ -352,7 +381,11 @@ mod test {
                         ),
                         odra::schema::entry_point::<String>(
                             "symbol",
-                            "Delegated. See `self.metadata.symbol()` for details.",
+                            &odra::schema::delegated_description::<Self, _>(
+                                |__module| &__module.metadata,
+                                "symbol",
+                                "Delegated. See `self.metadata.symbol()` for details."
+                            ),
                             false,
                             false,
                             odra::prelude::vec![]
