@@ -63,18 +63,26 @@ impl EventsFnsItem {
         }
     }
 
-    pub fn single(ty: &syn::Type) -> Self {
-        let into_event = utils::expr::into_event(ty);
-        let name = utils::expr::event_instance_name(ty);
-        let schema = utils::expr::event_instance_schema(ty);
-        let content = quote::quote!((#name, #schema));
-        let schema_expr = utils::expr::vec(content);
+    pub fn many(tys: &[syn::Type]) -> Self {
+        let into_events = tys
+            .iter()
+            .map(utils::expr::into_event)
+            .collect::<syn::punctuated::Punctuated<_, syn::token::Comma>>();
+        let schemas = tys
+            .iter()
+            .map(|ty| {
+                let name = utils::expr::event_instance_name(ty);
+                let schema = utils::expr::event_instance_schema(ty);
+                quote::quote!((#name, #schema))
+            })
+            .collect::<syn::punctuated::Punctuated<_, syn::token::Comma>>();
+        let schema_expr = utils::expr::vec(schemas);
         Self {
             events_fn: FnItem::new(
                 &utils::ident::events(),
                 vec![],
                 Self::events_ret_ty(),
-                utils::expr::vec(into_event).as_block()
+                utils::expr::vec(into_events).as_block()
             ),
             event_schemas_fn: FnItem::new(
                 &utils::ident::event_schemas(),

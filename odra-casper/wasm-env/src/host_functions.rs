@@ -50,6 +50,7 @@ use odra_core::consts::{
     ALLOW_KEY_OVERRIDE_ARG, CREATE_UPGRADE_GROUP, IS_FACTORY_UPGRADE_ARG, IS_UPGRADABLE_ARG,
     IS_UPGRADE_ARG, PACKAGE_HASH_KEY_NAME_ARG, PACKAGE_HASH_TO_UPGRADE_ARG, RANDOM_BYTES_COUNT
 };
+use odra_core::factory_dapp::{DAPP_KEY, REGISTRY_KEY};
 use odra_core::prelude::ExecutionError::{CannotExtractCallerInfo, CannotGetAnImmediateCaller};
 use odra_core::validator::ValidatorInfo;
 use odra_core::{args, prelude::*, CallDef};
@@ -105,6 +106,24 @@ pub fn install_new_contract(
     contract_schema: Option<&str>,
     init_args: Option<RuntimeArgs>
 ) -> (ContractPackageHash, URef) {
+    install_new_contract_with_named_keys(
+        entry_points,
+        events,
+        contract_schema,
+        init_args,
+        NamedKeys::new()
+    )
+}
+
+/// [install_new_contract] that also gives the contract `extra_named_keys`, e.g. the dictionary of
+/// [child_dapp_named_keys].
+pub fn install_new_contract_with_named_keys(
+    entry_points: EntryPoints,
+    events: Schemas,
+    contract_schema: Option<&str>,
+    init_args: Option<RuntimeArgs>,
+    extra_named_keys: NamedKeys
+) -> (ContractPackageHash, URef) {
     // Extract named arguments, variables and check if the contract is upgradable.
     // And check if there is an existing contract.
     let package_hash_key_name: String = runtime::get_named_arg(PACKAGE_HASH_KEY_NAME_ARG);
@@ -119,9 +138,16 @@ pub fn install_new_contract(
         .map(|ep| *ep.access() != EntryPointAccess::Template)
         .unwrap_or_default();
     let is_factory = entry_points.has_entry_point("new_contract");
+    // A factory's children run the factory's wasm, which Casper strips down to the factory's entry
+    // points; the factory keeps `migrate_events`, so it can upgrade its children.
+    let mut entry_points = entry_points;
+    if is_factory {
+        entry_points.add_entry_point(migrate_events_entry_point());
+    }
 
     // Prepare named keys.
-    let named_keys = initial_named_keys(events, contract_schema);
+    let mut named_keys = initial_named_keys(events, contract_schema);
+    named_keys.append(extra_named_keys);
 
     // Prepare message topic
     let mut message_topics = BTreeMap::new();
@@ -190,6 +216,18 @@ pub fn install_new_contract(
     (contract_package_hash, access_uref)
 }
 
+/// The entry point migrating the event schemas of a contract, run during every upgrade.
+fn migrate_events_entry_point() -> EntityEntryPoint {
+    EntityEntryPoint::new(
+        "migrate_events",
+        Parameters::from([Parameter::new("schemas", CLType::Any)]),
+        CLType::Unit,
+        EntryPointAccess::Groups(vec![Group::new(UPGRADER_GROUP_NAME)]),
+        EntryPointType::Called,
+        EntryPointPayment::Caller
+    )
+}
+
 /// Upgrades a contract within package.
 ///
 /// Creates a contract stored under a [Key::Hash]. The contract is upgradeable or not, depending on the
@@ -200,16 +238,28 @@ pub fn upgrade_contract(
     contract_schema: Option<&str>,
     upgrade_args: Option<RuntimeArgs>
 ) -> ContractPackageHash {
+    upgrade_contract_with_named_keys(
+        entry_points,
+        events,
+        contract_schema,
+        upgrade_args,
+        NamedKeys::new()
+    )
+}
+
+/// [upgrade_contract] that also gives the new version `extra_named_keys`, e.g. the dictionary of
+/// [child_dapp_named_keys]. A key the contract already has keeps its value: Casper merges the previous
+/// version's named keys over the new ones.
+pub fn upgrade_contract_with_named_keys(
+    entry_points: EntryPoints,
+    events: Schemas,
+    contract_schema: Option<&str>,
+    upgrade_args: Option<RuntimeArgs>,
+    extra_named_keys: NamedKeys
+) -> ContractPackageHash {
     // Add `migrate_events` entry point to the contract. It is run during the every upgrade.
     let mut entry_points = entry_points;
-    entry_points.add_entry_point(EntityEntryPoint::new(
-        "migrate_events",
-        Parameters::from([Parameter::new("schemas", CLType::Any)]),
-        CLType::Unit,
-        EntryPointAccess::Groups(vec![Group::new(UPGRADER_GROUP_NAME)]),
-        EntryPointType::Called,
-        EntryPointPayment::Caller
-    ));
+    entry_points.add_entry_point(migrate_events_entry_point());
     // The previous version's named keys take precedence over the new ones, so the contract schema
     // must be written from within the contract by `migrate_contract_schema`.
     if contract_schema.is_some() {
@@ -262,7 +312,8 @@ pub fn upgrade_contract(
     }
 
     // Prepare named keys.
-    let named_keys = initial_named_keys(events.clone(), None);
+    let mut named_keys = initial_named_keys(events.clone(), None);
+    named_keys.append(extra_named_keys);
 
     let contract_package_hash = ContractPackageHash::new(package_hash_to_upgrade);
     let previous_contract_hash = get_latest_contract_hash(contract_package_hash);
@@ -467,7 +518,26 @@ pub fn get_named_key(name: &str) -> Option<Bytes> {
 
 /// Writes a value under a key in a dictionary to a contract's storage.
 pub fn set_dictionary_value(dictionary_name: &str, key: &[u8], value: CLValue) {
-    let dictionary_uref = get_dictionary(dictionary_name);
+    dictionary_put(get_dictionary(dictionary_name), key, value);
+}
+
+/// The named keys a factory gives a child it creates or upgrades: a [DAPP_KEY] dictionary pointing the
+/// child to `registry`, or none without a registry.
+///
+/// The dictionary is created in the factory's context and handed over to the child, which holds its
+/// only named key, so the child can change it later.
+pub fn child_dapp_named_keys(registry: Option<Address>) -> NamedKeys {
+    let mut named_keys = NamedKeys::new();
+    if let Some(registry) = registry {
+        let dictionary = new_dictionary();
+        let value = CLValue::from_t(registry).unwrap_or_revert();
+        dictionary_put(dictionary, REGISTRY_KEY.as_bytes(), value);
+        named_keys.insert(DAPP_KEY.to_string(), Key::from(dictionary));
+    }
+    named_keys
+}
+
+fn dictionary_put(dictionary_uref: URef, key: &[u8], value: CLValue) {
     let (uref_ptr, uref_size, _bytes1) = to_ptr(dictionary_uref);
     let (dictionary_item_key_ptr, dictionary_item_key_size) = dictionary_item_key_to_ptr(key);
 
@@ -537,6 +607,18 @@ pub fn get_dictionary_value(dictionary_name: &str, key: &[u8]) -> Option<Bytes> 
     Some(Bytes::from(value_bytes))
 }
 
+/// Creates a dictionary without a named key.
+fn new_dictionary() -> URef {
+    let value_size = {
+        let mut value_size = MaybeUninit::uninit();
+        let ret = unsafe { ext_ffi::casper_new_dictionary(value_size.as_mut_ptr()) };
+        api_error::result_from(ret).unwrap_or_revert();
+        unsafe { value_size.assume_init() }
+    };
+    let value_bytes = read_host_buffer(value_size).unwrap_or_revert();
+    bytesrepr::deserialize(value_bytes).unwrap_or_revert()
+}
+
 fn get_dictionary(name: &str) -> URef {
     if name.is_empty() {
         runtime::revert(ApiError::MissingKey)
@@ -545,14 +627,7 @@ fn get_dictionary(name: &str) -> URef {
     let dictionary_uref = match runtime::get_key(name) {
         Some(dictionary_key) => *dictionary_key.as_uref().unwrap_or_revert(),
         None => {
-            let value_size = {
-                let mut value_size = MaybeUninit::uninit();
-                let ret = unsafe { ext_ffi::casper_new_dictionary(value_size.as_mut_ptr()) };
-                api_error::result_from(ret).unwrap_or_revert();
-                unsafe { value_size.assume_init() }
-            };
-            let value_bytes = read_host_buffer(value_size).unwrap_or_revert();
-            let uref: URef = bytesrepr::deserialize(value_bytes).unwrap_or_revert();
+            let uref = new_dictionary();
             runtime::put_key(name, Key::from(uref));
             uref
         }

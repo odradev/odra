@@ -491,6 +491,46 @@ impl ModuleImplIR {
         }))
     }
 
+    /// The entry point returning the dapp registry of the factory or its child, see `odra::factory_dapp`.
+    pub fn factory_get_dapp_registry_fn(&self) -> FnIR {
+        let ty_address = utils::ty::address();
+        FnIR::Impl(FnImplIR::new(parse_quote! {
+            /// Returns the dapp registry the factory belongs to.
+            pub fn get_dapp_registry(&self) -> #ty_address {
+            }
+        }))
+    }
+
+    /// The factory entry point setting the only address allowed to create children, see
+    /// `odra::factory_dapp`.
+    pub fn factory_set_creator_fn(&self) -> FnIR {
+        let ty_address = utils::ty::address();
+        FnIR::Impl(FnImplIR::new(parse_quote! {
+            /// Lets only the creator create children. Only the factory access holder may call it.
+            pub fn set_factory_creator(&mut self, creator: #ty_address) {
+            }
+        }))
+    }
+
+    /// The factory entry point setting the factory's dapp registry, see `odra::factory_dapp`.
+    pub fn factory_set_dapp_registry_fn(&self) -> FnIR {
+        let ty_address = utils::ty::address();
+        FnIR::Impl(FnImplIR::new(parse_quote! {
+            /// Adds the children created from now on to the dapp registry. Only the factory access holder may call it.
+            pub fn set_factory_dapp_registry(&mut self, registry: #ty_address) {
+            }
+        }))
+    }
+
+    /// The factory entry points of `odra::factory_dapp`.
+    pub fn factory_dapp_fns(&self) -> [FnIR; 3] {
+        [
+            self.factory_get_dapp_registry_fn(),
+            self.factory_set_creator_fn(),
+            self.factory_set_dapp_registry_fn()
+        ]
+    }
+
     pub fn upgrader(&self) -> Option<FnIR> {
         self.functions()
             .unwrap_or_default()
@@ -651,13 +691,15 @@ impl FnIR {
     }
 }
 
-const PROTECTED_FUNCTIONS: [&str; 6] = [
+const PROTECTED_FUNCTIONS: [&str; 8] = [
     "new",
     "env",
     "address",
     "new_contract",
     "upgrade_child_contract",
-    "batch_upgrade_child_contract"
+    "batch_upgrade_child_contract",
+    "set_factory_creator",
+    "set_factory_dapp_registry"
 ];
 const PROTECTED_ARGS: [&str; 2] = ["gas", "attached_value"];
 

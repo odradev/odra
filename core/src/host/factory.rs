@@ -5,7 +5,7 @@
 
 use crate::entry_point_callback::EntryPointsCallerFn;
 use crate::prelude::*;
-use crate::{utils, CallDef, ContractEnv, ExecutionEnv, VmError};
+use crate::{factory_dapp, utils, CallDef, ContractEnv, ExecutionEnv, VmError};
 use casper_event_standard::EventInstance;
 use casper_types::bytesrepr::{Bytes, FromBytes, ToBytes};
 use casper_types::RuntimeArgs;
@@ -14,8 +14,9 @@ const CONTRACT_NAME_ARG: &str = "contract_name";
 const BATCH_ARGS_ARG: &str = "args";
 
 /// Runs the `new_contract` entry point: deploys a child contract named by the `contract_name`
-/// argument, initialized with the rest of the call arguments, and emits the event `event`
-/// builds from the name and the address of the child.
+/// argument, initialized with the rest of the call arguments, adds it to the factory's dapp
+/// registry, if any, and emits the event `event` builds from the name and the address of the child.
+/// Only the factory's creator may call it, if the factory has one, see `odra::factory_dapp`.
 ///
 /// Returns the serialized address and access URef of the child.
 pub fn new_contract<E: ToBytes + EventInstance>(
@@ -24,8 +25,10 @@ pub fn new_contract<E: ToBytes + EventInstance>(
     child: EntryPointsCallerFn,
     event: fn(String, Address) -> E
 ) -> OdraResult<Bytes> {
+    factory_dapp::assert_creator(env);
     let name: String = execution_env(env).get_named_arg(CONTRACT_NAME_ARG);
     let (address, access) = env.new_child_contract(&name, call_def.args().clone(), child)?;
+    factory_dapp::register_child(env, address);
     env.emit_event(event(name, address));
     utils::try_serialize(&(address, access))
 }
@@ -63,6 +66,48 @@ pub fn batch_upgrade_child_contract<E: ToBytes + EventInstance>(
             env.emit_event(event(name, address));
         }
     }
+    utils::try_serialize(&())
+}
+
+/// Runs the `get_dapp_registry` entry point of the factory: returns the dapp registry it belongs to and
+/// fails with [ExecutionError::DappRegistryNotSet] without one.
+pub fn get_dapp_registry(env: &ContractEnv) -> OdraResult<Bytes> {
+    match factory_dapp::contract_dapp_registry(env) {
+        Some(registry) => utils::try_serialize(&registry),
+        None => Err(OdraError::ExecutionError(
+            ExecutionError::DappRegistryNotSet
+        ))
+    }
+}
+
+/// Runs the `set_factory_creator` entry point: lets only the address named by the `creator`
+/// argument create children and emits the event `event` builds from the previous and the new
+/// creator. Only the holder of the factory access may call it, see
+/// [ContractContext::caller_holds_factory_access](crate::ContractContext::caller_holds_factory_access).
+pub fn set_creator<E: ToBytes + EventInstance>(
+    env: &ContractEnv,
+    event: fn(Option<Address>, Address) -> E
+) -> OdraResult<Bytes> {
+    if !env.caller_holds_factory_access()? {
+        return Err(OdraError::VmError(VmError::InvalidContext));
+    }
+    factory_dapp::run_set_creator(env, event);
+    utils::try_serialize(&())
+}
+
+/// Runs the `set_factory_dapp_registry` entry point: points the factory to the registry named by
+/// the `registry` argument, which the children it creates from then on are added to, and emits the
+/// event `event` builds from the previous and the new registry. The factory must have a creator.
+/// Only the holder of the factory access may call it, see
+/// [ContractContext::caller_holds_factory_access](crate::ContractContext::caller_holds_factory_access).
+pub fn set_dapp_registry<E: ToBytes + EventInstance>(
+    env: &ContractEnv,
+    event: fn(Option<Address>, Address) -> E
+) -> OdraResult<Bytes> {
+    if !env.caller_holds_factory_access()? {
+        return Err(OdraError::VmError(VmError::InvalidContext));
+    }
+    factory_dapp::run_set_dapp_registry(env, event);
     utils::try_serialize(&())
 }
 

@@ -13,6 +13,7 @@ pub mod cep2612;
 pub mod cep3009;
 pub mod cep95;
 pub mod cep96;
+pub mod dapp;
 #[cfg(feature = "eip712")]
 mod eip712;
 pub mod erc1155;

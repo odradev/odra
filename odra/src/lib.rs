@@ -38,13 +38,14 @@
 #![no_std]
 
 pub use odra_core::{
-    args, contract_def, entry_point, entry_point_callback, host, module, prelude, uints, utils
+    args, contract_def, entry_point, entry_point_callback, factory_dapp, host, module, prelude,
+    uints, utils
 };
 /// Macros for creating Odra modules that store values in named keys or dictionaries.
 pub mod named_keys {
     pub use odra_core::{
-        base64_encoded_key_value_storage, compound_key_value_storage, key_value_storage,
-        single_value_storage
+        base64_encoded_key_value_storage, compound_key_value_storage, dictionary_value_storage,
+        key_value_storage, single_value_storage
     };
 }
 pub use odra_core::{casper_event_standard, casper_event_standard::Event, casper_types};

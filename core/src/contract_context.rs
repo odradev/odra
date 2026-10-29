@@ -284,6 +284,16 @@ pub trait ContractContext {
     ) -> OdraResult<Option<Address>> {
         Err(factory_not_supported())
     }
+
+    /// Returns whether the caller of the currently executed factory contract holds its factory
+    /// access: on Casper the factory group URef, which the account that deployed the factory
+    /// receives. Only that account may upgrade the children, set the factory's creator or point the
+    /// factory to a dapp registry.
+    ///
+    /// See [ContractContext::new_child_contract] for the supported backends.
+    fn caller_holds_factory_access(&self) -> OdraResult<bool> {
+        Err(factory_not_supported())
+    }
 }
 
 fn factory_not_supported() -> OdraError {

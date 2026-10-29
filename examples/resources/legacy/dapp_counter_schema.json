@@ -1,0 +1,22 @@
+{
+  "name": "DappCounter",
+  "events": [],
+  "entrypoints": [
+    {
+      "name": "increment",
+      "args": [],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "value",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "U32",
+      "ty": "Public",
+      "attributes": []
+    }
+  ]
+}
