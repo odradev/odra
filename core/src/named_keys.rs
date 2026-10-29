@@ -109,6 +109,34 @@ macro_rules! base64_encoded_key_value_storage {
     };
 }
 
+/// Creates an Odra module that stores a single value under a given key of a given dictionary, so
+/// several values, collections included, can share one dictionary (and one named key).
+///
+/// The module has three methods: `set`, `get` and `init`. The dictionary is created by `init`, or on
+/// the first access otherwise.
+#[macro_export]
+macro_rules! dictionary_value_storage {
+    ($name:ident, $value_ty:ty, $dict:expr, $key:expr) => {
+        #[odra::module(layout = odra::schema::StorageKind::dictionary_item::<$value_ty>($dict, $key))]
+        pub struct $name;
+
+        impl $name {
+            pub fn set(&self, value: $value_ty) {
+                self.env()
+                    .set_dictionary_value($dict, $key.as_bytes(), value);
+            }
+
+            pub fn get(&self) -> Option<$value_ty> {
+                self.env().get_dictionary_value($dict, $key.as_bytes())
+            }
+
+            pub fn init(&self) {
+                self.env().init_dictionary($dict);
+            }
+        }
+    };
+}
+
 /// Creates an Odra module that stores a values in a given dictionary.
 ///
 /// The module has three methods: `set`, `get` and `init`.

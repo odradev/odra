@@ -192,6 +192,14 @@ pub enum ExecutionError {
     PathIndexOutOfBounds = 137,
     /// A named argument is present but cannot be read as the expected type.
     InvalidArg = 138,
+    /// The factory has a creator and the caller of `new_contract` is someone else.
+    CallerNotFactoryCreator = 139,
+    /// The dapp registry is not a contract address.
+    DappRegistryNotAContract = 140,
+    /// The factory needs a creator before it gets a dapp registry.
+    FactoryCreatorNotSet = 141,
+    /// The contract does not belong to a dapp registry.
+    DappRegistryNotSet = 142,
     /// Maximum code for user errors
     MaxUserError = 64535,
     /// User error too high. The code should be in range 0..32767.
@@ -293,6 +301,10 @@ impl ExecutionError {
                 136 => CannotGetAnImmediateCaller,
                 137 => PathIndexOutOfBounds,
                 138 => InvalidArg,
+                139 => CallerNotFactoryCreator,
+                140 => DappRegistryNotAContract,
+                141 => FactoryCreatorNotSet,
+                142 => DappRegistryNotSet,
                 _ => return None
             }
         };
@@ -502,6 +514,10 @@ mod tests {
             CannotGetAnImmediateCaller,
             PathIndexOutOfBounds,
             InvalidArg,
+            CallerNotFactoryCreator,
+            DappRegistryNotAContract,
+            FactoryCreatorNotSet,
+            DappRegistryNotSet,
             MaxUserError,
             UserErrorTooHigh,
         ];
@@ -548,6 +564,10 @@ mod tests {
                 | CannotGetAnImmediateCaller
                 | PathIndexOutOfBounds
                 | InvalidArg
+                | CallerNotFactoryCreator
+                | DappRegistryNotAContract
+                | FactoryCreatorNotSet
+                | DappRegistryNotSet
                 | MaxUserError
                 | UserErrorTooHigh
                 | User(UserError { .. }) => {}

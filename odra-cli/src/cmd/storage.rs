@@ -319,6 +319,10 @@ fn describe(kind: &StorageKind) -> (String, Option<&[StorageField]>) {
             ),
             None
         ),
+        StorageKind::DictionaryItem { name, key, ty: t } => (
+            format!(": {} (dictionary `{name}`, key `{key}`)", ty(t)),
+            None
+        ),
         StorageKind::Mapping { key, value } => match value.as_ref() {
             StorageKind::Module { fields } => {
                 (format!(": Mapping<{}, module>", ty(key)), Some(fields))

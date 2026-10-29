@@ -13,6 +13,26 @@
   "types": [
     {
       "struct": {
+        "name": "DappRegistryChanged",
+        "description": null,
+        "members": [
+          {
+            "name": "previous_registry",
+            "description": null,
+            "ty": {
+              "Option": "Key"
+            }
+          },
+          {
+            "name": "new_registry",
+            "description": null,
+            "ty": "Key"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
         "name": "FTokenFactoryContractDeployed",
         "description": null,
         "members": [
@@ -23,6 +43,26 @@
           },
           {
             "name": "contract_address",
+            "description": null,
+            "ty": "Key"
+          }
+        ]
+      }
+    },
+    {
+      "struct": {
+        "name": "FactoryCreatorChanged",
+        "description": null,
+        "members": [
+          {
+            "name": "previous_creator",
+            "description": null,
+            "ty": {
+              "Option": "Key"
+            }
+          },
+          {
+            "name": "new_creator",
             "description": null,
             "ty": "Key"
           }
@@ -110,12 +150,61 @@
       "return_ty": "Unit",
       "is_contract_context": true,
       "access": "public"
+    },
+    {
+      "name": "get_dapp_registry",
+      "description": "Returns the dapp registry the factory belongs to.",
+      "is_mutable": false,
+      "arguments": [],
+      "return_ty": "Key",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "set_factory_creator",
+      "description": "Lets only the creator create children. Only the factory access holder may call it.",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "creator",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
+    },
+    {
+      "name": "set_factory_dapp_registry",
+      "description": "Adds the children created from now on to the dapp registry. Only the factory access holder may call it.",
+      "is_mutable": true,
+      "arguments": [
+        {
+          "name": "registry",
+          "description": null,
+          "ty": "Key",
+          "optional": false
+        }
+      ],
+      "return_ty": "Unit",
+      "is_contract_context": true,
+      "access": "public"
     }
   ],
   "events": [
     {
       "name": "FTokenFactoryContractDeployed",
       "ty": "FTokenFactoryContractDeployed"
+    },
+    {
+      "name": "FactoryCreatorChanged",
+      "ty": "FactoryCreatorChanged"
+    },
+    {
+      "name": "DappRegistryChanged",
+      "ty": "DappRegistryChanged"
     }
   ],
   "call": {

@@ -108,6 +108,15 @@ pub enum StorageKind {
         key_encoding: KeyEncoding,
         /// The type of the value.
         value: Type
+    },
+    /// A single value stored in a Casper dictionary under a fixed item key, next to other values.
+    DictionaryItem {
+        /// The name of the dictionary.
+        name: String,
+        /// The dictionary item key.
+        key: String,
+        /// The type of the value.
+        ty: Type
     }
 }
 
@@ -135,6 +144,15 @@ impl StorageKind {
             key: Type(K::ty()),
             key_encoding,
             value: Type(V::ty())
+        }
+    }
+
+    /// A value of type `T` stored in a dictionary under the fixed item key `key`.
+    pub fn dictionary_item<T: NamedCLTyped>(name: &str, key: &str) -> Self {
+        Self::DictionaryItem {
+            name: name.to_string(),
+            key: key.to_string(),
+            ty: Type(T::ty())
         }
     }
 
@@ -486,6 +504,10 @@ where
                     location: StorageLocation::Dictionary { name, key }
                 })
             }
+            StorageKind::DictionaryItem { name, key, ty } => Ok(StorageQuery {
+                ty,
+                location: StorageLocation::Dictionary { name, key }
+            }),
             StorageKind::Module { fields } => Err(StorageLayoutError::NotAValue {
                 path: self.location(),
                 available: fields.iter().map(|f| f.name.clone()).collect()

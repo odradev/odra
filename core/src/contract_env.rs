@@ -370,6 +370,13 @@ impl ContractEnv {
         backend.upgrade_child_contract(name, upgrade_args, entry_points_caller)
     }
 
+    /// Returns whether the caller of the current factory contract holds its factory access, see
+    /// [ContractContext::caller_holds_factory_access].
+    pub fn caller_holds_factory_access(&self) -> OdraResult<bool> {
+        let backend = self.backend.borrow();
+        backend.caller_holds_factory_access()
+    }
+
     /// Prints a debug message on the host running the contract.
     ///
     /// Always printed on OdraVM and for getters on livenet (they run locally). Inside wasm the

@@ -152,6 +152,13 @@ impl OdraVmState {
         }
     }
 
+    /// Writes a dictionary item of the contract at `address`, which needs not be the current one.
+    pub fn set_dict_value_of(&mut self, address: &Address, dict: &[u8], key: &[u8], value: Bytes) {
+        if let Err(error) = self.storage.insert_dict_value(address, dict, key, value) {
+            self.set_error(Into::<ExecutionError>::into(error));
+        }
+    }
+
     pub fn remove_dictionary(&mut self, dict: &[u8]) {
         let ctx = self.callstack.current().address();
         self.storage.remove_dict(ctx, dict);

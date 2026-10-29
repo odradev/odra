@@ -42,3 +42,9 @@ fqn = "cep3009::CEP3009Wrapper"
 
 [[contracts]]
 fqn = "cep2612::CEP2612Wrapper"
+
+[[contracts]]
+fqn = "dapp::OwnedDappRegistry"
+
+[[contracts]]
+fqn = "dapp::utils::MockDappContract"
