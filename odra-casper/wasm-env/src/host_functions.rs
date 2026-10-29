@@ -229,8 +229,9 @@ pub fn upgrade_contract(
     upgrade_contract_with_named_keys(entry_points, events, upgrade_args, NamedKeys::new())
 }
 
-/// [upgrade_contract] that also gives the new version `extra_named_keys`, replacing the keys of the
-/// same names, e.g. the dictionary of [child_dapp_named_keys].
+/// [upgrade_contract] that also gives the new version `extra_named_keys`, e.g. the dictionary of
+/// [child_dapp_named_keys]. A key the contract already has keeps its value: Casper merges the previous
+/// version's named keys over the new ones.
 pub fn upgrade_contract_with_named_keys(
     entry_points: EntryPoints,
     events: Schemas,

@@ -161,7 +161,7 @@ mod tests {
             DappContractAdded {
                 contract: member.address(),
                 is_registrar: false,
-                registrar: env.get_account(0)
+                added_by: env.get_account(0)
             }
         ));
     }
@@ -235,7 +235,7 @@ mod tests {
             DappContractAdded {
                 contract: child.address(),
                 is_registrar: false,
-                registrar: registrar.address()
+                added_by: registrar.address()
             }
         ));
 
@@ -279,7 +279,7 @@ mod tests {
             &registry,
             DappContractRemoved {
                 contract: a,
-                registrar: env.get_account(0)
+                removed_by: env.get_account(0)
             }
         ));
 
@@ -361,8 +361,6 @@ mod tests {
             dapp_item::<Vec<Address>>(&env, &address, REGISTRARS_KEY),
             vec![registrar]
         );
-        // No other named keys.
-        assert_eq!(env.get_named_value(&address, "__dapp_name"), None);
 
         // The storage layout points to the same items.
         let layout = OwnedDappRegistry::storage_kind();

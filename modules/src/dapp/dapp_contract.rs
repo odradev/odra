@@ -12,8 +12,6 @@ use odra::prelude::*;
 /// get it from the factory, see `odra::factory_dapp`.
 #[odra::external_contract]
 pub trait DappContract {
-    /// Points the contract to the given dapp registry.
-    fn set_dapp_registry(&mut self, registry: &Address);
     /// Returns the dapp registry the contract belongs to.
     fn get_dapp_registry(&self) -> Address;
 }
@@ -32,11 +30,12 @@ pub struct DappContractBase {
 impl DappContractBase {
     /// Returns the dapp registry the contract belongs to.
     ///
-    /// Reverts with [`Error::DappRegistryNotSet`] if the registry has not been set.
+    /// Reverts with [`ExecutionError::DappRegistryNotSet`], like a factory child without a registry, if
+    /// the registry has not been set.
     pub fn get_dapp_registry(&self) -> Address {
         self.registry
             .get()
-            .unwrap_or_revert_with(&self.env(), Error::DappRegistryNotSet)
+            .unwrap_or_revert_with(&self.env(), ExecutionError::DappRegistryNotSet)
     }
 }
 
@@ -69,7 +68,7 @@ mod tests {
         let contract = DappContractBase::deploy(&env, NoArgs);
         assert_eq!(
             contract.try_get_dapp_registry(),
-            Err(Error::DappRegistryNotSet.into())
+            Err(ExecutionError::DappRegistryNotSet.into())
         );
     }
 }

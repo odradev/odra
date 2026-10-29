@@ -133,7 +133,7 @@ mod tests {
             DappContractAdded {
                 contract: first,
                 is_registrar: false,
-                registrar: factory.address()
+                added_by: factory.address()
             }
         ));
 
@@ -176,6 +176,23 @@ mod tests {
             other.try_add_dapp_contract(&counter, false),
             Err(Error::DappRegistryMismatch.into())
         );
+    }
+
+    #[test]
+    fn a_child_keeps_its_registry() {
+        let (env, mut registry, mut factory, mut spawner) = setup();
+        factory.set_factory_creator(spawner.address());
+        factory.set_factory_dapp_registry(registry.address());
+        registry.add_dapp_contract(&factory.address(), true);
+        let counter = spawner.spawn();
+
+        // Pointing the factory to another registry moves only the children created afterwards: on
+        // Casper an upgrade cannot replace the child's `__dapp` named key.
+        let other = OwnedDappRegistry::deploy(&env, NoArgs);
+        factory.set_factory_dapp_registry(other.address());
+        factory.upgrade_child_contract("DappCounter0".to_string());
+        let counter = DappContractHostRef::new(counter, env.clone());
+        assert_eq!(counter.get_dapp_registry(), registry.address());
     }
 
     #[test]

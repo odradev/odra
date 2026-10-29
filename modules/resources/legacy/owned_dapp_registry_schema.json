@@ -52,7 +52,7 @@
           "is_required": true
         },
         {
-          "name": "registrar",
+          "name": "added_by",
           "ty": "Key",
           "is_ref": false,
           "is_slice": false,
@@ -71,7 +71,7 @@
           "is_required": true
         },
         {
-          "name": "registrar",
+          "name": "removed_by",
           "ty": "Key",
           "is_ref": false,
           "is_slice": false,

@@ -4,14 +4,20 @@
 //! of the factory access, the account that deployed the factory, may change that:
 //! - `set_factory_creator` lets only the given address create children, e.g. the contract that keeps
 //!   track of them;
-//! - `set_factory_dapp_registry` points the factory to a dapp registry. The factory then belongs to
-//!   that dapp, and points every child it creates or upgrades to the same registry. A child it creates
-//!   is also added to the registry, where the factory must be a registrar. A factory gets a registry
-//!   only after a creator: otherwise anyone could add contracts to the dapp.
+//! - `set_factory_dapp_registry` points the factory to a dapp registry: the factory belongs to that
+//!   dapp, and so does every child it creates from then on. A factory gets a registry only after a
+//!   creator: otherwise anyone could add contracts to the dapp.
+//!
+//! A child the factory creates points to the factory's registry and is added to it. The registry
+//! verifies the child and accepts it from a registrar only, so register the factory as a registrar
+//! right after pointing it to the registry: until then `new_contract` reverts. A child created before
+//! the factory had a registry points to it after `upgrade_child_contract`; the registry owner adds it.
+//! A child keeps the registry it points to: on Casper an upgrade cannot replace a named key the child
+//! already has, so pointing the factory to another registry moves only the children created afterwards.
 //!
 //! The factory and its children answer `get_dapp_registry`, which a dapp registry calls to verify a
 //! contract points back to it: the children run the factory's wasm, which exports the entry point, so
-//! the child module needs no code of its own.
+//! the child module needs no code of its own and cannot have its own `get_dapp_registry`.
 //!
 //! The creator lives under the [`CREATOR_KEY`] named key and the registry under the [`REGISTRY_KEY`]
 //! item of the [`DAPP_KEY`] dictionary, the item the `DappContractBase` module of `odra-modules` uses, so
@@ -19,7 +25,9 @@
 //! the factory. OdraVM runs the entry points natively through `odra::host::factory`, with the same
 //! rules.
 use crate::prelude::*;
-use crate::{CallDef, ContractEnv};
+use crate::{CallDef, ContractEnv, ExecutionEnv};
+use casper_event_standard::EventInstance;
+use casper_types::bytesrepr::ToBytes;
 use casper_types::RuntimeArgs;
 
 /// The named key of the dictionary holding a contract's dapp data.
@@ -78,7 +86,7 @@ pub fn set_dapp_registry(env: &ContractEnv, registry: Address) -> Option<Address
     if creator(env).is_none() {
         env.revert(ExecutionError::FactoryCreatorNotSet);
     }
-    let previous = dapp_registry(env);
+    let previous = contract_dapp_registry(env);
     env.set_dictionary_value(DAPP_KEY, REGISTRY_KEY.as_bytes(), registry);
     previous
 }
@@ -113,4 +121,34 @@ pub fn register_child(env: &ContractEnv, child: Address) {
             CallDef::new(String::from(ADD_DAPP_CONTRACT), true, args)
         );
     }
+}
+
+/// The `set_factory_creator` entry point, wasm and OdraVM alike: stores the creator named by the
+/// [`CREATOR_ARG`] argument and emits the event `event` builds from the previous and the new creator.
+/// The caller must hold the factory access, which the entry point's group checks in wasm.
+pub fn run_set_creator<E: ToBytes + EventInstance>(
+    env: &ContractEnv,
+    event: fn(Option<Address>, Address) -> E
+) {
+    let creator: Address = execution_env(env).get_named_arg(CREATOR_ARG);
+    let previous = set_creator(env, creator);
+    env.emit_event(event(previous, creator));
+}
+
+/// The `set_factory_dapp_registry` entry point, wasm and OdraVM alike: stores the registry named by
+/// the [`REGISTRY_ARG`] argument and emits the event `event` builds from the previous and the new
+/// registry. The caller must hold the factory access, which the entry point's group checks in wasm.
+pub fn run_set_dapp_registry<E: ToBytes + EventInstance>(
+    env: &ContractEnv,
+    event: fn(Option<Address>, Address) -> E
+) {
+    let registry: Address = execution_env(env).get_named_arg(REGISTRY_ARG);
+    let previous = set_dapp_registry(env, registry);
+    env.emit_event(event(previous, registry));
+}
+
+/// Reads the named arguments of the call the way a generated entry point does: a missing or
+/// malformed one reverts.
+fn execution_env(env: &ContractEnv) -> ExecutionEnv {
+    ExecutionEnv::new(Rc::new(env.clone()))
 }

@@ -148,7 +148,7 @@ impl DappRegistryBase {
         self.env().emit_event(DappContractAdded {
             contract: *dapp_contract,
             is_registrar,
-            registrar: self.env().caller()
+            added_by: self.env().caller()
         });
     }
 
@@ -176,7 +176,7 @@ impl DappRegistryBase {
 
         self.env().emit_event(DappContractRemoved {
             contract: *dapp_contract,
-            registrar: self.env().caller()
+            removed_by: self.env().caller()
         });
     }
 

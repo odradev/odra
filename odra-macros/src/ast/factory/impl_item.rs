@@ -731,16 +731,13 @@ mod test {
 
                 #[no_mangle]
                 fn new_contract() {
-                    odra::factory_dapp::assert_creator(&odra::odra_casper_wasm_env::WasmContractEnv::new_env());
+                    let env = odra::odra_casper_wasm_env::WasmContractEnv::new_env();
+                    odra::factory_dapp::assert_creator(&env);
                     odra::odra_casper_wasm_env::host_functions::override_factory_caller();
                     let schemas = odra::casper_event_standard::Schemas(
                         <Erc20 as odra::contract_def::HasEvents>::event_schemas()
                     );
-                    let exec_env = {
-                        let env = odra::odra_casper_wasm_env::WasmContractEnv::new_env();
-                        let env_rc = Rc::new(env);
-                        odra::ExecutionEnv::new(env_rc)
-                    };
+                    let exec_env = odra::ExecutionEnv::new(Rc::new(env.clone()));
 
                     let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
                     odra::args::EntrypointArgument::insert_runtime_arg(
@@ -750,7 +747,7 @@ mod test {
                     );
 
                     let dapp_named_keys = odra::odra_casper_wasm_env::host_functions::child_dapp_named_keys(
-                        odra::factory_dapp::dapp_registry(&odra::odra_casper_wasm_env::WasmContractEnv::new_env())
+                        odra::factory_dapp::dapp_registry(&env)
                     );
                     let (contract_package_hash, access_uref) = odra::odra_casper_wasm_env::host_functions::install_new_contract_with_named_keys(
                         child_contract_entry_points(),
@@ -759,7 +756,7 @@ mod test {
                         dapp_named_keys
                     );
                     let address: odra::prelude::Address = contract_package_hash.into();
-                    odra::factory_dapp::register_child(&odra::odra_casper_wasm_env::WasmContractEnv::new_env(), address);
+                    odra::factory_dapp::register_child(&env, address);
 
                     exec_env.emit_event(Erc20FactoryContractDeployed {
                         contract_name: exec_env.get_named_arg::<odra::prelude::string::String>("contract_name"),
@@ -869,26 +866,24 @@ mod test {
 
                 #[no_mangle]
                 fn set_factory_creator() {
-                    let env = Rc::new(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
-                    let exec_env = odra::ExecutionEnv::new(env.clone());
-                    let creator = exec_env.get_named_arg::<odra::prelude::Address>(odra::factory_dapp::CREATOR_ARG);
-                    let previous_creator = odra::factory_dapp::set_creator(&env, creator);
-                    env.emit_event(__erc20_factory_dapp::FactoryCreatorChanged {
-                        previous_creator,
-                        new_creator: creator
-                    });
+                    odra::factory_dapp::run_set_creator(
+                        &odra::odra_casper_wasm_env::WasmContractEnv::new_env(),
+                        |previous_creator, new_creator| __erc20_factory_dapp::FactoryCreatorChanged {
+                            previous_creator,
+                            new_creator
+                        }
+                    );
                 }
 
                 #[no_mangle]
                 fn set_factory_dapp_registry() {
-                    let env = Rc::new(odra::odra_casper_wasm_env::WasmContractEnv::new_env());
-                    let exec_env = odra::ExecutionEnv::new(env.clone());
-                    let registry = exec_env.get_named_arg::<odra::prelude::Address>(odra::factory_dapp::REGISTRY_ARG);
-                    let previous_registry = odra::factory_dapp::set_dapp_registry(&env, registry);
-                    env.emit_event(__erc20_factory_dapp::DappRegistryChanged {
-                        previous_registry,
-                        new_registry: registry
-                    });
+                    odra::factory_dapp::run_set_dapp_registry(
+                        &odra::odra_casper_wasm_env::WasmContractEnv::new_env(),
+                        |previous_registry, new_registry| __erc20_factory_dapp::DappRegistryChanged {
+                            previous_registry,
+                            new_registry
+                        }
+                    );
                 }
 
                 #[no_mangle]

@@ -1,4 +1,4 @@
-//! Named-key storage of the dapp modules.
+//! Storage of the dapp modules.
 //!
 //! The dapp data of a contract lives in one Casper dictionary under the `__dapp` named key, so
 //! explorers and SDKs read it by name, the way they read the `name` or `balances` of a CEP-18 token,

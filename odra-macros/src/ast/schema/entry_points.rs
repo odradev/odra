@@ -47,10 +47,8 @@ impl TryFrom<&ModuleImplIR> for FactorySchemaEntrypointsItem {
                     module.factory_fn(),
                     module.factory_upgrade_fn(),
                     module.factory_batch_upgrade_fn(),
-                    module.factory_get_dapp_registry_fn(),
-                    module.factory_set_creator_fn(),
-                    module.factory_set_dapp_registry_fn(),
                 ])
+                .chain(module.factory_dapp_fns())
                 .collect(),
             offchain_fns: vec![]
         };

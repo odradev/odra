@@ -59,7 +59,8 @@ pub struct OdraVm {
 #[derive(Clone)]
 struct CodeSnapshot {
     versions: BTreeMap<Address, ContractVersion>,
-    deployers: BTreeMap<Address, Address>
+    deployers: BTreeMap<Address, Address>,
+    factory_children: BTreeSet<Address>
 }
 
 impl OdraVm {
@@ -220,27 +221,31 @@ impl OdraVm {
 
     /// Points the child of the factory contract being executed to the factory's dapp registry, if any,
     /// as the factory does in wasm, see `odra::factory_dapp`.
+    ///
+    /// As on Casper, where an upgrade cannot replace a named key the child already has, a child that
+    /// points to a registry keeps it.
     fn point_child_to_dapp_registry(&self, child: &Address) {
-        let factory = self.self_address();
-        let has_creator = self
-            .get_named_value(&factory, factory_dapp::CREATOR_KEY)
-            .is_some();
-        if !has_creator {
+        if self.child_dapp_registry(child).is_some() {
             return;
         }
-        let registry = self.get_dictionary_value(
-            &factory,
-            factory_dapp::DAPP_KEY,
-            factory_dapp::REGISTRY_KEY.as_bytes()
-        );
-        if let Some(registry) = registry {
+        if let Some(registry) = factory_dapp::dapp_registry(&self.contract_env()) {
+            let registry = serialize(registry).expect("an address serializes");
             self.state.borrow_mut().set_dict_value_of(
                 child,
                 factory_dapp::DAPP_KEY.as_bytes(),
                 factory_dapp::REGISTRY_KEY.as_bytes(),
-                registry
+                registry.into()
             );
         }
+    }
+
+    /// The serialized dapp registry a factory child points to, if any.
+    fn child_dapp_registry(&self, child: &Address) -> Option<Bytes> {
+        self.get_dictionary_value(
+            child,
+            factory_dapp::DAPP_KEY,
+            factory_dapp::REGISTRY_KEY.as_bytes()
+        )
     }
 
     /// Upgrades a child of the factory contract being executed, see
@@ -296,28 +301,19 @@ impl OdraVm {
         }
         // The register is not borrowed during the call, the contract may deploy another one.
         let contract = self.contract_register.borrow().get_shared(&address);
-        let entry_point = call_def.entry_point().to_string();
+        // A factory child runs the factory's wasm, whose exported `get_dapp_registry` answers for
+        // the child, whatever the child module has.
+        let is_child_dapp_registry = call_def.entry_point() == factory_dapp::GET_DAPP_REGISTRY
+            && self.factory_children.borrow().contains(&address);
         let result = match contract {
+            Some(_) if is_child_dapp_registry => {
+                self.child_dapp_registry(&address)
+                    .ok_or(OdraError::ExecutionError(
+                        ExecutionError::DappRegistryNotSet
+                    ))
+            }
             Some(contract) => contract.call(self.contract_env(), call_def),
             None => Err(OdraError::VmError(VmError::InvalidContractAddress))
-        };
-        // A factory child runs the factory's wasm, which exports `get_dapp_registry`; the child
-        // module may not have it.
-        let result = match result {
-            Err(OdraError::VmError(VmError::NoSuchMethod(_)))
-                if entry_point == factory_dapp::GET_DAPP_REGISTRY
-                    && self.factory_children.borrow().contains(&address) =>
-            {
-                self.get_dictionary_value(
-                    &address,
-                    factory_dapp::DAPP_KEY,
-                    factory_dapp::REGISTRY_KEY.as_bytes()
-                )
-                .ok_or(OdraError::ExecutionError(
-                    ExecutionError::DappRegistryNotSet
-                ))
-            }
-            result => result
         };
 
         match result {
@@ -782,7 +778,8 @@ impl OdraVm {
     fn code_snapshot(&self) -> CodeSnapshot {
         CodeSnapshot {
             versions: self.contract_register.borrow().versions(),
-            deployers: self.deployers.borrow().clone()
+            deployers: self.deployers.borrow().clone(),
+            factory_children: self.factory_children.borrow().clone()
         }
     }
 
@@ -791,6 +788,7 @@ impl OdraVm {
             .borrow_mut()
             .revert_to(&code.versions);
         *self.deployers.borrow_mut() = code.deployers.clone();
+        *self.factory_children.borrow_mut() = code.factory_children.clone();
     }
 
     /// Calls the constructor or the upgrader of a child of the factory contract being executed.

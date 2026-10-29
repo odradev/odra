@@ -24,8 +24,8 @@ pub struct DappContractAdded {
     pub contract: Address,
     /// Whether the contract may add other contracts.
     pub is_registrar: bool,
-    /// The address that added the contract.
-    pub registrar: Address
+    /// The address that added the contract: the owner or a registrar.
+    pub added_by: Address
 }
 
 /// Emitted when a contract is removed from the dapp.
@@ -34,7 +34,7 @@ pub struct DappContractRemoved {
     /// The removed contract.
     pub contract: Address,
     /// The address that removed the contract.
-    pub registrar: Address
+    pub removed_by: Address
 }
 
 /// Emitted when a dapp contract points to a new dapp registry.

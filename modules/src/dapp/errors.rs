@@ -14,8 +14,6 @@ pub enum Error {
     DappRegistryMismatch = 22_003,
     /// The caller is not a registrar of the dapp.
     CallerNotDappRegistrar = 22_004,
-    /// The dapp registry has not been set.
-    DappRegistryNotSet = 22_005,
     /// The dapp registry cannot remove itself.
     CannotRemoveDappRegistry = 22_006
 }

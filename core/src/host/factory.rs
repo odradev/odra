@@ -91,9 +91,7 @@ pub fn set_creator<E: ToBytes + EventInstance>(
     if !env.caller_holds_factory_access()? {
         return Err(OdraError::VmError(VmError::InvalidContext));
     }
-    let creator: Address = execution_env(env).get_named_arg(factory_dapp::CREATOR_ARG);
-    let previous_creator = factory_dapp::set_creator(env, creator);
-    env.emit_event(event(previous_creator, creator));
+    factory_dapp::run_set_creator(env, event);
     utils::try_serialize(&())
 }
 
@@ -109,9 +107,7 @@ pub fn set_dapp_registry<E: ToBytes + EventInstance>(
     if !env.caller_holds_factory_access()? {
         return Err(OdraError::VmError(VmError::InvalidContext));
     }
-    let registry: Address = execution_env(env).get_named_arg(factory_dapp::REGISTRY_ARG);
-    let previous_registry = factory_dapp::set_dapp_registry(env, registry);
-    env.emit_event(event(previous_registry, registry));
+    factory_dapp::run_set_dapp_registry(env, event);
     utils::try_serialize(&())
 }
 
