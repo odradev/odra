@@ -27,7 +27,7 @@
             "ty": "Bool"
           },
           {
-            "name": "added_by",
+            "name": "registrar",
             "description": null,
             "ty": "Key"
           }
@@ -45,7 +45,7 @@
             "ty": "Key"
           },
           {
-            "name": "removed_by",
+            "name": "registrar",
             "description": null,
             "ty": "Key"
           }

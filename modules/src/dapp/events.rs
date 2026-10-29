@@ -1,4 +1,7 @@
 //! Events emitted by the dapp modules.
+//!
+//! An upgrade cannot change the schema of an event a contract already emits (`SchemaMismatch`), so these
+//! events keep their fields.
 use odra::prelude::*;
 
 /// Emitted when the dapp metadata is set.
@@ -25,7 +28,7 @@ pub struct DappContractAdded {
     /// Whether the contract may add other contracts.
     pub is_registrar: bool,
     /// The address that added the contract: the owner or a registrar.
-    pub added_by: Address
+    pub registrar: Address
 }
 
 /// Emitted when a contract is removed from the dapp.
@@ -34,7 +37,7 @@ pub struct DappContractRemoved {
     /// The removed contract.
     pub contract: Address,
     /// The address that removed the contract.
-    pub removed_by: Address
+    pub registrar: Address
 }
 
 /// Emitted when a dapp contract points to a new dapp registry.

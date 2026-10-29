@@ -133,7 +133,7 @@ mod tests {
             DappContractAdded {
                 contract: first,
                 is_registrar: false,
-                added_by: factory.address()
+                registrar: factory.address()
             }
         ));
 

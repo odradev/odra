@@ -161,7 +161,7 @@ mod tests {
             DappContractAdded {
                 contract: member.address(),
                 is_registrar: false,
-                added_by: env.get_account(0)
+                registrar: env.get_account(0)
             }
         ));
     }
@@ -235,7 +235,7 @@ mod tests {
             DappContractAdded {
                 contract: child.address(),
                 is_registrar: false,
-                added_by: registrar.address()
+                registrar: registrar.address()
             }
         ));
 
@@ -279,7 +279,7 @@ mod tests {
             &registry,
             DappContractRemoved {
                 contract: a,
-                removed_by: env.get_account(0)
+                registrar: env.get_account(0)
             }
         ));
 
