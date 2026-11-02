@@ -282,7 +282,7 @@
   "entry_points": [
     {
       "name": "name",
-      "description": "Delegated. See `self.token.name()` for details.",
+      "description": "Returns the name of the token.",
       "is_mutable": false,
       "is_payable": false,
       "arguments": [],
@@ -292,7 +292,7 @@
     },
     {
       "name": "symbol",
-      "description": "Delegated. See `self.token.symbol()` for details.",
+      "description": "Returns the symbol of the token.",
       "is_mutable": false,
       "is_payable": false,
       "arguments": [],
@@ -302,7 +302,7 @@
     },
     {
       "name": "decimals",
-      "description": "Delegated. See `self.token.decimals()` for details.",
+      "description": "Returns the number of decimals the token uses.",
       "is_mutable": false,
       "is_payable": false,
       "arguments": [],
@@ -312,7 +312,7 @@
     },
     {
       "name": "total_supply",
-      "description": "Delegated. See `self.token.total_supply()` for details.",
+      "description": "Returns the total supply of the token.",
       "is_mutable": false,
       "is_payable": false,
       "arguments": [],
@@ -322,7 +322,7 @@
     },
     {
       "name": "balance_of",
-      "description": "Delegated. See `self.token.balance_of()` for details.",
+      "description": "Returns the balance of the given address.",
       "is_mutable": false,
       "is_payable": false,
       "arguments": [
@@ -339,7 +339,7 @@
     },
     {
       "name": "transfer",
-      "description": "Delegated. See `self.token.transfer()` for details.",
+      "description": "Transfers tokens from the caller to the recipient.",
       "is_mutable": true,
       "is_payable": false,
       "arguments": [
@@ -362,7 +362,7 @@
     },
     {
       "name": "approve",
-      "description": "Delegated. See `self.token.approve()` for details.",
+      "description": "Approves the spender to spend the given amount of tokens on behalf of the caller.",
       "is_mutable": true,
       "is_payable": false,
       "arguments": [
@@ -385,7 +385,7 @@
     },
     {
       "name": "allowance",
-      "description": "Delegated. See `self.token.allowance()` for details.",
+      "description": "Returns the amount of tokens the owner has allowed the spender to spend.",
       "is_mutable": false,
       "is_payable": false,
       "arguments": [
@@ -408,7 +408,7 @@
     },
     {
       "name": "transfer_from",
-      "description": "Delegated. See `self.token.transfer_from()` for details.",
+      "description": "Transfers tokens from the owner to the recipient using the spender's allowance.",
       "is_mutable": true,
       "is_payable": false,
       "arguments": [
@@ -437,7 +437,7 @@
     },
     {
       "name": "decrease_allowance",
-      "description": "Delegated. See `self.token.decrease_allowance()` for details.",
+      "description": "Decreases the allowance of the spender by the given amount.",
       "is_mutable": true,
       "is_payable": false,
       "arguments": [
@@ -460,7 +460,7 @@
     },
     {
       "name": "increase_allowance",
-      "description": "Delegated. See `self.token.increase_allowance()` for details.",
+      "description": "Increases the allowance of the spender by the given amount.",
       "is_mutable": true,
       "is_payable": false,
       "arguments": [
@@ -483,7 +483,7 @@
     },
     {
       "name": "authorization_state",
-      "description": "Delegated. See `self.cep3009.authorization_state()` for details.",
+      "description": "Returns `true` if `(authorizer, nonce)` has been consumed by a previous transfer or burned by [`Self::cancel_authorization`]. Useful for off-chain clients to check before submitting a relayed transfer.",
       "is_mutable": false,
       "is_payable": false,
       "arguments": [
@@ -508,7 +508,7 @@
     },
     {
       "name": "transfer_with_authorization",
-      "description": "Delegated. See `self.cep3009.transfer_with_authorization()` for details.",
+      "description": "Consumes a signed `TransferWithAuthorization` and moves `value` tokens from `from` to `to`. Any account may submit this call — the signature, not the caller, is what authorizes the transfer.  Reverts with [`Error::InvalidNonceLength`], [`Error::NonceAlreadyUsed`], [`Error::AuthorizationNotYetValid`], [`Error::AuthorizationExpired`], [`Error::InvalidPublicKey`], or [`Error::InvalidSignature`] if the corresponding precondition fails. On success, marks the nonce used, emits [`AuthorizationUsed`], and performs the transfer via [`Cep18::raw_transfer`].",
       "is_mutable": true,
       "is_payable": false,
       "arguments": [
@@ -571,7 +571,7 @@
     },
     {
       "name": "receive_with_authorization",
-      "description": "Delegated. See `self.cep3009.receive_with_authorization()` for details.",
+      "description": "Like [`Self::transfer_with_authorization`], but requires `caller == to`. This lets a receiving contract atomically accept a pre-signed transfer and act on it within the same call (e.g. a \"deposit then mint LP token\" flow), while preventing any other account from triggering the transfer at a moment of their choosing.  Reverts with [`Error::InvalidCaller`] if `caller != to`. All other checks and effects mirror `transfer_with_authorization`.",
       "is_mutable": true,
       "is_payable": false,
       "arguments": [
@@ -634,7 +634,7 @@
     },
     {
       "name": "permit",
-      "description": "Delegated. See `self.cep2612.permit()` for details.",
+      "description": "Consumes an off-chain permit signature and sets `spender`'s allowance over `owner`'s tokens to `value`.  The caller (typically a relayer, not `owner`) supplies the signed `Permit(owner, spender, value, nonce, deadline)` typed-data digest. The contract:  1. Rejects the call if `deadline != u64::MAX` and the current block time (in seconds) is past `deadline`, a Unix timestamp in seconds (`PermitExpired`). 2. Rejects the call if `Address::from(public_key) != owner` (`InvalidPublicKey`). 3. Recomputes the EIP-712 digest using the on-chain nonce for `owner` and verifies `signature` against `public_key`. A mismatch — wrong field value or a replayed signature whose nonce has already been consumed — yields `InvalidSignature`. 4. Increments the owner's nonce and overwrites the allowance via [`Cep18::raw_approve`] (it does not add to the existing allowance).",
       "is_mutable": true,
       "is_payable": false,
       "arguments": [
