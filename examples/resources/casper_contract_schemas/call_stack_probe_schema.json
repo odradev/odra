@@ -19,7 +19,7 @@
   "entry_points": [
     {
       "name": "inspect",
-      "description": "Returns the immediate caller, the caller of the caller (if any) and the call stack from",
+      "description": "Returns the immediate caller, the caller of the caller (if any) and the call stack from the initiating account to this contract.",
       "is_mutable": false,
       "is_payable": false,
       "arguments": [],
