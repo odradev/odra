@@ -4,11 +4,11 @@ use odra::{
     casper_types::U512, host::HostEnv, prelude::Address,
     schema::casper_contract_schema::NamedCLType
 };
+use odra_schema::codec::CustomTypeSet;
 use serde::Serialize;
 
 use crate::{
     cmd::{CmdOutput, TRANSFER_SUBCOMMAND},
-    custom_types::CustomTypeSet,
     log,
     parser::{self, CLTypedParser, CsprTokenAmountParser},
     scenario::Args,

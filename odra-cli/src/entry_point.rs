@@ -1,14 +1,16 @@
 #![allow(dead_code)]
 use clap::ArgMatches;
 use odra::prelude::{Address, OdraError};
-use odra::schema::casper_contract_schema::{Entrypoint, NamedCLType};
+use odra::schema::{
+    casper_contract_schema::{Entrypoint, NamedCLType},
+    codec::CustomTypeSet
+};
 use odra::VmError;
 use odra::{casper_types::U512, host::HostEnv, CallDef};
 
 use crate::cmd::args::{read_arg, Arg, ArgsError, ARG_PRINT_EVENTS};
+use crate::container;
 use crate::container::ContractProvider;
-use crate::custom_types::CustomTypeSet;
-use crate::{container, types};
 
 pub(crate) mod cmd_args;
 mod runtime_args;
@@ -25,7 +27,7 @@ pub enum CallError {
     #[error(transparent)]
     ArgsError(#[from] ArgsError),
     #[error(transparent)]
-    TypesError(#[from] types::Error),
+    TypesError(#[from] odra_schema::codec::Error),
     #[error("Contract not found")]
     ContractNotFound,
     #[error(transparent)]
@@ -38,7 +40,9 @@ pub enum CallError {
     #[error("No entry point found in contract '{contract_name}'")]
     NoEntryPointFound { contract_name: String },
     #[error("Invalid gas value: {0}")]
-    InvalidGasValue(String)
+    InvalidGasValue(String),
+    #[error("Decoding error: {0}")]
+    DecodingError(#[from] odra_schema::codec::DecodeError)
 }
 
 /// The outcome of a contract call: the decoded return value plus any events captured when
@@ -105,7 +109,7 @@ pub fn call<T: ContractProvider>(
         Vec::new()
     };
 
-    let result = types::decode(bytes.inner_bytes(), ty, types)?;
+    let result = odra_schema::codec::decode(bytes.inner_bytes(), ty, types)?;
     Ok(CallOutcome {
         result: result.0,
         events
@@ -129,7 +133,7 @@ fn collect_events<T: ContractProvider>(
         }
         let decoded = events
             .iter()
-            .map(|event| types::decode_event(event, types))
+            .map(|event| odra_schema::codec::decode_event(event, types))
             .collect::<Result<Vec<_>, _>>()?;
         grouped.push(ContractEvents {
             contract: deployed_contract.key_name(),

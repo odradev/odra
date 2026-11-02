@@ -11,8 +11,10 @@ targets = [
 all-features = true
 
 [advisories]
-# Security vulnerabilities are always denied; there are none today. The entries
-# below are `unmaintained` advisories only, each with the reason it is accepted.
+# Security vulnerabilities are denied by default; every entry below is accepted only because it is
+# not reachable from Odra's own Cargo.toml (so Odra cannot bump it itself) and has no semver-
+# compatible fix available yet. Each has the reason it is accepted, and is removed once the
+# upstream crate it comes from releases a fixed version.
 ignore = [
     # bincode 1.3.3, pulled in by casper-execution-engine. Not reachable from
     # Odra's own code and not ours to bump - it goes away when the casper stack
@@ -24,6 +26,11 @@ ignore = [
     # proc-macro-error2 2.0.1, pulled in by syn_derive. Same story: build-time
     # only. The advisory itself notes no safe upgrade exists.
     "RUSTSEC-2026-0173",
+    # crypto-bigint 0.5.5 (timing side-channel), pulled in by
+    # casper-types -> k256 -> elliptic-curve 0.13.8, which pins crypto-bigint
+    # to ^0.5. The fix needs >=0.7.6; no elliptic-curve/k256 release using a
+    # patched crypto-bigint exists yet. Remove this once one does.
+    "RUSTSEC-2026-0387",
 ]
 
 [licenses]

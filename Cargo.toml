@@ -22,6 +22,7 @@ members = [
   "odra-cli",
   "odra-macros",
   "odra-schema",
+  "odra-storage-reader",
   "odra-test",
   "odra-vm",
   "odra-wasm-client",

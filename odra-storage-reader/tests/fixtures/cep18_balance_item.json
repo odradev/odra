@@ -1,0 +1,9 @@
+{
+  "stored_value": {
+    "CLValue": {
+      "cl_type": "U256",
+      "bytes": "021027",
+      "parsed": "10000"
+    }
+  }
+}

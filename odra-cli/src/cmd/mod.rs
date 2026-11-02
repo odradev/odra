@@ -24,6 +24,7 @@ pub use deploy::{DeployError, DeployScript};
 pub(crate) use events::PrintEventsCmd;
 pub(crate) use inspect::InspectCmd;
 pub(crate) use main::MainCmd;
+use odra_schema::codec::CustomTypeSet;
 pub(crate) use scenario::ScenariosCmd;
 pub use scenario::{Scenario, ScenarioArgs, ScenarioError, ScenarioMetadata};
 pub(crate) use status::StatusCmd;
@@ -32,7 +33,6 @@ pub(crate) use transfer::TransferCmd;
 pub(crate) use whoami::WhoamiCmd;
 
 use crate::{
-    custom_types::CustomTypeSet,
     output::{print_json, OutputFormat},
     DeployedContractsContainer
 };

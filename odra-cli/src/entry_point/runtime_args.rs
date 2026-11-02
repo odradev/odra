@@ -1,11 +1,10 @@
 use clap::ArgMatches;
 use odra::casper_types::{CLType, CLValue, RuntimeArgs};
 use odra::schema::casper_contract_schema::{Argument, Entrypoint, NamedCLType};
+use odra_schema::codec::CustomTypeSet;
 
 use crate::cmd::args::{ArgsError, CommandArg};
-use crate::custom_types::CustomTypeSet;
 use crate::entry_point::utils::flatten_schema_arg;
-use crate::types::{self, named_cl_type_to_cl_type};
 
 pub fn compose(
     entry_point: &Entrypoint,
@@ -68,7 +67,7 @@ impl<'a> ComposedArg<'a> {
             )));
         }
 
-        buffer.extend(types::to_bytes_or_err(size as u32)?);
+        buffer.extend(odra_schema::codec::to_bytes_or_err(size as u32)?);
 
         for i in 0..size {
             for values in &self.values {
@@ -116,7 +115,7 @@ fn compose_basic_arg(arg: &Argument, matches: &ArgMatches) -> Result<CLValue, Ar
 
     if input.is_empty() {
         return Ok(CLValue::from_components(
-            named_cl_type_to_cl_type(&arg.ty.0),
+            odra_schema::codec::named_cl_type_to_cl_type(&arg.ty.0),
             vec![0u8]
         ));
     }
@@ -124,11 +123,13 @@ fn compose_basic_arg(arg: &Argument, matches: &ArgMatches) -> Result<CLValue, Ar
     Ok(match &arg.ty.0 {
         NamedCLType::List(box NamedCLType::U8) => input[0].to_owned(),
         NamedCLType::List(inner) => {
-            let mut bytes = types::to_bytes_or_err(input.len() as u32)?;
+            let mut bytes = odra_schema::codec::to_bytes_or_err(input.len() as u32)?;
             for value in input {
                 bytes.extend(value.inner_bytes());
             }
-            let cl_type = CLType::List(Box::new(types::named_cl_type_to_cl_type(inner)));
+            let cl_type = CLType::List(Box::new(odra_schema::codec::named_cl_type_to_cl_type(
+                inner
+            )));
             CLValue::from_components(cl_type, bytes)
         }
         _ => input[0].to_owned()

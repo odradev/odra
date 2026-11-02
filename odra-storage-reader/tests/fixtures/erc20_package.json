@@ -1,0 +1,26 @@
+{
+  "stored_value": {
+    "ContractPackage": {
+      "access_key": "uref-cede0ddf3b52d9e689dc6c05d973fc43af3d3436cef8315f13ef7e90d50ec149-007",
+      "versions": [
+        {
+          "protocol_version_major": 2,
+          "contract_version": 1,
+          "contract_hash": "contract-61d26cde57d2dc2f848e20525899b669afea2a96fd5e9d674d22aa990a2196bd"
+        }
+      ],
+      "disabled_versions": [],
+      "groups": [
+        {
+          "group_name": "constructor_group",
+          "group_users": []
+        },
+        {
+          "group_name": "upgrader_group",
+          "group_users": []
+        }
+      ],
+      "lock_status": "Locked"
+    }
+  }
+}
