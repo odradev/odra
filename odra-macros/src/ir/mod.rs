@@ -72,10 +72,6 @@ impl ModuleStructIR {
         Ident::new(&format!("{}Factory", module_ident), module_ident.span())
     }
 
-    pub fn module_str(&self) -> String {
-        self.module_ident().to_string()
-    }
-
     pub fn module_mod_ident(&self) -> syn::Ident {
         format_ident!(
             "__{}_module",
