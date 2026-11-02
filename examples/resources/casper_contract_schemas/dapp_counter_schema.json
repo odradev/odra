@@ -1,6 +1,10 @@
 {
   "casper_contract_schema_version": 1,
   "toolchain": "rustc 1.94.0-nightly (8d670b93d 2025-12-31)",
+  "toolkit": {
+    "name": "Odra",
+    "version": "2.10.0"
+  },
   "authors": [
     "Jakub Płaskonka <kuba@odra.dev>",
     "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
@@ -10,13 +14,71 @@
   "homepage": "https://odra.dev/docs",
   "contract_name": "DappCounter",
   "contract_version": "2.10.0",
-  "types": [],
-  "errors": [],
+  "types": [
+    {
+      "struct": {
+        "name": "DappRegistryChanged",
+        "description": null,
+        "members": [
+          {
+            "name": "previous_registry",
+            "description": null,
+            "ty": {
+              "Option": "Key"
+            }
+          },
+          {
+            "name": "new_registry",
+            "description": null,
+            "ty": "Key"
+          }
+        ]
+      }
+    }
+  ],
+  "errors": [
+    {
+      "name": "CallerNotDappRegistrar",
+      "description": "The caller is not a registrar of the dapp.",
+      "discriminant": 22004
+    },
+    {
+      "name": "CannotRemoveDappRegistry",
+      "description": "The dapp registry cannot remove itself.",
+      "discriminant": 22006
+    },
+    {
+      "name": "DappContractAlreadyRegistered",
+      "description": "The contract is already registered. The registry itself counts as registered.",
+      "discriminant": 22001
+    },
+    {
+      "name": "DappContractNotRegistered",
+      "description": "The contract is not registered.",
+      "discriminant": 22002
+    },
+    {
+      "name": "DappRegistryMismatch",
+      "description": "The contract points to a different dapp registry.",
+      "discriminant": 22003
+    },
+    {
+      "name": "DappRegistryNotSet",
+      "description": "The dapp registry has not been set.",
+      "discriminant": 22005
+    },
+    {
+      "name": "NotAContract",
+      "description": "The address is not a contract address.",
+      "discriminant": 22000
+    }
+  ],
   "entry_points": [
     {
       "name": "increment",
       "description": "Increments the counter.",
       "is_mutable": true,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "Unit",
       "is_contract_context": true,
@@ -26,16 +88,32 @@
       "name": "value",
       "description": "Returns the counter value.",
       "is_mutable": false,
+      "is_payable": false,
       "arguments": [],
       "return_ty": "U32",
       "is_contract_context": true,
       "access": "public"
+    },
+    {
+      "name": "get_dapp_registry",
+      "description": "Delegated. See `self.dapp.get_dapp_registry()` for details.",
+      "is_mutable": false,
+      "is_payable": false,
+      "arguments": [],
+      "return_ty": "Key",
+      "is_contract_context": true,
+      "access": "public"
     }
   ],
-  "events": [],
+  "events": [
+    {
+      "name": "DappRegistryChanged",
+      "ty": "DappRegistryChanged"
+    }
+  ],
   "call": {
     "wasm_file_name": "DappCounter.wasm",
-    "description": null,
+    "description": "Points the counter to the dapp registry.",
     "arguments": [
       {
         "name": "odra_cfg_package_hash_key_name",
@@ -60,6 +138,39 @@
         "description": "The arg name for telling the installer that the contract is being upgraded.",
         "ty": "Bool",
         "optional": false
+      },
+      {
+        "name": "registry",
+        "description": null,
+        "ty": "Key",
+        "optional": false
+      }
+    ]
+  },
+  "storage": {
+    "kind": "module",
+    "fields": [
+      {
+        "name": "dapp",
+        "index": 1,
+        "kind": "module",
+        "fields": [
+          {
+            "name": "registry",
+            "index": 1,
+            "kind": "dictionary",
+            "dictionary": "__dapp",
+            "key": "String",
+            "key_encoding": "utf8",
+            "value": "Key"
+          }
+        ]
+      },
+      {
+        "name": "value",
+        "index": 2,
+        "kind": "value",
+        "ty": "U32"
       }
     ]
   }

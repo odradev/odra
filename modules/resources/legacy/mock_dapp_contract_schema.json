@@ -80,6 +80,30 @@
       "attributes": []
     },
     {
+      "name": "register",
+      "args": [
+        {
+          "name": "dapp_contract",
+          "ty": "Key",
+          "is_ref": false,
+          "is_slice": false,
+          "is_required": true
+        }
+      ],
+      "is_mutable": true,
+      "return_ty": "Unit",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
+      "name": "register_address",
+      "args": [],
+      "is_mutable": false,
+      "return_ty": "Key",
+      "ty": "Public",
+      "attributes": []
+    },
+    {
       "name": "register_in_dapp",
       "args": [
         {
