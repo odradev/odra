@@ -7,6 +7,21 @@ Changelog for `odra`.
 - Factory modules (`#[odra::module(factory = on)]`) work on OdraVM: `new_contract`,
   `upgrade_child_contract` and `batch_upgrade_child_contract` deploy and upgrade the children like on
   Casper, only the account that installed the factory may upgrade them, and their events are tracked.
+- `odra_modules::dapp` groups the contracts of a dapp: `DappRegistryBase` keeps the dapp metadata and its
+  contracts, and `DappContractBase` stores the registry a contract belongs to. A contract belongs to at most one
+  dapp: the registry adds a contract only if its `get_dapp_registry` points back to the registry. Neither base
+  module checks the caller, so they compose with `Ownable` or `AccessControl` (`DappRegistry` and `DappContract`
+  are their external contract traits). `OwnedDappRegistry` is ready to deploy: the owner manages the dapp and a
+  contract registered as a registrar may add other contracts. A registrar, e.g. a contract creating contracts
+  through a factory, passes `DappContractBase::register_address` to each contract it creates and adds it with
+  `DappContractBase::register` (`examples/src/factory/dapp.rs`). The dapp data of a contract lives in one dictionary
+  under the `__dapp` named key, every item a whole value (`__dapp->registry`, `__dapp->name`, the
+  `__dapp->contracts` and `__dapp->registrars` lists, ...), readable from the chain without calling the contracts;
+  a contract composing `DappRegistryBase` calls its `init`. The events keep their fields: an upgrade cannot change
+  the schema of an event a contract already emits.
+- `odra::named_keys::dictionary_value_storage` keeps a value of a module under a fixed item of a dictionary, so
+  several values can share one dictionary and one named key. The storage layout describes the whole
+  dictionary, keyed by UTF-8 strings.
 - `#[odra(offchain)]` on a `&self` function of a module: the function is not deployed and runs on the
   host against the contract's state, on OdraVM, CasperVM and livenet alike, for reads too expensive or
   too big for an entry point (#594).
@@ -68,8 +83,8 @@ Changelog for `odra`.
 - `cargo odra schema`, `build` and `test -b casper` are faster in projects that depend on `odra-cli`,
   which lost its build script (about 4 s less per contract).
 - Custom backends and hand-written callers only: `EntryPointsCaller` no longer holds a `HostEnv` and
-  `call` takes the `ContractEnv`; `ContractContext` gained `call_stack`, `debug`, `new_child_contract`
-  and `upgrade_child_contract`, `HostContext` gained `take_snapshot`, `restore_snapshot`,
+  `call` takes the `ContractEnv`; `ContractContext` gained `call_stack`, `debug`, `new_child_contract`,
+  `upgrade_child_contract` and `caller_holds_factory_access`, `HostContext` gained `take_snapshot`, `restore_snapshot`,
   `thread_env_factory`, `has_contract` and `take_child_contracts`, all with defaults; `EntryPoint` has
   `is_offchain` (use its constructors); `HasEvents` is a supertrait of `OdraContract`; `OdraVm::new()`
   replaces `Default`.
@@ -81,6 +96,11 @@ Changelog for `odra`.
   `storage` and `types` fields instead of the removed `StorageLayoutFile`/`STORAGE_LAYOUT_VERSION`.
 
 ### Fixed
+- A factory that was never upgraded could not upgrade its children on Casper ("Function not found:
+  migrate_events"): its wasm, which the children run, was stripped of the `migrate_events` an upgrade calls. A
+  factory keeps the entry point from its installation now.
+- OdraVM gave the 10th contract the address of the 1st (and the 11th, 20th, ... those of others): the
+  contract number was padded with zeros on the right. It is padded on the left now.
 - `#[odra(..)]` mistakes are compile errors at the attribute: unknown, duplicate and malformed
   arguments (they were silently ignored, `#[odra(payable, payable)]` made a function not payable),
   module arguments on an impl block or a trait (only `factory = on` is accepted on an impl), `payable`

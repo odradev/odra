@@ -119,6 +119,12 @@ pub fn install_new_contract(
         .map(|ep| *ep.access() != EntryPointAccess::Template)
         .unwrap_or_default();
     let is_factory = entry_points.has_entry_point("new_contract");
+    // A factory's children run the factory's wasm, which Casper strips down to the factory's entry
+    // points; the factory keeps `migrate_events`, so it can upgrade its children.
+    let mut entry_points = entry_points;
+    if is_factory {
+        entry_points.add_entry_point(migrate_events_entry_point());
+    }
 
     // Prepare named keys.
     let named_keys = initial_named_keys(events, contract_schema);
@@ -190,6 +196,18 @@ pub fn install_new_contract(
     (contract_package_hash, access_uref)
 }
 
+/// The entry point migrating the event schemas of a contract, run during every upgrade.
+fn migrate_events_entry_point() -> EntityEntryPoint {
+    EntityEntryPoint::new(
+        "migrate_events",
+        Parameters::from([Parameter::new("schemas", CLType::Any)]),
+        CLType::Unit,
+        EntryPointAccess::Groups(vec![Group::new(UPGRADER_GROUP_NAME)]),
+        EntryPointType::Called,
+        EntryPointPayment::Caller
+    )
+}
+
 /// Upgrades a contract within package.
 ///
 /// Creates a contract stored under a [Key::Hash]. The contract is upgradeable or not, depending on the
@@ -202,14 +220,7 @@ pub fn upgrade_contract(
 ) -> ContractPackageHash {
     // Add `migrate_events` entry point to the contract. It is run during the every upgrade.
     let mut entry_points = entry_points;
-    entry_points.add_entry_point(EntityEntryPoint::new(
-        "migrate_events",
-        Parameters::from([Parameter::new("schemas", CLType::Any)]),
-        CLType::Unit,
-        EntryPointAccess::Groups(vec![Group::new(UPGRADER_GROUP_NAME)]),
-        EntryPointType::Called,
-        EntryPointPayment::Caller
-    ));
+    entry_points.add_entry_point(migrate_events_entry_point());
     // The previous version's named keys take precedence over the new ones, so the contract schema
     // must be written from within the contract by `migrate_contract_schema`.
     if contract_schema.is_some() {
