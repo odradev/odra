@@ -95,11 +95,6 @@ fn struct_entrypoints_expr(ir: &ModuleImplIR) -> syn::Result<syn::Expr> {
             };
             Ok(expr)
         })
-        .chain([
-            Ok(utils::expr::factory_get_dapp_registry_ep()),
-            Ok(utils::expr::factory_set_creator_ep()),
-            Ok(utils::expr::factory_set_dapp_registry_ep())
-        ])
         .collect::<syn::Result<syn::punctuated::Punctuated<syn::Expr, syn::token::Comma>>>()?;
     Ok(utils::expr::vec_try_into(struct_entrypoints))
 }
@@ -132,10 +127,7 @@ mod test {
                                 odra::args::parameter::<odra::prelude::string::String>("contract_name")
                             ],
                         },
-                        odra::entry_point::EntryPoint::FactoryBatchUpgrade,
-                        odra::entry_point::EntryPoint::FactoryGetDappRegistry,
-                        odra::entry_point::EntryPoint::FactorySetCreator,
-                        odra::entry_point::EntryPoint::FactorySetDappRegistry
+                        odra::entry_point::EntryPoint::FactoryBatchUpgrade
                     ].into_iter().map(TryInto::try_into).collect::<Result<_, _>>().unwrap_or_default()
                 }
             }

@@ -260,6 +260,27 @@ mod tests {
     }
 
     #[test]
+    fn registrar_registers_in_its_registry() {
+        let (env, mut registry) = setup();
+        let mut registrar = member(&env, registry.address());
+        registry.add_dapp_contract(&registrar.address(), true);
+        assert_eq!(registrar.register_address(), registry.address());
+
+        // A contract pointing to the registrar's registry joins it.
+        let child = member(&env, registrar.register_address());
+        registrar.register(&child.address());
+        assert!(registry.is_dapp_contract(&child.address()));
+
+        // One pointing elsewhere does not.
+        let other = OwnedDappRegistry::deploy(&env, NoArgs);
+        let stranger = member(&env, other.address());
+        assert_eq!(
+            registrar.try_register(&stranger.address()),
+            Err(Error::DappRegistryMismatch.into())
+        );
+    }
+
+    #[test]
     fn remove_contracts() {
         let (env, mut registry) = setup();
         let reg = registry.address();

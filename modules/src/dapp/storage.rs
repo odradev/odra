@@ -11,10 +11,9 @@ use odra::named_keys::dictionary_value_storage;
 use odra::prelude::*;
 
 /// The named key of the dictionary holding the dapp data.
-pub const DAPP_KEY: &str = odra::factory_dapp::DAPP_KEY;
-/// The dapp registry a contract belongs to. A factory module stores its registry, and gives its
-/// children theirs, under the same item, see `odra::factory_dapp`.
-pub const REGISTRY_KEY: &str = odra::factory_dapp::REGISTRY_KEY;
+pub const DAPP_KEY: &str = "__dapp";
+/// The dapp registry a contract belongs to.
+pub const REGISTRY_KEY: &str = "registry";
 /// The name of the dapp.
 pub const NAME_KEY: &str = "name";
 /// A short description of the dapp.

@@ -34,6 +34,16 @@ impl MockDappContract {
         }
     }
 
+    /// Adds `dapp_contract` to the registry this contract belongs to, as a registrar would.
+    pub fn register(&mut self, dapp_contract: &Address) {
+        self.dapp.register(*dapp_contract);
+    }
+
+    /// Returns the registry this contract passes to the contracts it registers.
+    pub fn register_address(&self) -> Address {
+        self.dapp.register_address()
+    }
+
     /// Adds `dapp_contract` to `registry`, as a registrar would.
     pub fn register_in_dapp(
         &mut self,
