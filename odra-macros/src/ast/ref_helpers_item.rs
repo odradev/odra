@@ -41,8 +41,10 @@ impl TryFrom<&'_ TokenStream> for RefHelpersItem {
 
         let with_suffix = |suffix: &str| -> syn::Type {
             let mut path = path.clone();
-            let last = path.segments.last_mut().expect("checked above");
-            last.ident = syn::Ident::new(&format!("{}{}", last.ident, suffix), last.ident.span());
+            if let Some(last) = path.segments.last_mut() {
+                last.ident =
+                    syn::Ident::new(&format!("{}{}", last.ident, suffix), last.ident.span());
+            }
             syn::Type::Path(syn::TypePath { qself: None, path })
         };
         let contract_ref_impl = syn::ItemImpl {

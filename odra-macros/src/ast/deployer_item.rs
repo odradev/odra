@@ -1,5 +1,6 @@
 use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote, ToTokens};
+use syn::{parse_quote, punctuated::Punctuated};
 
 use crate::{
     ir::{FnArgIR, ModuleImplIR},
@@ -55,7 +56,7 @@ impl DeployerItem {
                         .functions()?
                         .iter()
                         .map(|f| {
-                            utils::expr::new_entry_point(
+                            new_entry_point(
                                 f.name_str(),
                                 f.raw_typed_args(),
                                 f.is_payable(),
@@ -100,7 +101,7 @@ impl DeployerItem {
                         entry_points: [new_contract_fn, upgrade_fn]
                             .into_iter()
                             .map(|f| {
-                                utils::expr::new_entry_point(
+                                new_entry_point(
                                     f.name_str(),
                                     f.raw_typed_args(),
                                     f.is_payable(),
@@ -286,6 +287,40 @@ impl ToTokens for CallerProviderImplItem {
             }
         });
     }
+}
+
+/// `odra::entry_point_callback::EntryPoint::new[_payable|_offchain](name, args)`.
+fn new_entry_point(
+    name: String,
+    args: Vec<syn::PatType>,
+    is_payable: bool,
+    is_offchain: bool
+) -> syn::Expr {
+    let ty = utils::ty::odra_entry_point();
+    let name = string_from(&name);
+    let args_stream = args
+        .iter()
+        .map(new_entry_point_arg)
+        .collect::<Punctuated<_, syn::Token![,]>>();
+    let args_vec: syn::Expr = parse_quote!(odra::prelude::vec![#args_stream]);
+    if is_offchain {
+        parse_quote!(#ty::new_offchain(#name, #args_vec))
+    } else if is_payable {
+        parse_quote!(#ty::new_payable(#name, #args_vec))
+    } else {
+        parse_quote!(#ty::new(#name, #args_vec))
+    }
+}
+fn new_entry_point_arg(arg: &syn::PatType) -> syn::Expr {
+    let ty = utils::ty::odra_entry_point_arg();
+    let arg_ty = utils::ty::unreferenced_ty(&arg.ty);
+    let name = string_from(&arg.pat.to_token_stream().to_string());
+    parse_quote!(#ty::new::<#arg_ty>(#name))
+}
+
+fn string_from(string: &str) -> syn::Expr {
+    let ty = utils::ty::string();
+    parse_quote!(#ty::from(#string))
 }
 
 #[cfg(test)]

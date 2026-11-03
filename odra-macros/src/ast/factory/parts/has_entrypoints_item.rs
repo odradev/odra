@@ -17,17 +17,17 @@ impl TryFrom<&ModuleImplIR> for FactoryHasEntrypointsImplItem {
     fn try_from(module: &ModuleImplIR) -> Result<Self, Self::Error> {
         let constructor = module
             .constructor()
-            .map(|_| utils::expr::constructor_ep(syn::parse_quote!(odra::prelude::vec![])));
+            .map(|_| wasm_parts::constructor_ep(syn::parse_quote!(odra::prelude::vec![])));
         Ok(Self {
             module_ident: module.module_ident()?,
             entry_points: constructor
                 .into_iter()
                 .chain([
-                    utils::expr::factory_ep(wasm_parts::parameters(&module.factory_fn())),
-                    utils::expr::factory_upgrade_ep(wasm_parts::parameters(
+                    wasm_parts::factory_ep(wasm_parts::parameters(&module.factory_fn())),
+                    wasm_parts::factory_upgrade_ep(wasm_parts::parameters(
                         &module.factory_upgrade_fn()
                     )),
-                    utils::expr::factory_batch_upgrade_ep()
+                    wasm_parts::factory_batch_upgrade_ep()
                 ])
                 .collect()
         })

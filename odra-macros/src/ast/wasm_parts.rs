@@ -1,5 +1,6 @@
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
+use syn::parse_quote;
 
 use crate::{
     ast::{
@@ -115,9 +116,9 @@ impl EntryPointsFnItem {
                     .iter()
                     .map(template_entry_point)
                     .chain([
-                        utils::expr::factory_ep(parameters(&module.factory_fn())),
-                        utils::expr::factory_upgrade_ep(parameters(&module.factory_upgrade_fn())),
-                        utils::expr::factory_batch_upgrade_ep()
+                        factory_ep(parameters(&module.factory_fn())),
+                        factory_upgrade_ep(parameters(&module.factory_upgrade_fn())),
+                        factory_batch_upgrade_ep()
                     ])
                     .collect(),
                 child_entry_points: Some(functions.iter().map(installed_entry_point).collect())
@@ -304,11 +305,11 @@ impl ToTokens for NoMangleFnItem {
 pub(crate) fn installed_entry_point(func: &FnIR) -> syn::Expr {
     let args = parameters(func);
     if func.is_constructor() {
-        utils::expr::constructor_ep(args)
+        constructor_ep(args)
     } else if func.is_upgrader() {
-        utils::expr::upgrader_ep(args)
+        upgrader_ep(args)
     } else {
-        utils::expr::regular_ep(
+        regular_ep(
             func.name_str(),
             args,
             return_cl_type(func),
@@ -321,7 +322,7 @@ pub(crate) fn installed_entry_point(func: &FnIR) -> syn::Expr {
 /// The `EntryPoint` of a child function as its factory lists it: name, arguments and return
 /// type only, enough for a host to build calls to the child without its code.
 fn template_entry_point(func: &FnIR) -> syn::Expr {
-    utils::expr::template_ep(func.name_str(), parameters(func), return_cl_type(func))
+    template_ep(func.name_str(), parameters(func), return_cl_type(func))
 }
 
 /// `vec![odra::args::parameter::<Ty>("name"), ..]` for the function's named arguments.
@@ -329,7 +330,7 @@ pub(crate) fn parameters(func: &FnIR) -> syn::Expr {
     let params = func
         .named_args()
         .iter()
-        .map(|arg| utils::expr::new_parameter(arg.name_str(), arg.ty().clone()))
+        .map(|arg| new_parameter(arg.name_str(), arg.ty().clone()))
         .collect::<Vec<_>>();
     syn::parse_quote!(vec![#(#params),*])
 }
@@ -337,8 +338,8 @@ pub(crate) fn parameters(func: &FnIR) -> syn::Expr {
 /// The `CLType` of the function's return type, `()` when it has none.
 pub(crate) fn return_cl_type(func: &FnIR) -> syn::Expr {
     match func.return_type() {
-        syn::ReturnType::Default => utils::expr::unit_cl_type(),
-        syn::ReturnType::Type(_, ty) => utils::expr::as_cl_type(&ty)
+        syn::ReturnType::Default => unit_cl_type(),
+        syn::ReturnType::Type(_, ty) => as_cl_type(&ty)
     }
 }
 
@@ -356,6 +357,70 @@ pub(crate) fn insert_arg_stmt(arg: &FnArgIR) -> syn::Stmt {
 /// `WasmContractEnv::new_env()`, the env of one wasm call.
 pub(crate) fn new_wasm_env_expr() -> syn::Expr {
     syn::parse_quote!(odra::odra_casper_wasm_env::WasmContractEnv::new_env())
+}
+
+// --- The `odra::entry_point::EntryPoint` variants -----------------------------------------------
+
+pub(crate) fn constructor_ep(args_expr: syn::Expr) -> syn::Expr {
+    parse_quote!(odra::entry_point::EntryPoint::Constructor {
+        args: #args_expr
+    })
+}
+pub(crate) fn upgrader_ep(args_expr: syn::Expr) -> syn::Expr {
+    parse_quote!(odra::entry_point::EntryPoint::Upgrader {
+        args: #args_expr
+    })
+}
+pub(crate) fn regular_ep(
+    name: String,
+    args_expr: syn::Expr,
+    ret_ty_expr: syn::Expr,
+    is_payable: bool,
+    is_non_reentrant: bool
+) -> syn::Expr {
+    parse_quote!(odra::entry_point::EntryPoint::Regular {
+        name: #name,
+        args: #args_expr,
+        ret_ty: #ret_ty_expr,
+        is_non_reentrant: #is_non_reentrant,
+        is_payable: #is_payable
+    })
+}
+pub(crate) fn factory_ep(args_expr: syn::Expr) -> syn::Expr {
+    parse_quote!(odra::entry_point::EntryPoint::Factory {
+        args: #args_expr,
+    })
+}
+pub(crate) fn factory_upgrade_ep(args_expr: syn::Expr) -> syn::Expr {
+    parse_quote!(odra::entry_point::EntryPoint::FactoryUpgrade {
+        args: #args_expr,
+    })
+}
+pub(crate) fn factory_batch_upgrade_ep() -> syn::Expr {
+    parse_quote!(odra::entry_point::EntryPoint::FactoryBatchUpgrade)
+}
+pub(crate) fn template_ep(name: String, args_expr: syn::Expr, ret_ty_expr: syn::Expr) -> syn::Expr {
+    parse_quote!(odra::entry_point::EntryPoint::Template {
+        name: #name,
+        args: #args_expr,
+        ret_ty: #ret_ty_expr
+    })
+}
+
+fn new_parameter(name: String, ty: syn::Type) -> syn::Expr {
+    let ty = utils::ty::unreferenced_ty(&ty);
+
+    parse_quote!(odra::args::parameter::<#ty>(#name))
+}
+fn as_cl_type(ty: &syn::Type) -> syn::Expr {
+    let ty = utils::ty::unreferenced_ty(ty);
+    let ty_cl_typed = utils::ty::cl_typed();
+    let ty = utils::syn::as_casted_ty_stream(&ty, ty_cl_typed);
+    parse_quote!(#ty::cl_type())
+}
+fn unit_cl_type() -> syn::Expr {
+    let ty_cl_typed = utils::ty::cl_typed();
+    parse_quote!(<() as #ty_cl_typed>::cl_type())
 }
 
 #[cfg(test)]

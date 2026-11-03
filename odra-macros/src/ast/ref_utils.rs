@@ -132,7 +132,7 @@ fn call_def_with_amount(fun: &FnIR) -> syn::Expr {
     let args_block = runtime_args_with_amount_block(fun, insert_arg_stmt);
     let is_mut = fun.is_mut();
     let attached_value = utils::member::attached_value();
-    let fun_name = utils::expr::string_from(fun_name_str);
+    let fun_name = string_from(fun_name_str);
 
     syn::parse_quote!(#ty_call_def::new(#fun_name, #is_mut, #args_block).with_amount(#attached_value))
 }
@@ -140,10 +140,10 @@ fn call_def_with_amount(fun: &FnIR) -> syn::Expr {
 fn factory_call_def_with_amount(fun: &FnIR) -> syn::Expr {
     let ty_call_def = utils::ty::call_def();
     let fun_name_str = fun.name_str();
-    let new_runtime_args = utils::expr::new_runtime_args();
+    let new_runtime_args = new_runtime_args();
     let args = utils::ident::named_args();
     let is_mut = fun.is_mut();
-    let fun_name = utils::expr::string_from(fun_name_str);
+    let fun_name = string_from(fun_name_str);
     let ty_ep_arg = utils::ty::entry_point_arg();
     let fn_args = fun
         .named_args()
@@ -217,7 +217,7 @@ fn runtime_args_with_amount_block<F: FnMut(&FnArgIR) -> syn::Stmt>(
     fun: &FnIR,
     insert_arg_fn: F
 ) -> syn::Block {
-    let runtime_args = utils::expr::new_runtime_args();
+    let runtime_args = new_runtime_args();
     let args = utils::ident::named_args();
     let insert_amount = insert_amount_arg_stmt();
     let ty = utils::ty::entry_point_arg();
@@ -241,7 +241,7 @@ fn runtime_args_with_amount_block<F: FnMut(&FnArgIR) -> syn::Stmt>(
 
 fn insert_amount_arg_stmt() -> syn::Stmt {
     let ident = utils::ident::named_args();
-    let zero = utils::expr::u512_zero();
+    let zero = u512_zero();
     let attached_value = utils::member::attached_value();
 
     syn::parse_quote!(
@@ -257,4 +257,17 @@ pub fn insert_arg_stmt(arg: &FnArgIR) -> syn::Stmt {
     let args = utils::ident::named_args();
     let ty = ty::entry_point_arg();
     syn::parse_quote!(#ty::insert_runtime_arg(#ident, #name, &mut #args);)
+}
+
+fn new_runtime_args() -> syn::Expr {
+    let ty = utils::ty::runtime_args();
+    parse_quote!(#ty::new())
+}
+fn u512_zero() -> syn::Expr {
+    let ty = utils::ty::u512();
+    parse_quote!(#ty::zero())
+}
+fn string_from(string: String) -> syn::Expr {
+    let ty = utils::ty::string();
+    parse_quote!(#ty::from(#string))
 }
