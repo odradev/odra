@@ -1,6 +1,6 @@
 use proc_macro2::Ident;
 use quote::format_ident;
-use syn::parse_quote;
+use syn::{parse_quote, spanned::Spanned};
 
 use super::attr::{self, OdraAttribute};
 use super::errors;
@@ -359,6 +359,12 @@ impl FnArgIR {
 
     pub fn name_str(&self) -> String {
         self.ident.to_string()
+    }
+
+    /// The name with the span of the type: for a use of the value whose bound error should point
+    /// at the type, as every other error about the argument does.
+    pub fn name_spanned_as_type(&self) -> Ident {
+        Ident::new(&self.ident.to_string(), self.code.ty.span())
     }
 
     pub fn ty(&self) -> &syn::Type {
