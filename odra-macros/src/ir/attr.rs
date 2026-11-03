@@ -3,6 +3,8 @@ use std::{collections::HashSet, convert::TryFrom};
 use quote::ToTokens;
 use syn::{punctuated::Punctuated, Meta, Path, Token};
 
+use super::errors;
+
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct OdraAttribute {
     types: Vec<AttrType>
@@ -53,33 +55,16 @@ fn parse_odra_attribute(
         Meta::List(list) => {
             list.parse_args_with(Punctuated::<syn::Meta, Token![,]>::parse_terminated)?
         }
-        _ => {
-            return Err(syn::Error::new_spanned(
-                attr,
-                format!(
-                    "malformed odra attribute, expected `#[odra(..)]` with one or more of: {}",
-                    AttrType::expected()
-                )
-            ))
-        }
+        _ => return Err(errors::odra_attr_malformed(attr, &AttrType::expected()))
     };
     if metas.is_empty() {
-        return Err(syn::Error::new_spanned(
-            attr,
-            format!(
-                "empty odra attribute, expected one or more of: {}",
-                AttrType::expected()
-            )
-        ));
+        return Err(errors::odra_attr_empty(attr, &AttrType::expected()));
     }
     let mut types = Vec::with_capacity(metas.len());
     for meta in metas.iter() {
         let ty = AttrType::try_from(meta)?;
         if !seen.insert(ty.clone()) {
-            return Err(syn::Error::new_spanned(
-                meta,
-                format!("duplicate odra attribute `{}`", ty.name())
-            ));
+            return Err(errors::odra_attr_duplicate(meta, ty.name()));
         }
         types.push(ty);
     }
@@ -125,28 +110,13 @@ impl TryFrom<&'_ syn::Meta> for AttrType {
         let known = |path: &Path| Self::ALL.into_iter().find(|ty| path.is_ident(ty.name()));
         let path_str = |path: &Path| path.to_token_stream().to_string().replace(' ', "");
         match meta {
-            Meta::Path(path) => known(path).ok_or_else(|| {
-                syn::Error::new_spanned(
-                    meta,
-                    format!(
-                        "unknown odra attribute `{}`, expected one of: {}",
-                        path_str(path),
-                        Self::expected()
-                    )
-                )
-            }),
+            Meta::Path(path) => known(path)
+                .ok_or_else(|| errors::odra_attr_unknown(meta, &path_str(path), &Self::expected())),
             Meta::List(syn::MetaList { path, .. })
-            | Meta::NameValue(syn::MetaNameValue { path, .. }) => {
-                let msg = match known(path) {
-                    Some(ty) => format!("odra attribute `{}` takes no value", ty.name()),
-                    None => format!(
-                        "unknown odra attribute `{}`, expected one of: {}",
-                        path_str(path),
-                        Self::expected()
-                    )
-                };
-                Err(syn::Error::new_spanned(meta, msg))
-            }
+            | Meta::NameValue(syn::MetaNameValue { path, .. }) => Err(match known(path) {
+                Some(ty) => errors::odra_attr_with_value(meta, ty.name()),
+                None => errors::odra_attr_unknown(meta, &path_str(path), &Self::expected())
+            })
         }
     }
 }

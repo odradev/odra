@@ -1,6 +1,6 @@
 use crate::{
     ast::utils::Named,
-    ir::{EnumeratedTypedField, ModuleStructIR, TypeIR},
+    ir::{errors, EnumeratedTypedField, ModuleStructIR, TypeIR},
     utils
 };
 use quote::ToTokens;
@@ -87,7 +87,7 @@ impl TryFrom<&TypeIR> for SchemaErrorItem {
                 errors: variants
             })
         } else {
-            Err(syn::Error::new_spanned(ir.self_code(), "An enum expected."))
+            Err(errors::error_on_struct(ir.self_code()))
         }
     }
 }

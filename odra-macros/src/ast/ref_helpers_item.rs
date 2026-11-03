@@ -1,6 +1,6 @@
+use crate::ir::errors;
 use crate::utils;
 use proc_macro2::TokenStream;
-use syn::spanned::Spanned;
 
 /// `#[odra::ref_helpers] impl Xxx { .. }` - the same inherent impl for `XxxContractRef` and
 /// `XxxHostRef`.
@@ -19,39 +19,24 @@ impl TryFrom<&'_ TokenStream> for RefHelpersItem {
     type Error = syn::Error;
 
     fn try_from(item: &'_ TokenStream) -> Result<Self, Self::Error> {
-        let item_impl = syn::parse2::<syn::ItemImpl>(item.clone()).map_err(|_| {
-            syn::Error::new(
-                item.span(),
-                "#[odra::ref_helpers] can be applied to an inherent impl block only"
-            )
-        })?;
+        let item_impl = syn::parse2::<syn::ItemImpl>(item.clone())
+            .map_err(|_| errors::ref_helpers_on_non_impl(item))?;
         if let Some((_, path, _)) = &item_impl.trait_ {
-            return Err(syn::Error::new(
-                path.span(),
-                "#[odra::ref_helpers] can be applied to an inherent impl block only, not a trait impl"
-            ));
+            return Err(errors::ref_helpers_on_trait_impl(path));
         }
         if !item_impl.generics.params.is_empty() {
-            return Err(syn::Error::new(
-                item_impl.generics.span(),
-                "#[odra::ref_helpers] does not support generics on the impl block"
-            ));
+            return Err(errors::ref_helpers_with_generics(&item_impl.generics));
         }
         let path = match item_impl.self_ty.as_ref() {
             syn::Type::Path(syn::TypePath { qself: None, path }) => path,
-            ty => {
-                return Err(syn::Error::new(
-                    ty.span(),
-                    "#[odra::ref_helpers] expects a module or an external contract name"
-                ))
-            }
+            ty => return Err(errors::ref_helpers_on_non_path(ty))
         };
-        let last = path.segments.last().expect("a path has at least one segment");
+        // A parsed path has at least one segment.
+        let Some(last) = path.segments.last() else {
+            return Err(errors::ref_helpers_on_non_path(&item_impl.self_ty));
+        };
         if !last.arguments.is_none() {
-            return Err(syn::Error::new(
-                last.arguments.span(),
-                "#[odra::ref_helpers] does not support generic arguments"
-            ));
+            return Err(errors::ref_helpers_with_generic_args(&last.arguments));
         }
 
         let with_suffix = |suffix: &str| -> syn::Type {

@@ -1,5 +1,7 @@
 use proc_macro2::TokenStream;
-use syn::{parse_quote, spanned::Spanned, Fields};
+use syn::{parse_quote, Fields};
+
+use crate::ir::errors;
 
 pub fn ident_from_impl(impl_code: &syn::ItemImpl) -> syn::Result<syn::Ident> {
     last_segment_ident(&impl_code.self_ty)
@@ -64,10 +66,9 @@ pub fn function_return_type(sig: &syn::Signature) -> syn::ReturnType {
 
 pub fn struct_fields_ident(item: &syn::ItemStruct) -> syn::Result<Vec<syn::Ident>> {
     map_fields(item, |f| {
-        f.ident.clone().ok_or(syn::Error::new(
-            f.span(),
-            "Invalid field. Module fields must be named"
-        ))
+        f.ident
+            .clone()
+            .ok_or_else(|| errors::module_fields_unnamed(&item.fields))
     })
 }
 
@@ -75,10 +76,7 @@ pub fn struct_typed_fields(item: &syn::ItemStruct) -> syn::Result<Vec<(syn::Iden
     map_fields(item, |f| {
         f.ident
             .clone()
-            .ok_or(syn::Error::new_spanned(
-                f,
-                "Invalid field. Module fields must be named"
-            ))
+            .ok_or_else(|| errors::module_fields_unnamed(&item.fields))
             .map(|i| (i, f.ty.clone()))
     })
 }
@@ -93,10 +91,7 @@ fn map_fields<T, F: FnMut(&syn::Field) -> syn::Result<T>>(
     if let syn::Fields::Named(named) = &item.fields {
         named.named.iter().map(f).collect()
     } else {
-        Err(syn::Error::new_spanned(
-            &item.fields,
-            "Invalid fields. Module fields must be named"
-        ))
+        Err(errors::module_fields_unnamed(&item.fields))
     }
 }
 
@@ -152,11 +147,8 @@ pub fn last_segment_ident(ty: &syn::Type) -> syn::Result<syn::Ident> {
             .segments
             .last()
             .map(|seg| seg.ident.clone())
-            .ok_or(syn::Error::new(type_path.span(), "Invalid type path")),
-        ty => Err(syn::Error::new(
-            ty.span(),
-            "Only support impl for type path"
-        ))
+            .ok_or_else(|| errors::impl_self_type_not_a_path(ty)),
+        ty => Err(errors::impl_self_type_not_a_path(ty))
     }
 }
 
@@ -193,18 +185,10 @@ pub fn is_ref(ty: &syn::Type) -> bool {
 }
 
 pub fn extract_unit_variants(input: &syn::ItemEnum) -> syn::Result<Vec<syn::Variant>> {
-    let variants = &input.variants;
-    let is_valid = variants
-        .iter()
-        .all(|v| matches!(v.fields, syn::Fields::Unit));
-    if is_valid {
-        Ok(variants.into_iter().cloned().collect())
-    } else {
-        Err(syn::Error::new_spanned(
-            variants,
-            "Expected a unit enum variant."
-        ))
-    }
+    errors::collect_all(input.variants.iter().map(|v| match v.fields {
+        syn::Fields::Unit => Ok(v.clone()),
+        _ => Err(errors::error_variant_with_data(v))
+    }))
 }
 
 pub fn transform_variants<F: Fn(String, Fields, u16, Vec<String>) -> TokenStream>(

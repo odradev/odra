@@ -1,5 +1,6 @@
 use std::ops::Deref;
 
+use super::errors;
 use syn::{
     parse::{Parse, ParseBuffer},
     punctuated::Punctuated,
@@ -43,6 +44,9 @@ pub struct ModuleConfiguration {
 }
 
 impl ModuleConfiguration {
+    /// The arguments `#[odra::module(..)]` takes, for error messages.
+    const ARGS: [&'static str; 6] = ["name", "version", "events", "errors", "factory", "layout"];
+
     /// Arguments that only make sense on the module struct, not on an `impl` or `trait` block.
     pub fn struct_only_args(&self) -> impl Iterator<Item = &(&'static str, proc_macro2::Span)> {
         self.given.iter().filter(|(name, _)| *name != "factory")
@@ -107,7 +111,21 @@ impl Parse for ModuleConfiguration {
                 continue;
             }
 
-            return Err(input.error("Unexpected token"));
+            // A known argument that was not consumed above has been given already.
+            let twice = [
+                ("events", input.peek(kw::events)),
+                ("errors", input.peek(kw::errors)),
+                ("name", input.peek(kw::name)),
+                ("version", input.peek(kw::version)),
+                ("factory", input.peek(kw::factory)),
+                ("layout", input.peek(kw::layout))
+            ]
+            .into_iter()
+            .find_map(|(name, given)| given.then_some(name));
+            return Err(match twice {
+                Some(name) => errors::module_arg_twice(name, span),
+                None => errors::unknown_module_arg(input, &Self::ARGS)
+            });
         }
 
         Ok(Self {

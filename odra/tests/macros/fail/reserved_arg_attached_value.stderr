@@ -1,4 +1,4 @@
-error: Argument name `attached_value` is reserved
+error: `attached_value` is a reserved argument name; rename the argument
   --> tests/macros/fail/reserved_arg_attached_value.rs:12:31
    |
 12 |     pub fn deposit(&mut self, attached_value: U512) {

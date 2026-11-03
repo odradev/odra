@@ -1,4 +1,4 @@
-use crate::ir::ModuleStructIR;
+use crate::ir::{errors, ModuleStructIR};
 use crate::utils;
 
 const MAX_FIELDS: usize = 255;
@@ -19,13 +19,7 @@ impl TryFrom<&'_ ModuleStructIR> for ModuleDefItem {
         );
 
         if item_struct.fields.len() > MAX_FIELDS {
-            return Err(syn::Error::new_spanned(
-                item_struct.fields,
-                format!(
-                    "The number of fields in a module definition must be less than or equal to {}",
-                    MAX_FIELDS
-                )
-            ));
+            return Err(errors::module_too_many_fields(&item_struct.fields, MAX_FIELDS));
         }
 
         let fields = item_struct

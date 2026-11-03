@@ -637,8 +637,8 @@ mod test {
 
     #[test]
     fn contract_ref_invalid_delegate() {
-        let module = test_utils::mock::module_invalid_delegation();
-        let actual = RefItem::try_from(&module);
-        assert!(actual.is_err());
+        // A `delegate!` that does not parse is rejected when the module is read, before any
+        // item is built from it.
+        assert!(test_utils::mock::module_invalid_delegation().is_err());
     }
 }

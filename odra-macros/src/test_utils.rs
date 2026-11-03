@@ -177,7 +177,7 @@ pub mod mock {
         ModuleImplIR::try_from((&attr, &module)).unwrap()
     }
 
-    pub fn module_invalid_delegation() -> ModuleImplIR {
+    pub fn module_invalid_delegation() -> syn::Result<ModuleImplIR> {
         let module = quote! {
             impl Erc20 {
                 /// Returns the total supply of the token.
@@ -197,7 +197,7 @@ pub mod mock {
         };
 
         let attr = quote!();
-        ModuleImplIR::try_from((&attr, &module)).unwrap()
+        ModuleImplIR::try_from((&attr, &module))
     }
 
     pub fn module_definition() -> ModuleStructIR {

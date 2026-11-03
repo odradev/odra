@@ -5,13 +5,16 @@ use crate::utils;
 use config::ConfigItem;
 use proc_macro2::Ident;
 use quote::{format_ident, ToTokens};
-use syn::{parse_quote, spanned::Spanned, ImplItem};
+use syn::{parse_quote, ImplItem};
 
 use self::attr::OdraAttribute;
 
 mod attr;
 mod config;
 pub mod delegate;
+pub mod errors;
+
+use errors::OffchainMisuse;
 
 const CONSTRUCTOR_NAME: &str = "init";
 const UPGRADER_NAME: &str = "upgrade";
@@ -198,42 +201,34 @@ impl TryFrom<(&proc_macro2::TokenStream, &proc_macro2::TokenStream)> for ModuleI
         let config = syn::parse2::<ConfigItem>(stream.0.clone())?;
         if let Ok(code) = syn::parse2::<syn::ItemImpl>(stream.1.clone()) {
             if let ConfigItem::Module(cfg) = &config {
-                if let Some((name, span)) = cfg.struct_only_args().next() {
-                    return Err(syn::Error::new(
-                        *span,
-                        format!(
-                            "`{name}` is not allowed on an impl block; put it on the module \
-                             struct: `#[odra::module({name} = ...)] pub struct ...`"
-                        )
-                    ));
-                }
+                errors::check_all(
+                    cfg.struct_only_args()
+                        .map(|(name, span)| Err(errors::module_arg_on_impl(name, *span)))
+                )?;
             }
             let ir = Self::Impl(ModuleIR { code, config });
-            ir.validate_offchain_functions()?;
+            errors::check_all([ir.functions().map(|_| ()), ir.validate_offchain_functions()])?;
             return Ok(ir);
         }
 
         if let Ok(code) = syn::parse2::<syn::ItemTrait>(stream.1.clone()) {
             if let ConfigItem::Module(cfg) = &config {
-                if let Some((name, span)) = cfg.args().next() {
-                    return Err(syn::Error::new(
-                        *span,
-                        format!("`{name}` is not allowed on a trait; `#[odra::module]` on a trait takes no arguments")
-                    ));
-                }
+                errors::check_all(
+                    cfg.args()
+                        .map(|(name, span)| Err(errors::module_arg_on_trait(name, *span)))
+                )?;
             }
             for c in code.items.iter() {
                 if let syn::TraitItem::Verbatim(func) = c {
                     syn::parse2::<syn::TraitItemFn>(func.clone())?;
                 }
             }
-            return Ok(Self::Trait(ModuleTraitIR { code, config }));
+            let ir = Self::Trait(ModuleTraitIR { code, config });
+            ir.functions()?;
+            return Ok(ir);
         }
 
-        Err(syn::Error::new_spanned(
-            stream.1,
-            "Impl or Trait block expected"
-        ))
+        Err(errors::impl_or_trait_expected(stream.1))
     }
 }
 
@@ -402,44 +397,40 @@ impl ModuleImplIR {
     }
 
     /// `#[odra(offchain)]` is only meaningful on a read-only function of a plain module impl.
+    ///
+    /// Checked on the functions before their own validation, so a reserved name elsewhere in the
+    /// impl does not hide an offchain mistake: all of them are reported in one build.
     fn validate_offchain_functions(&self) -> syn::Result<()> {
-        // A function list that does not parse is reported by whoever consumes it.
-        let Ok(offchain_functions) = self.offchain_functions() else {
-            return Ok(());
+        let functions = match self {
+            ModuleImplIR::Impl(ir) => ir.unchecked_functions(),
+            ModuleImplIR::Trait(_) => return Ok(())
         };
-        for f in offchain_functions {
+        let offchain_functions = functions.iter().filter(|f| f.is_offchain());
+        errors::check_all(offchain_functions.map(|f| {
             let sig = f.sig();
-            let reason = if self.is_trait_impl() {
-                Some(
-                    "a trait impl cannot have offchain functions: the trait is also implemented \
-                     by the ContractRef, where an offchain function has no meaning. Move it to a \
-                     plain `impl` block of the module"
-                )
+            let receiver = utils::syn::receiver_arg(sig);
+            // The `#[odra(..)]` attribute that says `offchain`; it parsed, as `f` is offchain.
+            let offchain_attr = f.attributes().iter().find(|attr| {
+                OdraAttribute::try_from((*attr).clone()).is_ok_and(|a| a.is_offchain())
+            });
+            let (why, spanned) = if self.is_trait_impl() {
+                (OffchainMisuse::InTraitImpl, offchain_attr.to_token_stream())
             } else if self.is_factory() {
-                Some("offchain functions are not supported in a factory module")
+                (OffchainMisuse::InFactory, offchain_attr.to_token_stream())
             } else if f.is_mut() {
-                Some(
-                    "an offchain function runs on the host and cannot change the state: take \
-                     `&self`"
-                )
+                (OffchainMisuse::MutReceiver, receiver.to_token_stream())
             } else if f.is_payable() || f.is_non_reentrant() {
-                Some(
-                    "an offchain function is never called on chain, so `payable` and \
-                     `non_reentrant` do not apply to it"
+                (
+                    OffchainMisuse::PayableOrNonReentrant,
+                    offchain_attr.to_token_stream()
                 )
-            } else if utils::syn::receiver_arg(sig).is_none() {
-                Some("an offchain function reads the contract's state: take `&self`")
+            } else if receiver.is_none() {
+                (OffchainMisuse::NoReceiver, sig.ident.to_token_stream())
             } else {
-                None
+                return Ok(());
             };
-            if let Some(reason) = reason {
-                return Err(syn::Error::new_spanned(
-                    sig,
-                    format!("`#[odra(offchain)]` on `{}`: {}", f.name_str(), reason)
-                ));
-            }
-        }
-        Ok(())
+            Err(errors::offchain_misuse(spanned, &f.name_str(), why))
+        }))
     }
 
     pub fn host_mut_ret_functions(&self) -> syn::Result<Vec<FnIR>> {
@@ -543,6 +534,23 @@ impl ModuleIR {
         Ok(code)
     }
 
+    /// The functions `functions` validates, as they are; for checks that must run even when one
+    /// of them is invalid.
+    fn unchecked_functions(&self) -> Vec<FnIR> {
+        self.code
+            .items
+            .iter()
+            .filter_map(|item| match item {
+                syn::ImplItem::Fn(func)
+                    if self.is_trait_impl() || matches!(func.vis, syn::Visibility::Public(_)) =>
+                {
+                    Some(FnIR::Impl(FnImplIR::new(func.clone())))
+                }
+                _ => None
+            })
+            .collect()
+    }
+
     fn functions(&self) -> syn::Result<Vec<FnIR>> {
         let own_functions = self
             .code
@@ -570,9 +578,7 @@ impl ModuleIR {
                 FnIR::Def(ir) => FnIR::Def(ir)
             })
         });
-        own_functions
-            .chain(delegated_functions)
-            .collect::<Result<Vec<_>, _>>()
+        errors::collect_all(own_functions.chain(delegated_functions))
     }
 
     fn delegated_functions(&self) -> syn::Result<Vec<DelegatedFn>> {
@@ -616,14 +622,10 @@ impl ModuleTraitIR {
     }
 
     fn functions(&self) -> syn::Result<Vec<FnIR>> {
-        self.code
-            .items
-            .iter()
-            .filter_map(|item| match item {
-                syn::TraitItem::Fn(func) => Some(FnIR::try_from(func.clone())),
-                _ => None
-            })
-            .collect()
+        errors::collect_all(self.code.items.iter().filter_map(|item| match item {
+            syn::TraitItem::Fn(func) => Some(FnIR::try_from(func.clone())),
+            _ => None
+        }))
     }
 }
 
@@ -667,22 +669,24 @@ const PROTECTED_FUNCTIONS: [&str; 6] = [
 ];
 const PROTECTED_ARGS: [&str; 2] = ["gas", "attached_value"];
 
-fn validate_fn_name<T: ToTokens>(name: &str, ctx: T) -> syn::Result<()> {
-    if PROTECTED_FUNCTIONS.contains(&name) {
-        return Err(syn::Error::new_spanned(
-            ctx,
-            format!("Entrypoint name `{}` is reserved", name)
-        ));
+fn validate_fn_name(name: &Ident) -> syn::Result<()> {
+    if PROTECTED_FUNCTIONS.contains(&name.to_string().as_str()) {
+        return Err(errors::reserved_fn_name(name));
     }
     Ok(())
 }
 
-fn validate_fn_arg<T: ToTokens>(name: &str, ctx: T) -> syn::Result<()> {
-    if PROTECTED_ARGS.contains(&name) {
-        return Err(syn::Error::new_spanned(
-            ctx,
-            format!("Argument name `{}` is reserved", name)
-        ));
+/// An argument is `name: Type` (the receiver aside), and the name is not one every call carries.
+fn validate_fn_arg(arg: &syn::FnArg) -> syn::Result<()> {
+    let name = match arg {
+        syn::FnArg::Receiver(_) => return Ok(()),
+        syn::FnArg::Typed(syn::PatType { pat, .. }) => match pat.as_ref() {
+            syn::Pat::Ident(pat) => &pat.ident,
+            _ => return Err(errors::arg_without_name(arg))
+        }
+    };
+    if PROTECTED_ARGS.contains(&name.to_string().as_str()) {
+        return Err(errors::reserved_arg_name(name));
     }
     Ok(())
 }
@@ -697,30 +701,18 @@ fn validate_fn_attrs(fn_name: &str, attrs: &[syn::Attribute]) -> syn::Result<()>
         return Ok(());
     }
 
-    for attr in attrs.iter().filter(|attr| attr.path().is_ident("odra")) {
-        let odra_attr = OdraAttribute::try_from(attr.clone())?;
-        if let Some(arg) = odra_attr.arg_names().first() {
-            let reason = match *arg {
-                "payable" => format!(
-                    "`{}` cannot receive attached tokens - there is no way to attach \
-                     CSPR to it. Use a separate payable entrypoint instead",
-                    fn_name
-                ),
-                _ => format!(
-                    "it is not applied when generating the `{}` entrypoint",
-                    fn_name
-                )
-            };
-            return Err(syn::Error::new_spanned(
-                attr,
-                format!(
-                    "`#[odra({})]` is not allowed on `{}`: {}",
-                    arg, fn_name, reason
-                )
-            ));
-        }
-    }
-    Ok(())
+    errors::check_all(
+        attrs
+            .iter()
+            .filter(|attr| attr.path().is_ident("odra"))
+            .map(|attr| {
+                let odra_attr = OdraAttribute::try_from(attr.clone())?;
+                match odra_attr.arg_names().first() {
+                    Some(arg) => Err(errors::odra_attr_on_special_fn(attr, arg, fn_name)),
+                    None => Ok(())
+                }
+            })
+    )
 }
 
 impl TryFrom<syn::TraitItemFn> for FnIR {
@@ -748,13 +740,12 @@ fn validate_fn_ir(
     sig: &syn::Signature,
     attrs: &[syn::Attribute]
 ) -> syn::Result<()> {
-    validate_fn_name(fn_name, sig)?;
-    utils::syn::function_arg_names(sig)
-        .iter()
-        .try_for_each(|arg_ident| validate_fn_arg(&arg_ident.to_string(), arg_ident))?;
-    attr::partition_attributes(attrs.to_vec())?;
-    validate_fn_attrs(fn_name, attrs)?;
-    Ok(())
+    errors::check_all([
+        validate_fn_name(&sig.ident),
+        errors::check_all(sig.inputs.iter().map(validate_fn_arg)),
+        attr::partition_attributes(attrs.to_vec()).map(|_| ()),
+        validate_fn_attrs(fn_name, attrs)
+    ])
 }
 
 impl FnIR {
@@ -971,7 +962,7 @@ impl FnArgIR {
                 pat: box syn::Pat::Ident(pat),
                 ..
             }) => Ok(pat.ident.clone()),
-            _ => Err(syn::Error::new_spanned(&self.code, "Unnamed arg"))
+            _ => Err(errors::arg_without_name(&self.code))
         }
     }
 
@@ -982,7 +973,7 @@ impl FnArgIR {
     pub fn ty(&self) -> syn::Result<syn::Type> {
         match &self.code {
             syn::FnArg::Typed(syn::PatType { box ty, .. }) => Ok(ty.clone()),
-            _ => Err(syn::Error::new_spanned(&self.code, "Unnamed arg"))
+            _ => Err(errors::arg_without_name(&self.code))
         }
     }
     pub fn name_and_ty(&self) -> syn::Result<(String, syn::Type)> {
@@ -992,7 +983,7 @@ impl FnArgIR {
                 pat: box syn::Pat::Ident(pat),
                 ..
             }) => Ok((pat.ident.to_string(), ty.clone())),
-            _ => Err(syn::Error::new_spanned(&self.code, "Unnamed arg"))
+            _ => Err(errors::arg_without_name(&self.code))
         }
     }
 
@@ -1041,15 +1032,12 @@ impl TypeIR {
                         f.ident
                             .clone()
                             .map(|i| (i, f.ty.clone()))
-                            .ok_or(syn::Error::new(f.span(), "Unnamed field"))
+                            .ok_or_else(|| errors::type_fields_unnamed(fields))
                     })
                     .collect::<Result<Vec<_>, _>>()?;
                 Ok(TypeKind::Struct { fields })
             }
-            _ => Err(syn::Error::new_spanned(
-                &self.code,
-                "Invalid type. Only enums and structs are supported"
-            ))
+            _ => Err(errors::type_on_other_item(&self.code))
         }
     }
 }

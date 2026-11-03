@@ -1,6 +1,6 @@
 use crate::ast::fn_utils::SingleArgFnItem;
 use crate::ast::utils::{ImplItem, Named};
-use crate::ir::{TypeIR, TypeKind};
+use crate::ir::{errors, TypeIR, TypeKind};
 use crate::utils;
 use crate::utils::misc::AsBlock;
 use derive_try_from_ref::TryFromRef;
@@ -32,10 +32,7 @@ impl TryFrom<&'_ TypeIR> for OdraErrorItem {
             TypeKind::Enum { variants } => variants,
             TypeKind::UnitEnum { variants } => variants,
             _ => {
-                return Err(syn::Error::new_spanned(
-                    ty.self_code(),
-                    "Expected an enum or unit enum for #[odra_error]"
-                ))
+                return Err(errors::error_on_struct(ty.self_code()))
             }
         }
         .iter()

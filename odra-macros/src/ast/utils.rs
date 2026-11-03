@@ -1,6 +1,5 @@
-use syn::spanned::Spanned;
 
-use crate::ir::{ModuleStructIR, TypeIR};
+use crate::ir::{errors, ModuleStructIR, TypeIR};
 use crate::utils;
 use crate::utils::misc::AsType;
 
@@ -58,10 +57,7 @@ impl Named for TypeIR {
         match self.self_code() {
             syn::Item::Struct(i) => Ok(i.ident.clone()),
             syn::Item::Enum(i) => Ok(i.ident.clone()),
-            _ => Err(syn::Error::new(
-                self.self_code().span(),
-                "Invalid type. Only structs and enums are supported"
-            ))
+            _ => Err(errors::type_on_other_item(self.self_code()))
         }
     }
 }
