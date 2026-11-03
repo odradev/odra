@@ -1,4 +1,4 @@
-use crate::ir::{FnType, ModuleImplIR};
+use crate::ir::FnType;
 use crate::utils::syn::visibility_default;
 use crate::utils::ty;
 use crate::{
@@ -6,7 +6,7 @@ use crate::{
     ir::{FnArgIR, FnIR},
     utils::{self, syn::visibility_pub}
 };
-use quote::{ToTokens, format_ident};
+use quote::format_ident;
 use syn::{parse_quote, Attribute, Visibility};
 
 pub fn host_try_function_item(fun: &FnIR) -> syn::ItemFn {
@@ -253,56 +253,4 @@ pub fn insert_arg_stmt(arg: &FnArgIR) -> syn::Stmt {
     let args = utils::ident::named_args();
     let ty = ty::entry_point_arg();
     syn::parse_quote!(#ty::insert_runtime_arg(#ident, #name, &mut #args);)
-}
-
-pub struct SchemaErrorsItem {
-    ident: syn::Ident
-}
-
-impl TryFrom<&ModuleImplIR> for SchemaErrorsItem {
-    type Error = syn::Error;
-
-    fn try_from(ir: &ModuleImplIR) -> Result<Self, Self::Error> {
-        Ok(Self {
-            ident: ir.contract_ref_ident()?
-        })
-    }
-}
-
-impl ToTokens for SchemaErrorsItem {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let ident = &self.ident;
-        let item = quote::quote!(
-            #[automatically_derived]
-            #[cfg(not(target_arch = "wasm32"))]
-            impl odra::schema::SchemaErrors for #ident {}
-        );
-        item.to_tokens(tokens);
-    }
-}
-
-pub struct SchemaEventsItem {
-    ident: syn::Ident
-}
-
-impl TryFrom<&ModuleImplIR> for SchemaEventsItem {
-    type Error = syn::Error;
-
-    fn try_from(ir: &ModuleImplIR) -> Result<Self, Self::Error> {
-        Ok(Self {
-            ident: ir.contract_ref_ident()?
-        })
-    }
-}
-
-impl ToTokens for SchemaEventsItem {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let ident = &self.ident;
-        let item = quote::quote!(
-            #[automatically_derived]
-            #[cfg(not(target_arch = "wasm32"))]
-            impl odra::schema::SchemaEvents for #ident {}
-        );
-        item.to_tokens(tokens);
-    }
 }
