@@ -1,0 +1,370 @@
+error[E0277]: `NotAnArg` cannot be an entry point argument
+  --> tests/macros/fail/arg_not_entrypoint_argument.rs:14:34
+   |
+14 |     pub fn set(&mut self, value: NotAnArg) {
+   |                                  ^^^^^^^^ not an entry point argument type
+   |
+help: the trait `CLTyped` is not implemented for `NotAnArg`
+  --> tests/macros/fail/arg_not_entrypoint_argument.rs:5:1
+   |
+ 5 | pub struct NotAnArg;
+   | ^^^^^^^^^^^^^^^^^^^
+   = note: an argument type is serializable and has a `CLType`: a Casper type, a type from `odra::prelude`, or a struct or enum with `#[odra::odra_type]`
+   = help: the following other types implement trait `CLTyped`:
+             &T
+             &str
+             ()
+             (T1, T2)
+             (T1, T2, T3)
+             (T1,)
+             AddressableEntityHash
+             BTreeMap<K, V>
+           and $N others
+   = note: required for `NotAnArg` to implement `EntrypointArgument`
+note: required by a bound in `odra_argument`
+  --> $WORKSPACE/core/src/args.rs
+   |
+   | pub fn odra_argument<T: EntrypointArgument>(name: &str) -> Argument {
+   |                         ^^^^^^^^^^^^^^^^^^ required by this bound in `odra_argument`
+
+error[E0277]: `NotAnArg` cannot be an entry point argument
+  --> tests/macros/fail/arg_not_entrypoint_argument.rs:14:34
+   |
+14 |     pub fn set(&mut self, value: NotAnArg) {
+   |                                  ^^^^^^^^ not an entry point argument type
+   |
+help: the trait `odra::casper_types::bytesrepr::ToBytes` is not implemented for `NotAnArg`
+  --> tests/macros/fail/arg_not_entrypoint_argument.rs:5:1
+   |
+ 5 | pub struct NotAnArg;
+   | ^^^^^^^^^^^^^^^^^^^
+   = note: an argument type is serializable and has a `CLType`: a Casper type, a type from `odra::prelude`, or a struct or enum with `#[odra::odra_type]`
+   = help: the following other types implement trait `odra::casper_types::bytesrepr::ToBytes`:
+             &T
+             &str
+             ()
+             (T1, T2)
+             (T1, T2, T3)
+             (T1, T2, T3, T4)
+             (T1, T2, T3, T4, T5)
+             (T1, T2, T3, T4, T5, T6)
+           and $N others
+   = note: required for `NotAnArg` to implement `EntrypointArgument`
+note: required by a bound in `odra_argument`
+  --> $WORKSPACE/core/src/args.rs
+   |
+   | pub fn odra_argument<T: EntrypointArgument>(name: &str) -> Argument {
+   |                         ^^^^^^^^^^^^^^^^^^ required by this bound in `odra_argument`
+
+error[E0277]: `NotAnArg` cannot be an entry point argument
+  --> tests/macros/fail/arg_not_entrypoint_argument.rs:14:34
+   |
+12 | #[odra::module]
+   | --------------- required by a bound introduced by this call
+13 | impl Contract {
+14 |     pub fn set(&mut self, value: NotAnArg) {
+   |                                  ^^^^^^^^ not an entry point argument type
+   |
+help: the trait `CLTyped` is not implemented for `NotAnArg`
+  --> tests/macros/fail/arg_not_entrypoint_argument.rs:5:1
+   |
+ 5 | pub struct NotAnArg;
+   | ^^^^^^^^^^^^^^^^^^^
+   = note: an argument type is serializable and has a `CLType`: a Casper type, a type from `odra::prelude`, or a struct or enum with `#[odra::odra_type]`
+   = help: the following other types implement trait `CLTyped`:
+             &T
+             &str
+             ()
+             (T1, T2)
+             (T1, T2, T3)
+             (T1,)
+             AddressableEntityHash
+             BTreeMap<K, V>
+           and $N others
+   = note: required for `NotAnArg` to implement `EntrypointArgument`
+
+error[E0277]: `NotAnArg` cannot be an entry point argument
+  --> tests/macros/fail/arg_not_entrypoint_argument.rs:14:34
+   |
+12 | #[odra::module]
+   | --------------- required by a bound introduced by this call
+13 | impl Contract {
+14 |     pub fn set(&mut self, value: NotAnArg) {
+   |                                  ^^^^^^^^ not an entry point argument type
+   |
+help: the trait `odra::casper_types::bytesrepr::ToBytes` is not implemented for `NotAnArg`
+  --> tests/macros/fail/arg_not_entrypoint_argument.rs:5:1
+   |
+ 5 | pub struct NotAnArg;
+   | ^^^^^^^^^^^^^^^^^^^
+   = note: an argument type is serializable and has a `CLType`: a Casper type, a type from `odra::prelude`, or a struct or enum with `#[odra::odra_type]`
+   = help: the following other types implement trait `odra::casper_types::bytesrepr::ToBytes`:
+             &T
+             &str
+             ()
+             (T1, T2)
+             (T1, T2, T3)
+             (T1, T2, T3, T4)
+             (T1, T2, T3, T4, T5)
+             (T1, T2, T3, T4, T5, T6)
+           and $N others
+   = note: required for `NotAnArg` to implement `EntrypointArgument`
+
+error[E0277]: `NotAnArg` cannot be an entry point argument
+  --> tests/macros/fail/arg_not_entrypoint_argument.rs:14:34
+   |
+14 |     pub fn set(&mut self, value: NotAnArg) {
+   |                                  ^^^^^^^^ not an entry point argument type
+   |
+help: the trait `CLTyped` is not implemented for `NotAnArg`
+  --> tests/macros/fail/arg_not_entrypoint_argument.rs:5:1
+   |
+ 5 | pub struct NotAnArg;
+   | ^^^^^^^^^^^^^^^^^^^
+   = note: an argument type is serializable and has a `CLType`: a Casper type, a type from `odra::prelude`, or a struct or enum with `#[odra::odra_type]`
+   = help: the following other types implement trait `CLTyped`:
+             &T
+             &str
+             ()
+             (T1, T2)
+             (T1, T2, T3)
+             (T1,)
+             AddressableEntityHash
+             BTreeMap<K, V>
+           and $N others
+   = note: required for `NotAnArg` to implement `EntrypointArgument`
+note: required by a bound in `odra::entry_point_callback::Argument::new`
+  --> $WORKSPACE/core/src/entry_point_callback.rs
+   |
+   |     pub fn new<T: EntrypointArgument>(name: String) -> Self {
+   |                   ^^^^^^^^^^^^^^^^^^ required by this bound in `Argument::new`
+
+error[E0277]: `NotAnArg` cannot be an entry point argument
+  --> tests/macros/fail/arg_not_entrypoint_argument.rs:14:34
+   |
+14 |     pub fn set(&mut self, value: NotAnArg) {
+   |                                  ^^^^^^^^ not an entry point argument type
+   |
+help: the trait `odra::casper_types::bytesrepr::ToBytes` is not implemented for `NotAnArg`
+  --> tests/macros/fail/arg_not_entrypoint_argument.rs:5:1
+   |
+ 5 | pub struct NotAnArg;
+   | ^^^^^^^^^^^^^^^^^^^
+   = note: an argument type is serializable and has a `CLType`: a Casper type, a type from `odra::prelude`, or a struct or enum with `#[odra::odra_type]`
+   = help: the following other types implement trait `odra::casper_types::bytesrepr::ToBytes`:
+             &T
+             &str
+             ()
+             (T1, T2)
+             (T1, T2, T3)
+             (T1, T2, T3, T4)
+             (T1, T2, T3, T4, T5)
+             (T1, T2, T3, T4, T5, T6)
+           and $N others
+   = note: required for `NotAnArg` to implement `EntrypointArgument`
+note: required by a bound in `odra::entry_point_callback::Argument::new`
+  --> $WORKSPACE/core/src/entry_point_callback.rs
+   |
+   |     pub fn new<T: EntrypointArgument>(name: String) -> Self {
+   |                   ^^^^^^^^^^^^^^^^^^ required by this bound in `Argument::new`
+
+error[E0277]: the trait bound `NotAnArg: FromBytes` is not satisfied
+  --> tests/macros/fail/arg_not_entrypoint_argument.rs:14:34
+   |
+12 | #[odra::module]
+   | --------------- required by a bound introduced by this call
+13 | impl Contract {
+14 |     pub fn set(&mut self, value: NotAnArg) {
+   |                                  ^^^^^^^^ unsatisfied trait bound
+   |
+help: the trait `FromBytes` is not implemented for `NotAnArg`
+  --> tests/macros/fail/arg_not_entrypoint_argument.rs:5:1
+   |
+ 5 | pub struct NotAnArg;
+   | ^^^^^^^^^^^^^^^^^^^
+   = help: the following other types implement trait `FromBytes`:
+             ()
+             (T1, T2)
+             (T1, T2, T3)
+             (T1, T2, T3, T4)
+             (T1, T2, T3, T4, T5)
+             (T1, T2, T3, T4, T5, T6)
+             (T1, T2, T3, T4, T5, T6, T7)
+             (T1, T2, T3, T4, T5, T6, T7, T8)
+           and $N others
+note: required by a bound in `ExecutionEnv::get_named_arg`
+  --> $WORKSPACE/core/src/contract_env.rs
+   |
+   |     pub fn get_named_arg<T: FromBytes + EntrypointArgument>(&self, name: &str) -> T {
+   |                             ^^^^^^^^^ required by this bound in `ExecutionEnv::get_named_arg`
+
+error[E0277]: `NotAnArg` cannot be an entry point argument
+  --> tests/macros/fail/arg_not_entrypoint_argument.rs:14:34
+   |
+12 | #[odra::module]
+   | --------------- required by a bound introduced by this call
+13 | impl Contract {
+14 |     pub fn set(&mut self, value: NotAnArg) {
+   |                                  ^^^^^^^^ not an entry point argument type
+   |
+help: the trait `CLTyped` is not implemented for `NotAnArg`
+  --> tests/macros/fail/arg_not_entrypoint_argument.rs:5:1
+   |
+ 5 | pub struct NotAnArg;
+   | ^^^^^^^^^^^^^^^^^^^
+   = note: an argument type is serializable and has a `CLType`: a Casper type, a type from `odra::prelude`, or a struct or enum with `#[odra::odra_type]`
+   = help: the following other types implement trait `CLTyped`:
+             &T
+             &str
+             ()
+             (T1, T2)
+             (T1, T2, T3)
+             (T1,)
+             AddressableEntityHash
+             BTreeMap<K, V>
+           and $N others
+   = note: required for `NotAnArg` to implement `EntrypointArgument`
+note: required by a bound in `ExecutionEnv::get_named_arg`
+  --> $WORKSPACE/core/src/contract_env.rs
+   |
+   |     pub fn get_named_arg<T: FromBytes + EntrypointArgument>(&self, name: &str) -> T {
+   |                                         ^^^^^^^^^^^^^^^^^^ required by this bound in `ExecutionEnv::get_named_arg`
+
+error[E0277]: `NotAnArg` cannot be an entry point argument
+  --> tests/macros/fail/arg_not_entrypoint_argument.rs:14:34
+   |
+12 | #[odra::module]
+   | --------------- required by a bound introduced by this call
+13 | impl Contract {
+14 |     pub fn set(&mut self, value: NotAnArg) {
+   |                                  ^^^^^^^^ not an entry point argument type
+   |
+help: the trait `odra::casper_types::bytesrepr::ToBytes` is not implemented for `NotAnArg`
+  --> tests/macros/fail/arg_not_entrypoint_argument.rs:5:1
+   |
+ 5 | pub struct NotAnArg;
+   | ^^^^^^^^^^^^^^^^^^^
+   = note: an argument type is serializable and has a `CLType`: a Casper type, a type from `odra::prelude`, or a struct or enum with `#[odra::odra_type]`
+   = help: the following other types implement trait `odra::casper_types::bytesrepr::ToBytes`:
+             &T
+             &str
+             ()
+             (T1, T2)
+             (T1, T2, T3)
+             (T1, T2, T3, T4)
+             (T1, T2, T3, T4, T5)
+             (T1, T2, T3, T4, T5, T6)
+           and $N others
+   = note: required for `NotAnArg` to implement `EntrypointArgument`
+note: required by a bound in `ExecutionEnv::get_named_arg`
+  --> $WORKSPACE/core/src/contract_env.rs
+   |
+   |     pub fn get_named_arg<T: FromBytes + EntrypointArgument>(&self, name: &str) -> T {
+   |                                         ^^^^^^^^^^^^^^^^^^ required by this bound in `ExecutionEnv::get_named_arg`
+
+error[E0277]: the trait bound `NotAnArg: NamedCLTyped` is not satisfied
+  --> tests/macros/fail/arg_not_entrypoint_argument.rs:14:34
+   |
+14 |     pub fn set(&mut self, value: NotAnArg) {
+   |                                  ^^^^^^^^ unsatisfied trait bound
+   |
+help: the trait `NamedCLTyped` is not implemented for `NotAnArg`
+  --> tests/macros/fail/arg_not_entrypoint_argument.rs:5:1
+   |
+ 5 | pub struct NotAnArg;
+   | ^^^^^^^^^^^^^^^^^^^
+   = help: the following other types implement trait `NamedCLTyped`:
+             &str
+             ()
+             (T1, T2)
+             (T1, T2, T3)
+             (T1,)
+             BTreeMap<K, V>
+             ContractHash
+             Maybe<T>
+           and $N others
+note: required by a bound in `argument`
+  --> $WORKSPACE/odra-schema/src/lib.rs
+   |
+   | pub fn argument<T: NamedCLTyped + EntrypointArgument>(name: &str) -> Argument {
+   |                    ^^^^^^^^^^^^ required by this bound in `argument`
+
+error[E0277]: `NotAnArg` cannot be an entry point argument
+  --> tests/macros/fail/arg_not_entrypoint_argument.rs:14:34
+   |
+14 |     pub fn set(&mut self, value: NotAnArg) {
+   |                                  ^^^^^^^^ not an entry point argument type
+   |
+help: the trait `CLTyped` is not implemented for `NotAnArg`
+  --> tests/macros/fail/arg_not_entrypoint_argument.rs:5:1
+   |
+ 5 | pub struct NotAnArg;
+   | ^^^^^^^^^^^^^^^^^^^
+   = note: an argument type is serializable and has a `CLType`: a Casper type, a type from `odra::prelude`, or a struct or enum with `#[odra::odra_type]`
+   = help: the following other types implement trait `CLTyped`:
+             &T
+             &str
+             ()
+             (T1, T2)
+             (T1, T2, T3)
+             (T1,)
+             AddressableEntityHash
+             BTreeMap<K, V>
+           and $N others
+   = note: required for `NotAnArg` to implement `EntrypointArgument`
+note: required by a bound in `argument`
+  --> $WORKSPACE/odra-schema/src/lib.rs
+   |
+   | pub fn argument<T: NamedCLTyped + EntrypointArgument>(name: &str) -> Argument {
+   |                                   ^^^^^^^^^^^^^^^^^^ required by this bound in `argument`
+
+error[E0277]: `NotAnArg` cannot be an entry point argument
+  --> tests/macros/fail/arg_not_entrypoint_argument.rs:14:34
+   |
+14 |     pub fn set(&mut self, value: NotAnArg) {
+   |                                  ^^^^^^^^ not an entry point argument type
+   |
+help: the trait `odra::casper_types::bytesrepr::ToBytes` is not implemented for `NotAnArg`
+  --> tests/macros/fail/arg_not_entrypoint_argument.rs:5:1
+   |
+ 5 | pub struct NotAnArg;
+   | ^^^^^^^^^^^^^^^^^^^
+   = note: an argument type is serializable and has a `CLType`: a Casper type, a type from `odra::prelude`, or a struct or enum with `#[odra::odra_type]`
+   = help: the following other types implement trait `odra::casper_types::bytesrepr::ToBytes`:
+             &T
+             &str
+             ()
+             (T1, T2)
+             (T1, T2, T3)
+             (T1, T2, T3, T4)
+             (T1, T2, T3, T4, T5)
+             (T1, T2, T3, T4, T5, T6)
+           and $N others
+   = note: required for `NotAnArg` to implement `EntrypointArgument`
+note: required by a bound in `argument`
+  --> $WORKSPACE/odra-schema/src/lib.rs
+   |
+   | pub fn argument<T: NamedCLTyped + EntrypointArgument>(name: &str) -> Argument {
+   |                                   ^^^^^^^^^^^^^^^^^^ required by this bound in `argument`
+
+error[E0277]: the trait bound `NotAnArg: SchemaCustomTypes` is not satisfied
+  --> tests/macros/fail/arg_not_entrypoint_argument.rs:14:34
+   |
+14 |     pub fn set(&mut self, value: NotAnArg) {
+   |                                  ^^^^^^^^ unsatisfied trait bound
+   |
+help: the trait `SchemaCustomTypes` is not implemented for `NotAnArg`
+  --> tests/macros/fail/arg_not_entrypoint_argument.rs:5:1
+   |
+ 5 | pub struct NotAnArg;
+   | ^^^^^^^^^^^^^^^^^^^
+   = help: the following other types implement trait `SchemaCustomTypes`:
+             ()
+             (T1, T2)
+             (T1, T2, T3)
+             (T1,)
+             BTreeMap<T, E>
+             Contract
+             ContractHash
+             Maybe<T>
+           and $N others

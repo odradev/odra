@@ -1,5 +1,7 @@
 use proc_macro2::TokenStream;
-use syn::{parse_quote, spanned::Spanned, Fields};
+use syn::{parse_quote, Fields};
+
+use crate::ir::errors;
 
 pub fn ident_from_impl(impl_code: &syn::ItemImpl) -> syn::Result<syn::Ident> {
     last_segment_ident(&impl_code.self_ty)
@@ -11,34 +13,6 @@ pub fn ident_from_struct(struct_code: &syn::ItemStruct) -> syn::Ident {
 
 pub fn function_name(sig: &syn::Signature) -> String {
     sig.ident.to_string()
-}
-
-pub fn function_arg_names(sig: &syn::Signature) -> Vec<syn::Ident> {
-    sig.inputs
-        .iter()
-        .filter_map(|arg| match arg {
-            syn::FnArg::Typed(syn::PatType {
-                pat: box syn::Pat::Ident(pat),
-                ..
-            }) => Some(pat.ident.clone()),
-            _ => None
-        })
-        .collect()
-}
-
-pub fn function_named_args(sig: &syn::Signature) -> Vec<&syn::FnArg> {
-    sig.inputs
-        .iter()
-        .filter(|arg| {
-            matches!(
-                arg,
-                syn::FnArg::Typed(syn::PatType {
-                    pat: box syn::Pat::Ident(_),
-                    ..
-                })
-            )
-        })
-        .collect::<Vec<_>>()
 }
 
 pub fn function_typed_args(sig: &syn::Signature) -> Vec<syn::PatType> {
@@ -62,23 +36,11 @@ pub fn function_return_type(sig: &syn::Signature) -> syn::ReturnType {
     sig.output.clone()
 }
 
-pub fn struct_fields_ident(item: &syn::ItemStruct) -> syn::Result<Vec<syn::Ident>> {
-    map_fields(item, |f| {
-        f.ident.clone().ok_or(syn::Error::new(
-            f.span(),
-            "Invalid field. Module fields must be named"
-        ))
-    })
-}
-
 pub fn struct_typed_fields(item: &syn::ItemStruct) -> syn::Result<Vec<(syn::Ident, syn::Type)>> {
     map_fields(item, |f| {
         f.ident
             .clone()
-            .ok_or(syn::Error::new_spanned(
-                f,
-                "Invalid field. Module fields must be named"
-            ))
+            .ok_or_else(|| errors::module_fields_unnamed(&item.fields))
             .map(|i| (i, f.ty.clone()))
     })
 }
@@ -93,10 +55,7 @@ fn map_fields<T, F: FnMut(&syn::Field) -> syn::Result<T>>(
     if let syn::Fields::Named(named) = &item.fields {
         named.named.iter().map(f).collect()
     } else {
-        Err(syn::Error::new_spanned(
-            &item.fields,
-            "Invalid fields. Module fields must be named"
-        ))
+        Err(errors::module_fields_unnamed(&item.fields))
     }
 }
 
@@ -152,11 +111,8 @@ pub fn last_segment_ident(ty: &syn::Type) -> syn::Result<syn::Ident> {
             .segments
             .last()
             .map(|seg| seg.ident.clone())
-            .ok_or(syn::Error::new(type_path.span(), "Invalid type path")),
-        ty => Err(syn::Error::new(
-            ty.span(),
-            "Only support impl for type path"
-        ))
+            .ok_or_else(|| errors::impl_self_type_not_a_path(ty)),
+        ty => Err(errors::impl_self_type_not_a_path(ty))
     }
 }
 
@@ -193,18 +149,10 @@ pub fn is_ref(ty: &syn::Type) -> bool {
 }
 
 pub fn extract_unit_variants(input: &syn::ItemEnum) -> syn::Result<Vec<syn::Variant>> {
-    let variants = &input.variants;
-    let is_valid = variants
-        .iter()
-        .all(|v| matches!(v.fields, syn::Fields::Unit));
-    if is_valid {
-        Ok(variants.into_iter().cloned().collect())
-    } else {
-        Err(syn::Error::new_spanned(
-            variants,
-            "Expected a unit enum variant."
-        ))
-    }
+    errors::collect_all(input.variants.iter().map(|v| match v.fields {
+        syn::Fields::Unit => Ok(v.clone()),
+        _ => Err(errors::error_variant_with_data(v))
+    }))
 }
 
 pub fn transform_variants<F: Fn(String, Fields, u16, Vec<String>) -> TokenStream>(
@@ -217,9 +165,12 @@ pub fn transform_variants<F: Fn(String, Fields, u16, Vec<String>) -> TokenStream
         let name = v.ident.to_string();
         let fields = v.fields.clone();
 
+        // A discriminant is a `u16` literal: `TypeIR::kind` has rejected anything else.
         if let Some((_, syn::Expr::Lit(lit))) = &v.discriminant {
             if let syn::Lit::Int(int) = &lit.lit {
-                discriminant = int.base10_parse().unwrap();
+                if let Ok(value) = int.base10_parse() {
+                    discriminant = value;
+                }
             }
         };
         let result = f(name, fields, discriminant, docs);

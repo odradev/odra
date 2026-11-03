@@ -1,5 +1,6 @@
 use std::ops::Deref;
 
+use super::errors;
 use syn::{
     parse::{Parse, ParseBuffer},
     punctuated::Punctuated,
@@ -43,6 +44,9 @@ pub struct ModuleConfiguration {
 }
 
 impl ModuleConfiguration {
+    /// The arguments `#[odra::module(..)]` takes, for error messages.
+    const ARGS: [&'static str; 6] = ["name", "version", "events", "errors", "factory", "layout"];
+
     /// Arguments that only make sense on the module struct, not on an `impl` or `trait` block.
     pub fn struct_only_args(&self) -> impl Iterator<Item = &(&'static str, proc_macro2::Span)> {
         self.given.iter().filter(|(name, _)| *name != "factory")
@@ -56,69 +60,29 @@ impl ModuleConfiguration {
 
 impl Parse for ModuleConfiguration {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        let mut name = None;
-        let mut version = None;
-        let mut events = None;
-        let mut errors = None;
-        let mut factory = None;
-        let mut layout = None;
-        let mut given = Vec::new();
+        let mut config = Self::default();
         while !input.is_empty() {
             let span = input.span();
-            if events.is_none() && input.peek(kw::events) {
-                given.push(("events", span));
-                events = Some(input.parse::<ModuleEvents>()?);
-                let _ = input.parse::<Token![,]>(); // optional comma
-                continue;
+            let ident = input.fork().parse::<syn::Ident>().ok();
+            let arg = ident
+                .and_then(|ident| Self::ARGS.into_iter().find(|arg| ident == arg))
+                .ok_or_else(|| errors::unknown_module_arg(input, &Self::ARGS))?;
+            if config.given.iter().any(|(given, _)| *given == arg) {
+                return Err(errors::module_arg_twice(arg, span));
             }
-
-            if errors.is_none() && input.peek(kw::errors) {
-                given.push(("errors", span));
-                errors = Some(input.parse::<ModuleErrors>()?);
-                let _ = input.parse::<Token![,]>(); // optional comma
-                continue;
+            config.given.push((arg, span));
+            match arg {
+                "name" => config.name = input.parse()?,
+                "version" => config.version = input.parse()?,
+                "events" => config.events = input.parse()?,
+                "errors" => config.errors = input.parse()?,
+                "factory" => config.factory = input.parse()?,
+                "layout" => config.layout = input.parse()?,
+                _ => unreachable!("`{arg}` comes from `ARGS`")
             }
-
-            if name.is_none() && input.peek(kw::name) {
-                given.push(("name", span));
-                name = Some(input.parse::<ModuleName>()?);
-                let _ = input.parse::<Token![,]>(); // optional comma
-                continue;
-            }
-
-            if version.is_none() && input.peek(kw::version) {
-                given.push(("version", span));
-                version = Some(input.parse::<ModuleVersion>()?);
-                let _ = input.parse::<Token![,]>(); // optional comma
-                continue;
-            }
-
-            if factory.is_none() && input.peek(kw::factory) {
-                given.push(("factory", span));
-                factory = Some(input.parse::<Factory>()?);
-                let _ = input.parse::<Token![,]>(); // optional comma
-                continue;
-            }
-
-            if layout.is_none() && input.peek(kw::layout) {
-                given.push(("layout", span));
-                layout = Some(input.parse::<ModuleLayout>()?);
-                let _ = input.parse::<Token![,]>(); // optional comma
-                continue;
-            }
-
-            return Err(input.error("Unexpected token"));
+            let _ = input.parse::<Token![,]>(); // optional comma
         }
-
-        Ok(Self {
-            name: name.unwrap_or_default(),
-            version: version.unwrap_or_default(),
-            events: events.unwrap_or_default(),
-            errors: errors.unwrap_or_default(),
-            factory: factory.unwrap_or_default(),
-            layout: layout.unwrap_or_default(),
-            given
-        })
+        Ok(config)
     }
 }
 

@@ -102,7 +102,6 @@ serde_json = { version = "1.0", default-features = false }
 sha3 = { version = "0.10", default-features = false }
 shlex = "1"
 syn = "2.0"
-syn_derive = "0.2"
 thiserror = "1.0"
 tokio = "1.48"
 toml = "0.9"

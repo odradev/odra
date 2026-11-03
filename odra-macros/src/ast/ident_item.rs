@@ -1,122 +1,52 @@
-use syn::parse_quote;
+use proc_macro2::TokenStream;
+use quote::{quote, ToTokens};
 
 use crate::ir::ModuleStructIR;
 use crate::utils;
 
-#[derive(syn_derive::ToTokens)]
+/// Emits `impl odra::contract_def::HasIdent for Xxx`: `ident()` is the struct's name and
+/// `contract_name()` the `name = ".."` of `#[odra::module(..)]`, present only when it was given.
 pub struct HasIdentImplItem {
-    impl_token: syn::token::Impl,
-    has_ident_ty: syn::Type,
-    for_token: syn::token::For,
     module_ident: syn::Ident,
-    #[syn(braced)]
-    brace_token: syn::token::Brace,
-    #[syn(in = brace_token)]
-    ident_fn: IdentFnItem,
-    #[syn(in = brace_token)]
-    name_fn: Option<NameFnItem>
+    contract_name: Option<String>
 }
 
-impl TryFrom<&'_ ModuleStructIR> for HasIdentImplItem {
+impl TryFrom<&ModuleStructIR> for HasIdentImplItem {
     type Error = syn::Error;
 
-    fn try_from(ir: &'_ ModuleStructIR) -> Result<Self, Self::Error> {
+    fn try_from(ir: &ModuleStructIR) -> Result<Self, Self::Error> {
+        let contract_name = ir.contract_name();
         Ok(Self {
-            impl_token: Default::default(),
-            has_ident_ty: utils::ty::has_ident(),
-            for_token: Default::default(),
             module_ident: ir.module_ident(),
-            brace_token: Default::default(),
-            ident_fn: ir.try_into()?,
-            name_fn: NameFnItem::for_module(ir)
+            contract_name: (!contract_name.is_empty()).then_some(contract_name)
         })
     }
 }
 
-/// `fn contract_name() -> String`, emitted only when `#[odra::module(name = "..")]` was given; otherwise
-/// the trait's default (the ident) applies.
-#[derive(syn_derive::ToTokens)]
-pub struct NameFnItem {
-    sig: syn::Signature,
-    #[syn(braced)]
-    brace_token: syn::token::Brace,
-    #[syn(in = brace_token)]
-    expr: syn::Expr
-}
+impl ToTokens for HasIdentImplItem {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let module_ident = &self.module_ident;
+        let module_name = module_ident.to_string();
+        let has_ident_ty = utils::ty::has_ident();
+        let string_ty = utils::ty::string();
+        let contract_name_fn = self.contract_name.as_ref().map(|name| {
+            quote! {
+                fn contract_name() -> #string_ty {
+                    #string_ty::from(#name)
+                }
+            }
+        });
 
-impl NameFnItem {
-    fn for_module(ir: &ModuleStructIR) -> Option<Self> {
-        let name = ir.contract_name();
-        if name.is_empty() {
-            return None;
-        }
-        let ret_ty = utils::ty::string();
-        Some(Self {
-            sig: parse_quote!(fn contract_name() -> #ret_ty),
-            brace_token: Default::default(),
-            expr: utils::expr::string_from(name)
-        })
-    }
-}
-
-#[derive(syn_derive::ToTokens)]
-pub struct IdentFnItem {
-    sig: syn::Signature,
-    #[syn(braced)]
-    brace_token: syn::token::Brace,
-    #[syn(in = brace_token)]
-    expr: syn::Expr
-}
-
-impl TryFrom<&'_ ModuleStructIR> for IdentFnItem {
-    type Error = syn::Error;
-
-    fn try_from(ir: &'_ ModuleStructIR) -> Result<Self, Self::Error> {
-        let ident = utils::ident::ident();
-        let ret_ty = utils::ty::string();
-
-        Ok(Self {
-            sig: parse_quote!(fn #ident() -> #ret_ty),
-            brace_token: Default::default(),
-            expr: utils::expr::string_from(ir.module_str())
-        })
+        tokens.extend(quote! {
+            impl #has_ident_ty for #module_ident {
+                fn ident() -> #string_ty {
+                    #string_ty::from(#module_name)
+                }
+                #contract_name_fn
+            }
+        });
     }
 }
 
 #[cfg(test)]
-mod test {
-    use crate::ast::ident_item::HasIdentImplItem;
-    use crate::test_utils;
-    use quote::quote;
-
-    #[test]
-    fn test_entrypoints() {
-        let module = test_utils::mock::module_definition();
-        let expected = quote!(
-            impl odra::contract_def::HasIdent for CounterPack {
-                fn ident() -> odra::prelude::string::String {
-                    odra::prelude::string::String::from("CounterPack")
-                }
-                fn contract_name() -> odra::prelude::string::String {
-                    odra::prelude::string::String::from("MyCounterPack")
-                }
-            }
-        );
-        let actual = HasIdentImplItem::try_from(&module).unwrap();
-        test_utils::assert_eq(actual, expected);
-    }
-
-    #[test]
-    fn no_name_attribute_no_name_fn() {
-        let module = test_utils::mock::factory_module_definition();
-        let expected = quote!(
-            impl odra::contract_def::HasIdent for CounterPack {
-                fn ident() -> odra::prelude::string::String {
-                    odra::prelude::string::String::from("CounterPack")
-                }
-            }
-        );
-        let actual = HasIdentImplItem::try_from(&module).unwrap();
-        test_utils::assert_eq(actual, expected);
-    }
-}
+mod tests;

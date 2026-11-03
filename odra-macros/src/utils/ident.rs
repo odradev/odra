@@ -35,10 +35,6 @@ pub fn exec_env() -> syn::Ident {
     format_ident!("__odra_exec_env")
 }
 
-pub fn epc() -> syn::Ident {
-    format_ident!("entry_points_caller")
-}
-
 pub fn address() -> syn::Ident {
     format_ident!("address")
 }
@@ -96,28 +92,4 @@ pub fn ident() -> syn::Ident {
 
 pub fn bytes() -> syn::Ident {
     format_ident!("__odra_bytes")
-}
-
-pub fn from_bytes() -> syn::Ident {
-    format_ident!("from_bytes")
-}
-
-pub fn to_bytes() -> syn::Ident {
-    format_ident!("to_bytes")
-}
-
-pub fn serialized_length() -> syn::Ident {
-    format_ident!("serialized_length")
-}
-
-pub fn cl_type() -> syn::Ident {
-    format_ident!("cl_type")
-}
-
-pub fn from() -> syn::Ident {
-    format_ident!("from")
-}
-
-pub fn error() -> syn::Ident {
-    format_ident!("error")
 }

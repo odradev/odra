@@ -1,0 +1,5 @@
+error: `(a, b)` is not an argument name; an entry point argument is written `name: Type`
+  --> tests/macros/fail/arg_without_name.rs:11:27
+   |
+11 |     pub fn set(&mut self, (a, b): (u32, u32)) {
+   |                           ^^^^^^
