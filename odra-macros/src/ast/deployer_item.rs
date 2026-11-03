@@ -53,7 +53,7 @@ impl DeployerItem {
                 caller_provider_impl: CallerProviderImplItem {
                     host_ref_ident,
                     entry_points: module
-                        .functions()?
+                        .functions()
                         .iter()
                         .map(|f| {
                             new_entry_point(
@@ -67,7 +67,7 @@ impl DeployerItem {
                     branches: CallerBranches::ExecParts {
                         exec_parts_mod_ident: module.exec_parts_mod_ident()?,
                         functions: module
-                            .functions()?
+                            .functions()
                             .iter()
                             .map(|f| (f.name_str(), f.execute_name()))
                             .collect()

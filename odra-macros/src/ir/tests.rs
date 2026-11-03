@@ -76,18 +76,12 @@ mod offchain {
             }
         })
         .unwrap();
-        let names = |fns: Vec<FnIR>| fns.iter().map(FnIR::name_str).collect::<Vec<_>>();
+        let names = |fns: Vec<&FnIR>| fns.into_iter().map(FnIR::name_str).collect::<Vec<_>>();
         assert_eq!(
-            names(module.functions().unwrap()),
+            names(module.functions().iter().collect()),
             vec!["balance_of", "balances"]
         );
-        assert_eq!(
-            names(module.onchain_functions().unwrap()),
-            vec!["balance_of"]
-        );
-        assert_eq!(
-            names(module.offchain_functions().unwrap()),
-            vec!["balances"]
-        );
+        assert_eq!(names(module.onchain_functions()), vec!["balance_of"]);
+        assert_eq!(names(module.offchain_functions()), vec!["balances"]);
     }
 }

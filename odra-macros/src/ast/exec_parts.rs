@@ -33,7 +33,7 @@ impl ModuleExecPartsItem {
         Ok(Self {
             mod_ident: module.exec_parts_mod_ident()?,
             exec_functions: module
-                .functions()?
+                .functions()
                 .iter()
                 .map(|f| ExecFunctionItem::try_new(f, &module_ident, kind))
                 .collect::<syn::Result<_>>()?

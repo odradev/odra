@@ -22,8 +22,8 @@ impl TryFrom<&ModuleImplIR> for HasEntrypointsImplItem {
         Ok(Self {
             module_ident: module.module_ident()?,
             entry_points: module
-                .onchain_functions()?
-                .iter()
+                .onchain_functions()
+                .into_iter()
                 .map(EntrypointDef::try_new)
                 .collect::<syn::Result<_>>()?
         })

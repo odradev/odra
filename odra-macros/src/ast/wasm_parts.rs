@@ -35,8 +35,8 @@ pub struct ModuleWasmPartsItem {
 impl ModuleWasmPartsItem {
     pub(crate) fn try_new(module: &ModuleImplIR, kind: WasmPartsKind) -> syn::Result<Self> {
         let functions = match kind {
-            WasmPartsKind::Module => module.onchain_functions()?,
-            WasmPartsKind::Factory => module.functions()?
+            WasmPartsKind::Module => module.onchain_functions(),
+            WasmPartsKind::Factory => module.functions().iter().collect()
         };
         let exec_parts_mod_ident = module.exec_parts_mod_ident()?;
         Ok(Self {
@@ -105,15 +105,16 @@ struct EntryPointsFnItem {
 }
 
 impl EntryPointsFnItem {
-    fn new(module: &ModuleImplIR, kind: WasmPartsKind, functions: &[FnIR]) -> Self {
+    fn new(module: &ModuleImplIR, kind: WasmPartsKind, functions: &[&FnIR]) -> Self {
         match kind {
             WasmPartsKind::Module => Self {
-                entry_points: functions.iter().map(installed_entry_point).collect(),
+                entry_points: functions.iter().copied().map(installed_entry_point).collect(),
                 child_entry_points: None
             },
             WasmPartsKind::Factory => Self {
                 entry_points: functions
                     .iter()
+                    .copied()
                     .map(template_entry_point)
                     .chain([
                         factory_ep(parameters(&module.factory_fn())),
@@ -121,7 +122,7 @@ impl EntryPointsFnItem {
                         factory_batch_upgrade_ep()
                     ])
                     .collect(),
-                child_entry_points: Some(functions.iter().map(installed_entry_point).collect())
+                child_entry_points: Some(functions.iter().copied().map(installed_entry_point).collect())
             }
         }
     }

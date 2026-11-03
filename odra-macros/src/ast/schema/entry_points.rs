@@ -23,13 +23,13 @@ impl TryFrom<&ModuleImplIR> for SchemaEntrypointsItem {
         Ok(Self {
             module_ident: module.module_ident()?,
             entry_points: module
-                .onchain_functions()?
-                .iter()
+                .onchain_functions()
+                .into_iter()
                 .map(SchemaEntryPoint::new)
                 .collect(),
             offchain_entry_points: module
-                .offchain_functions()?
-                .iter()
+                .offchain_functions()
+                .into_iter()
                 .map(SchemaEntryPoint::new)
                 .collect()
         })
@@ -75,7 +75,7 @@ impl TryFrom<&ModuleImplIR> for FactorySchemaEntrypointsItem {
 
     fn try_from(module: &ModuleImplIR) -> Result<Self, Self::Error> {
         let bare_constructor = module
-            .functions()?
+            .functions()
             .iter()
             .filter(|f| f.is_constructor())
             .map(|f| SchemaEntryPoint {

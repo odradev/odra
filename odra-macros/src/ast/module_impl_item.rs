@@ -33,7 +33,7 @@ impl TryFrom<&ModuleImplIR> for ModuleImplItem {
 
     fn try_from(ir: &ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
-            self_code: ir.self_code()?,
+            self_code: ir.self_code(),
             has_entrypoints_item: HasEntrypointsImplItem::try_from(ir)?,
             ref_item: RefItem::try_from(ir)?,
             test_parts: TestPartsItem::try_from(ir)?,

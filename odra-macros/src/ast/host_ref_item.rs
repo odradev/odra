@@ -211,8 +211,8 @@ impl TryFrom<&ModuleImplIR> for HostRefItem {
     fn try_from(module: &ModuleImplIR) -> Result<Self, Self::Error> {
         let ref_ident = module.host_ref_ident()?;
         let is_trait_impl = module.is_trait_impl();
-        let host_functions = module.host_functions()?;
-        let mut_ret_functions = module.host_mut_ret_functions()?;
+        let host_functions = module.host_functions();
+        let mut_ret_functions = module.host_mut_ret_functions();
 
         let fns_impl_item = HostRefFnsImplItem {
             trait_path: module.impl_trait_path(),
@@ -235,7 +235,7 @@ impl TryFrom<&ModuleImplIR> for HostRefItem {
                 trait_path: None,
                 ref_ident,
                 functions: mut_ret_functions
-                    .iter()
+                    .into_iter()
                     .flat_map(|f| {
                         [
                             ref_utils::host_mut_no_ret_function_item(f),

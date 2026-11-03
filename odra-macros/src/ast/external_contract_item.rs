@@ -22,7 +22,7 @@ impl TryFrom<&ModuleImplIR> for ExternalContractImpl {
     type Error = syn::Error;
 
     fn try_from(ir: &ModuleImplIR) -> Result<Self, Self::Error> {
-        let trait_item = ir.self_code()?;
+        let trait_item = ir.self_code();
         Ok(Self {
             // Only the generated refs may use the trait; do not warn about that.
             trait_item: quote!(#[allow(dead_code)] #trait_item),
@@ -66,7 +66,7 @@ impl TraitImplItem {
             trait_ident: ir.module_ident()?,
             ref_ident: ir.contract_ref_ident()?,
             functions: ir
-                .functions()?
+                .functions()
                 .iter()
                 .map(|f| ref_utils::contract_function_item(f, true))
                 .collect()
@@ -78,7 +78,7 @@ impl TraitImplItem {
             trait_ident: ir.module_ident()?,
             ref_ident: ir.host_ref_ident()?,
             functions: ir
-                .host_functions()?
+                .host_functions()
                 .iter()
                 .map(|f| ref_utils::host_function_item(f, true))
                 .collect()

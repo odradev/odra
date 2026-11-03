@@ -21,7 +21,7 @@ use crate::{
 #[source(ModuleImplIR)]
 #[err(syn::Error)]
 pub struct FactoryModuleImplItem {
-    #[expr(input.self_code()?)]
+    #[expr(input.self_code())]
     self_code: TokenStream,
     has_entrypoints_item: FactoryHasEntrypointsImplItem,
     ref_item: FactoryRefItem,

@@ -44,6 +44,18 @@ where
     collect_all(checks).map(|_| ())
 }
 
+/// The value when it and the check both succeed; otherwise the errors of both, the value's first.
+pub fn checked<T>(value: syn::Result<T>, check: syn::Result<()>) -> syn::Result<T> {
+    match (value, check) {
+        (Ok(value), Ok(())) => Ok(value),
+        (Err(mut error), Err(other)) => {
+            error.combine(other);
+            Err(error)
+        }
+        (Err(error), Ok(())) | (Ok(_), Err(error)) => Err(error)
+    }
+}
+
 // --- What the attribute macro is applied to -------------------------------------------------
 
 /// `#[odra::module]` on something that is neither a struct nor an impl or trait block.

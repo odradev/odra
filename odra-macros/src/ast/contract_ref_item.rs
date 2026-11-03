@@ -27,8 +27,8 @@ impl RefItem {
             ContractRefKind::Module => (
                 module.impl_trait_path(),
                 module
-                    .onchain_functions()?
-                    .iter()
+                    .onchain_functions()
+                    .into_iter()
                     .map(|f| ref_utils::contract_function_item(f, is_trait_impl))
                     .collect()
             ),

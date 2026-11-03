@@ -18,7 +18,7 @@ impl TryFrom<&ModuleImplIR> for ContractItem {
 
     fn try_from(module: &ModuleImplIR) -> Result<Self, Self::Error> {
         let no_args: syn::Path = syn::parse_quote!(odra::host::NoArgs);
-        let has_args = |f: Option<crate::ir::FnIR>| f.is_some_and(|f| f.has_args());
+        let has_args = |f: Option<&crate::ir::FnIR>| f.is_some_and(|f| f.has_args());
         Ok(Self {
             module_ident: module.module_ident()?,
             host_ref_ident: module.host_ref_ident()?,

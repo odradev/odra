@@ -50,19 +50,25 @@ impl ToTokens for FactoryModuleItem {
 pub struct FactoryModuleImplItem {
     is_factory: bool,
     factory_module_ident: syn::Ident,
-    functions: Vec<FnIR>
+    /// The functions of the impl block, as written.
+    functions: Vec<syn::ImplItemFn>
 }
 
 impl TryFrom<&ModuleImplIR> for FactoryModuleImplItem {
     type Error = syn::Error;
 
     fn try_from(ir: &ModuleImplIR) -> Result<Self, Self::Error> {
-        let functions = ir.functions()?;
-        // functions.push(ir.factory_fn());
         Ok(Self {
             is_factory: ir.is_factory(),
             factory_module_ident: ir.factory_module_ident()?,
-            functions
+            functions: ir
+                .functions()
+                .iter()
+                .filter_map(|f| match f {
+                    FnIR::Impl(fn_impl_ir) => Some(fn_impl_ir.raw()),
+                    _ => None
+                })
+                .collect()
         })
     }
 }
@@ -78,12 +84,7 @@ impl ToTokens for FactoryModuleImplItem {
         let functions = &self
             .functions
             .iter()
-            .filter_map(|f| match f {
-                FnIR::Impl(fn_impl_ir) => Some(fn_impl_ir),
-                _ => None
-            })
-            .map(|f| {
-                let raw = f.raw();
+            .map(|raw| {
                 // The body only reverts, so the arguments of the copied signature go unused.
                 let mut attrs = raw.attrs.clone();
                 attrs.push(parse_quote!(#[allow(unused_variables)]));
@@ -92,7 +93,7 @@ impl ToTokens for FactoryModuleImplItem {
                     block: parse_quote!({
                         self.env().revert(OdraError::ExecutionError(ExecutionError::FactoryModuleCall));
                     }),
-                    ..raw
+                    ..raw.clone()
                 }
             })
             .collect::<Vec<_>>();
