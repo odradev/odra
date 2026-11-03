@@ -100,14 +100,6 @@ pub fn cl_type() -> syn::Type {
     parse_quote!(odra::casper_types::CLType)
 }
 
-pub fn cl_type_any() -> syn::Type {
-    parse_quote!(odra::casper_types::CLType::Any)
-}
-
-pub fn cl_type_u8() -> syn::Type {
-    parse_quote!(odra::casper_types::CLType::U8)
-}
-
 pub fn runtime_args() -> syn::Type {
     parse_quote!(odra::casper_types::RuntimeArgs)
 }
@@ -156,18 +148,6 @@ pub fn string() -> syn::Type {
     parse_quote!(odra::prelude::string::String)
 }
 
-pub fn result(ty: &syn::Type, err_ty: &syn::Type) -> syn::Type {
-    parse_quote!(Result<#ty, #err_ty>)
-}
-
-pub fn bytes_result(ty: &syn::Type) -> syn::Type {
-    result(ty, &bytes_err())
-}
-
-pub fn bytes_slice() -> syn::Type {
-    parse_quote!(&[u8])
-}
-
 #[allow(non_snake_case)]
 pub fn _Self() -> syn::Type {
     parse_quote!(Self)
@@ -183,18 +163,6 @@ pub fn vec() -> syn::Type {
 
 pub fn vec_of(ty: &syn::Type) -> syn::Type {
     parse_quote!(odra::prelude::vec::Vec<#ty>)
-}
-
-pub fn bytes_vec() -> syn::Type {
-    parse_quote!(odra::prelude::vec::Vec<u8>)
-}
-
-pub fn usize() -> syn::Type {
-    parse_quote!(usize)
-}
-
-pub fn u8() -> syn::Type {
-    parse_quote!(u8)
 }
 
 pub fn from<T: ToTokens>(ty: &T) -> syn::Type {

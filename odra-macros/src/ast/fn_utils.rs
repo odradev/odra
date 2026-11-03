@@ -52,10 +52,6 @@ impl FnItem {
         self
     }
 
-    pub fn instanced(mut self) -> FnItem {
-        self.args.insert(0, parse_quote!(&self));
-        self
-    }
 }
 
 #[derive(syn_derive::ToTokens)]
@@ -75,8 +71,4 @@ impl SingleArgFnItem {
         self
     }
 
-    pub fn _make_instanced(mut self) -> Self {
-        self.fn_item = self.fn_item.instanced();
-        self
-    }
 }

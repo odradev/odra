@@ -21,18 +21,6 @@ impl ImplItem {
         })
     }
 
-    pub fn from_bytes(ir: &TypeIR) -> syn::Result<Self> {
-        Self::new(ir, utils::ty::from_bytes())
-    }
-
-    pub fn to_bytes(ir: &TypeIR) -> syn::Result<Self> {
-        Self::new(ir, utils::ty::to_bytes())
-    }
-
-    pub fn cl_typed(ir: &TypeIR) -> syn::Result<Self> {
-        Self::new(ir, utils::ty::cl_typed())
-    }
-
     pub fn has_events<T: Named>(named: &T) -> syn::Result<Self> {
         Self::new(named, utils::ty::has_events())
     }

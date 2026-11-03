@@ -78,31 +78,6 @@ pub fn string_from(string: String) -> syn::Expr {
     parse_quote!(#ty::from(#string))
 }
 
-pub fn failable_from_bytes(arg_ident: &syn::Ident) -> syn::Expr {
-    let ty = super::ty::from_bytes();
-    let fn_ident = super::ident::from_bytes();
-    parse_quote!(#ty::#fn_ident(#arg_ident)?)
-}
-
-pub fn serialized_length<T: ToTokens>(caller: &T) -> syn::Expr {
-    let fn_ident = super::ident::serialized_length();
-    parse_quote!(#caller.#fn_ident())
-}
-
-pub fn u8_serialized_len() -> syn::Expr {
-    parse_quote!(odra::casper_types::bytesrepr::U8_SERIALIZED_LENGTH)
-}
-
-pub fn failable_to_bytes<T: ToTokens>(caller: &T) -> syn::Expr {
-    let fn_ident = super::ident::to_bytes();
-    let ty = super::ty::to_bytes();
-    parse_quote!(#ty::#fn_ident(&#caller)?)
-}
-
-pub fn serialize_enum() -> syn::Expr {
-    parse_quote!(Ok(odra::prelude::vec![self.clone() as u8]))
-}
-
 pub fn empty_vec() -> syn::Expr {
     let ty = super::ty::vec();
     parse_quote!(#ty::new())

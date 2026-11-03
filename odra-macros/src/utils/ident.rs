@@ -98,22 +98,6 @@ pub fn bytes() -> syn::Ident {
     format_ident!("__odra_bytes")
 }
 
-pub fn from_bytes() -> syn::Ident {
-    format_ident!("from_bytes")
-}
-
-pub fn to_bytes() -> syn::Ident {
-    format_ident!("to_bytes")
-}
-
-pub fn serialized_length() -> syn::Ident {
-    format_ident!("serialized_length")
-}
-
-pub fn cl_type() -> syn::Ident {
-    format_ident!("cl_type")
-}
-
 pub fn from() -> syn::Ident {
     format_ident!("from")
 }

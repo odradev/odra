@@ -14,16 +14,6 @@ impl<T: quote::ToTokens> AsBlock for T {
     }
 }
 
-pub trait AsExpr {
-    fn as_expr(&self) -> ::syn::Expr;
-}
-
-impl<T: quote::ToTokens> AsExpr for T {
-    fn as_expr(&self) -> ::syn::Expr {
-        ::syn::parse_quote!(#self)
-    }
-}
-
 pub trait AsType {
     fn as_type(&self) -> ::syn::Type;
 }
