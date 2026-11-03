@@ -23,9 +23,9 @@ pub struct RefItem {
 impl RefItem {
     pub(crate) fn try_new(module: &ModuleImplIR, kind: ContractRefKind) -> syn::Result<Self> {
         let is_trait_impl = module.is_trait_impl();
-        let (trait_ident, functions) = match kind {
+        let (trait_path, functions) = match kind {
             ContractRefKind::Module => (
-                module.impl_trait_ident(),
+                module.impl_trait_path(),
                 module
                     .onchain_functions()?
                     .iter()
@@ -54,7 +54,7 @@ impl RefItem {
                 ref_ident: ref_ident.clone()
             },
             fns_impl_item: ContractRefFnsImplItem {
-                trait_ident,
+                trait_path,
                 ref_ident: ref_ident.clone(),
                 functions
             },
@@ -174,7 +174,7 @@ impl ToTokens for WithTokensFnItem {
 /// Emits `impl XxxContractRef { .. }` (or `impl Trait for XxxContractRef { .. }`) with one
 /// method per entry point, each a `call_contract` with the arguments as runtime args.
 struct ContractRefFnsImplItem {
-    trait_ident: Option<Ident>,
+    trait_path: Option<syn::Path>,
     ref_ident: Ident,
     functions: Vec<syn::ItemFn>
 }
@@ -183,7 +183,7 @@ impl ToTokens for ContractRefFnsImplItem {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let ref_ident = &self.ref_ident;
         let functions = &self.functions;
-        let for_trait = self.trait_ident.as_ref().map(|t| quote!(#t for));
+        let for_trait = self.trait_path.as_ref().map(|t| quote!(#t for));
 
         tokens.extend(quote! {
             impl #for_trait #ref_ident {

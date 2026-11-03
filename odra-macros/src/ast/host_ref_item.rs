@@ -176,7 +176,7 @@ impl ToTokens for HasIdentTraitImplItem {
 /// functions. The host ref has three: the entry points as written, their `try_` versions
 /// returning `OdraResult`, and for a mutating entry point with a result, a `_no_ret` version.
 struct HostRefFnsImplItem {
-    trait_ident: Option<Ident>,
+    trait_path: Option<syn::Path>,
     ref_ident: Ident,
     functions: Vec<syn::ItemFn>
 }
@@ -185,7 +185,7 @@ impl ToTokens for HostRefFnsImplItem {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let ref_ident = &self.ref_ident;
         let functions = &self.functions;
-        let for_trait = self.trait_ident.as_ref().map(|t| quote!(#t for));
+        let for_trait = self.trait_path.as_ref().map(|t| quote!(#t for));
 
         tokens.extend(quote! {
             impl #for_trait #ref_ident {
@@ -215,7 +215,7 @@ impl TryFrom<&ModuleImplIR> for HostRefItem {
         let mut_ret_functions = module.host_mut_ret_functions()?;
 
         let fns_impl_item = HostRefFnsImplItem {
-            trait_ident: module.impl_trait_ident(),
+            trait_path: module.impl_trait_path(),
             ref_ident: ref_ident.clone(),
             functions: host_functions
                 .iter()
@@ -223,7 +223,7 @@ impl TryFrom<&ModuleImplIR> for HostRefItem {
                 .collect()
         };
         let try_fns_impl_item = HostRefFnsImplItem {
-            trait_ident: None,
+            trait_path: None,
             ref_ident: ref_ident.clone(),
             functions: host_functions
                 .iter()
@@ -232,7 +232,7 @@ impl TryFrom<&ModuleImplIR> for HostRefItem {
         };
         let mut_no_ret_fns_impl_item = (!mut_ret_functions.is_empty()).then(|| {
             HostRefFnsImplItem {
-                trait_ident: None,
+                trait_path: None,
                 ref_ident,
                 functions: mut_ret_functions
                     .iter()

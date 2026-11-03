@@ -1,6 +1,5 @@
 #![doc = "This crate provides a set of macros and derive attributes to simplify the process of writing"]
 #![doc = "smart contracts for the Odra platform."]
-#![feature(box_patterns)]
 use crate::utils::IntoCode;
 use ast::*;
 use ir::{errors, ModuleImplIR, ModuleStructIR, TypeIR};

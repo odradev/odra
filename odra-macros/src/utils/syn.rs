@@ -19,10 +19,10 @@ pub fn function_arg_names(sig: &syn::Signature) -> Vec<syn::Ident> {
     sig.inputs
         .iter()
         .filter_map(|arg| match arg {
-            syn::FnArg::Typed(syn::PatType {
-                pat: box syn::Pat::Ident(pat),
-                ..
-            }) => Some(pat.ident.clone()),
+            syn::FnArg::Typed(syn::PatType { pat, .. }) => match pat.as_ref() {
+                syn::Pat::Ident(pat) => Some(pat.ident.clone()),
+                _ => None
+            },
             _ => None
         })
         .collect()
@@ -31,14 +31,11 @@ pub fn function_arg_names(sig: &syn::Signature) -> Vec<syn::Ident> {
 pub fn function_named_args(sig: &syn::Signature) -> Vec<&syn::FnArg> {
     sig.inputs
         .iter()
-        .filter(|arg| {
-            matches!(
-                arg,
-                syn::FnArg::Typed(syn::PatType {
-                    pat: box syn::Pat::Ident(_),
-                    ..
-                })
-            )
+        .filter(|arg| match arg {
+            syn::FnArg::Typed(syn::PatType { pat, .. }) => {
+                matches!(pat.as_ref(), syn::Pat::Ident(_))
+            }
+            _ => false
         })
         .collect::<Vec<_>>()
 }
