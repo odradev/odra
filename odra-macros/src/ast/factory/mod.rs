@@ -7,6 +7,8 @@ pub mod impl_item;
 mod parts;
 pub mod struct_item;
 
+pub(crate) use parts::FactoryWasmFnsItem;
+
 pub struct FactoryModuleItem {
     is_factory: bool,
     factory_module_ident: syn::Ident,

@@ -27,11 +27,6 @@ fn rc_clone(ident: &syn::Ident) -> syn::Expr {
     parse_quote!(odra::prelude::Rc::clone(&#ident))
 }
 
-pub fn new_entry_points() -> syn::Expr {
-    let ty = super::ty::entry_points();
-    parse_quote!(#ty::new())
-}
-
 pub fn new_parameter(name: String, ty: syn::Type) -> syn::Expr {
     let ty = super::ty::unreferenced_ty(&ty);
 
@@ -48,26 +43,6 @@ pub fn as_cl_type(ty: &syn::Type) -> syn::Expr {
 pub fn unit_cl_type() -> syn::Expr {
     let ty_cl_typed = super::ty::cl_typed();
     parse_quote!(<() as #ty_cl_typed>::cl_type())
-}
-
-pub fn schemas(events: &syn::Expr) -> syn::Expr {
-    let ty = super::ty::schemas();
-    parse_quote!(#ty(#events))
-}
-
-/// The contract schema JSON embedded at build time by `odra_build::build()`, if available.
-pub fn contract_schema() -> syn::Expr {
-    parse_quote!({
-        #[cfg(odra_contract_schema)]
-        let contract_schema = Some(include_str!(env!("ODRA_CONTRACT_SCHEMA_PATH")));
-        #[cfg(not(odra_contract_schema))]
-        let contract_schema: Option<&'static str> = None;
-        contract_schema
-    })
-}
-
-pub fn new_wasm_contract_env() -> syn::Expr {
-    parse_quote!(odra::odra_casper_wasm_env::WasmContractEnv::new_env())
 }
 
 pub fn into_event(ty: &syn::Type) -> syn::Expr {

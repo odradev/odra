@@ -2,7 +2,7 @@
 use quote::ToTokens;
 use syn::parse_quote;
 
-use crate::ast::wasm_parts_utils;
+use crate::ast::wasm_parts;
 use crate::{ir::ModuleImplIR, utils};
 
 pub struct FactoryHasEntrypointsImplItem {
@@ -78,7 +78,7 @@ fn struct_entrypoints_expr(ir: &ModuleImplIR) -> syn::Result<syn::Expr> {
         .filter_map(|f| f.as_ref())
         .chain([ir.factory_fn(), ir.factory_upgrade_fn(), ir.factory_batch_upgrade_fn()].iter())
         .map(|f| {
-            let args = wasm_parts_utils::param_parameters(f);
+            let args = wasm_parts::parameters(f);
             let expr = match f.fn_type() {
                 crate::ir::FnType::Constructor => utils::expr::constructor_ep(parse_quote!(odra::prelude::vec![])),
                 crate::ir::FnType::Upgrader => utils::expr::upgrader_ep(args),
@@ -88,7 +88,7 @@ fn struct_entrypoints_expr(ir: &ModuleImplIR) -> syn::Result<syn::Expr> {
                 crate::ir::FnType::Regular => utils::expr::regular_ep(
                     f.name_str(),
                     args,
-                    wasm_parts_utils::param_ret_ty(f),
+                    wasm_parts::return_cl_type(f),
                     f.is_payable(),
                     f.is_non_reentrant()
                 ),

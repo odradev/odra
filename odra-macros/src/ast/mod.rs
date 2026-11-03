@@ -49,7 +49,6 @@ mod schema;
 mod test_parts;
 mod utils;
 mod wasm_parts;
-mod wasm_parts_utils;
 
 pub(crate) use error_item::OdraErrorAttrItem;
 pub(crate) use event::OdraEventItem;

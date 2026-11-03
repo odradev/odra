@@ -15,4 +15,5 @@ pub(super) use has_entrypoints_item::FactoryHasEntrypointsImplItem;
 pub(super) use ref_item::FactoryRefItem;
 pub(super) use test_parts::FactoryTestPartsItem;
 pub(super) use wasm_parts::FactoryWasmPartsItem;
+pub(crate) use wasm_parts::FactoryWasmFnsItem;
 pub(super) use event_item::{FactoryHasEventsImplItem, FactoryEventItem};

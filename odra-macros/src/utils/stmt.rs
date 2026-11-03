@@ -1,16 +1,6 @@
 use crate::utils::misc::AsExpr;
 use syn::parse_quote;
 
-pub fn runtime_return(result_ident: &syn::Ident) -> syn::Stmt {
-    parse_quote!(
-        odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
-            odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
-                odra::casper_types::CLValue::from_t(#result_ident)
-            )
-        );
-    )
-}
-
 pub fn new_module(
     contract_ident: &syn::Ident,
     module_ident: &syn::Ident,
@@ -31,20 +21,6 @@ pub fn new_mut_module(
     parse_quote!(
         let mut #contract_ident = <#module_ident as #module_ty>::new(#env_rc_ident);
     )
-}
-
-pub fn install_or_upgrade(
-    entry_points: syn::Expr,
-    schemas: syn::Expr,
-    args: syn::Expr
-) -> syn::Stmt {
-    let contract_schema = super::expr::contract_schema();
-    parse_quote!(odra::odra_casper_wasm_env::host_functions::install_or_upgrade(
-        #entry_points,
-        #schemas,
-        #contract_schema,
-        #args
-    );)
 }
 
 pub fn get_named_arg(arg_ident: &syn::Ident, env_ident: &syn::Ident, ty: &syn::Type) -> syn::Stmt {
