@@ -159,10 +159,6 @@ pub fn btree_from_iter<T: ToTokens>(expr: &T) -> syn::Expr {
     parse_quote!(odra::prelude::BTreeMap::from_iter(#expr))
 }
 
-pub fn default() -> syn::Expr {
-    parse_quote!(Default::default())
-}
-
 pub fn new_entry_point(
     name: String,
     args: Vec<syn::PatType>,

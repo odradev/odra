@@ -164,10 +164,6 @@ pub fn bytes_result(ty: &syn::Type) -> syn::Type {
     result(ty, &bytes_err())
 }
 
-pub fn self_ref() -> syn::Type {
-    parse_quote!(&self)
-}
-
 pub fn bytes_slice() -> syn::Type {
     parse_quote!(&[u8])
 }
