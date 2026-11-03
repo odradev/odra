@@ -1,3 +1,7 @@
+//! The functions of the contract ref and the host ref: one per entry point, each a call to
+//! the contract with the arguments as runtime args. Built once here for the module and the
+//! factory refs.
+
 use crate::ir::FnType;
 use crate::utils::syn::visibility_default;
 use crate::utils::ty;

@@ -1,5 +1,6 @@
 use quote::{quote, ToTokens};
 
+/// Emits `use odra::prelude::*;`, the first line of every generated module.
 #[derive(Default)]
 pub struct UsePreludeItem;
 
@@ -11,6 +12,7 @@ impl ToTokens for UsePreludeItem {
     }
 }
 
+/// Emits `use super::*;`, so a generated module sees the user's module.
 #[derive(Default)]
 pub struct UseSuperItem;
 
