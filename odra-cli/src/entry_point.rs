@@ -13,7 +13,7 @@ use crate::container;
 use crate::container::ContractProvider;
 
 pub(crate) mod cmd_args;
-mod runtime_args;
+pub(crate) mod runtime_args;
 mod utils;
 
 #[derive(Debug, thiserror::Error)]

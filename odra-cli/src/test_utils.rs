@@ -156,6 +156,8 @@ impl TestContract {
 
     pub fn mutable(&mut self) {}
 
+    pub fn upgrade(&mut self, version: u32) {}
+
     pub fn set_status(&mut self, status: Status) {}
 
     #[allow(clippy::too_many_arguments)]
@@ -193,9 +195,7 @@ impl HostContext for DummyHostCtx {
     }
 
     #[doc = " Sets the gas limit for the current contract execution."]
-    fn set_gas(&self, gas: u64) {
-        todo!()
-    }
+    fn set_gas(&self, gas: u64) {}
 
     #[doc = " Returns the caller address for the current contract execution."]
     fn caller(&self) -> Address {

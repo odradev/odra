@@ -93,7 +93,8 @@ impl ContractCmd {
         let package_name = package_name.unwrap_or(T::HostRef::ident());
         let entry_points = T::schema_entrypoints()
             .into_iter()
-            .filter(|entry_point| entry_point.name != "init")
+            // `init` is called by the deploy script and `upgrade` by the `upgrade` command.
+            .filter(|entry_point| entry_point.name != "init" && entry_point.name != "upgrade")
             .map(|entry_point| CallCmd::new::<T>(entry_point, package_name.clone(), false))
             .chain(
                 T::schema_offchain_entrypoints()
@@ -316,6 +317,11 @@ mod tests {
             .iter()
             .find(|cmd| cmd.entry_point.name == "sum_of")
             .expect("offchain functions are listed");
+        // `upgrade` is run by the `upgrade` command, not called like an entry point.
+        assert!(!cmd
+            .entry_points
+            .iter()
+            .any(|cmd| cmd.entry_point.name == "upgrade"));
         assert!(sum_of.offchain);
         assert!(!TestContract::schema_entrypoints()
             .iter()

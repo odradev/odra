@@ -4,6 +4,11 @@ Changelog for `odra`.
 
 ## [Unreleased]
 ### Added
+- OdraCLI `upgrade` command: `upgrade <Contract> --gas <amount> [--<upgrade args>]` upgrades a contract from the
+  contracts file with its wasm, calling its `upgrade` entry point with the given arguments, without a custom
+  scenario (#690). `--force-create-upgrade-group`, `--allow-key-override` and `--package-named-key` set the
+  `UpgradeConfig`. `upgrade` is no longer listed among the entry points of the `contract` command.
+- `Deployer::try_upgrade_with_runtime_args` upgrades a contract with upgrade arguments composed at runtime.
 - Factory modules (`#[odra::module(factory = on)]`) work on OdraVM: `new_contract`,
   `upgrade_child_contract` and `batch_upgrade_child_contract` deploy and upgrade the children like on
   Casper, only the account that installed the factory may upgrade them, and their events are tracked.
