@@ -140,14 +140,12 @@ impl ExecFnBody {
         let args = func
             .named_args()
             .iter()
-            .map(|arg| {
-                Ok(ExecArg {
-                    name: arg.name()?,
-                    ty: utils::ty::unreferenced_ty(&arg.ty()?),
-                    by_ref: arg.is_ref()
-                })
+            .map(|arg| ExecArg {
+                name: arg.name(),
+                ty: utils::ty::unreferenced_ty(arg.ty()),
+                by_ref: arg.is_ref()
             })
-            .collect::<syn::Result<Vec<_>>>()?;
+            .collect();
         Ok(Self {
             module_ident: module_ident.clone(),
             fn_ident: func.name(),

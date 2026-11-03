@@ -149,8 +149,8 @@ fn factory_call_def_with_amount(fun: &FnIR) -> syn::Expr {
         .named_args()
         .iter()
         .map(|arg| {
-            let ident = arg.name().unwrap();
-            let name = ident.to_string();
+            let ident = arg.name();
+            let name = arg.name_str();
             quote::quote!(#ty_ep_arg::insert_runtime_arg(#ident, #name, &mut #args);)
         })
         .collect::<Vec<_>>();
@@ -252,8 +252,8 @@ fn insert_amount_arg_stmt() -> syn::Stmt {
 }
 
 pub fn insert_arg_stmt(arg: &FnArgIR) -> syn::Stmt {
-    let ident = arg.name().unwrap();
-    let name = ident.to_string();
+    let ident = arg.name();
+    let name = arg.name_str();
     let args = utils::ident::named_args();
     let ty = ty::entry_point_arg();
     syn::parse_quote!(#ty::insert_runtime_arg(#ident, #name, &mut #args);)

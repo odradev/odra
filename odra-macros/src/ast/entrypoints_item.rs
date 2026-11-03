@@ -68,8 +68,8 @@ impl EntrypointDef {
             args: f
                 .named_args()
                 .iter()
-                .map(|arg| Ok((arg.name_str()?, utils::ty::unreferenced_ty(&arg.ty()?))))
-                .collect::<syn::Result<_>>()?,
+                .map(|arg| (arg.name_str(), utils::ty::unreferenced_ty(arg.ty())))
+                .collect(),
             is_mut: f.is_mut(),
             return_cl_type: wasm_parts::return_cl_type(f),
             is_constructor: f.is_restricted(),

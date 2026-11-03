@@ -329,8 +329,7 @@ pub(crate) fn parameters(func: &FnIR) -> syn::Expr {
     let params = func
         .named_args()
         .iter()
-        .filter_map(|arg| arg.name_and_ty().ok())
-        .map(|(name, ty)| utils::expr::new_parameter(name, ty))
+        .map(|arg| utils::expr::new_parameter(arg.name_str(), arg.ty().clone()))
         .collect::<Vec<_>>();
     syn::parse_quote!(vec![#(#params),*])
 }
@@ -345,10 +344,7 @@ pub(crate) fn return_cl_type(func: &FnIR) -> syn::Expr {
 
 /// Reads the argument from the call (`exec_env`) and puts it into `__odra_named_args`.
 pub(crate) fn insert_arg_stmt(arg: &FnArgIR) -> syn::Stmt {
-    // `named_args` yields only `name: Type` arguments, so both parts are there.
-    let (name, ty) = arg
-        .name_and_ty()
-        .expect("a named argument has a name and a type");
+    let (name, ty) = arg.name_and_ty();
     let named_args = utils::ident::named_args();
     syn::parse_quote!(odra::args::EntrypointArgument::insert_runtime_arg(
         exec_env.get_named_arg::<#ty>(#name),

@@ -147,7 +147,7 @@ impl TryFrom<&ModuleImplIR> for UpgradeChildContractFnsItem {
             .unwrap_or_default()
             .iter()
             .map(FnArgIR::name_and_ty)
-            .collect::<syn::Result<Vec<_>>>()?;
+            .collect();
         Ok(Self {
             child_ident: module.child_module_ident()?,
             event_ident: format_ident!("{}ContractDeployed", module.module_ident()?),

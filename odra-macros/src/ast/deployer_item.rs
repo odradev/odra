@@ -1,7 +1,10 @@
 use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote, ToTokens};
 
-use crate::{ir::ModuleImplIR, utils};
+use crate::{
+    ir::{FnArgIR, ModuleImplIR},
+    utils
+};
 
 /// Which contract the deployer is built for: the module itself, or the factory that deploys
 /// instances of it. A factory has no argument structs, lists its own three entry points and runs
@@ -33,7 +36,7 @@ impl DeployerItem {
                         role: ArgsRole::Init,
                         module_name: module_name.clone(),
                         ident: module.init_args_ident()?,
-                        fields: f.named_args().iter().map(|a| a.name_and_ty()).collect::<syn::Result<_>>()?
+                        fields: f.named_args().iter().map(FnArgIR::name_and_ty).collect()
                     }),
                     _ => None
                 },
@@ -42,7 +45,7 @@ impl DeployerItem {
                         role: ArgsRole::Upgrade,
                         module_name,
                         ident: module.upgrade_args_ident()?,
-                        fields: f.named_args().iter().map(|a| a.name_and_ty()).collect::<syn::Result<_>>()?
+                        fields: f.named_args().iter().map(FnArgIR::name_and_ty).collect()
                     }),
                     _ => None
                 },

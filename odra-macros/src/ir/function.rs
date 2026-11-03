@@ -168,7 +168,7 @@ impl FnIR {
     }
 
     pub fn arg_names(&self) -> Vec<Ident> {
-        utils::syn::function_arg_names(self.sig())
+        self.named_args().iter().map(FnArgIR::name).collect()
     }
 
     pub fn has_args(&self) -> bool {
@@ -176,9 +176,10 @@ impl FnIR {
     }
 
     pub fn named_args(&self) -> Vec<FnArgIR> {
-        utils::syn::function_named_args(self.sig())
-            .into_iter()
-            .map(|arg| FnArgIR::new(arg.to_owned()))
+        self.sig()
+            .inputs
+            .iter()
+            .filter_map(FnArgIR::named)
             .collect()
     }
 
@@ -326,49 +327,49 @@ impl FnImplIR {
     }
 }
 
-/// A `name: Type` argument of an entry point.
+/// A `name: Type` argument of an entry point. Only such arguments reach here: a pattern in
+/// place of the name is rejected when the function is read.
 pub struct FnArgIR {
-    code: syn::FnArg
+    ident: Ident,
+    code: syn::PatType
 }
 
 impl FnArgIR {
-    pub fn new(code: syn::FnArg) -> Self {
-        FnArgIR { code }
+    /// The argument, when it is `name: Type`.
+    fn named(arg: &syn::FnArg) -> Option<Self> {
+        let syn::FnArg::Typed(code) = arg else {
+            return None;
+        };
+        let syn::Pat::Ident(pat) = code.pat.as_ref() else {
+            return None;
+        };
+        Some(Self {
+            ident: pat.ident.clone(),
+            code: code.clone()
+        })
     }
 
     pub fn raw(&self) -> syn::FnArg {
-        self.code.clone()
+        syn::FnArg::Typed(self.code.clone())
     }
 
-    pub fn name(&self) -> syn::Result<Ident> {
-        match &self.code {
-            syn::FnArg::Typed(syn::PatType { pat, .. }) => match pat.as_ref() {
-                syn::Pat::Ident(pat) => Ok(pat.ident.clone()),
-                _ => Err(errors::arg_without_name(&self.code))
-            },
-            _ => Err(errors::arg_without_name(&self.code))
-        }
+    pub fn name(&self) -> Ident {
+        self.ident.clone()
     }
 
-    pub fn name_str(&self) -> syn::Result<String> {
-        self.name().map(|i| i.to_string())
+    pub fn name_str(&self) -> String {
+        self.ident.to_string()
     }
 
-    pub fn ty(&self) -> syn::Result<syn::Type> {
-        match &self.code {
-            syn::FnArg::Typed(syn::PatType { ty, .. }) => Ok((**ty).clone()),
-            _ => Err(errors::arg_without_name(&self.code))
-        }
+    pub fn ty(&self) -> &syn::Type {
+        &self.code.ty
     }
 
-    pub fn name_and_ty(&self) -> syn::Result<(String, syn::Type)> {
-        Ok((self.name()?.to_string(), self.ty()?))
+    pub fn name_and_ty(&self) -> (String, syn::Type) {
+        (self.name_str(), self.ty().clone())
     }
 
     pub fn is_ref(&self) -> bool {
-        match &self.code {
-            syn::FnArg::Typed(syn::PatType { ty, .. }) => utils::syn::is_ref(ty),
-            _ => false
-        }
+        utils::syn::is_ref(self.ty())
     }
 }
