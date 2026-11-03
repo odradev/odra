@@ -1,11 +1,10 @@
 use crate::ast::contract_ref_item::RefItem;
 use crate::ast::host_ref_item::HostRefItem;
-use crate::ast::parts_utils::{UsePreludeItem, UseSuperItem};
 use crate::ast::ref_utils;
-use crate::ast::test_parts::{PartsModuleItem, TestPartsReexportItem};
+use crate::ast::test_parts::{self, TestPartsReexportItem};
 use crate::ir::ModuleImplIR;
 use derive_try_from_ref::TryFromRef;
-use quote::TokenStreamExt;
+use quote::{ToTokens, TokenStreamExt};
 
 #[derive(syn_derive::ToTokens)]
 pub struct ExternalContractImpl {
@@ -90,24 +89,25 @@ impl TryFrom<&'_ ModuleImplIR> for HostTraitImplItem {
 #[derive(syn_derive::ToTokens)]
 struct HostTraitImplItem(TraitImplItem);
 
-#[derive(syn_derive::ToTokens, TryFromRef)]
+#[derive(TryFromRef)]
 #[source(ModuleImplIR)]
 #[err(syn::Error)]
 struct TestPartsItem {
-    parts_module: PartsModuleItem,
-    #[syn(braced)]
-    #[default]
-    brace_token: syn::token::Brace,
-    #[syn(in = brace_token)]
-    #[default]
-    use_super: UseSuperItem,
-    #[syn(in = brace_token)]
-    #[default]
-    use_prelude: UsePreludeItem,
-    #[syn(in = brace_token)]
+    #[expr(input.test_parts_mod_ident()?)]
+    mod_ident: syn::Ident,
     host_ref: HostRefItem,
-    #[syn(in = brace_token)]
     host_trait_impl: HostTraitImplItem
+}
+
+impl ToTokens for TestPartsItem {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        let host_ref = &self.host_ref;
+        let host_trait_impl = &self.host_trait_impl;
+        tokens.extend(test_parts::not_wasm32_mod(
+            &self.mod_ident,
+            quote::quote!(#host_ref #host_trait_impl)
+        ));
+    }
 }
 
 #[cfg(test)]

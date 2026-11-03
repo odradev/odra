@@ -7,7 +7,7 @@ pub mod impl_item;
 mod parts;
 pub mod struct_item;
 
-pub(crate) use parts::FactoryWasmFnsItem;
+pub(crate) use parts::{FactoryDeployImplItem, FactoryHostRefItem, FactoryWasmFnsItem};
 
 pub struct FactoryModuleItem {
     is_factory: bool,
