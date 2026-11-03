@@ -76,14 +76,6 @@ pub fn vec<T: ToTokens>(content: T) -> syn::Expr {
     parse_quote!(odra::prelude::vec![#content])
 }
 
-pub fn vec_try_into<T: ToTokens>(content: T) -> syn::Expr {
-    parse_quote!(odra::prelude::vec![#content]
-        .into_iter()
-        .map(TryInto::try_into)
-        .collect::<Result<_, _>>()
-        .unwrap_or_default())
-}
-
 pub fn user_error(error: &syn::Ident) -> syn::Expr {
     let ty = super::ty::odra_error();
     parse_quote!(#ty::user(#error as u16))
@@ -120,10 +112,6 @@ fn new_entry_point_arg(arg: &syn::PatType) -> syn::Expr {
     let arg_ty = super::ty::unreferenced_ty(&arg.ty);
     let name = string_from(arg.pat.to_token_stream().to_string());
     parse_quote!(#ty::new::<#arg_ty>(#name))
-}
-
-pub fn into_arg(ty: syn::Type, ident: String) -> syn::Expr {
-    parse_quote!(odra::args::odra_argument::<#ty>(#ident))
 }
 
 pub fn constructor_ep(args_expr: syn::Expr) -> syn::Expr {
