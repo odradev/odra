@@ -299,6 +299,39 @@ mod test {
     }
 
     #[test]
+    fn test_entrypoint_with_paragraph_break_in_docs() {
+        let module = quote!(
+            impl Erc20 {
+                /// Initializes the contract.
+                ///
+                /// Reverts if already initialized.
+                pub fn init(&mut self) {}
+            }
+        );
+        let attr = quote!();
+        let module = crate::ir::ModuleImplIR::try_from((&attr, &module)).unwrap();
+        let expected = quote!(
+            #[automatically_derived]
+            #[cfg(not(target_arch = "wasm32"))]
+            impl odra::schema::SchemaEntrypoints for Erc20 {
+                fn schema_entrypoints(
+                ) -> odra::prelude::vec::Vec<odra::schema::casper_contract_schema::Entrypoint>
+                {
+                    odra::prelude::vec![odra::schema::entry_point::<()>(
+                        "init",
+                        "Initializes the contract. Reverts if already initialized.",
+                        true,
+                        false,
+                        odra::prelude::vec![]
+                    )]
+                }
+            }
+        );
+        let actual = SchemaEntrypointsItem::try_from(&module).unwrap();
+        test_utils::assert_eq(actual, expected);
+    }
+
+    #[test]
     fn test_trait_impl_entrypoints() {
         let module = test_utils::mock::module_trait_impl();
         let expected = quote!(
