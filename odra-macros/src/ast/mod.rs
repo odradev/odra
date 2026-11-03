@@ -26,7 +26,6 @@ mod blueprint;
 mod contract_item;
 mod contract_ref_item;
 mod deployer_item;
-mod deployer_utils;
 mod entrypoints_item;
 mod error_item;
 mod event;

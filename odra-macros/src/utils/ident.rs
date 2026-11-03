@@ -35,10 +35,6 @@ pub fn exec_env() -> syn::Ident {
     format_ident!("__odra_exec_env")
 }
 
-pub fn epc() -> syn::Ident {
-    format_ident!("entry_points_caller")
-}
-
 pub fn address() -> syn::Ident {
     format_ident!("address")
 }

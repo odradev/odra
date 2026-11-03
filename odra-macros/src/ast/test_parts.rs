@@ -61,11 +61,11 @@ impl TestPartsItem {
         let (host_ref, deployer) = match kind {
             TestPartsKind::Module => (
                 HostRef::Module(HostRefItem::try_from(module)?),
-                Deployer::Module(Box::new(DeployerItem::try_from(module)?))
+                Deployer::Module(DeployerItem::try_from(module)?)
             ),
             TestPartsKind::Factory => (
                 HostRef::Factory(FactoryHostRefItem::try_from(module)?),
-                Deployer::Factory(Box::new(FactoryDeployImplItem::try_from(module)?))
+                Deployer::Factory(FactoryDeployImplItem::try_from(module)?)
             )
         };
         Ok(Self {
@@ -135,8 +135,8 @@ impl ToTokens for HostRef {
 }
 
 enum Deployer {
-    Module(Box<DeployerItem>),
-    Factory(Box<FactoryDeployImplItem>)
+    Module(DeployerItem),
+    Factory(FactoryDeployImplItem)
 }
 
 impl ToTokens for Deployer {
