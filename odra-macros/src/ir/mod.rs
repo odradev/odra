@@ -62,10 +62,6 @@ impl ModuleStructIR {
         &self.code
     }
 
-    pub fn field_names(&self) -> syn::Result<Vec<syn::Ident>> {
-        utils::syn::struct_fields_ident(&self.code)
-    }
-
     pub fn module_ident(&self) -> syn::Ident {
         utils::syn::ident_from_struct(&self.code)
     }

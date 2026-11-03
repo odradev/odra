@@ -64,14 +64,6 @@ pub fn function_return_type(sig: &syn::Signature) -> syn::ReturnType {
     sig.output.clone()
 }
 
-pub fn struct_fields_ident(item: &syn::ItemStruct) -> syn::Result<Vec<syn::Ident>> {
-    map_fields(item, |f| {
-        f.ident
-            .clone()
-            .ok_or_else(|| errors::module_fields_unnamed(&item.fields))
-    })
-}
-
 pub fn struct_typed_fields(item: &syn::ItemStruct) -> syn::Result<Vec<(syn::Ident, syn::Type)>> {
     map_fields(item, |f| {
         f.ident

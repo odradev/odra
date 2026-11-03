@@ -11,16 +11,6 @@ pub fn u512_zero() -> syn::Expr {
     parse_quote!(#ty::zero())
 }
 
-pub fn module_component_instance(ty: &syn::Type, env_ident: &syn::Ident, idx: u8) -> syn::Expr {
-    let rc = rc_clone(env_ident);
-    let component = super::ty::module_component();
-    parse_quote!(<#ty as #component>::instance(#rc, #idx))
-}
-
-fn rc_clone(ident: &syn::Ident) -> syn::Expr {
-    parse_quote!(odra::prelude::Rc::clone(&#ident))
-}
-
 pub fn new_parameter(name: String, ty: syn::Type) -> syn::Expr {
     let ty = super::ty::unreferenced_ty(&ty);
 
