@@ -93,11 +93,3 @@ pub fn ident() -> syn::Ident {
 pub fn bytes() -> syn::Ident {
     format_ident!("__odra_bytes")
 }
-
-pub fn from() -> syn::Ident {
-    format_ident!("from")
-}
-
-pub fn error() -> syn::Ident {
-    format_ident!("error")
-}

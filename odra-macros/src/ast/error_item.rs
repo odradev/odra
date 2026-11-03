@@ -1,14 +1,16 @@
-use crate::ast::fn_utils::SingleArgFnItem;
-use crate::ast::utils::{ImplItem, Named};
-use crate::ir::{errors, TypeIR, TypeKind};
-use crate::utils;
-use crate::utils::misc::AsBlock;
 use derive_try_from_ref::TryFromRef;
-use syn::parse_quote;
+use proc_macro2::{Ident, TokenStream};
+use quote::{quote, ToTokens};
 
-use super::schema::SchemaErrorItem;
+use crate::{
+    ast::{schema::SchemaErrorItem, utils::Named},
+    ir::{errors, TypeIR, TypeKind},
+    utils
+};
 
-#[derive(syn_derive::ToTokens, TryFromRef)]
+/// Emits everything `#[odra::odra_error]` adds to an error enum: the `From` impls
+/// ([OdraErrorItem]) and its schema.
+#[derive(TryFromRef)]
 #[source(TypeIR)]
 #[err(syn::Error)]
 pub struct OdraErrorAttrItem {
@@ -16,113 +18,73 @@ pub struct OdraErrorAttrItem {
     schema: SchemaErrorItem
 }
 
-#[derive(syn_derive::ToTokens)]
-pub struct OdraErrorItem {
-    item: syn::Item,
-    wasm32_fn: FromErrorItem,
-    not_wasm32_fn: FromErrorItem
+impl ToTokens for OdraErrorAttrItem {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        self.item.to_tokens(tokens);
+        self.schema.to_tokens(tokens);
+    }
 }
 
-impl TryFrom<&'_ TypeIR> for OdraErrorItem {
+/// Emits the user's enum and `impl From<Xxx> for OdraError` twice: in wasm the error is only
+/// its code, outside wasm it carries the variant's name too, for test output.
+pub struct OdraErrorItem {
+    item: syn::Item,
+    ident: Ident,
+    variants: Vec<Ident>
+}
+
+impl TryFrom<&TypeIR> for OdraErrorItem {
     type Error = syn::Error;
 
     fn try_from(ty: &TypeIR) -> Result<Self, Self::Error> {
-        let kind: TypeKind = ty.kind()?;
-        let variants = match kind {
-            TypeKind::Enum { variants } => variants,
-            TypeKind::UnitEnum { variants } => variants,
-            _ => {
-                return Err(errors::error_on_struct(ty.self_code()))
-            }
-        }
-        .iter()
-        .map(|v| v.ident.clone())
-        .collect::<Vec<_>>();
-
-        let ident = ty.name()?;
-        let ident_error = utils::ident::error();
-        let ty_odra_error = utils::ty::odra_error();
+        let variants = match ty.kind()? {
+            TypeKind::Enum { variants } | TypeKind::UnitEnum { variants } => variants,
+            TypeKind::Struct { .. } => return Err(errors::error_on_struct(ty.self_code()))
+        };
         Ok(Self {
             item: ty.self_code().clone(),
-            wasm32_fn: FromErrorItem {
-                wasm32_attr: utils::attr::wasm32(),
-                attr: utils::attr::automatically_derived(),
-                impl_item: ImplItem::from(ty, &ty_odra_error)?,
-                braces: Default::default(),
-                fn_item: SingleArgFnItem::new(
-                    &utils::ident::from(),
-                    parse_quote!(#ident_error: #ident),
-                    utils::misc::ret_ty(&utils::ty::_Self()),
-                    utils::expr::user_error(&ident_error).as_block()
-                )
-            },
-            not_wasm32_fn: FromErrorItem {
-                wasm32_attr: utils::attr::not_wasm32(),
-                attr: utils::attr::automatically_derived(),
-                impl_item: ImplItem::from(ty, &ty_odra_error)?,
-                braces: Default::default(),
-                fn_item: SingleArgFnItem::new(
-                    &utils::ident::from(),
-                    parse_quote!(#ident_error: #ident),
-                    utils::misc::ret_ty(&utils::ty::_Self()),
-                    parse_quote!({
-                        match error {
-                            #(#ident::#variants => OdraError::user(error as u16, stringify!(#variants)),)*
-                        }
-                    })
-                )
-            }
+            ident: ty.name()?,
+            variants: variants.iter().map(|v| v.ident.clone()).collect()
         })
     }
 }
 
-#[derive(syn_derive::ToTokens)]
-struct FromErrorItem {
-    wasm32_attr: syn::Attribute,
-    attr: syn::Attribute,
-    impl_item: ImplItem,
-    #[syn(braced)]
-    braces: syn::token::Brace,
-    #[syn(in = braces)]
-    fn_item: SingleArgFnItem
-}
+impl ToTokens for OdraErrorItem {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let Self {
+            item,
+            ident,
+            variants
+        } = self;
+        let ty_odra_error = utils::ty::odra_error();
+        let ty_from = utils::ty::from(ident);
+        let wasm32_attr = utils::attr::wasm32();
+        let not_wasm32_attr = utils::attr::not_wasm32();
+        let derived_attr = utils::attr::automatically_derived();
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::test_utils;
+        tokens.extend(quote! {
+            #item
 
-    #[test]
-    fn test_odra_error_item() {
-        let ty = test_utils::mock::custom_enum();
-        let item = OdraErrorItem::try_from(&ty).unwrap();
-        let expected = quote::quote! {
-            enum MyType {
-                /// Description of A
-                A = 10,
-                /// Description of B
-                B,
-            }
-
-            #[cfg(target_arch = "wasm32")]
-            #[automatically_derived]
-            impl ::core::convert::From<MyType> for OdraError {
-                fn from(error: MyType) -> Self {
-                    OdraError::user(error as u16)
+            #wasm32_attr
+            #derived_attr
+            impl #ty_from for #ty_odra_error {
+                fn from(error: #ident) -> Self {
+                    #ty_odra_error::user(error as u16)
                 }
             }
 
-            #[cfg(not(target_arch = "wasm32"))]
-            #[automatically_derived]
-            impl ::core::convert::From<MyType> for OdraError {
-                fn from(error: MyType) -> Self {
+            #not_wasm32_attr
+            #derived_attr
+            impl #ty_from for #ty_odra_error {
+                fn from(error: #ident) -> Self {
                     match error {
-                        MyType::A => OdraError::user(error as u16, stringify!(A)),
-                        MyType::B => OdraError::user(error as u16, stringify!(B)),
+                        #(#ident::#variants => OdraError::user(error as u16, stringify!(#variants)),)*
                     }
                 }
             }
-        };
-        test_utils::assert_eq(item, expected);
+        });
     }
 }
+
+#[cfg(test)]
+mod tests;

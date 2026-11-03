@@ -29,11 +29,6 @@ pub fn unit_cl_type() -> syn::Expr {
     parse_quote!(<() as #ty_cl_typed>::cl_type())
 }
 
-pub fn new_blueprint(ident: &syn::Ident) -> syn::Expr {
-    let ty = super::ty::contract_blueprint();
-    parse_quote!(#ty::new::<#ident>())
-}
-
 pub fn string_from(string: String) -> syn::Expr {
     let ty = super::ty::string();
     parse_quote!(#ty::from(#string))
@@ -41,11 +36,6 @@ pub fn string_from(string: String) -> syn::Expr {
 
 pub fn vec<T: ToTokens>(content: T) -> syn::Expr {
     parse_quote!(odra::prelude::vec![#content])
-}
-
-pub fn user_error(error: &syn::Ident) -> syn::Expr {
-    let ty = super::ty::odra_error();
-    parse_quote!(#ty::user(#error as u16))
 }
 
 pub fn new_entry_point(
