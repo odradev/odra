@@ -196,7 +196,7 @@
     },
     {
       "name": "get_dapp_registry",
-      "description": "Delegated. See `self.dapp.get_dapp_registry()` for details.",
+      "description": "Returns the dapp registry the contract belongs to.  Reverts with [`Error::DappRegistryNotSet`] if the registry has not been set.",
       "is_mutable": false,
       "is_payable": false,
       "arguments": [],
@@ -206,7 +206,7 @@
     },
     {
       "name": "get_owner",
-      "description": "Delegated. See `self.ownable.get_owner()` for details.",
+      "description": "Returns the address of the current owner.",
       "is_mutable": false,
       "is_payable": false,
       "arguments": [],

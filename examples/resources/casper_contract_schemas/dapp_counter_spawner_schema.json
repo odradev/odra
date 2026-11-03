@@ -86,7 +86,7 @@
     },
     {
       "name": "spawn",
-      "description": "Creates a new counter pointing to the dapp registry and adds it to the dapp.",
+      "description": "Creates a new counter pointing to the dapp registry and adds it to the dapp.  The spawner must be registered in the dapp as a registrar.",
       "is_mutable": true,
       "is_payable": false,
       "arguments": [],
@@ -96,7 +96,7 @@
     },
     {
       "name": "get_dapp_registry",
-      "description": "Delegated. See `self.dapp.get_dapp_registry()` for details.",
+      "description": "Returns the dapp registry the contract belongs to.  Reverts with [`Error::DappRegistryNotSet`] if the registry has not been set.",
       "is_mutable": false,
       "is_payable": false,
       "arguments": [],
