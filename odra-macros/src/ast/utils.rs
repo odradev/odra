@@ -1,7 +1,6 @@
 
 use crate::ir::{errors, ModuleStructIR, TypeIR};
 use crate::utils;
-use crate::utils::misc::AsType;
 
 #[derive(syn_derive::ToTokens)]
 pub struct ImplItem {
@@ -12,19 +11,6 @@ pub struct ImplItem {
 }
 
 impl ImplItem {
-    fn new<T: Named>(named: &T, ty: syn::Type) -> syn::Result<Self> {
-        Ok(Self {
-            impl_token: Default::default(),
-            ty,
-            for_token: Default::default(),
-            for_ty: named.name()?.as_type()
-        })
-    }
-
-    pub fn has_events<T: Named>(named: &T) -> syn::Result<Self> {
-        Self::new(named, utils::ty::has_events())
-    }
-
     pub fn from<T: Named>(named: &T, for_ty: &syn::Type) -> syn::Result<Self> {
         let ty_from = utils::ty::from(&named.name()?);
         Ok(Self {

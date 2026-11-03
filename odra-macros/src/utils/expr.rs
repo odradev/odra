@@ -29,29 +29,6 @@ pub fn unit_cl_type() -> syn::Expr {
     parse_quote!(<() as #ty_cl_typed>::cl_type())
 }
 
-pub fn into_event(ty: &syn::Type) -> syn::Expr {
-    parse_quote!(<#ty as odra::contract_def::IntoEvent>::into_event())
-}
-
-pub fn events(ty: &syn::Type) -> syn::Expr {
-    let has_events_ty = super::ty::has_events();
-    parse_quote!(<#ty as #has_events_ty>::events())
-}
-
-pub fn event_schemas(ty: &syn::Type) -> syn::Expr {
-    let has_events_ty = super::ty::has_events();
-    parse_quote!(<#ty as #has_events_ty>::event_schemas())
-}
-
-pub fn event_instance_name(ty: &syn::Type) -> syn::Expr {
-    let event_instance_ty = super::ty::event_instance();
-    parse_quote!(<#ty as #event_instance_ty>::name())
-}
-
-pub fn event_instance_schema(ty: &syn::Type) -> syn::Expr {
-    let event_instance_ty = super::ty::event_instance();
-    parse_quote!(<#ty as #event_instance_ty>::schema())
-}
 pub fn new_blueprint(ident: &syn::Ident) -> syn::Expr {
     let ty = super::ty::contract_blueprint();
     parse_quote!(#ty::new::<#ident>())
@@ -62,16 +39,6 @@ pub fn string_from(string: String) -> syn::Expr {
     parse_quote!(#ty::from(#string))
 }
 
-pub fn empty_vec() -> syn::Expr {
-    let ty = super::ty::vec();
-    parse_quote!(#ty::new())
-}
-
-pub fn empty_btree_map() -> syn::Expr {
-    let ty = super::ty::btree_map();
-    parse_quote!(#ty::new())
-}
-
 pub fn vec<T: ToTokens>(content: T) -> syn::Expr {
     parse_quote!(odra::prelude::vec![#content])
 }
@@ -79,10 +46,6 @@ pub fn vec<T: ToTokens>(content: T) -> syn::Expr {
 pub fn user_error(error: &syn::Ident) -> syn::Expr {
     let ty = super::ty::odra_error();
     parse_quote!(#ty::user(#error as u16))
-}
-
-pub fn btree_from_iter<T: ToTokens>(expr: &T) -> syn::Expr {
-    parse_quote!(odra::prelude::BTreeMap::from_iter(#expr))
 }
 
 pub fn new_entry_point(

@@ -14,16 +14,6 @@ impl<T: quote::ToTokens> AsBlock for T {
     }
 }
 
-pub trait AsType {
-    fn as_type(&self) -> ::syn::Type;
-}
-
-impl<T: quote::ToTokens> AsType for T {
-    fn as_type(&self) -> ::syn::Type {
-        ::syn::parse_quote!(#self)
-    }
-}
-
 pub fn field(ident: &syn::Ident, ty: &syn::Type) -> syn::Field {
     syn::Field {
         attrs: vec![],
