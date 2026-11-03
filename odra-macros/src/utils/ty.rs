@@ -148,21 +148,8 @@ pub fn string() -> syn::Type {
     parse_quote!(odra::prelude::string::String)
 }
 
-#[allow(non_snake_case)]
-pub fn _Self() -> syn::Type {
-    parse_quote!(Self)
-}
-
-pub fn _self() -> syn::Type {
-    parse_quote!(self)
-}
-
 pub fn vec() -> syn::Type {
     parse_quote!(odra::prelude::vec::Vec)
-}
-
-pub fn vec_of(ty: &syn::Type) -> syn::Type {
-    parse_quote!(odra::prelude::vec::Vec<#ty>)
 }
 
 pub fn from<T: ToTokens>(ty: &T) -> syn::Type {
@@ -191,7 +178,9 @@ pub fn odra_entry_point_arg() -> syn::Type {
 
 fn slice_to_vec(ty: &syn::Type) -> syn::Type {
     match ty {
-        syn::Type::Slice(ty) => vec_of(ty.elem.as_ref()),
+        syn::Type::Slice(syn::TypeSlice { elem, .. }) => {
+            parse_quote!(odra::prelude::vec::Vec<#elem>)
+        }
         _ => ty.clone()
     }
 }
