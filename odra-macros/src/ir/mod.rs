@@ -1013,6 +1013,7 @@ impl TypeIR {
     pub fn kind(&self) -> syn::Result<TypeKind> {
         match &self.code {
             syn::Item::Enum(e) => {
+                errors::check_all(e.variants.iter().map(validate_discriminant))?;
                 let is_unit = e.variants.iter().all(|v| v.fields.is_empty());
                 let variants = e.variants.iter().cloned().collect();
                 if is_unit {
@@ -1035,6 +1036,25 @@ impl TypeIR {
             }
             _ => Err(errors::type_on_other_item(&self.code))
         }
+    }
+}
+
+/// A variant's discriminant, when given, is a `u16` literal: it is the code of an error and the
+/// tag of a serialized enum.
+fn validate_discriminant(variant: &syn::Variant) -> syn::Result<()> {
+    let Some((_, discriminant)) = &variant.discriminant else {
+        return Ok(());
+    };
+    let is_u16 = match discriminant {
+        syn::Expr::Lit(syn::ExprLit {
+            lit: syn::Lit::Int(int),
+            ..
+        }) => int.base10_parse::<u16>().is_ok(),
+        _ => false
+    };
+    match is_u16 {
+        true => Ok(()),
+        false => Err(errors::discriminant_not_u16(discriminant))
     }
 }
 

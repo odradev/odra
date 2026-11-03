@@ -374,6 +374,34 @@ pub fn type_fields_unnamed(fields: &syn::Fields) -> syn::Error {
     )
 }
 
+/// `#[odra::event]` on something that is not a struct.
+pub fn event_on_other_item(item: &syn::Item) -> syn::Error {
+    syn::Error::new(
+        item_ident_span(item),
+        format!(
+            "`#[odra::event]` goes on a struct with named fields, one per event field; this is {}",
+            item_kind(item)
+        )
+    )
+}
+
+/// `#[odra::event]` on a tuple or unit struct.
+pub fn event_fields_unnamed(fields: &syn::Fields) -> syn::Error {
+    syn::Error::new_spanned(
+        fields,
+        "an event's fields are named, as the name is part of its schema; write \
+         `struct Transfer { from: Address, to: Address }`"
+    )
+}
+
+/// An enum discriminant that is not a `u16` literal: `A = -1`, `A = 70000`, `A = 1 + 1`.
+pub fn discriminant_not_u16(discriminant: &syn::Expr) -> syn::Error {
+    syn::Error::new_spanned(
+        discriminant,
+        "a discriminant is an integer literal from 0 to 65535, as an error code is a `u16`"
+    )
+}
+
 /// An `impl` whose self type is not a plain path, such as `impl (A, B)` or `impl &X`.
 pub fn impl_self_type_not_a_path(self_ty: &syn::Type) -> syn::Error {
     syn::Error::new_spanned(

@@ -193,9 +193,12 @@ pub fn transform_variants<F: Fn(String, Fields, u16, Vec<String>) -> TokenStream
         let name = v.ident.to_string();
         let fields = v.fields.clone();
 
+        // A discriminant is a `u16` literal: `TypeIR::kind` has rejected anything else.
         if let Some((_, syn::Expr::Lit(lit))) = &v.discriminant {
             if let syn::Lit::Int(int) = &lit.lit {
-                discriminant = int.base10_parse().unwrap();
+                if let Ok(value) = int.base10_parse() {
+                    discriminant = value;
+                }
             }
         };
         let result = f(name, fields, discriminant, docs);
