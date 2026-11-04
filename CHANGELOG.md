@@ -9,6 +9,11 @@ Changelog for `odra`.
   scenario (#690). `--force-create-upgrade-group`, `--allow-key-override` and `--package-named-key` set the
   `UpgradeConfig`. `upgrade` is no longer listed among the entry points of the `contract` command.
 - `Deployer::try_upgrade_with_runtime_args` upgrades a contract with upgrade arguments composed at runtime.
+- OdraCLI `upgrade-children` command: `upgrade-children <Factory> --gas <amount> [--<upgrade args>]` upgrades all
+  child contracts of a factory from the contracts file with the factory's current code, in one
+  `batch_upgrade_child_contract` call with the same upgrade arguments for every child. The children are read
+  from the factory's `ContractDeployed` events.
+- `odra::consts` re-exports the names of the `odra_cfg_*` arguments.
 - Factory modules (`#[odra::module(factory = on)]`) work on OdraVM: `new_contract`,
   `upgrade_child_contract` and `batch_upgrade_child_contract` deploy and upgrade the children like on
   Casper, only the account that installed the factory may upgrade them, and their events are tracked.

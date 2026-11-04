@@ -18,10 +18,11 @@ use crate::{
     cmd::{
         CompletionsCmd, ConfigCmd, ContractsCmd, DeployCmd, DeployScript, InspectCmd, MainCmd,
         MutableCommand, OdraCommand, PrintEventsCmd, Scenario, ScenarioMetadata, ScenariosCmd,
-        StatusCmd, StorageCmd, TransferCmd, UpgradeCmd, WhoamiCmd, COMPLETIONS_SUBCOMMAND,
-        CONFIG_SUBCOMMAND, CONTRACTS_SUBCOMMAND, DEPLOY_SUBCOMMAND, INSPECT_SUBCOMMAND,
-        PRINT_EVENTS_SUBCOMMAND, REPL_SUBCOMMAND, SCENARIOS_SUBCOMMAND, STATUS_SUBCOMMAND,
-        STORAGE_SUBCOMMAND, TRANSFER_SUBCOMMAND, UPGRADE_SUBCOMMAND, WHOAMI_SUBCOMMAND
+        StatusCmd, StorageCmd, TransferCmd, UpgradeChildrenCmd, UpgradeCmd, WhoamiCmd,
+        COMPLETIONS_SUBCOMMAND, CONFIG_SUBCOMMAND, CONTRACTS_SUBCOMMAND, DEPLOY_SUBCOMMAND,
+        INSPECT_SUBCOMMAND, PRINT_EVENTS_SUBCOMMAND, REPL_SUBCOMMAND, SCENARIOS_SUBCOMMAND,
+        STATUS_SUBCOMMAND, STORAGE_SUBCOMMAND, TRANSFER_SUBCOMMAND, UPGRADE_CHILDREN_SUBCOMMAND,
+        UPGRADE_SUBCOMMAND, WHOAMI_SUBCOMMAND
     },
     container::FileContractStorage,
     custom_types::CustomTypes,
@@ -47,6 +48,7 @@ pub struct OdraCli {
     config_cmd: ConfigCmd,
     transfer_cmd: TransferCmd,
     upgrade_cmd: UpgradeCmd,
+    upgrade_children_cmd: UpgradeChildrenCmd,
     completions_cmd: CompletionsCmd,
     custom_types: CustomTypes,
     /// The livenet host environment, created on first use by a command that talks to the network
@@ -81,6 +83,7 @@ impl OdraCli {
             config_cmd: ConfigCmd,
             transfer_cmd: TransferCmd,
             upgrade_cmd: UpgradeCmd::default(),
+            upgrade_children_cmd: UpgradeChildrenCmd::default(),
             completions_cmd: CompletionsCmd,
             host_env: OnceCell::new(),
             custom_types: CustomTypes::default(),
@@ -123,6 +126,8 @@ impl OdraCli {
         self.inspect_cmd.add_contract::<T>();
         self.storage_cmd.add_contract::<T>();
         self.upgrade_cmd.add_contract::<T>();
+        self.upgrade_children_cmd
+            .add_contract::<T>(T::HostRef::ident());
         self
     }
 
@@ -146,7 +151,8 @@ impl OdraCli {
         self.status_cmd.add_contract_named::<T>(name.clone());
         self.inspect_cmd.add_contract_named::<T>(name.clone());
         self.storage_cmd.add_contract_named::<T>(name.clone());
-        self.upgrade_cmd.add_contract_named::<T>(name);
+        self.upgrade_cmd.add_contract_named::<T>(name.clone());
+        self.upgrade_children_cmd.add_contract::<T>(name);
         self
     }
 
@@ -182,6 +188,9 @@ impl OdraCli {
         self.main_cmd = self.main_cmd.subcommand(&self.config_cmd);
         self.main_cmd = self.main_cmd.subcommand(&self.transfer_cmd);
         self.main_cmd = self.main_cmd.subcommand(&self.upgrade_cmd);
+        if !self.upgrade_children_cmd.is_empty() {
+            self.main_cmd = self.main_cmd.subcommand(&self.upgrade_children_cmd);
+        }
         self.main_cmd = self.main_cmd.subcommand(&self.completions_cmd);
         self.main_cmd = self.main_cmd.subcommand(
             clap::Command::new(REPL_SUBCOMMAND)
@@ -313,6 +322,9 @@ impl OdraCli {
             CONFIG_SUBCOMMAND => self.run_config(args),
             TRANSFER_SUBCOMMAND => self.run_command(&self.transfer_cmd, args, container),
             UPGRADE_SUBCOMMAND => self.run_command(&self.upgrade_cmd, args, container),
+            UPGRADE_CHILDREN_SUBCOMMAND => {
+                self.run_command(&self.upgrade_children_cmd, args, container)
+            }
             COMPLETIONS_SUBCOMMAND => self
                 .completions_cmd
                 .generate(args, self.main_cmd.to_command(&[])),

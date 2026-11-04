@@ -186,6 +186,22 @@ impl TestContract {
     }
 }
 
+#[odra::module(factory = on)]
+pub struct TestCounter {
+    value: Var<u32>
+}
+
+#[odra::module(factory = on)]
+impl TestCounter {
+    pub fn init(&mut self, value: u32) {
+        self.value.set(value);
+    }
+
+    pub fn upgrade(&mut self, new_value: u32) {
+        self.value.set(new_value);
+    }
+}
+
 struct DummyHostCtx;
 
 impl HostContext for DummyHostCtx {
