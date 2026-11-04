@@ -1,34 +1,36 @@
 use std::collections::BTreeSet;
 
 use anyhow::Result;
-use clap::{ArgMatches, Command};
+use clap::{ArgAction, ArgMatches, Command};
 use odra::casper_types::bytesrepr::{Bytes, FromBytes, ToBytes};
 use odra::casper_types::{CLValue, RuntimeArgs};
 use odra::host::HostEnv;
 use odra::prelude::{Address, BTreeMap, OdraError};
 use odra::schema::casper_contract_schema::{CustomType, Entrypoint};
 use odra::schema::{SchemaCustomTypes, SchemaEntrypoints, SchemaEvents};
-use odra::{consts, CallDef, OdraContract, VmError};
+use odra::{CallDef, OdraContract, VmError};
 use odra_schema::codec::CustomTypeSet;
 use serde_derive::Serialize;
 
 use crate::cmd::args::{read_arg, Arg};
 use crate::cmd::{CmdOutput, UPGRADE_CHILDREN_SUBCOMMAND};
 use crate::container::ContractProvider;
+use crate::entry_point::factory::{
+    self, BATCH_UPGRADE_CHILD_CONTRACT, CONTRACT_NAME_ARG, UPGRADE_CHILD_CONTRACT
+};
 use crate::{entry_point, log, DeployedContractsContainer};
 
 use super::OdraCommand;
 
-const UPGRADE_CHILD_ENTRY_POINT: &str = "upgrade_child_contract";
-const BATCH_UPGRADE_ENTRY_POINT: &str = "batch_upgrade_child_contract";
-const CONTRACT_NAME_ARG: &str = "contract_name";
 const BATCH_ARGS_ARG: &str = "args";
+const ARG_BATCH_SIZE: &str = "batch-size";
 
 /// UpgradeChildrenCmd is a struct that represents the upgrade-children command in the Odra CLI.
 ///
 /// The command upgrades every child contract of a factory (`#[odra::module(factory = on)]`) from
-/// the contracts file with the factory's current code, in a single `batch_upgrade_child_contract`
-/// call. The children are the contracts the factory announced with its `ContractDeployed` events.
+/// the contracts file with the factory's current code, with `batch_upgrade_child_contract` calls:
+/// one, or one per `--batch-size` children. The children are the contracts the factory announced
+/// with its `ContractDeployed` events.
 #[derive(Default)]
 pub(crate) struct UpgradeChildrenCmd {
     factories: Vec<FactoryUpgradeChildrenCmd>
@@ -97,15 +99,12 @@ impl FactoryUpgradeChildrenCmd {
         T: SchemaEntrypoints + OdraContract + SchemaCustomTypes + SchemaEvents
     {
         let entry_points = T::schema_entrypoints();
-        if !entry_points
-            .iter()
-            .any(|entry_point| entry_point.name == BATCH_UPGRADE_ENTRY_POINT)
-        {
+        if !factory::is_factory(&entry_points) {
             return None;
         }
         let mut upgrade_args = entry_points
             .into_iter()
-            .find(|entry_point| entry_point.name == UPGRADE_CHILD_ENTRY_POINT)?;
+            .find(|entry_point| entry_point.name == UPGRADE_CHILD_CONTRACT)?;
         upgrade_args
             .arguments
             .retain(|arg| arg.name != CONTRACT_NAME_ARG);
@@ -142,6 +141,9 @@ impl OdraCommand for FactoryUpgradeChildrenCmd {
         let gas = read_arg(args, Arg::Gas).ok_or_else(|| {
             anyhow::anyhow!("Failed to read gas value. Use --gas <value> to specify it.")
         })?;
+        let batch_size = args
+            .get_one::<u32>(ARG_BATCH_SIZE)
+            .map(|size| *size as usize);
 
         let events = (0..env.events_count(&address))
             .map(|index| env.get_event_bytes(&address, index))
@@ -154,28 +156,45 @@ impl OdraCommand for FactoryUpgradeChildrenCmd {
             anyhow::bail!("Factory {} has no child contracts", self.package_name);
         }
 
-        let call_def = CallDef::new(
-            BATCH_UPGRADE_ENTRY_POINT,
-            true,
-            batch_upgrade_args(&children, &upgrade_args)?
-        );
-        env.set_gas(gas);
-        let result = env.raw_call_contract(address, call_def, false);
-        // Set back to 0 to avoid sending a huge amount of gas in consecutive calls.
-        env.set_gas(0);
-        result.map_err(|e| {
-            anyhow::anyhow!(
-                "Upgrading the children of {} failed with: {}",
-                self.package_name,
-                match e {
-                    OdraError::VmError(VmError::Other(msg)) => msg,
-                    _ => format!("{:?}", e)
-                }
-            )
-        })?;
+        let batches = children
+            .chunks(batch_size.unwrap_or(children.len()))
+            .collect::<Vec<_>>();
+        for (index, batch) in batches.iter().enumerate() {
+            let call_def = CallDef::new(
+                BATCH_UPGRADE_CHILD_CONTRACT,
+                true,
+                batch_upgrade_args(batch, &upgrade_args)?
+            );
+            env.set_gas(gas);
+            let result = env.raw_call_contract(address, call_def, false);
+            // Set back to 0 to avoid sending a huge amount of gas in consecutive calls.
+            env.set_gas(0);
+            if let Err(e) = result {
+                let upgraded = batches[..index].concat();
+                anyhow::bail!(
+                    "Upgrading the children of {} failed with: {}\nUpgraded: {}\nNot upgraded: {}",
+                    self.package_name,
+                    match e {
+                        OdraError::VmError(VmError::Other(msg)) => msg,
+                        _ => format!("{:?}", e)
+                    },
+                    list_or_none(&upgraded),
+                    list_or_none(&batches[index..].concat())
+                );
+            }
+            if batches.len() > 1 {
+                log(format!(
+                    "Batch {}/{} upgraded: {}",
+                    index + 1,
+                    batches.len(),
+                    batch.join(", ")
+                ));
+            }
+        }
 
         Ok(UpgradeChildrenReport {
             factory: self.package_name.clone(),
+            transactions: batches.len(),
             children
         })
     }
@@ -193,6 +212,24 @@ impl From<&FactoryUpgradeChildrenCmd> for Command {
                 &value.custom_types
             ))
             .arg(Arg::Gas)
+            .arg(
+                clap::Arg::new(ARG_BATCH_SIZE)
+                    .long(ARG_BATCH_SIZE)
+                    .help(
+                        "Upgrade at most N children per transaction, each with the --gas amount \
+                         [default: all in one transaction]"
+                    )
+                    .value_name("N")
+                    .value_parser(clap::value_parser!(u32).range(1..))
+                    .action(ArgAction::Set)
+            )
+    }
+}
+
+fn list_or_none(names: &[String]) -> String {
+    match names.is_empty() {
+        true => "none".to_string(),
+        false => names.join(", ")
     }
 }
 
@@ -231,12 +268,7 @@ fn batch_upgrade_args(children: &[String], upgrade_args: &RuntimeArgs) -> Result
         .collect::<BTreeMap<_, _>>();
     let mut args = RuntimeArgs::new();
     args.insert_cl_value(BATCH_ARGS_ARG, CLValue::from_t(batch).map_err(cl_error)?);
-    args.insert(consts::IS_FACTORY_UPGRADE_ARG, true)
-        .map_err(cl_error)?;
-    args.insert(consts::ALLOW_KEY_OVERRIDE_ARG, true)
-        .map_err(cl_error)?;
-    args.insert(consts::CREATE_UPGRADE_GROUP, false)
-        .map_err(cl_error)?;
+    factory::insert_cfg_args(BATCH_UPGRADE_CHILD_CONTRACT, &mut args).map_err(cl_error)?;
     Ok(args)
 }
 
@@ -248,15 +280,22 @@ fn cl_error(e: odra::casper_types::CLValueError) -> anyhow::Error {
 #[derive(Serialize)]
 pub(crate) struct UpgradeChildrenReport {
     factory: String,
+    /// The number of `batch_upgrade_child_contract` transactions sent.
+    transactions: usize,
     children: Vec<String>
 }
 
 impl CmdOutput for UpgradeChildrenReport {
     fn pretty_print(&self) {
+        let transactions = match self.transactions {
+            1 => String::new(),
+            n => format!(" in {n} transactions")
+        };
         log(format!(
-            "Upgraded {} child contracts of {}: {}",
+            "Upgraded {} child contracts of {}{}: {}",
             self.children.len(),
             self.factory,
+            transactions,
             self.children.join(", ")
         ));
     }
@@ -265,6 +304,7 @@ impl CmdOutput for UpgradeChildrenReport {
 #[cfg(test)]
 mod tests {
     use odra::args::{BatchUpgradeArgs, EntrypointArgument};
+    use odra::consts;
     use odra::prelude::Address;
 
     use super::*;
@@ -355,6 +395,30 @@ mod tests {
             .unwrap_err()
             .kind(),
             clap::error::ErrorKind::UnknownArgument
+        );
+    }
+
+    #[test]
+    fn batch_size_is_at_least_one() {
+        let cmd = cmd();
+        let parse = |batch_size: &str| {
+            Command::from(&cmd).try_get_matches_from(vec![
+                "upgrade-children",
+                "TestCounterFactory",
+                "--gas",
+                "10000000000",
+                "--new_value",
+                "5",
+                "--batch-size",
+                batch_size,
+            ])
+        };
+        let matches = parse("2").unwrap();
+        let (_, factory_args) = matches.subcommand().unwrap();
+        assert_eq!(factory_args.get_one::<u32>(ARG_BATCH_SIZE), Some(&2));
+        assert_eq!(
+            parse("0").unwrap_err().kind(),
+            clap::error::ErrorKind::ValueValidation
         );
     }
 

@@ -91,15 +91,28 @@ impl ContractCmd {
     ) -> Self {
         let contract_name = T::HostRef::ident();
         let package_name = package_name.unwrap_or(T::HostRef::ident());
-        let entry_points = T::schema_entrypoints()
+        let schema_entry_points = T::schema_entrypoints();
+        let is_factory = entry_point::factory::is_factory(&schema_entry_points);
+        let entry_points = schema_entry_points
             .into_iter()
-            // `init` is called by the deploy script and `upgrade` by the `upgrade` command.
-            .filter(|entry_point| entry_point.name != "init" && entry_point.name != "upgrade")
-            .map(|entry_point| CallCmd::new::<T>(entry_point, package_name.clone(), false))
+            // `init` is called by the deploy script, `upgrade` by the `upgrade` command and
+            // `batch_upgrade_child_contract`, whose arguments the schema does not describe, by the
+            // `upgrade-children` command.
+            .filter(|entry_point| {
+                !matches!(
+                    entry_point.name.as_str(),
+                    "init" | "upgrade" | entry_point::factory::BATCH_UPGRADE_CHILD_CONTRACT
+                )
+            })
+            .map(|entry_point| {
+                CallCmd::new::<T>(entry_point, package_name.clone(), false, is_factory)
+            })
             .chain(
                 T::schema_offchain_entrypoints()
                     .into_iter()
-                    .map(|entry_point| CallCmd::new::<T>(entry_point, package_name.clone(), true))
+                    .map(|entry_point| {
+                        CallCmd::new::<T>(entry_point, package_name.clone(), true, false)
+                    })
             )
             .collect::<Vec<_>>();
         ContractCmd {
@@ -158,14 +171,17 @@ struct CallCmd {
     entry_point: Entrypoint,
     custom_types: BTreeSet<CustomType>,
     /// An `#[odra(offchain)]` function: runs on the host, costs no gas.
-    offchain: bool
+    offchain: bool,
+    /// An entry point of a factory, whose calls carry `odra_cfg_*` arguments.
+    is_factory: bool
 }
 
 impl CallCmd {
     pub fn new<T: SchemaEntrypoints + OdraContract + SchemaCustomTypes + SchemaEvents>(
         entry_point: Entrypoint,
         package_name: String,
-        offchain: bool
+        offchain: bool,
+        is_factory: bool
     ) -> Self {
         let mut custom_types = BTreeSet::new();
         custom_types.extend(T::schema_types().into_iter().flatten());
@@ -174,7 +190,8 @@ impl CallCmd {
             package_name,
             entry_point,
             custom_types,
-            offchain
+            offchain,
+            is_factory
         }
     }
 }
@@ -193,7 +210,15 @@ impl OdraCommand for CallCmd {
         let entry_point = &self.entry_point;
         let contract_name = &self.package_name;
 
-        let outcome = entry_point::call(env, contract_name, entry_point, args, types, container)?;
+        let outcome = entry_point::call(
+            env,
+            contract_name,
+            entry_point,
+            self.is_factory,
+            args,
+            types,
+            container
+        )?;
         Ok(CallResultReport {
             contract: contract_name.clone(),
             entry_point: entry_point.name.clone(),
@@ -288,7 +313,7 @@ impl From<&CallCmd> for Command {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utils::{self, TestContract};
+    use crate::test_utils::{self, TestContract, TestCounterFactory};
 
     #[test]
     fn test_contracts_cmd() {
@@ -332,6 +357,22 @@ mod tests {
             .unwrap()
             .to_string()
             .contains("offchain"));
+    }
+
+    #[test]
+    fn factory_entry_points_carry_the_cfg_args() {
+        let cmd = ContractCmd::new::<TestCounterFactory>();
+        let names = cmd
+            .entry_points
+            .iter()
+            .map(|cmd| cmd.entry_point.name.as_str())
+            .collect::<Vec<_>>();
+        // `batch_upgrade_child_contract` is run by the `upgrade-children` command.
+        assert_eq!(names, vec!["new_contract", "upgrade_child_contract"]);
+        assert!(cmd.entry_points.iter().all(|cmd| cmd.is_factory));
+
+        let cmd = ContractCmd::new::<TestContract>();
+        assert!(cmd.entry_points.iter().all(|cmd| !cmd.is_factory));
     }
 
     #[test]
