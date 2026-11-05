@@ -4,7 +4,7 @@
 //! what is generated; these check that it compiles and what a mistake looks like.
 //!
 //! The `.stderr` snapshots depend on the compiler version: regenerate them with the toolchain
-//! pinned in `rust-toolchain` (`TRYBUILD=overwrite cargo test -p odra --test macros`) and review
+//! pinned in `rust-toolchain.toml` (`TRYBUILD=overwrite cargo test -p odra --test macros`) and review
 //! the diff.
 
 #[test]

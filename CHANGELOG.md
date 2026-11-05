@@ -2,7 +2,7 @@
 
 Changelog for `odra`.
 
-## [Unreleased]
+## [2.10.0]
 ### Added
 - OdraCLI `upgrade` command: `upgrade <Contract> --gas <amount> [--<upgrade args>]` upgrades a contract from the
   contracts file with its wasm, calling its `upgrade` entry point with the given arguments, without a custom
