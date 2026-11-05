@@ -172,7 +172,7 @@ generate-schemas:
     cd modules && cargo odra schema
     cd examples && cargo odra schema
 
-SCHEMA_DIRS := "modules/resources examples/resources/casper_contract_schemas examples/resources/legacy"
+SCHEMA_DIRS := "modules/resources examples/resources/casper_contract_schemas"
 
 # Fail if the committed schemas differ from freshly generated ones (fix: generate-schemas, commit).
 check-schemas: generate-schemas

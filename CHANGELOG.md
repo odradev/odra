@@ -65,6 +65,9 @@ Changelog for `odra`.
 - `const fn u512` in the prelude; `cspr!` with a literal is a constant expression.
 
 ### Changed
+- `cargo odra schema` writes only the contract schema (`resources/casper_contract_schemas`), no longer the
+  legacy one (`resources/legacy`) (#689). `bin/build_schema.rs` calls the new `odra_build::contract_schema`;
+  `odra_build::schema` still compiles but ignores the legacy schema passed to it.
 - `Erc20::mint`, `Erc20::burn` and `Ownable::unchecked_transfer_ownership` are no longer entry points
   of contracts built from `odra-modules` (a deployed `Erc20` let anyone mint); call them from a
   wrapping module that adds its own access control.

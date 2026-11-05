@@ -16,17 +16,24 @@ pub fn build() {
 
 const CONTRACT_SCHEMAS_DIR: &str = "resources/casper_contract_schemas";
 
-pub fn schema<B, S>(legacy_schema: B, schema: S)
-where
-    B: Serialize,
-    S: Serialize
-{
+/// Writes the contract schema of the module named by `ODRA_MODULE` to
+/// `resources/casper_contract_schemas/<module>_schema.json`.
+pub fn contract_schema<S: Serialize>(schema: S) {
     let module = std::env::var("ODRA_MODULE").expect("ODRA_MODULE environment variable is not set");
     let module = to_snake_case(module_file_name(&module));
 
     write_schema_file(CONTRACT_SCHEMAS_DIR, &module, schema);
+}
 
-    write_schema_file("resources/legacy", &module, legacy_schema);
+/// Kept for the `bin/build_schema.rs` of projects generated before [`contract_schema`]: the legacy
+/// schema is no longer written, only the contract schema.
+#[doc(hidden)]
+pub fn schema<B, S>(_legacy_schema: B, schema: S)
+where
+    B: Serialize,
+    S: Serialize
+{
+    contract_schema(schema);
 }
 
 fn write_schema_file<T>(path: &str, module: &str, schema: T)
