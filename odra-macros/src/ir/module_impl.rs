@@ -2,11 +2,11 @@ use proc_macro2::Ident;
 use quote::ToTokens;
 use syn::{parse_quote, ImplItem};
 
-use super::attr::{self, OdraAttribute};
+use super::attr::{self, OdraAttrs};
 use super::config::ModuleConfig;
 use super::delegate::{Delegate, DelegatedFn};
-use super::errors::{self, OffchainMisuse};
-use super::function::{FnArgIR, FnIR};
+use super::errors;
+use super::function::{FnArgIR, FnIR, ImplContext};
 use super::{CONSTRUCTOR_NAME, UPGRADER_NAME};
 use crate::utils;
 
@@ -278,14 +278,13 @@ pub struct ModuleIR {
 
 impl ModuleIR {
     fn try_new(code: syn::ItemImpl, config: ModuleConfig) -> syn::Result<Self> {
-        let is_trait_impl = code.trait_.is_some();
-        let is_factory = config.factory;
+        let ctx = ImplContext {
+            is_trait_impl: code.trait_.is_some(),
+            is_factory: config.factory
+        };
         let (ident, functions) = errors::both(
             Self::module_ident(&code.self_ty),
-            errors::checked(
-                Self::parse_functions(&code, is_trait_impl),
-                Self::validate_offchain_functions(&code, is_trait_impl, is_factory)
-            )
+            Self::parse_functions(&code, ctx)
         )?;
         Ok(Self {
             code,
@@ -334,7 +333,7 @@ impl ModuleIR {
         is_trait_impl || matches!(func.vis, syn::Visibility::Public(_))
     }
 
-    fn parse_functions(code: &syn::ItemImpl, is_trait_impl: bool) -> syn::Result<Vec<FnIR>> {
+    fn parse_functions(code: &syn::ItemImpl, ctx: ImplContext) -> syn::Result<Vec<FnIR>> {
         let own_functions = code
             .items
             .iter()
@@ -345,18 +344,16 @@ impl ModuleIR {
             .filter_map(|func| {
                 // Private functions of a plain impl are not entry points: only their
                 // `#[odra(..)]` attributes are checked, not their names nor arguments.
-                if Self::is_entry_point(func, is_trait_impl) {
-                    Some(FnIR::try_from(func.clone()))
+                if Self::is_entry_point(func, ctx.is_trait_impl) {
+                    Some(FnIR::try_new_impl(func.clone(), ctx))
                 } else {
-                    attr::partition_attributes(func.attrs.clone())
-                        .err()
-                        .map(Err)
+                    OdraAttrs::parse(&func.attrs).err().map(Err)
                 }
             });
         let delegated_functions = Self::delegated_functions(code)?
             .into_iter()
             .map(|delegated| {
-                FnIR::try_from(delegated.function)
+                FnIR::try_new_impl(delegated.function, ctx)
                     .map(|fn_ir| fn_ir.delegated_to(delegated.target, delegated.has_own_docs))
             });
         errors::collect_all(own_functions.chain(delegated_functions))
@@ -377,54 +374,6 @@ impl ModuleIR {
             .into_iter()
             .flat_map(|delegate| delegate.functions)
             .collect())
-    }
-
-    /// `#[odra(offchain)]` is only meaningful on a read-only function of a plain module impl.
-    ///
-    /// Checked on the functions as written, before their own validation, so a reserved name
-    /// elsewhere in the impl does not hide an offchain mistake: all of them are reported in one
-    /// build.
-    fn validate_offchain_functions(
-        code: &syn::ItemImpl,
-        is_trait_impl: bool,
-        is_factory: bool
-    ) -> syn::Result<()> {
-        let functions = code
-            .items
-            .iter()
-            .filter_map(|item| match item {
-                syn::ImplItem::Fn(func) if Self::is_entry_point(func, is_trait_impl) => {
-                    Some(FnIR::unchecked(func.clone()))
-                }
-                _ => None
-            })
-            .collect::<Vec<_>>();
-        let offchain_functions = functions.iter().filter(|f| f.is_offchain());
-        errors::check_all(offchain_functions.map(|f| {
-            let sig = f.sig();
-            let receiver = utils::syn::receiver_arg(sig);
-            // The `#[odra(..)]` attribute that says `offchain`; it parsed, as `f` is offchain.
-            let offchain_attr = f.attributes().iter().find(|attr| {
-                OdraAttribute::try_from((*attr).clone()).is_ok_and(|a| a.is_offchain())
-            });
-            let (why, spanned) = if is_trait_impl {
-                (OffchainMisuse::InTraitImpl, offchain_attr.to_token_stream())
-            } else if is_factory {
-                (OffchainMisuse::InFactory, offchain_attr.to_token_stream())
-            } else if f.is_mut() {
-                (OffchainMisuse::MutReceiver, receiver.to_token_stream())
-            } else if f.is_payable() || f.is_non_reentrant() {
-                (
-                    OffchainMisuse::PayableOrNonReentrant,
-                    offchain_attr.to_token_stream()
-                )
-            } else if receiver.is_none() {
-                (OffchainMisuse::NoReceiver, sig.ident.to_token_stream())
-            } else {
-                return Ok(());
-            };
-            Err(errors::offchain_misuse(spanned, &f.name_str(), why))
-        }))
     }
 }
 

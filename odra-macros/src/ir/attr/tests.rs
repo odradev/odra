@@ -1,106 +1,41 @@
 use super::*;
-use std::fmt::{self, Formatter};
-
-#[derive(Clone)]
-enum Attribute {
-    Odra(OdraAttribute),
-    Other(Box<syn::Attribute>)
-}
-
-impl PartialEq for Attribute {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Attribute::Odra(a), Attribute::Odra(b)) => a == b,
-            (Attribute::Other(a), Attribute::Other(b)) => {
-                a.to_token_stream().to_string() == b.to_token_stream().to_string()
-            }
-            _ => false
-        }
-    }
-}
-
-impl std::fmt::Debug for Attribute {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            Attribute::Odra(odra_attr) => odra_attr.fmt(f),
-            Attribute::Other(other_attr) => f
-                .debug_struct("syn::Attribute")
-                .field("value", &other_attr.to_token_stream().to_string())
-                .finish()
-        }
-    }
-}
-
-impl TryFrom<syn::Attribute> for Attribute {
-    type Error = syn::Error;
-
-    fn try_from(attr: syn::Attribute) -> Result<Self, Self::Error> {
-        if attr.path().is_ident("odra") {
-            return <OdraAttribute as TryFrom<_>>::try_from(attr).map(Into::into);
-        }
-        Ok(Attribute::Other(Box::new(attr)))
-    }
-}
-
-impl From<OdraAttribute> for Attribute {
-    fn from(odra_attribute: OdraAttribute) -> Self {
-        Attribute::Odra(odra_attribute)
-    }
-}
+use syn::parse_quote;
 
 #[test]
-fn payable_attr_works() {
-    assert_attribute_try_from(
-        syn::parse_quote! {
-            #[odra(payable)]
-        },
-        Ok(Attribute::Odra(OdraAttribute {
-            types: vec![AttrType::Payable]
-        }))
+fn flags_are_read_across_attributes() {
+    let attrs = OdraAttrs::parse(&[
+        parse_quote!(#[odra(payable)]),
+        parse_quote!(#[yoyo(abc)]),
+        parse_quote!(#[odra(offchain)])
+    ])
+    .unwrap();
+    assert!(attrs.is_payable());
+    assert!(!attrs.is_non_reentrant());
+    assert!(attrs.is_offchain());
+    assert_eq!(
+        attrs
+            .each_attribute()
+            .map(|(_, name)| name)
+            .collect::<Vec<_>>(),
+        vec!["payable", "offchain"]
     );
 }
 
 #[test]
-fn non_reentrant_attr_works() {
-    assert_attribute_try_from(
-        syn::parse_quote! {
-            #[odra(non_reentrant)]
-        },
-        Ok(Attribute::Odra(OdraAttribute {
-            types: vec![AttrType::NonReentrant]
-        }))
-    );
+fn no_odra_attribute_means_no_flags() {
+    let attrs = OdraAttrs::parse(&[parse_quote!(#[yoyo(abc)])]).unwrap();
+    assert!(!attrs.is_payable());
+    assert!(!attrs.is_non_reentrant());
+    assert!(!attrs.is_offchain());
+    assert!(attrs.offchain_attribute().is_none());
 }
 
 #[test]
-fn offchain_attr_works() {
-    assert_attribute_try_from(
-        syn::parse_quote! {
-            #[odra(offchain)]
-        },
-        Ok(Attribute::Odra(OdraAttribute {
-            types: vec![AttrType::Offchain]
-        }))
-    );
-}
-
-#[test]
-fn non_odra_attr_works() {
-    let expected_value: syn::Attribute = syn::parse_quote! {
-        #[yoyo(abc)]
-    };
-    assert_attribute_try_from(
-        expected_value.clone(),
-        Ok(Attribute::Other(Box::new(expected_value)))
-    );
+fn other_attributes_are_kept() {
+    let other: syn::Attribute = parse_quote!(#[yoyo(abc)]);
+    let kept = other_attributes([parse_quote!(#[odra(payable)]), other.clone()]);
+    assert_eq!(kept, vec![other]);
 }
 
 // Wrong attributes (unknown, duplicate, malformed) are covered by the compile-fail tests of
 // the `odra` crate (`tests/macros/fail`), which check the message and its span.
-
-fn assert_attribute_try_from(input: syn::Attribute, expected: Result<Attribute, &'static str>) {
-    assert_eq!(
-        <Attribute as TryFrom<_>>::try_from(input).map_err(|err| err.to_string()),
-        expected.map_err(ToString::to_string),
-    );
-}

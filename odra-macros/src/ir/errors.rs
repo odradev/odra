@@ -56,11 +56,6 @@ pub fn both<A, B>(a: syn::Result<A>, b: syn::Result<B>) -> syn::Result<(A, B)> {
     }
 }
 
-/// The value when it and the check both succeed; otherwise the errors of both, the value's first.
-pub fn checked<T>(value: syn::Result<T>, check: syn::Result<()>) -> syn::Result<T> {
-    both(value, check).map(|(value, ())| value)
-}
-
 // --- What the attribute macro is applied to -------------------------------------------------
 
 /// `#[odra::module]` on something that is neither a struct nor an impl or trait block.
