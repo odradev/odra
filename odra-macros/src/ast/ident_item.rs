@@ -15,10 +15,9 @@ impl TryFrom<&ModuleStructIR> for HasIdentImplItem {
     type Error = syn::Error;
 
     fn try_from(ir: &ModuleStructIR) -> Result<Self, Self::Error> {
-        let contract_name = ir.contract_name();
         Ok(Self {
             module_ident: ir.module_ident(),
-            contract_name: (!contract_name.is_empty()).then_some(contract_name)
+            contract_name: ir.contract_name()
         })
     }
 }

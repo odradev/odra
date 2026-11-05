@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use proc_macro2::Ident;
 use quote::{format_ident, ToTokens};
 
-use super::config::{ConfigItem, ModuleConfiguration};
+use super::config::ModuleConfig;
 use super::errors;
 use crate::utils;
 
@@ -14,7 +14,7 @@ const MAX_FIELDS: usize = 255;
 /// named, or there are none, and there are at most [MAX_FIELDS] of them.
 pub struct ModuleStructIR {
     code: syn::ItemStruct,
-    config: ConfigItem,
+    config: ModuleConfig,
     fields: Vec<EnumeratedTypedField>
 }
 
@@ -33,7 +33,7 @@ impl TryFrom<(&proc_macro2::TokenStream, &proc_macro2::TokenStream)> for ModuleS
 impl ModuleStructIR {
     /// The IR of the struct, with `attr` the arguments of the macro.
     pub fn try_new(attr: &proc_macro2::TokenStream, code: syn::ItemStruct) -> syn::Result<Self> {
-        let config = syn::parse2::<ConfigItem>(attr.clone())?;
+        let config = syn::parse2::<ModuleConfig>(attr.clone())?;
         if code.fields.len() > MAX_FIELDS {
             return Err(errors::module_too_many_fields(&code.fields, MAX_FIELDS));
         }
@@ -103,48 +103,34 @@ impl ModuleStructIR {
             .collect()
     }
 
-    /// The `#[odra::module(..)]` arguments, when any were given.
-    fn module_cfg(&self) -> Option<&ModuleConfiguration> {
-        match &self.config {
-            ConfigItem::Module(cfg) => Some(cfg),
-            ConfigItem::Empty => None
-        }
-    }
-
     /// The types of `events = [..]`.
     pub fn events(&self) -> Vec<syn::Type> {
-        self.module_cfg()
-            .map(|cfg| cfg.events.iter().cloned().collect())
-            .unwrap_or_default()
+        self.config.events.clone()
     }
 
     /// The type of `errors = ..`.
     pub fn errors(&self) -> Option<syn::Type> {
-        self.module_cfg().and_then(|cfg| (*cfg.errors).clone())
+        self.config.errors.clone()
     }
 
     /// The expression of `layout = ..`.
     pub fn storage_layout(&self) -> Option<syn::Expr> {
-        self.module_cfg().and_then(|cfg| (*cfg.layout).clone())
+        self.config.layout.clone()
     }
 
     /// `factory = on`.
     pub fn is_factory(&self) -> bool {
-        self.module_cfg().is_some_and(|cfg| *cfg.factory)
+        self.config.factory
     }
 
-    /// The `name = ".."`, empty when not given.
-    pub fn contract_name(&self) -> String {
-        self.module_cfg()
-            .map(|cfg| (*cfg.name).clone())
-            .unwrap_or_default()
+    /// The `name = ".."`, when given.
+    pub fn contract_name(&self) -> Option<String> {
+        self.config.name.clone()
     }
 
-    /// The `version = ".."`, empty when not given.
-    pub fn contract_version(&self) -> String {
-        self.module_cfg()
-            .map(|cfg| (*cfg.version).clone())
-            .unwrap_or_default()
+    /// The `version = ".."`, when given.
+    pub fn contract_version(&self) -> Option<String> {
+        self.config.version.clone()
     }
 }
 

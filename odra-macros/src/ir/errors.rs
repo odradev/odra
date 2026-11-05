@@ -219,6 +219,14 @@ pub fn module_arg_on_trait(name: &str, span: Span) -> syn::Error {
     )
 }
 
+/// `factory = <value>` with a value other than `on` or `off`.
+pub fn factory_not_on_or_off(value: &syn::Ident) -> syn::Error {
+    syn::Error::new_spanned(
+        value,
+        format!("`{value}` is not a `factory` value; write `factory = on` or `factory = off`")
+    )
+}
+
 /// A `#[odra::module(..)]` argument given twice.
 pub fn module_arg_twice(name: &str, span: Span) -> syn::Error {
     syn::Error::new(

@@ -3,7 +3,7 @@ use quote::ToTokens;
 use syn::{parse_quote, ImplItem};
 
 use super::attr::{self, OdraAttribute};
-use super::config::ConfigItem;
+use super::config::ModuleConfig;
 use super::delegate::{Delegate, DelegatedFn};
 use super::errors::{self, OffchainMisuse};
 use super::function::{FnArgIR, FnIR};
@@ -20,13 +20,12 @@ pub enum ModuleImplIR {
 impl ModuleImplIR {
     /// The IR of an impl block, with `attr` the arguments of the macro.
     pub fn try_new_impl(attr: &proc_macro2::TokenStream, code: syn::ItemImpl) -> syn::Result<Self> {
-        let config = syn::parse2::<ConfigItem>(attr.clone())?;
-        if let ConfigItem::Module(cfg) = &config {
-            errors::check_all(
-                cfg.struct_only_args()
-                    .map(|(name, span)| Err(errors::module_arg_on_impl(name, *span)))
-            )?;
-        }
+        let config = syn::parse2::<ModuleConfig>(attr.clone())?;
+        errors::check_all(
+            config
+                .struct_only_args()
+                .map(|(name, span)| Err(errors::module_arg_on_impl(name, *span)))
+        )?;
         ModuleIR::try_new(code, config).map(Self::Impl)
     }
 
@@ -35,13 +34,12 @@ impl ModuleImplIR {
         attr: &proc_macro2::TokenStream,
         code: syn::ItemTrait
     ) -> syn::Result<Self> {
-        let config = syn::parse2::<ConfigItem>(attr.clone())?;
-        if let ConfigItem::Module(cfg) = &config {
-            errors::check_all(
-                cfg.args()
-                    .map(|(name, span)| Err(errors::module_arg_on_trait(name, *span)))
-            )?;
-        }
+        let config = syn::parse2::<ModuleConfig>(attr.clone())?;
+        errors::check_all(
+            config
+                .args()
+                .map(|(name, span)| Err(errors::module_arg_on_trait(name, *span)))
+        )?;
         // A trait function with a visibility (`pub fn`) is a `Verbatim` item to syn. Parsing it
         // as a function reports the `pub` here, instead of skipping the function and leaving the
         // error to rustc on the emitted trait.
@@ -50,7 +48,7 @@ impl ModuleImplIR {
                 syn::parse2::<syn::TraitItemFn>(func.clone())?;
             }
         }
-        ModuleTraitIR::try_new(code, config).map(Self::Trait)
+        ModuleTraitIR::try_new(code).map(Self::Trait)
     }
 }
 
@@ -97,10 +95,7 @@ impl ModuleImplIR {
     /// `factory = on` on the impl block.
     pub fn is_factory(&self) -> bool {
         match self {
-            ModuleImplIR::Impl(ir) => match &ir.config {
-                ConfigItem::Module(cfg) => *cfg.factory,
-                ConfigItem::Empty => false
-            },
+            ModuleImplIR::Impl(ir) => ir.config.factory,
             ModuleImplIR::Trait(_) => false
         }
     }
@@ -276,14 +271,15 @@ pub struct ModuleIR {
     code: syn::ItemImpl,
     /// The module: the last segment of the impl's self type, which is a path.
     ident: Ident,
-    config: ConfigItem,
+    /// Boxed, as the impl variant would otherwise dwarf the trait one.
+    config: Box<ModuleConfig>,
     functions: Vec<FnIR>
 }
 
 impl ModuleIR {
-    fn try_new(code: syn::ItemImpl, config: ConfigItem) -> syn::Result<Self> {
+    fn try_new(code: syn::ItemImpl, config: ModuleConfig) -> syn::Result<Self> {
         let is_trait_impl = code.trait_.is_some();
-        let is_factory = matches!(&config, ConfigItem::Module(cfg) if *cfg.factory);
+        let is_factory = config.factory;
         let (ident, functions) = errors::both(
             Self::module_ident(&code.self_ty),
             errors::checked(
@@ -294,7 +290,7 @@ impl ModuleIR {
         Ok(Self {
             code,
             ident,
-            config,
+            config: Box::new(config),
             functions
         })
     }
@@ -436,22 +432,16 @@ impl ModuleIR {
 /// `#[odra::external_contract]`.
 pub struct ModuleTraitIR {
     code: syn::ItemTrait,
-    #[allow(dead_code)]
-    config: ConfigItem,
     functions: Vec<FnIR>
 }
 
 impl ModuleTraitIR {
-    fn try_new(code: syn::ItemTrait, config: ConfigItem) -> syn::Result<Self> {
+    fn try_new(code: syn::ItemTrait) -> syn::Result<Self> {
         let functions = errors::collect_all(code.items.iter().filter_map(|item| match item {
             syn::TraitItem::Fn(func) => Some(FnIR::try_from(func.clone())),
             _ => None
         }))?;
-        Ok(Self {
-            code,
-            config,
-            functions
-        })
+        Ok(Self { code, functions })
     }
 
     pub fn self_code(&self) -> syn::ItemTrait {
