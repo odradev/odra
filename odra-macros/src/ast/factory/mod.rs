@@ -7,7 +7,7 @@ pub mod impl_item;
 mod parts;
 pub mod struct_item;
 
-pub(crate) use parts::{FactoryDeployImplItem, FactoryHostRefItem, FactoryWasmFnsItem};
+pub(crate) use parts::FactoryWasmFnsItem;
 
 /// Emits `#[odra::factory] pub struct XxxFactory;` for a module with `factory = on`: the
 /// factory's own struct, expanded by the factory macro in turn. Nothing for other modules.

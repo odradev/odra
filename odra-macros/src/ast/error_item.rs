@@ -1,21 +1,29 @@
-use derive_try_from_ref::TryFromRef;
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 
 use crate::{
     ast::{schema::SchemaErrorItem},
-    ir::TypeIR,
+    ir::{TypeIR, VariantIR},
     utils
 };
 
 /// Emits everything `#[odra::odra_error]` adds to an error enum: the `From` impls
 /// ([OdraErrorItem]) and its schema.
-#[derive(TryFromRef)]
-#[source(TypeIR)]
-#[err(syn::Error)]
 pub struct OdraErrorAttrItem {
     item: OdraErrorItem,
     schema: SchemaErrorItem
+}
+
+impl TryFrom<&TypeIR> for OdraErrorAttrItem {
+    type Error = syn::Error;
+
+    fn try_from(ir: &TypeIR) -> Result<Self, Self::Error> {
+        let variants = ir.error_variants()?;
+        Ok(Self {
+            item: OdraErrorItem::new(ir, variants),
+            schema: SchemaErrorItem::new(ir.ident(), variants)
+        })
+    }
 }
 
 impl ToTokens for OdraErrorAttrItem {
@@ -33,15 +41,14 @@ pub struct OdraErrorItem {
     variants: Vec<Ident>
 }
 
-impl TryFrom<&TypeIR> for OdraErrorItem {
-    type Error = syn::Error;
-
-    fn try_from(ty: &TypeIR) -> Result<Self, Self::Error> {
-        Ok(Self {
+impl OdraErrorItem {
+    /// `variants` are the enum's, see [TypeIR::error_variants].
+    pub fn new(ty: &TypeIR, variants: &[VariantIR]) -> Self {
+        Self {
             item: ty.self_code().clone(),
             ident: ty.ident(),
-            variants: ty.error_variants()?.iter().map(|v| v.ident.clone()).collect()
-        })
+            variants: variants.iter().map(|v| v.ident.clone()).collect()
+        }
     }
 }
 

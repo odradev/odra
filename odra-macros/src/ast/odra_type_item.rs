@@ -1,4 +1,3 @@
-use derive_try_from_ref::TryFromRef;
 use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote, ToTokens};
 
@@ -10,12 +9,20 @@ use crate::{
 
 /// Emits everything `#[odra::odra_type]` adds to a type: the derives and trait impls
 /// ([OdraTypeItem]) and its schema.
-#[derive(TryFromRef)]
-#[source(TypeIR)]
-#[err(syn::Error)]
 pub struct OdraTypeAttrItem {
     item: OdraTypeItem,
     schema: SchemaCustomTypeItem
+}
+
+impl TryFrom<&TypeIR> for OdraTypeAttrItem {
+    type Error = syn::Error;
+
+    fn try_from(ir: &TypeIR) -> Result<Self, Self::Error> {
+        Ok(Self {
+            item: OdraTypeItem::try_from(ir)?,
+            schema: SchemaCustomTypeItem::try_from(ir)?
+        })
+    }
 }
 
 impl ToTokens for OdraTypeAttrItem {

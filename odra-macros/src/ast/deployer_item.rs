@@ -3,18 +3,10 @@ use quote::{format_ident, quote, ToTokens};
 use syn::{parse_quote, punctuated::Punctuated};
 
 use crate::{
+    ast::Target,
     ir::{FnArgIR, ModuleImplIR},
     utils
 };
-
-/// Which contract the deployer is built for: the module itself, or the factory that deploys
-/// instances of it. A factory has no argument structs, lists its own three entry points and runs
-/// them with the helpers of `odra::host::factory`.
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub enum DeployerKind {
-    Module,
-    Factory
-}
 
 /// Emits what a test needs to deploy the contract on a host: the `XxxInitArgs` and
 /// `XxxUpgradeArgs` structs when `init` and `upgrade` take arguments, and
@@ -27,11 +19,11 @@ pub struct DeployerItem {
 }
 
 impl DeployerItem {
-    pub(crate) fn try_new(module: &ModuleImplIR, kind: DeployerKind) -> syn::Result<Self> {
+    pub(crate) fn try_new(module: &ModuleImplIR, kind: Target) -> syn::Result<Self> {
         let module_name = module.module_str();
         let host_ref_ident = module.host_ref_ident();
         match kind {
-            DeployerKind::Module => Ok(Self {
+            Target::Module => Ok(Self {
                 init_args: match module.constructor() {
                     Some(f) if f.has_args() => Some(ArgsStructItem {
                         role: ArgsRole::Init,
@@ -74,7 +66,7 @@ impl DeployerItem {
                     }
                 }
             }),
-            DeployerKind::Factory => {
+            Target::Factory => {
                 let factory_fns = [
                     module.factory_fn(),
                     module.factory_upgrade_fn(),
@@ -129,7 +121,7 @@ impl TryFrom<&ModuleImplIR> for DeployerItem {
     type Error = syn::Error;
 
     fn try_from(module: &ModuleImplIR) -> Result<Self, Self::Error> {
-        Self::try_new(module, DeployerKind::Module)
+        Self::try_new(module, Target::Module)
     }
 }
 

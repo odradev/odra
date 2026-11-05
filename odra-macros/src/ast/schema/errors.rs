@@ -1,5 +1,5 @@
 use crate::{
-    ir::{EnumeratedTypedField, ModuleStructIR, TypeIR},
+    ir::{EnumeratedTypedField, ModuleStructIR, VariantIR},
     utils
 };
 use quote::ToTokens;
@@ -82,14 +82,12 @@ impl ToTokens for SchemaErrorItem {
     }
 }
 
-impl TryFrom<&TypeIR> for SchemaErrorItem {
-    type Error = syn::Error;
-
-    fn try_from(ir: &TypeIR) -> Result<Self, Self::Error> {
-        Ok(Self {
-            ty_ident: ir.ident(),
-            errors: ir
-                .error_variants()?
+impl SchemaErrorItem {
+    /// `variants` are the enum's, see [crate::ir::TypeIR::error_variants].
+    pub fn new(ty_ident: syn::Ident, variants: &[VariantIR]) -> Self {
+        Self {
+            ty_ident,
+            errors: variants
                 .iter()
                 .map(|v| {
                     (
@@ -99,7 +97,7 @@ impl TryFrom<&TypeIR> for SchemaErrorItem {
                     )
                 })
                 .collect()
-        })
+        }
     }
 }
 

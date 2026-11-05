@@ -1,15 +1,11 @@
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 
-use crate::{ast::ref_utils, ir::ModuleImplIR, utils};
-
-/// Which contract the ref is built for: the module itself, or the factory that deploys instances
-/// of it. They differ in the functions the ref exposes.
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub enum ContractRefKind {
-    Module,
-    Factory
-}
+use crate::{
+    ast::{ref_utils, Target},
+    ir::ModuleImplIR,
+    utils
+};
 
 /// Emits the whole contract ref of a module: the struct, `impl ContractRef`, the impl block with
 /// one method per entry point, and the empty schema marker impls.
@@ -21,10 +17,10 @@ pub struct RefItem {
 }
 
 impl RefItem {
-    pub(crate) fn try_new(module: &ModuleImplIR, kind: ContractRefKind) -> syn::Result<Self> {
+    pub(crate) fn try_new(module: &ModuleImplIR, kind: Target) -> syn::Result<Self> {
         let is_trait_impl = module.is_trait_impl();
         let (trait_path, functions) = match kind {
-            ContractRefKind::Module => (
+            Target::Module => (
                 module.impl_trait_path(),
                 module
                     .onchain_functions()
@@ -32,7 +28,7 @@ impl RefItem {
                     .map(|f| ref_utils::contract_function_item(f, is_trait_impl))
                     .collect()
             ),
-            ContractRefKind::Factory => (
+            Target::Factory => (
                 None,
                 [
                     module.factory_fn(),
@@ -67,7 +63,7 @@ impl TryFrom<&ModuleImplIR> for RefItem {
     type Error = syn::Error;
 
     fn try_from(module: &ModuleImplIR) -> Result<Self, Self::Error> {
-        Self::try_new(module, ContractRefKind::Module)
+        Self::try_new(module, Target::Module)
     }
 }
 

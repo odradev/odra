@@ -3,7 +3,6 @@ use crate::ast::host_ref_item::HostRefItem;
 use crate::ast::ref_utils;
 use crate::ast::test_parts::{self, TestPartsReexportItem};
 use crate::ir::ModuleImplIR;
-use derive_try_from_ref::TryFromRef;
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 
@@ -101,15 +100,22 @@ impl ToTokens for TraitImplItem {
 
 /// The test parts of an external contract: the host ref and `impl Trait for XxxHostRef`; there
 /// is no deployer, as there is no code to deploy.
-#[derive(TryFromRef)]
-#[source(ModuleImplIR)]
-#[err(syn::Error)]
 struct TestPartsItem {
-    #[expr(input.test_parts_mod_ident())]
     mod_ident: syn::Ident,
     host_ref: HostRefItem,
-    #[expr(TraitImplItem::host_ref(input)?)]
     host_trait_impl: TraitImplItem
+}
+
+impl TryFrom<&ModuleImplIR> for TestPartsItem {
+    type Error = syn::Error;
+
+    fn try_from(ir: &ModuleImplIR) -> Result<Self, Self::Error> {
+        Ok(Self {
+            mod_ident: ir.test_parts_mod_ident(),
+            host_ref: HostRefItem::try_from(ir)?,
+            host_trait_impl: TraitImplItem::host_ref(ir)?
+        })
+    }
 }
 
 impl ToTokens for TestPartsItem {

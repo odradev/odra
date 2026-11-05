@@ -5,19 +5,12 @@ use syn::parse_quote;
 use crate::{
     ast::{
         factory::FactoryWasmFnsItem,
-        parts_utils::{UsePreludeItem, UseSuperItem}
+        parts_utils::{UsePreludeItem, UseSuperItem},
+        Target
     },
     ir::{FnArgIR, FnIR, FnType, ModuleImplIR},
     utils
 };
-
-/// Which contract the wasm parts are built for: the module itself, or the factory that
-/// deploys and upgrades instances of it.
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub enum WasmPartsKind {
-    Module,
-    Factory
-}
 
 /// Emits `mod __xxx_wasm_parts`, compiled only for wasm32 and only when the crate is built for
 /// this module: the `entry_points()` listing, the `call()` installer, for a factory its
@@ -33,10 +26,10 @@ pub struct ModuleWasmPartsItem {
 }
 
 impl ModuleWasmPartsItem {
-    pub(crate) fn try_new(module: &ModuleImplIR, kind: WasmPartsKind) -> syn::Result<Self> {
+    pub(crate) fn try_new(module: &ModuleImplIR, kind: Target) -> syn::Result<Self> {
         let functions = match kind {
-            WasmPartsKind::Module => module.onchain_functions(),
-            WasmPartsKind::Factory => module.functions().iter().collect()
+            Target::Module => module.onchain_functions(),
+            Target::Factory => module.functions().iter().collect()
         };
         let exec_parts_mod_ident = module.exec_parts_mod_ident();
         Ok(Self {
@@ -45,8 +38,8 @@ impl ModuleWasmPartsItem {
             entry_points_fn: EntryPointsFnItem::new(module, kind, &functions),
             call_fn: CallFnItem::try_new(module, kind)?,
             factory_fns: match kind {
-                WasmPartsKind::Module => None,
-                WasmPartsKind::Factory => Some(FactoryWasmFnsItem::try_from(module)?)
+                Target::Module => None,
+                Target::Factory => Some(FactoryWasmFnsItem::try_from(module)?)
             },
             entry_points: functions
                 .iter()
@@ -60,7 +53,7 @@ impl TryFrom<&ModuleImplIR> for ModuleWasmPartsItem {
     type Error = syn::Error;
 
     fn try_from(module: &ModuleImplIR) -> Result<Self, Self::Error> {
-        Self::try_new(module, WasmPartsKind::Module)
+        Self::try_new(module, Target::Module)
     }
 }
 
@@ -105,13 +98,13 @@ struct EntryPointsFnItem {
 }
 
 impl EntryPointsFnItem {
-    fn new(module: &ModuleImplIR, kind: WasmPartsKind, functions: &[&FnIR]) -> Self {
+    fn new(module: &ModuleImplIR, kind: Target, functions: &[&FnIR]) -> Self {
         match kind {
-            WasmPartsKind::Module => Self {
+            Target::Module => Self {
                 entry_points: functions.iter().copied().map(installed_entry_point).collect(),
                 child_entry_points: None
             },
-            WasmPartsKind::Factory => Self {
+            Target::Factory => Self {
                 entry_points: functions
                     .iter()
                     .copied()
@@ -157,14 +150,14 @@ impl ToTokens for EntryPointsFnItem {
 /// Emits `#[no_mangle] fn call()`, the installer the host runs on deploy and on upgrade. A module
 /// reads its `init` (or `upgrade`) arguments from the call and forwards them; a factory has none.
 struct CallFnItem {
-    kind: WasmPartsKind,
+    kind: Target,
     module_ident: Ident,
     init_args: Option<Vec<FnArgIR>>,
     upgrade_args: Option<Vec<FnArgIR>>
 }
 
 impl CallFnItem {
-    fn try_new(module: &ModuleImplIR, kind: WasmPartsKind) -> syn::Result<Self> {
+    fn try_new(module: &ModuleImplIR, kind: Target) -> syn::Result<Self> {
         Ok(Self {
             kind,
             module_ident: module.module_ident(),
@@ -200,7 +193,7 @@ impl ToTokens for CallFnItem {
             None => quote!(Option::<#ty_runtime_args>::None)
         };
         let (read_args, install_args) = match self.kind {
-            WasmPartsKind::Module => {
+            Target::Module => {
                 let init_args = forwarded_args(&self.init_args);
                 let upgrade_args = forwarded_args(&self.upgrade_args);
                 (
@@ -211,7 +204,7 @@ impl ToTokens for CallFnItem {
                     quote!(#named_args)
                 )
             }
-            WasmPartsKind::Factory => (quote!(), quote!(Option::<#ty_runtime_args>::None))
+            Target::Factory => (quote!(), quote!(Option::<#ty_runtime_args>::None))
         };
 
         tokens.extend(quote! {
@@ -254,13 +247,13 @@ struct NoMangleFnItem {
 }
 
 impl NoMangleFnItem {
-    fn new(func: &FnIR, exec_parts_mod_ident: &Ident, kind: WasmPartsKind) -> Self {
+    fn new(func: &FnIR, exec_parts_mod_ident: &Ident, kind: Target) -> Self {
         Self {
             fn_ident: func.name(),
             exec_parts_mod_ident: exec_parts_mod_ident.clone(),
             execute_ident: func.execute_name(),
             returns_value: !matches!(func.return_type(), syn::ReturnType::Default),
-            override_caller: kind == WasmPartsKind::Factory
+            override_caller: kind == Target::Factory
                 && matches!(func.fn_type(), FnType::Constructor | FnType::Upgrader)
         }
     }

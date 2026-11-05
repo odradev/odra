@@ -2,18 +2,13 @@ use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 
 use crate::{
-    ast::parts_utils::{UsePreludeItem, UseSuperItem},
+    ast::{
+        parts_utils::{UsePreludeItem, UseSuperItem},
+        Target
+    },
     ir::{FnIR, ModuleImplIR},
     utils
 };
-
-/// Which contract the exec parts are built for: the module itself, or the factory that deploys
-/// instances of it. A factory's exec parts instantiate the child module.
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub enum ExecPartsKind {
-    Module,
-    Factory
-}
 
 /// Emits `mod __xxx_exec_parts`: one `execute_<name>(env)` per function, the body every entry
 /// point runs on both the host and in wasm. It reads the arguments from the call, instantiates
@@ -25,10 +20,10 @@ pub struct ModuleExecPartsItem {
 }
 
 impl ModuleExecPartsItem {
-    pub(crate) fn try_new(module: &ModuleImplIR, kind: ExecPartsKind) -> syn::Result<Self> {
+    pub(crate) fn try_new(module: &ModuleImplIR, kind: Target) -> syn::Result<Self> {
         let module_ident = match kind {
-            ExecPartsKind::Module => module.module_ident(),
-            ExecPartsKind::Factory => module.child_module_ident()
+            Target::Module => module.module_ident(),
+            Target::Factory => module.child_module_ident()
         };
         Ok(Self {
             mod_ident: module.exec_parts_mod_ident(),
@@ -45,7 +40,7 @@ impl TryFrom<&ModuleImplIR> for ModuleExecPartsItem {
     type Error = syn::Error;
 
     fn try_from(module: &ModuleImplIR) -> Result<Self, Self::Error> {
-        Self::try_new(module, ExecPartsKind::Module)
+        Self::try_new(module, Target::Module)
     }
 }
 

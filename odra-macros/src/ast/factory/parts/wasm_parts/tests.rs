@@ -1,10 +1,10 @@
-use super::FactoryWasmPartsItem;
+use crate::ast::{wasm_parts::ModuleWasmPartsItem, Target};
 use crate::test_utils;
 
 #[test]
 fn test() {
     let module = test_utils::mock::module_factory_impl();
-    let actual = FactoryWasmPartsItem::try_from(&module).expect("Failed to convert");
+    let actual = ModuleWasmPartsItem::try_new(&module, Target::Factory).expect("Failed to convert");
 
     let expected = quote::quote! {
         #[cfg(target_arch = "wasm32")]

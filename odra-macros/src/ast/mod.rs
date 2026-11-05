@@ -2,7 +2,8 @@
 //!
 //! An item is built from the parsed input (`crate::ir`) and written out by `ToTokens`. The
 //! top-level items (`ModuleStructItem`, `ModuleImplItem`, ...) are structs whose fields are the
-//! generated pieces in emission order, composed with `derive_try_from_ref::TryFromRef`.
+//! generated pieces in emission order. An emitter a module and its factory share takes a
+//! [Target].
 //!
 //! Every item file follows one template:
 //!
@@ -56,3 +57,12 @@ pub(crate) use module_impl_item::ModuleImplItem;
 pub(crate) use module_struct_item::ModuleStructItem;
 pub(crate) use odra_type_item::OdraTypeAttrItem;
 pub(crate) use ref_helpers_item::RefHelpersItem;
+
+/// Which contract an emitter builds for: the module itself, or the factory that deploys and
+/// upgrades instances of it. The two share most of their generated code and differ in the
+/// functions they expose.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Target {
+    Module,
+    Factory
+}

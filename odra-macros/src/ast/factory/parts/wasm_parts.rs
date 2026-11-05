@@ -2,28 +2,10 @@ use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote, ToTokens};
 
 use crate::{
-    ast::wasm_parts::{insert_arg_stmt, new_wasm_env_expr, ModuleWasmPartsItem, WasmPartsKind},
+    ast::wasm_parts::{insert_arg_stmt, new_wasm_env_expr},
     ir::{FnArgIR, ModuleImplIR},
     utils
 };
-
-/// Emits the wasm parts of a factory: the module's wasm parts built for the factory kind, see
-/// [ModuleWasmPartsItem].
-pub struct FactoryWasmPartsItem(ModuleWasmPartsItem);
-
-impl TryFrom<&ModuleImplIR> for FactoryWasmPartsItem {
-    type Error = syn::Error;
-
-    fn try_from(module: &ModuleImplIR) -> Result<Self, Self::Error> {
-        ModuleWasmPartsItem::try_new(module, WasmPartsKind::Factory).map(Self)
-    }
-}
-
-impl ToTokens for FactoryWasmPartsItem {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        self.0.to_tokens(tokens);
-    }
-}
 
 /// Emits the three `#[no_mangle]` functions only a factory has: `new_contract`,
 /// `upgrade_child_contract` and `batch_upgrade_child_contract`.
