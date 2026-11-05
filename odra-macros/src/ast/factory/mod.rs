@@ -7,7 +7,7 @@ pub mod impl_item;
 mod parts;
 pub mod struct_item;
 
-pub(crate) use parts::{FactoryDeployImplItem, FactoryHostRefItem, FactoryWasmFnsItem};
+pub(crate) use parts::FactoryWasmFnsItem;
 
 /// Emits `#[odra::factory] pub struct XxxFactory;` for a module with `factory = on`: the
 /// factory's own struct, expanded by the factory macro in turn. Nothing for other modules.
@@ -60,15 +60,8 @@ impl TryFrom<&ModuleImplIR> for FactoryModuleImplItem {
     fn try_from(ir: &ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
             is_factory: ir.is_factory(),
-            factory_module_ident: ir.factory_module_ident()?,
-            functions: ir
-                .functions()
-                .iter()
-                .filter_map(|f| match f {
-                    FnIR::Impl(fn_impl_ir) => Some(fn_impl_ir.raw()),
-                    _ => None
-                })
-                .collect()
+            factory_module_ident: ir.factory_module_ident(),
+            functions: ir.functions().iter().filter_map(FnIR::raw_impl).collect()
         })
     }
 }

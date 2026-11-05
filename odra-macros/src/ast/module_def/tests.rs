@@ -30,10 +30,3 @@ fn empty_module() {
     };
     assert_eq(def, expected);
 }
-
-#[test]
-fn test_invalid_module_definition() {
-    let ir = mock::invalid_module_definition();
-    let def = ModuleDefItem::try_from(&ir);
-    assert!(def.is_err());
-}

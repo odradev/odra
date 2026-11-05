@@ -33,7 +33,7 @@ fn custom_types_works() {
 #[test]
 fn test_odra_error_item() {
     let ty = test_utils::mock::custom_enum();
-    let item = SchemaErrorItem::try_from(&ty).unwrap();
+    let item = SchemaErrorItem::new(ty.ident(), ty.error_variants().unwrap());
     let expected = quote::quote! {
         #[automatically_derived]
         #[cfg(not(target_arch = "wasm32"))]
@@ -52,7 +52,7 @@ fn test_odra_error_item() {
 #[test]
 fn test_odra_error_item_with_multiline_docs() {
     let ty = test_utils::mock::custom_enum_with_multiline_docs();
-    let item = SchemaErrorItem::try_from(&ty).unwrap();
+    let item = SchemaErrorItem::new(ty.ident(), ty.error_variants().unwrap());
     let expected = quote::quote! {
         #[automatically_derived]
         #[cfg(not(target_arch = "wasm32"))]

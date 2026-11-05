@@ -44,38 +44,38 @@ where
     collect_all(checks).map(|_| ())
 }
 
-/// The value when it and the check both succeed; otherwise the errors of both, the value's first.
-pub fn checked<T>(value: syn::Result<T>, check: syn::Result<()>) -> syn::Result<T> {
-    match (value, check) {
-        (Ok(value), Ok(())) => Ok(value),
+/// Both values when both succeed; otherwise the errors of both, the first one's first.
+pub fn both<A, B>(a: syn::Result<A>, b: syn::Result<B>) -> syn::Result<(A, B)> {
+    match (a, b) {
+        (Ok(a), Ok(b)) => Ok((a, b)),
         (Err(mut error), Err(other)) => {
             error.combine(other);
             Err(error)
         }
-        (Err(error), Ok(())) | (Ok(_), Err(error)) => Err(error)
+        (Err(error), Ok(_)) | (Ok(_), Err(error)) => Err(error)
     }
 }
 
 // --- What the attribute macro is applied to -------------------------------------------------
 
 /// `#[odra::module]` on something that is neither a struct nor an impl or trait block.
-pub fn module_on_other_item(item: &TokenStream) -> syn::Error {
+pub fn module_on_other_item(item: &syn::Item) -> syn::Error {
     syn::Error::new(
-        item_span(item),
+        item_ident_span(item),
         format!(
             "`#[odra::module]` goes on the module struct and on its impl or trait block; this is {}",
-            tokens_kind(item)
+            item_kind(item)
         )
     )
 }
 
 /// `#[odra::factory]` on something that is neither a struct nor an impl or trait block.
-pub fn factory_on_other_item(item: &TokenStream) -> syn::Error {
+pub fn factory_on_other_item(item: &syn::Item) -> syn::Error {
     syn::Error::new(
-        item_span(item),
+        item_ident_span(item),
         format!(
             "`#[odra::factory]` goes on the factory struct and on its impl block; this is {}",
-            tokens_kind(item)
+            item_kind(item)
         )
     )
 }
@@ -101,12 +101,11 @@ pub fn error_on_struct(item: &syn::Item) -> syn::Error {
 }
 
 /// An error enum variant carrying data: `Overflow(u32)` or `Overflow { by: u32 }`.
-pub fn error_variant_with_data(variant: &syn::Variant) -> syn::Error {
-    syn::Error::new_spanned(
-        variant,
+pub fn error_variant_with_data(ident: &syn::Ident, span: Span) -> syn::Error {
+    syn::Error::new(
+        span,
         format!(
-            "`{}` carries data; an error variant is a bare name, as an error is only its code",
-            variant.ident
+            "`{ident}` carries data; an error variant is a bare name, as an error is only its code"
         )
     )
 }
@@ -120,15 +119,14 @@ pub fn external_contract_on_impl(item: &syn::ItemImpl) -> syn::Error {
     )
 }
 
-/// `#[odra::external_contract]` on something that is not a trait (the module macros dispatch
-/// structs and impls before, so for them this is unreachable).
-pub fn impl_or_trait_expected(item: &TokenStream) -> syn::Error {
+/// `#[odra::external_contract]` on something that is neither a trait nor an impl block.
+pub fn external_contract_on_other_item(item: &syn::Item) -> syn::Error {
     syn::Error::new(
-        item_span(item),
+        item_ident_span(item),
         format!(
             "`#[odra::external_contract]` goes on a trait describing the contract's entry points; \
              this is {}",
-            tokens_kind(item)
+            item_kind(item)
         )
     )
 }
@@ -157,9 +155,9 @@ pub fn ref_helpers_with_args(attr: &TokenStream) -> syn::Error {
     syn::Error::new_spanned(attr, "`#[odra::ref_helpers]` takes no arguments")
 }
 
-pub fn ref_helpers_on_non_impl(item: &TokenStream) -> syn::Error {
+pub fn ref_helpers_on_non_impl(item: &syn::Item) -> syn::Error {
     syn::Error::new(
-        item_span(item),
+        item_ident_span(item),
         "`#[odra::ref_helpers]` goes on an inherent impl block named after a module or an \
          external contract; this is not an impl block"
     )
@@ -213,6 +211,14 @@ pub fn module_arg_on_trait(name: &str, span: Span) -> syn::Error {
         format!(
             "`{name}` is not allowed on a trait; `#[odra::module]` on a trait takes no arguments"
         )
+    )
+}
+
+/// `factory = <value>` with a value other than `on` or `off`.
+pub fn factory_not_on_or_off(value: &syn::Ident) -> syn::Error {
+    syn::Error::new_spanned(
+        value,
+        format!("`{value}` is not a `factory` value; write `factory = on` or `factory = off`")
     )
 }
 
@@ -424,15 +430,6 @@ pub fn impl_self_type_not_a_path(self_ty: &syn::Type) -> syn::Error {
 
 // --- Spans -------------------------------------------------------------------------------------
 
-/// The span of the item's name when the tokens parse as an item, so the error points at
-/// `enum Contract` rather than underlining the whole body; else the span of all the tokens.
-fn item_span(item: &TokenStream) -> Span {
-    match syn::parse2::<syn::Item>(item.clone()) {
-        Ok(parsed) => item_ident_span(&parsed),
-        Err(_) => item.span()
-    }
-}
-
 /// "an enum", "a function", ... for a message that says what the macro was put on.
 fn item_kind(item: &syn::Item) -> &'static str {
     match item {
@@ -455,13 +452,8 @@ fn item_kind(item: &syn::Item) -> &'static str {
     }
 }
 
-fn tokens_kind(item: &TokenStream) -> &'static str {
-    match syn::parse2::<syn::Item>(item.clone()) {
-        Ok(parsed) => item_kind(&parsed),
-        Err(_) => "not an item"
-    }
-}
-
+/// The span of the item's name, so the error points at `enum Contract` rather than underlining
+/// the whole body.
 fn item_ident_span(item: &syn::Item) -> Span {
     match item {
         syn::Item::Const(i) => i.ident.span(),

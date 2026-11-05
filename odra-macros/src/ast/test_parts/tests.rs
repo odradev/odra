@@ -579,3 +579,242 @@ fn test_trait_impl_parts() {
 
     test_utils::assert_eq(actual, expected);
 }
+
+/// The same emitter built for the factory of the module.
+mod factory {
+    use super::*;
+
+    #[test]
+    fn test_parts() {
+        let module = mock::module_factory_impl();
+        let actual = TestPartsItem::try_new(&module, Target::Factory).unwrap();
+
+        let expected = quote::quote! {
+            #[cfg(not(target_arch = "wasm32"))]
+            mod __erc20_factory_test_parts {
+                use super::*;
+                use odra::prelude::*;
+
+                /// [Erc20Factory] Host Ref.
+                pub struct Erc20FactoryHostRef {
+                    address: odra::prelude::Address,
+                    env: odra::host::HostEnv,
+                    attached_value: odra::casper_types::U512
+                }
+
+                impl odra::host::HostRef for Erc20FactoryHostRef {
+                    fn new(address: odra::prelude::Address, env: odra::host::HostEnv) -> Self {
+                        env.register_contract_ref(
+                            address,
+                            <Self as odra::contract_def::HasIdent>::ident(),
+                            <Self as odra::host::EntryPointsCallerProvider>::entry_points_caller
+                        );
+                        Self {
+                            address,
+                            env,
+                            attached_value: Default::default()
+                        }
+                    }
+
+                    fn with_tokens(&self, tokens: odra::casper_types::U512) -> Self {
+                        Self {
+                            address: self.address,
+                            env: self.env.clone(),
+                            attached_value: tokens
+                        }
+                    }
+
+                    fn contract_address(&self) -> odra::prelude::Address {
+                        self.address
+                    }
+
+                    fn env(&self) -> &odra::host::HostEnv {
+                        &self.env
+                    }
+
+                    fn get_event<T>(&self, index: i32) -> Result<T, odra::EventError>
+                    where
+                        T: odra::casper_types::bytesrepr::FromBytes + odra::casper_event_standard::EventInstance,
+                    {
+                        self.env.get_event(self, index)
+                    }
+
+                    fn last_call(&self) -> odra::ContractCallResult {
+                        self.env.last_call_result(self.address)
+                    }
+                }
+
+                impl Erc20FactoryHostRef {
+                    pub fn new_contract(&mut self, contract_name: odra::prelude::string::String, value: u32) -> (odra::prelude::Address, odra::casper_types::URef) {
+                        self.try_new_contract(contract_name, value).unwrap()
+                    }
+
+                    pub fn upgrade_child_contract(&mut self, contract_name: odra::prelude::string::String) {
+                        self.try_upgrade_child_contract(contract_name).unwrap()
+                    }
+
+                    pub fn batch_upgrade_child_contract<
+                        T: Into<odra::casper_types::RuntimeArgs>
+                    >(
+                        &mut self,
+                        args: odra::prelude::BTreeMap<odra::prelude::string::String, T>
+                    ) {
+                        self.try_batch_upgrade_child_contract(args).unwrap()
+                    }
+                }
+
+                impl Erc20FactoryHostRef {
+                    /// Does not fail in case of error, returns `odra::OdraResult` instead.
+                    pub fn try_new_contract(&mut self, contract_name: odra::prelude::string::String, value: u32) -> OdraResult<(odra::prelude::Address, odra::casper_types::URef)> {
+                        self.env
+                            .call_contract(
+                                self.address,
+                                odra::CallDef::new(
+                                    odra::prelude::string::String::from("new_contract"),
+                                    true,
+                                    {
+                                        let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
+                                        odra::args::EntrypointArgument::insert_runtime_arg(true, "odra_cfg_is_upgradable", &mut __odra_named_args);
+                                        odra::args::EntrypointArgument::insert_runtime_arg(false, "odra_cfg_is_upgrade", &mut __odra_named_args);
+                                        odra::args::EntrypointArgument::insert_runtime_arg(true, "odra_cfg_allow_key_override", &mut __odra_named_args);
+                                        odra::args::EntrypointArgument::insert_runtime_arg(contract_name.clone(), "odra_cfg_package_hash_key_name", &mut __odra_named_args);
+                                        odra::args::EntrypointArgument::insert_runtime_arg(contract_name, "contract_name", &mut __odra_named_args);
+                                        odra::args::EntrypointArgument::insert_runtime_arg(value, "value", &mut __odra_named_args);
+                                        __odra_named_args
+                                    },
+                                )
+                            )
+                    }
+
+                    /// Does not fail in case of error, returns `odra::OdraResult` instead.
+                    pub fn try_upgrade_child_contract(
+                        &mut self,
+                        contract_name: odra::prelude::string::String,
+                    ) -> OdraResult<()> {
+                        self.env
+                            .call_contract(
+                                self.address,
+                                odra::CallDef::new(
+                                    odra::prelude::string::String::from("upgrade_child_contract"),
+                                    true,
+                                    {
+                                        let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
+                                        odra::args::EntrypointArgument::insert_runtime_arg(contract_name, "contract_name", &mut __odra_named_args);
+                                        odra::args::EntrypointArgument::insert_runtime_arg(true, "odra_cfg_is_factory_upgrade", &mut __odra_named_args);
+                                        odra::args::EntrypointArgument::insert_runtime_arg(true, "odra_cfg_allow_key_override", &mut __odra_named_args);
+                                        odra::args::EntrypointArgument::insert_runtime_arg(false, "odra_cfg_create_upgrade_group", &mut __odra_named_args);
+                                        __odra_named_args
+                                    },
+                                ),
+                            )
+                    }
+                    /// Does not fail in case of error, returns `odra::OdraResult` instead.
+                    pub fn try_batch_upgrade_child_contract<
+                        T: Into<odra::casper_types::RuntimeArgs>
+                    >(
+                        &mut self,
+                        args: odra::prelude::BTreeMap<odra::prelude::string::String, T>
+                    ) -> OdraResult<()> {
+                        self.env
+                            .call_contract(
+                                self.address,
+                                odra::CallDef::new(
+                                    odra::prelude::string::String::from(
+                                        "batch_upgrade_child_contract",
+                                    ),
+                                    true,
+                                    {
+                                        let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
+                                        odra::args::EntrypointArgument::insert_runtime_arg(odra::args::BatchUpgradeArgs::from(args), "args", &mut __odra_named_args);
+                                        odra::args::EntrypointArgument::insert_runtime_arg(true, "odra_cfg_is_factory_upgrade", &mut __odra_named_args);
+                                        odra::args::EntrypointArgument::insert_runtime_arg(true, "odra_cfg_allow_key_override", &mut __odra_named_args);
+                                        odra::args::EntrypointArgument::insert_runtime_arg(false, "odra_cfg_create_upgrade_group", &mut __odra_named_args);
+                                        __odra_named_args
+                                    },
+                                ),
+                            )
+                    }
+                }
+
+                impl odra::contract_def::HasIdent for Erc20FactoryHostRef {
+                    fn ident() -> odra::prelude::string::String {
+                        Erc20Factory::ident()
+                    }
+                    fn contract_name() -> odra::prelude::string::String {
+                        <Erc20Factory as odra::contract_def::HasIdent>::contract_name()
+                    }
+                }
+
+                impl odra::host::EntryPointsCallerProvider for Erc20FactoryHostRef {
+                    fn entry_points_caller() -> odra::entry_point_callback::EntryPointsCaller {
+                        let entry_points = odra::prelude::vec![
+                            odra::entry_point_callback::EntryPoint::new(
+                                odra::prelude::string::String::from("new_contract"),
+                                odra::prelude::vec![
+                                    odra::entry_point_callback::Argument::new::<odra::prelude::string::String>(
+                                        odra::prelude::string::String::from("contract_name")
+                                    ),
+                                    odra::entry_point_callback::Argument::new::<u32>(
+                                        odra::prelude::string::String::from("value")
+                                    )
+                                ]
+                            ),
+                            odra::entry_point_callback::EntryPoint::new(
+                                odra::prelude::string::String::from("upgrade_child_contract"),
+                                odra::prelude::vec![
+                                    odra::entry_point_callback::Argument::new::<odra::prelude::string::String>(
+                                        odra::prelude::string::String::from("contract_name")
+                                    )
+                                ]
+                            ),
+                            odra::entry_point_callback::EntryPoint::new(
+                                odra::prelude::string::String::from("batch_upgrade_child_contract"),
+                                odra::prelude::vec![
+                                    odra::entry_point_callback::Argument::new::<odra::args::BatchUpgradeArgs<odra::host::NoArgs>>(
+                                        odra::prelude::string::String::from("args")
+                                    )
+                                ]
+                            )
+                        ];
+                        odra::entry_point_callback::EntryPointsCaller::new(entry_points, |__odra_contract_env, __odra_call_def| {
+                            match __odra_call_def.entry_point() {
+                                "new_contract" => odra::host::factory::new_contract(
+                                    &__odra_contract_env,
+                                    &__odra_call_def,
+                                    <Erc20HostRef as odra::host::EntryPointsCallerProvider>::entry_points_caller,
+                                    |contract_name, contract_address| Erc20FactoryContractDeployed {
+                                        contract_name,
+                                        contract_address
+                                    }
+                                ),
+                                "upgrade_child_contract" => odra::host::factory::upgrade_child_contract(
+                                    &__odra_contract_env,
+                                    &__odra_call_def,
+                                    <Erc20HostRef as odra::host::EntryPointsCallerProvider>::entry_points_caller,
+                                    |contract_name, contract_address| Erc20FactoryContractDeployed {
+                                        contract_name,
+                                        contract_address
+                                    }
+                                ),
+                                "batch_upgrade_child_contract" => odra::host::factory::batch_upgrade_child_contract(
+                                    &__odra_contract_env,
+                                    &__odra_call_def,
+                                    <Erc20HostRef as odra::host::EntryPointsCallerProvider>::entry_points_caller,
+                                    |contract_name, contract_address| Erc20FactoryContractDeployed {
+                                        contract_name,
+                                        contract_address
+                                    }
+                                ),
+                                name => Err(OdraError::VmError(
+                                    odra::VmError::NoSuchMethod(odra::prelude::String::from(name))
+                                ))
+                            }
+                        })
+                    }
+                }
+            }
+        };
+
+        test_utils::assert_eq(actual, expected);
+    }
+}

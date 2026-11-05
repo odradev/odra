@@ -2,7 +2,8 @@
 //!
 //! An item is built from the parsed input (`crate::ir`) and written out by `ToTokens`. The
 //! top-level items (`ModuleStructItem`, `ModuleImplItem`, ...) are structs whose fields are the
-//! generated pieces in emission order, composed with `derive_try_from_ref::TryFromRef`.
+//! generated pieces in emission order. An emitter a module and its factory share takes a
+//! [Target].
 //!
 //! Every item file follows one template:
 //!
@@ -14,8 +15,9 @@
 //! - `impl TryFrom<&XxxIR>` does every validation and raises every error (built in
 //!   `crate::ir::errors`); it never formats code.
 //! - `impl ToTokens` is one `quote!` per emitted item, with the `let` bindings it needs right
-//!   above it. Paths into the `odra` crate come from `crate::utils::ty` and `crate::utils::ident`,
-//!   so a path is spelled in one place.
+//!   above it. Paths into the `odra` crate are written out in the `quote!`, so the emitter reads
+//!   like the code it generates. The locals the generated code invents are named through
+//!   `crate::utils::ident`, so their `__odra_` prefix is spelled in one place.
 //! - Spans: a token copied from the user's code (an ident, a type, an attribute) is reused as its
 //!   syn node so it keeps the user's span and rustc points at it; a token the macro invents has
 //!   the call-site span. `quote_spanned!` is used only where an invented token must point at a
@@ -33,7 +35,6 @@ mod events_item;
 mod exec_parts;
 mod external_contract_item;
 mod factory;
-mod fn_utils;
 mod host_ref_item;
 mod ident_item;
 mod module_def;
@@ -46,7 +47,6 @@ mod ref_helpers_item;
 mod ref_utils;
 mod schema;
 mod test_parts;
-mod utils;
 mod wasm_parts;
 
 pub(crate) use error_item::OdraErrorAttrItem;
@@ -58,3 +58,12 @@ pub(crate) use module_impl_item::ModuleImplItem;
 pub(crate) use module_struct_item::ModuleStructItem;
 pub(crate) use odra_type_item::OdraTypeAttrItem;
 pub(crate) use ref_helpers_item::RefHelpersItem;
+
+/// Which contract an emitter builds for: the module itself, or the factory that deploys and
+/// upgrades instances of it. The two share most of their generated code and differ in the
+/// functions they expose.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Target {
+    Module,
+    Factory
+}

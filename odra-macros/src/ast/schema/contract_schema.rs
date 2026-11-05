@@ -68,16 +68,13 @@ impl TryFrom<&'_ ModuleStructIR> for SchemaItem {
     fn try_from(module: &'_ ModuleStructIR) -> Result<Self, Self::Error> {
         let module_ident = module.module_ident();
 
-        let name = match module.contract_name().as_str() {
-            "" => module_ident.to_string(),
-            name => name.to_string()
-        };
-
         Ok(Self {
             mod_ident: module.contract_schema_mod_ident(),
+            name: module
+                .contract_name()
+                .unwrap_or_else(|| module_ident.to_string()),
             module_ident,
-            name,
-            version: module.contract_version()
+            version: module.contract_version().unwrap_or_default()
         })
     }
 }

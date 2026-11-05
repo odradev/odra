@@ -22,7 +22,7 @@ impl TryFrom<&ModuleStructIR> for ModuleModItem {
         Ok(Self {
             mod_ident: ir.module_mod_ident(),
             module_ident: ir.module_ident(),
-            fields: ir.typed_fields()?
+            fields: ir.typed_fields().to_vec()
         })
     }
 }
@@ -35,16 +35,13 @@ impl ToTokens for ModuleModItem {
             fields
         } = self;
         let use_super = UseSuperItem;
-        let ty_module = utils::ty::module();
-        let ty_module_component = utils::ty::module_component();
-        let ty_rc_contract_env = utils::ty::rc_contract_env();
         // The `Module::new` parameter and the hidden field share the name.
         let env = utils::ident::prefixed_env();
 
         let field_idents = fields.iter().map(|f| &f.ident);
         let instances = fields.iter().map(|EnumeratedTypedField { idx, ident, ty }| {
             quote! {
-                let #ident = <#ty as #ty_module_component>::instance(
+                let #ident = <#ty as odra::module::ModuleComponent>::instance(
                     odra::prelude::Rc::clone(&#env),
                     #idx
                 );
@@ -55,8 +52,8 @@ impl ToTokens for ModuleModItem {
             mod #mod_ident {
                 #use_super
 
-                impl #ty_module for #module_ident {
-                    fn new(#env: #ty_rc_contract_env) -> Self {
+                impl Module for #module_ident {
+                    fn new(#env: odra::prelude::Rc<odra::ContractEnv>) -> Self {
                         #(#instances)*
                         Self {
                             #(#field_idents,)*
@@ -64,7 +61,7 @@ impl ToTokens for ModuleModItem {
                         }
                     }
 
-                    fn env(&self) -> #ty_rc_contract_env {
+                    fn env(&self) -> odra::prelude::Rc<odra::ContractEnv> {
                         self.#env.clone()
                     }
                 }

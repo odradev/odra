@@ -48,15 +48,15 @@ impl TryFrom<&ModuleImplIR> for SchemaCustomTypesItem {
 
     fn try_from(ir: &ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
-            module_ident: ir.module_ident()?,
+            module_ident: ir.module_ident(),
             types: ir
                 .functions()
                 .iter()
                 .flat_map(|f| {
-                    let args = f.typed_args();
-                    let mut types = args
+                    let mut types = f
+                        .args()
                         .iter()
-                        .map(|arg| ty::unreferenced_ty(&arg.ty))
+                        .map(|arg| ty::unreferenced_ty(arg.ty()))
                         .collect::<Vec<_>>();
                     if let syn::ReturnType::Type(_, t) = f.return_type() {
                         types.push(*t);

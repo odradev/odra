@@ -17,9 +17,9 @@ impl TryFrom<&ModuleImplIR> for BlueprintItem {
 
     fn try_from(module: &ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
-            module_name: module.module_str()?,
-            mod_ident: module.schema_mod_ident()?,
-            module_ident: module.module_ident()?
+            module_name: module.module_str(),
+            mod_ident: module.schema_mod_ident(),
+            module_ident: module.module_ident()
         })
     }
 }
@@ -32,21 +32,17 @@ impl ToTokens for BlueprintItem {
             module_ident
         } = self;
         let odra_module_attr = utils::attr::odra_module(module_name);
-        let not_wasm32_attr = utils::attr::not_wasm32();
-        let no_mangle_attr = utils::attr::no_mangle();
         let use_super = UseSuperItem;
-        let module_schema = utils::ident::module_schema();
-        let ty_blueprint = utils::ty::contract_blueprint();
 
         tokens.extend(quote! {
             #odra_module_attr
             mod #mod_ident {
                 #use_super
 
-                #no_mangle_attr
-                #not_wasm32_attr
-                fn #module_schema() -> #ty_blueprint {
-                    #ty_blueprint::new::<#module_ident>()
+                #[no_mangle]
+                #[cfg(not(target_arch = "wasm32"))]
+                fn module_schema() -> odra::contract_def::ContractBlueprint {
+                    odra::contract_def::ContractBlueprint::new::<#module_ident>()
                 }
             }
         });

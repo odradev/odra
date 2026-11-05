@@ -2,13 +2,12 @@ use proc_macro2::Ident;
 use quote::ToTokens;
 use syn::{parse_quote, ImplItem};
 
-use super::attr::{self, OdraAttribute};
-use super::config::ConfigItem;
+use super::attr::{self, OdraAttrs};
+use super::config::ModuleConfig;
 use super::delegate::{Delegate, DelegatedFn};
-use super::errors::{self, OffchainMisuse};
-use super::function::{FnArgIR, FnIR, FnImplIR};
-use super::{CONSTRUCTOR_NAME, UPGRADER_NAME};
-use crate::utils;
+use super::errors;
+use super::function::{FnArgIR, FnIR, ImplContext};
+use super::{generated_mod_ident, CONSTRUCTOR_NAME, UPGRADER_NAME};
 
 /// The impl block or the trait `#[odra::module]` (or `#[odra::external_contract]`) is applied
 /// to. Built with every function validated, see [FnIR].
@@ -17,39 +16,54 @@ pub enum ModuleImplIR {
     Trait(ModuleTraitIR)
 }
 
+impl ModuleImplIR {
+    /// The IR of an impl block, with `attr` the arguments of the macro.
+    pub fn try_new_impl(attr: &proc_macro2::TokenStream, code: syn::ItemImpl) -> syn::Result<Self> {
+        let config = syn::parse2::<ModuleConfig>(attr.clone())?;
+        errors::check_all(
+            config
+                .struct_only_args()
+                .map(|(name, span)| Err(errors::module_arg_on_impl(name, *span)))
+        )?;
+        ModuleIR::try_new(code, config).map(Self::Impl)
+    }
+
+    /// The IR of a trait, with `attr` the arguments of the macro.
+    pub fn try_new_trait(
+        attr: &proc_macro2::TokenStream,
+        code: syn::ItemTrait
+    ) -> syn::Result<Self> {
+        let config = syn::parse2::<ModuleConfig>(attr.clone())?;
+        errors::check_all(
+            config
+                .args()
+                .map(|(name, span)| Err(errors::module_arg_on_trait(name, *span)))
+        )?;
+        // A trait function with a visibility (`pub fn`) is a `Verbatim` item to syn. Parsing it
+        // as a function reports the `pub` here, instead of skipping the function and leaving the
+        // error to rustc on the emitted trait.
+        for item in code.items.iter() {
+            if let syn::TraitItem::Verbatim(func) = item {
+                syn::parse2::<syn::TraitItemFn>(func.clone())?;
+            }
+        }
+        ModuleTraitIR::try_new(code).map(Self::Trait)
+    }
+}
+
+/// The IR from the macro's token streams, for the test mocks.
+#[cfg(test)]
 impl TryFrom<(&proc_macro2::TokenStream, &proc_macro2::TokenStream)> for ModuleImplIR {
     type Error = syn::Error;
 
     fn try_from(
-        stream: (&proc_macro2::TokenStream, &proc_macro2::TokenStream)
+        (attr, item): (&proc_macro2::TokenStream, &proc_macro2::TokenStream)
     ) -> Result<Self, Self::Error> {
-        let config = syn::parse2::<ConfigItem>(stream.0.clone())?;
-        if let Ok(code) = syn::parse2::<syn::ItemImpl>(stream.1.clone()) {
-            if let ConfigItem::Module(cfg) = &config {
-                errors::check_all(
-                    cfg.struct_only_args()
-                        .map(|(name, span)| Err(errors::module_arg_on_impl(name, *span)))
-                )?;
-            }
-            return ModuleIR::try_new(code, config).map(Self::Impl);
+        match syn::parse2::<syn::Item>(item.clone())? {
+            syn::Item::Impl(code) => Self::try_new_impl(attr, code),
+            syn::Item::Trait(code) => Self::try_new_trait(attr, code),
+            other => Err(errors::external_contract_on_other_item(&other))
         }
-
-        if let Ok(code) = syn::parse2::<syn::ItemTrait>(stream.1.clone()) {
-            if let ConfigItem::Module(cfg) = &config {
-                errors::check_all(
-                    cfg.args()
-                        .map(|(name, span)| Err(errors::module_arg_on_trait(name, *span)))
-                )?;
-            }
-            for c in code.items.iter() {
-                if let syn::TraitItem::Verbatim(func) = c {
-                    syn::parse2::<syn::TraitItemFn>(func.clone())?;
-                }
-            }
-            return ModuleTraitIR::try_new(code, config).map(Self::Trait);
-        }
-
-        Err(errors::impl_or_trait_expected(stream.1))
     }
 }
 
@@ -63,10 +77,10 @@ impl ModuleImplIR {
         }
     }
 
-    pub fn module_ident(&self) -> syn::Result<Ident> {
+    pub fn module_ident(&self) -> Ident {
         match self {
-            ModuleImplIR::Impl(ir) => utils::syn::ident_from_impl(&ir.code),
-            ModuleImplIR::Trait(ir) => Ok(ir.module_ident())
+            ModuleImplIR::Impl(ir) => ir.ident.clone(),
+            ModuleImplIR::Trait(ir) => ir.code.ident.clone()
         }
     }
 
@@ -80,10 +94,7 @@ impl ModuleImplIR {
     /// `factory = on` on the impl block.
     pub fn is_factory(&self) -> bool {
         match self {
-            ModuleImplIR::Impl(ir) => match &ir.config {
-                ConfigItem::Module(cfg) => *cfg.factory,
-                ConfigItem::Empty => false
-            },
+            ModuleImplIR::Impl(ir) => ir.config.factory,
             ModuleImplIR::Trait(_) => false
         }
     }
@@ -96,102 +107,64 @@ impl ModuleImplIR {
         }
     }
 
-    pub fn module_str(&self) -> syn::Result<String> {
-        self.module_ident().map(|i| i.to_string())
+    pub fn module_str(&self) -> String {
+        self.module_ident().to_string()
     }
 
-    pub fn snake_cased_module_ident(&self) -> syn::Result<Ident> {
-        let ident = self.module_ident()?;
-        Ok(Ident::new(
-            utils::string::camel_to_snake(&ident).as_str(),
-            ident.span()
-        ))
+    /// `<Module><suffix>`, spanned as the module ident.
+    fn suffixed(&self, suffix: &str) -> Ident {
+        let module_ident = self.module_ident();
+        Ident::new(&format!("{module_ident}{suffix}"), module_ident.span())
     }
 
-    pub fn host_ref_ident(&self) -> syn::Result<Ident> {
-        let module_ident = self.module_ident()?;
-        Ok(Ident::new(
-            &format!("{}HostRef", module_ident),
-            module_ident.span()
-        ))
+    fn parts_mod_ident(&self, part: &str) -> Ident {
+        generated_mod_ident(&self.module_ident(), part)
     }
 
-    pub fn contract_ref_ident(&self) -> syn::Result<Ident> {
-        let module_ident = self.module_ident()?;
-        Ok(Ident::new(
-            &format!("{}ContractRef", module_ident),
-            module_ident.span()
-        ))
+    pub fn host_ref_ident(&self) -> Ident {
+        self.suffixed("HostRef")
     }
 
-    pub fn factory_module_ident(&self) -> syn::Result<Ident> {
-        let module_ident = self.module_ident()?;
-        Ok(Ident::new(
-            &format!("{}Factory", module_ident),
-            module_ident.span()
-        ))
+    pub fn contract_ref_ident(&self) -> Ident {
+        self.suffixed("ContractRef")
+    }
+
+    pub fn factory_module_ident(&self) -> Ident {
+        self.suffixed("Factory")
     }
 
     /// The module a factory impl stands for. `#[odra::factory]` sees only the `<Module>Factory`
     /// ident that [factory_module_ident](Self::factory_module_ident) made, so the suffix is
     /// stripped back; for any other module it is the module ident itself.
-    pub fn child_module_ident(&self) -> syn::Result<Ident> {
-        let module_ident = self.module_ident()?;
+    pub fn child_module_ident(&self) -> Ident {
+        let module_ident = self.module_ident();
         let module_str = module_ident.to_string();
         let child = module_str.strip_suffix("Factory").unwrap_or(&module_str);
-        Ok(Ident::new(child, module_ident.span()))
+        Ident::new(child, module_ident.span())
     }
 
-    pub fn init_args_ident(&self) -> syn::Result<syn::Ident> {
-        let module_ident = self.module_ident()?;
-        Ok(Ident::new(
-            &format!("{}InitArgs", module_ident),
-            module_ident.span()
-        ))
+    pub fn init_args_ident(&self) -> Ident {
+        self.suffixed("InitArgs")
     }
 
-    pub fn upgrade_args_ident(&self) -> syn::Result<syn::Ident> {
-        let module_ident = self.module_ident()?;
-        Ok(Ident::new(
-            &format!("{}UpgradeArgs", module_ident),
-            module_ident.span()
-        ))
+    pub fn upgrade_args_ident(&self) -> Ident {
+        self.suffixed("UpgradeArgs")
     }
 
-    pub fn schema_mod_ident(&self) -> syn::Result<Ident> {
-        let module_ident = self.snake_cased_module_ident()?;
-        Ok(Ident::new(
-            &format!("__{}_schema", module_ident),
-            module_ident.span()
-        ))
+    pub fn schema_mod_ident(&self) -> Ident {
+        self.parts_mod_ident("schema")
     }
 
-    pub fn test_parts_mod_ident(&self) -> syn::Result<syn::Ident> {
-        let module_ident = self.snake_cased_module_ident()?;
-        Ok(Ident::new(
-            &format!("__{}_test_parts", module_ident),
-            module_ident.span()
-        ))
+    pub fn test_parts_mod_ident(&self) -> Ident {
+        self.parts_mod_ident("test_parts")
     }
 
-    pub fn wasm_parts_mod_ident(&self) -> syn::Result<syn::Ident> {
-        let module_ident = self.snake_cased_module_ident()?;
-        Ok(Ident::new(
-            &format!("__{}_wasm_parts", module_ident),
-            module_ident.span()
-        ))
+    pub fn wasm_parts_mod_ident(&self) -> Ident {
+        self.parts_mod_ident("wasm_parts")
     }
 
-    pub fn exec_parts_mod_ident(&self) -> syn::Result<syn::Ident> {
-        let module_ident = self.snake_cased_module_ident()?;
-        Ok(Ident::new(
-            &format!("__{}_exec_parts", module_ident),
-            module_ident.span()
-        ))
-    }
-
-    pub fn host_functions(&self) -> &[FnIR] {
-        self.functions()
+    pub fn exec_parts_mod_ident(&self) -> Ident {
+        self.parts_mod_ident("exec_parts")
     }
 
     /// The functions that become entry points of the deployed contract: everything but the
@@ -213,7 +186,7 @@ impl ModuleImplIR {
     }
 
     pub fn host_mut_ret_functions(&self) -> Vec<&FnIR> {
-        self.host_functions()
+        self.functions()
             .iter()
             .filter(|f| f.is_mut() && f.return_type() != syn::ReturnType::Default)
             .collect()
@@ -227,32 +200,26 @@ impl ModuleImplIR {
 
     pub fn factory_fn(&self) -> FnIR {
         let args = self.constructor_args();
-        let ty_address = utils::ty::address();
-        let ty_uref = utils::ty::uref();
-        let ty_string = utils::ty::string();
         let factory_fn = parse_quote! {
-            pub fn new_contract(&mut self, contract_name: #ty_string, #args) -> (#ty_address, #ty_uref) {
+            pub fn new_contract(&mut self, contract_name: odra::prelude::string::String, #args) -> (odra::prelude::Address, odra::casper_types::URef) {
             }
         };
-        FnIR::Impl(FnImplIR::new(factory_fn))
+        FnIR::unchecked(factory_fn)
     }
 
     pub fn factory_upgrade_fn(&self) -> FnIR {
         let args = self.upgrader_args();
-        let ty_string = utils::ty::string();
-        FnIR::Impl(FnImplIR::new(parse_quote! {
-            pub fn upgrade_child_contract(&mut self, contract_name: #ty_string, #args) {
+        FnIR::unchecked(parse_quote! {
+            pub fn upgrade_child_contract(&mut self, contract_name: odra::prelude::string::String, #args) {
             }
-        }))
+        })
     }
 
     pub fn factory_batch_upgrade_fn(&self) -> FnIR {
-        let rt_args = utils::ty::runtime_args();
-        let btree_map = utils::ty::typed_btree_map(&utils::ty::string(), &parse_quote!(T));
-        FnIR::Impl(FnImplIR::new(parse_quote! {
-            pub fn batch_upgrade_child_contract<T: Into<#rt_args>>(&mut self, args: #btree_map) {
+        FnIR::unchecked(parse_quote! {
+            pub fn batch_upgrade_child_contract<T: Into<odra::casper_types::RuntimeArgs>>(&mut self, args: odra::prelude::BTreeMap<odra::prelude::string::String, T>) {
             }
-        }))
+        })
     }
 
     pub fn upgrader(&self) -> Option<&FnIR> {
@@ -272,7 +239,7 @@ impl ModuleImplIR {
 
     fn constructor_args(&self) -> syn::punctuated::Punctuated<syn::FnArg, syn::token::Comma> {
         self.constructor()
-            .map(|fn_ir| fn_ir.named_args())
+            .map(|fn_ir| fn_ir.args())
             .unwrap_or_default()
             .iter()
             .map(FnArgIR::raw)
@@ -281,7 +248,7 @@ impl ModuleImplIR {
 
     fn upgrader_args(&self) -> syn::punctuated::Punctuated<syn::FnArg, syn::token::Comma> {
         self.upgrader()
-            .map(|fn_ir| fn_ir.named_args())
+            .map(|fn_ir| fn_ir.args())
             .unwrap_or_default()
             .iter()
             .map(FnArgIR::raw)
@@ -292,33 +259,53 @@ impl ModuleImplIR {
 /// A plain or trait `impl` block of a module.
 pub struct ModuleIR {
     code: syn::ItemImpl,
-    config: ConfigItem,
+    /// The module: the last segment of the impl's self type, which is a path.
+    ident: Ident,
+    /// Boxed, as the impl variant would otherwise dwarf the trait one.
+    config: Box<ModuleConfig>,
     functions: Vec<FnIR>
 }
 
 impl ModuleIR {
-    fn try_new(code: syn::ItemImpl, config: ConfigItem) -> syn::Result<Self> {
-        let is_trait_impl = code.trait_.is_some();
-        let is_factory = matches!(&config, ConfigItem::Module(cfg) if *cfg.factory);
-        let functions = errors::checked(
-            Self::parse_functions(&code, is_trait_impl),
-            Self::validate_offchain_functions(&code, is_trait_impl, is_factory)
+    fn try_new(code: syn::ItemImpl, config: ModuleConfig) -> syn::Result<Self> {
+        let ctx = ImplContext {
+            is_trait_impl: code.trait_.is_some(),
+            is_factory: config.factory
+        };
+        let (ident, functions) = errors::both(
+            Self::module_ident(&code.self_ty),
+            Self::parse_functions(&code, ctx)
         )?;
         Ok(Self {
             code,
-            config,
+            ident,
+            config: Box::new(config),
             functions
         })
+    }
+
+    fn module_ident(self_ty: &syn::Type) -> syn::Result<Ident> {
+        match self_ty {
+            syn::Type::Path(type_path) => type_path
+                .path
+                .segments
+                .last()
+                .map(|seg| seg.ident.clone())
+                .ok_or_else(|| errors::impl_self_type_not_a_path(self_ty)),
+            ty => Err(errors::impl_self_type_not_a_path(ty))
+        }
     }
 
     pub(super) fn self_code(&self) -> syn::ItemImpl {
         let mut code = self.code.clone();
         // include delegated functions
-        code.items
-            .extend(self.functions.iter().filter_map(|f| match f {
-                FnIR::Impl(ir) if ir.is_delegated() => Some(syn::ImplItem::Fn(ir.raw())),
-                _ => None
-            }));
+        code.items.extend(
+            self.functions
+                .iter()
+                .filter(|f| f.is_delegated())
+                .filter_map(FnIR::raw_impl)
+                .map(syn::ImplItem::Fn)
+        );
         // remove odra attributes
         code.items.iter_mut().for_each(|item| {
             if let syn::ImplItem::Fn(func) = item {
@@ -336,7 +323,7 @@ impl ModuleIR {
         is_trait_impl || matches!(func.vis, syn::Visibility::Public(_))
     }
 
-    fn parse_functions(code: &syn::ItemImpl, is_trait_impl: bool) -> syn::Result<Vec<FnIR>> {
+    fn parse_functions(code: &syn::ItemImpl, ctx: ImplContext) -> syn::Result<Vec<FnIR>> {
         let own_functions = code
             .items
             .iter()
@@ -347,23 +334,17 @@ impl ModuleIR {
             .filter_map(|func| {
                 // Private functions of a plain impl are not entry points: only their
                 // `#[odra(..)]` attributes are checked, not their names nor arguments.
-                if Self::is_entry_point(func, is_trait_impl) {
-                    Some(FnIR::try_from(func.clone()))
+                if Self::is_entry_point(func, ctx.is_trait_impl) {
+                    Some(FnIR::try_new_impl(func.clone(), ctx))
                 } else {
-                    attr::partition_attributes(func.attrs.clone())
-                        .err()
-                        .map(Err)
+                    OdraAttrs::parse(&func.attrs).err().map(Err)
                 }
             });
         let delegated_functions = Self::delegated_functions(code)?
             .into_iter()
             .map(|delegated| {
-                FnIR::try_from(delegated.function).map(|fn_ir| match fn_ir {
-                    FnIR::Impl(ir) => {
-                        FnIR::Impl(ir.delegated_to(delegated.target, delegated.has_own_docs))
-                    }
-                    FnIR::Def(ir) => FnIR::Def(ir)
-                })
+                FnIR::try_new_impl(delegated.function, ctx)
+                    .map(|fn_ir| fn_ir.delegated_to(delegated.target, delegated.has_own_docs))
             });
         errors::collect_all(own_functions.chain(delegated_functions))
     }
@@ -384,76 +365,22 @@ impl ModuleIR {
             .flat_map(|delegate| delegate.functions)
             .collect())
     }
-
-    /// `#[odra(offchain)]` is only meaningful on a read-only function of a plain module impl.
-    ///
-    /// Checked on the functions as written, before their own validation, so a reserved name
-    /// elsewhere in the impl does not hide an offchain mistake: all of them are reported in one
-    /// build.
-    fn validate_offchain_functions(
-        code: &syn::ItemImpl,
-        is_trait_impl: bool,
-        is_factory: bool
-    ) -> syn::Result<()> {
-        let functions = code
-            .items
-            .iter()
-            .filter_map(|item| match item {
-                syn::ImplItem::Fn(func) if Self::is_entry_point(func, is_trait_impl) => {
-                    Some(FnIR::Impl(FnImplIR::new(func.clone())))
-                }
-                _ => None
-            })
-            .collect::<Vec<_>>();
-        let offchain_functions = functions.iter().filter(|f| f.is_offchain());
-        errors::check_all(offchain_functions.map(|f| {
-            let sig = f.sig();
-            let receiver = utils::syn::receiver_arg(sig);
-            // The `#[odra(..)]` attribute that says `offchain`; it parsed, as `f` is offchain.
-            let offchain_attr = f.attributes().iter().find(|attr| {
-                OdraAttribute::try_from((*attr).clone()).is_ok_and(|a| a.is_offchain())
-            });
-            let (why, spanned) = if is_trait_impl {
-                (OffchainMisuse::InTraitImpl, offchain_attr.to_token_stream())
-            } else if is_factory {
-                (OffchainMisuse::InFactory, offchain_attr.to_token_stream())
-            } else if f.is_mut() {
-                (OffchainMisuse::MutReceiver, receiver.to_token_stream())
-            } else if f.is_payable() || f.is_non_reentrant() {
-                (
-                    OffchainMisuse::PayableOrNonReentrant,
-                    offchain_attr.to_token_stream()
-                )
-            } else if receiver.is_none() {
-                (OffchainMisuse::NoReceiver, sig.ident.to_token_stream())
-            } else {
-                return Ok(());
-            };
-            Err(errors::offchain_misuse(spanned, &f.name_str(), why))
-        }))
-    }
 }
 
 /// A trait describing a contract's entry points: `#[odra::module]` on a trait, or an
 /// `#[odra::external_contract]`.
 pub struct ModuleTraitIR {
     code: syn::ItemTrait,
-    #[allow(dead_code)]
-    config: ConfigItem,
     functions: Vec<FnIR>
 }
 
 impl ModuleTraitIR {
-    fn try_new(code: syn::ItemTrait, config: ConfigItem) -> syn::Result<Self> {
+    fn try_new(code: syn::ItemTrait) -> syn::Result<Self> {
         let functions = errors::collect_all(code.items.iter().filter_map(|item| match item {
             syn::TraitItem::Fn(func) => Some(FnIR::try_from(func.clone())),
             _ => None
         }))?;
-        Ok(Self {
-            code,
-            config,
-            functions
-        })
+        Ok(Self { code, functions })
     }
 
     pub fn self_code(&self) -> syn::ItemTrait {
@@ -464,9 +391,5 @@ impl ModuleTraitIR {
             }
         });
         code
-    }
-
-    pub(super) fn module_ident(&self) -> syn::Ident {
-        self.code.ident.clone()
     }
 }

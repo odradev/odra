@@ -2,9 +2,8 @@ use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 
 use crate::{
-    ast::{contract_ref_item::WithTokensFnItem, ref_utils},
-    ir::ModuleImplIR,
-    utils
+    ast::{contract_ref_item::WithTokensFnItem, ref_utils, Target},
+    ir::ModuleImplIR
 };
 
 /// Emits `pub struct XxxHostRef { address, env, attached_value }`, the handle a test holds on a
@@ -19,8 +18,8 @@ impl TryFrom<&ModuleImplIR> for HostRefStructItem {
 
     fn try_from(module: &ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
-            module_name: module.module_str()?,
-            ref_ident: module.host_ref_ident()?
+            module_name: module.module_str(),
+            ref_ident: module.host_ref_ident()
         })
     }
 }
@@ -29,19 +28,13 @@ impl ToTokens for HostRefStructItem {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let ref_ident = &self.ref_ident;
         let doc = format!(" [{}] Host Ref.", self.module_name);
-        let address = utils::ident::address();
-        let env = utils::ident::env();
-        let attached_value = utils::ident::attached_value();
-        let ty_address = utils::ty::address();
-        let ty_host_env = utils::ty::host_env();
-        let ty_u512 = utils::ty::u512();
 
         tokens.extend(quote! {
             #[doc = #doc]
             pub struct #ref_ident {
-                #address: #ty_address,
-                #env: #ty_host_env,
-                #attached_value: #ty_u512
+                address: odra::prelude::Address,
+                env: odra::host::HostEnv,
+                attached_value: odra::casper_types::U512
             }
         });
     }
@@ -61,7 +54,7 @@ impl TryFrom<&ModuleImplIR> for HostRefTraitImplItem {
 
     fn try_from(module: &ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
-            ref_ident: module.host_ref_ident()?,
+            ref_ident: module.host_ref_ident(),
             register: matches!(module, ModuleImplIR::Impl(_))
         })
     }
@@ -70,61 +63,48 @@ impl TryFrom<&ModuleImplIR> for HostRefTraitImplItem {
 impl ToTokens for HostRefTraitImplItem {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let ref_ident = &self.ref_ident;
-        let ty_host_ref = utils::ty::host_ref();
-        let ty_address = utils::ty::address();
-        let ty_host_env = utils::ty::host_env();
-        let ty_has_ident = utils::ty::has_ident();
-        let ty_caller_provider = utils::ty::entry_point_caller_provider();
-        let ty_event_instance = utils::ty::event_instance();
-        let ty_from_bytes = utils::ty::from_bytes();
-        let ty_event_error = utils::ty::event_error();
-        let ty_call_result = utils::ty::contract_call_result();
-        let address = utils::ident::address();
-        let env = utils::ident::env();
-        let attached_value = utils::ident::attached_value();
-        let contract_address = utils::ident::contract_address();
         let with_tokens_fn = WithTokensFnItem;
 
         let register = self.register.then(|| {
             quote! {
-                #env.register_contract_ref(
-                    #address,
-                    <Self as #ty_has_ident>::ident(),
-                    <Self as #ty_caller_provider>::entry_points_caller
+                env.register_contract_ref(
+                    address,
+                    <Self as odra::contract_def::HasIdent>::ident(),
+                    <Self as odra::host::EntryPointsCallerProvider>::entry_points_caller
                 );
             }
         });
 
         tokens.extend(quote! {
-            impl #ty_host_ref for #ref_ident {
-                fn new(#address: #ty_address, #env: #ty_host_env) -> Self {
+            impl odra::host::HostRef for #ref_ident {
+                fn new(address: odra::prelude::Address, env: odra::host::HostEnv) -> Self {
                     #register
                     Self {
-                        #address,
-                        #env,
-                        #attached_value: Default::default()
+                        address,
+                        env,
+                        attached_value: Default::default()
                     }
                 }
 
                 #with_tokens_fn
 
-                fn #contract_address(&self) -> #ty_address {
-                    self.#address
+                fn contract_address(&self) -> odra::prelude::Address {
+                    self.address
                 }
 
-                fn #env(&self) -> &#ty_host_env {
-                    &self.#env
+                fn env(&self) -> &odra::host::HostEnv {
+                    &self.env
                 }
 
-                fn get_event<T>(&self, index: i32) -> Result<T, #ty_event_error>
+                fn get_event<T>(&self, index: i32) -> Result<T, odra::EventError>
                 where
-                    T: #ty_from_bytes + #ty_event_instance
+                    T: odra::casper_types::bytesrepr::FromBytes + odra::casper_event_standard::EventInstance
                 {
-                    self.#env.get_event(self, index)
+                    self.env.get_event(self, index)
                 }
 
-                fn last_call(&self) -> #ty_call_result {
-                    self.#env.last_call_result(self.#address)
+                fn last_call(&self) -> odra::ContractCallResult {
+                    self.env.last_call_result(self.address)
                 }
             }
         });
@@ -145,8 +125,8 @@ impl TryFrom<&ModuleImplIR> for HasIdentTraitImplItem {
 
     fn try_from(module: &ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
-            module_ident: module.module_ident()?,
-            ref_ident: module.host_ref_ident()?
+            module_ident: module.module_ident(),
+            ref_ident: module.host_ref_ident()
         })
     }
 }
@@ -155,17 +135,14 @@ impl ToTokens for HasIdentTraitImplItem {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let module_ident = &self.module_ident;
         let ref_ident = &self.ref_ident;
-        let ty_has_ident = utils::ty::has_ident();
-        let ty_string = utils::ty::string();
-        let ident = utils::ident::ident();
 
         tokens.extend(quote! {
-            impl #ty_has_ident for #ref_ident {
-                fn #ident() -> #ty_string {
-                    #module_ident::#ident()
+            impl odra::contract_def::HasIdent for #ref_ident {
+                fn ident() -> odra::prelude::string::String {
+                    #module_ident::ident()
                 }
-                fn contract_name() -> #ty_string {
-                    <#module_ident as #ty_has_ident>::contract_name()
+                fn contract_name() -> odra::prelude::string::String {
+                    <#module_ident as odra::contract_def::HasIdent>::contract_name()
                 }
             }
         });
@@ -196,7 +173,8 @@ impl ToTokens for HostRefFnsImplItem {
 }
 
 /// Emits the whole host ref of a module: the struct, `impl HostRef`, and the impl blocks with
-/// the entry points, their `try_` versions and the `_no_ret` versions.
+/// the entry points, their `try_` versions and the `_no_ret` versions. A factory's host ref has
+/// the three factory functions and their `try_` versions instead.
 pub struct HostRefItem {
     struct_item: HostRefStructItem,
     trait_impl_item: HostRefTraitImplItem,
@@ -205,46 +183,75 @@ pub struct HostRefItem {
     mut_no_ret_fns_impl_item: Option<HostRefFnsImplItem>
 }
 
-impl TryFrom<&ModuleImplIR> for HostRefItem {
-    type Error = syn::Error;
-
-    fn try_from(module: &ModuleImplIR) -> Result<Self, Self::Error> {
-        let ref_ident = module.host_ref_ident()?;
-        let is_trait_impl = module.is_trait_impl();
-        let host_functions = module.host_functions();
-        let mut_ret_functions = module.host_mut_ret_functions();
-
-        let fns_impl_item = HostRefFnsImplItem {
-            trait_path: module.impl_trait_path(),
+impl HostRefItem {
+    pub(crate) fn try_new(module: &ModuleImplIR, target: Target) -> syn::Result<Self> {
+        let ref_ident = module.host_ref_ident();
+        let fns_impl = |trait_path, functions| HostRefFnsImplItem {
+            trait_path,
             ref_ident: ref_ident.clone(),
-            functions: host_functions
-                .iter()
-                .map(|f| ref_utils::host_function_item(f, is_trait_impl))
-                .collect()
+            functions
         };
-        let try_fns_impl_item = HostRefFnsImplItem {
-            trait_path: None,
-            ref_ident: ref_ident.clone(),
-            functions: host_functions
-                .iter()
-                .map(ref_utils::host_try_function_item)
-                .collect()
-        };
-        let mut_no_ret_fns_impl_item = (!mut_ret_functions.is_empty()).then(|| {
-            HostRefFnsImplItem {
-                trait_path: None,
-                ref_ident,
-                functions: mut_ret_functions
-                    .into_iter()
-                    .flat_map(|f| {
-                        [
-                            ref_utils::host_mut_no_ret_function_item(f),
-                            ref_utils::host_mut_try_no_ret_function_item(f)
-                        ]
+        let (fns_impl_item, try_fns_impl_item, mut_no_ret_fns_impl_item) = match target {
+            Target::Module => {
+                let is_trait_impl = module.is_trait_impl();
+                let functions = module.functions();
+                let mut_ret_functions = module.host_mut_ret_functions();
+                (
+                    fns_impl(
+                        module.impl_trait_path(),
+                        functions
+                            .iter()
+                            .map(|f| ref_utils::host_function_item(f, is_trait_impl))
+                            .collect()
+                    ),
+                    fns_impl(
+                        None,
+                        functions
+                            .iter()
+                            .map(ref_utils::host_try_function_item)
+                            .collect()
+                    ),
+                    (!mut_ret_functions.is_empty()).then(|| {
+                        fns_impl(
+                            None,
+                            mut_ret_functions
+                                .into_iter()
+                                .flat_map(|f| {
+                                    [
+                                        ref_utils::host_mut_no_ret_function_item(f),
+                                        ref_utils::host_mut_try_no_ret_function_item(f)
+                                    ]
+                                })
+                                .collect()
+                        )
                     })
-                    .collect()
+                )
             }
-        });
+            Target::Factory => {
+                let functions = [
+                    module.factory_fn(),
+                    module.factory_upgrade_fn(),
+                    module.factory_batch_upgrade_fn()
+                ];
+                (
+                    fns_impl(
+                        None,
+                        functions
+                            .iter()
+                            .map(|f| ref_utils::host_function_item(f, false))
+                            .collect()
+                    ),
+                    fns_impl(
+                        None,
+                        functions
+                            .iter()
+                            .map(ref_utils::factory_try_function_item)
+                            .collect()
+                    ),
+                    None
+                )
+            }
+        };
 
         Ok(Self {
             struct_item: HostRefStructItem::try_from(module)?,
@@ -253,6 +260,14 @@ impl TryFrom<&ModuleImplIR> for HostRefItem {
             try_fns_impl_item,
             mut_no_ret_fns_impl_item
         })
+    }
+}
+
+impl TryFrom<&ModuleImplIR> for HostRefItem {
+    type Error = syn::Error;
+
+    fn try_from(module: &ModuleImplIR) -> Result<Self, Self::Error> {
+        Self::try_new(module, Target::Module)
     }
 }
 

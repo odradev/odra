@@ -34,7 +34,7 @@ impl ToTokens for UseSuperItem {
 /// the item exists - so the item is nested in `const _: () = { .. };`, which keeps it at the same
 /// module level (`use super::*` still resolves to the user's module and `#[no_mangle]` symbols
 /// are still exported).
-pub struct OdraModuleCfgItem<T>(T);
+pub struct OdraModuleCfgItem<T>(pub(crate) T);
 
 impl<'a, T> TryFrom<&'a crate::ir::ModuleImplIR> for OdraModuleCfgItem<T>
 where

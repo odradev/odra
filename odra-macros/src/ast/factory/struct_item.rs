@@ -1,4 +1,3 @@
-use derive_try_from_ref::TryFromRef;
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 
@@ -13,9 +12,6 @@ use crate::ast::schema::{
 use crate::ir::ModuleStructIR;
 
 /// Emits everything `#[odra::factory]` adds to a factory struct, in this order.
-#[derive(TryFromRef)]
-#[source(ModuleStructIR)]
-#[err(syn::Error)]
 pub struct FactoryModuleStructItem {
     self_code: ModuleDefItem,
     mod_item: ModuleModItem,
@@ -26,6 +22,24 @@ pub struct FactoryModuleStructItem {
     schema_events_item: FactorySchemaEventsItem,
     schema_errors: FactorySchemaErrorsItem,
     schema_storage_layout: SchemaStorageLayoutItem
+}
+
+impl TryFrom<&ModuleStructIR> for FactoryModuleStructItem {
+    type Error = syn::Error;
+
+    fn try_from(ir: &ModuleStructIR) -> Result<Self, Self::Error> {
+        Ok(Self {
+            self_code: ModuleDefItem::try_from(ir)?,
+            mod_item: ModuleModItem::try_from(ir)?,
+            has_ident_item: HasIdentImplItem::try_from(ir)?,
+            has_events_item: FactoryEventItem::try_from(ir)?,
+            factory_has_events_impl_item: FactoryHasEventsImplItem::try_from(ir)?,
+            schema_item: OdraModuleCfgItem::try_from(ir)?,
+            schema_events_item: FactorySchemaEventsItem::try_from(ir)?,
+            schema_errors: FactorySchemaErrorsItem::try_from(ir)?,
+            schema_storage_layout: SchemaStorageLayoutItem::try_from(ir)?
+        })
+    }
 }
 
 impl ToTokens for FactoryModuleStructItem {

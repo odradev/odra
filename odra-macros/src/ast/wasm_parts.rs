@@ -1,23 +1,16 @@
 use proc_macro2::{Ident, TokenStream};
-use quote::{quote, ToTokens};
+use quote::{format_ident, quote, ToTokens};
 use syn::parse_quote;
 
 use crate::{
     ast::{
         factory::FactoryWasmFnsItem,
-        parts_utils::{UsePreludeItem, UseSuperItem}
+        parts_utils::{UsePreludeItem, UseSuperItem},
+        Target
     },
     ir::{FnArgIR, FnIR, FnType, ModuleImplIR},
     utils
 };
-
-/// Which contract the wasm parts are built for: the module itself, or the factory that
-/// deploys and upgrades instances of it.
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub enum WasmPartsKind {
-    Module,
-    Factory
-}
 
 /// Emits `mod __xxx_wasm_parts`, compiled only for wasm32 and only when the crate is built for
 /// this module: the `entry_points()` listing, the `call()` installer, for a factory its
@@ -33,20 +26,20 @@ pub struct ModuleWasmPartsItem {
 }
 
 impl ModuleWasmPartsItem {
-    pub(crate) fn try_new(module: &ModuleImplIR, kind: WasmPartsKind) -> syn::Result<Self> {
+    pub(crate) fn try_new(module: &ModuleImplIR, kind: Target) -> syn::Result<Self> {
         let functions = match kind {
-            WasmPartsKind::Module => module.onchain_functions(),
-            WasmPartsKind::Factory => module.functions().iter().collect()
+            Target::Module => module.onchain_functions(),
+            Target::Factory => module.functions().iter().collect()
         };
-        let exec_parts_mod_ident = module.exec_parts_mod_ident()?;
+        let exec_parts_mod_ident = module.exec_parts_mod_ident();
         Ok(Self {
-            module_name: module.module_str()?,
-            mod_ident: module.wasm_parts_mod_ident()?,
+            module_name: module.module_str(),
+            mod_ident: module.wasm_parts_mod_ident(),
             entry_points_fn: EntryPointsFnItem::new(module, kind, &functions),
             call_fn: CallFnItem::try_new(module, kind)?,
             factory_fns: match kind {
-                WasmPartsKind::Module => None,
-                WasmPartsKind::Factory => Some(FactoryWasmFnsItem::try_from(module)?)
+                Target::Module => None,
+                Target::Factory => Some(FactoryWasmFnsItem::try_from(module)?)
             },
             entry_points: functions
                 .iter()
@@ -60,7 +53,7 @@ impl TryFrom<&ModuleImplIR> for ModuleWasmPartsItem {
     type Error = syn::Error;
 
     fn try_from(module: &ModuleImplIR) -> Result<Self, Self::Error> {
-        Self::try_new(module, WasmPartsKind::Module)
+        Self::try_new(module, Target::Module)
     }
 }
 
@@ -74,13 +67,12 @@ impl ToTokens for ModuleWasmPartsItem {
             factory_fns,
             entry_points
         } = self;
-        let wasm32_attr = utils::attr::wasm32();
         let odra_module_attr = utils::attr::odra_module(module_name);
         let use_super = UseSuperItem;
         let use_prelude = UsePreludeItem;
 
         tokens.extend(quote! {
-            #wasm32_attr
+            #[cfg(target_arch = "wasm32")]
             #odra_module_attr
             mod #mod_ident {
                 #use_super
@@ -105,13 +97,13 @@ struct EntryPointsFnItem {
 }
 
 impl EntryPointsFnItem {
-    fn new(module: &ModuleImplIR, kind: WasmPartsKind, functions: &[&FnIR]) -> Self {
+    fn new(module: &ModuleImplIR, kind: Target, functions: &[&FnIR]) -> Self {
         match kind {
-            WasmPartsKind::Module => Self {
+            Target::Module => Self {
                 entry_points: functions.iter().copied().map(installed_entry_point).collect(),
                 child_entry_points: None
             },
-            WasmPartsKind::Factory => Self {
+            Target::Factory => Self {
                 entry_points: functions
                     .iter()
                     .copied()
@@ -130,26 +122,22 @@ impl EntryPointsFnItem {
 
 impl ToTokens for EntryPointsFnItem {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let ty_entry_points = utils::ty::entry_points();
-        let entry_points = utils::ident::entry_points();
-        let child_entry_points = utils::ident::child_contract_entry_points();
-        let add = utils::ident::add_entry_point();
 
-        let listing = |fn_ident: &Ident, items: &[syn::Expr]| {
+        let listing = |fn_ident: Ident, items: &[syn::Expr]| {
             quote! {
                 #[inline]
-                fn #fn_ident() -> #ty_entry_points {
+                fn #fn_ident() -> odra::casper_types::EntryPoints {
                     use odra::entry_point::EntityEntryPointsExt;
-                    let mut #entry_points = #ty_entry_points::new();
-                    #(#entry_points.#add(#items);)*
-                    #entry_points
+                    let mut entry_points = odra::casper_types::EntryPoints::new();
+                    #(entry_points.add(#items);)*
+                    entry_points
                 }
             }
         };
 
-        tokens.extend(listing(&entry_points, &self.entry_points));
+        tokens.extend(listing(format_ident!("entry_points"), &self.entry_points));
         if let Some(items) = &self.child_entry_points {
-            tokens.extend(listing(&child_entry_points, items));
+            tokens.extend(listing(format_ident!("child_contract_entry_points"), items));
         }
     }
 }
@@ -157,19 +145,19 @@ impl ToTokens for EntryPointsFnItem {
 /// Emits `#[no_mangle] fn call()`, the installer the host runs on deploy and on upgrade. A module
 /// reads its `init` (or `upgrade`) arguments from the call and forwards them; a factory has none.
 struct CallFnItem {
-    kind: WasmPartsKind,
+    kind: Target,
     module_ident: Ident,
     init_args: Option<Vec<FnArgIR>>,
     upgrade_args: Option<Vec<FnArgIR>>
 }
 
 impl CallFnItem {
-    fn try_new(module: &ModuleImplIR, kind: WasmPartsKind) -> syn::Result<Self> {
+    fn try_new(module: &ModuleImplIR, kind: Target) -> syn::Result<Self> {
         Ok(Self {
             kind,
-            module_ident: module.module_ident()?,
-            init_args: module.constructor().map(|f| f.named_args()),
-            upgrade_args: module.upgrader().map(|f| f.named_args())
+            module_ident: module.module_ident(),
+            init_args: module.constructor().map(|f| f.args().to_vec()),
+            upgrade_args: module.upgrader().map(|f| f.args().to_vec())
         })
     }
 }
@@ -177,11 +165,6 @@ impl CallFnItem {
 impl ToTokens for CallFnItem {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let module_ident = &self.module_ident;
-        let ty_schemas = utils::ty::schemas();
-        let ty_has_events = utils::ty::has_events();
-        let ty_runtime_args = utils::ty::runtime_args();
-        let schemas = utils::ident::schemas();
-        let entry_points = utils::ident::entry_points();
         let named_args = utils::ident::named_args();
         let new_env = new_wasm_env_expr();
 
@@ -191,16 +174,16 @@ impl ToTokens for CallFnItem {
                 let inserts = args.iter().map(insert_arg_stmt);
                 quote! {{
                     Some({
-                        let mut #named_args = #ty_runtime_args::new();
+                        let mut #named_args = odra::casper_types::RuntimeArgs::new();
                         #(#inserts)*
                         #named_args
                     })
                 }}
             }
-            None => quote!(Option::<#ty_runtime_args>::None)
+            None => quote!(Option::<odra::casper_types::RuntimeArgs>::None)
         };
         let (read_args, install_args) = match self.kind {
-            WasmPartsKind::Module => {
+            Target::Module => {
                 let init_args = forwarded_args(&self.init_args);
                 let upgrade_args = forwarded_args(&self.upgrade_args);
                 (
@@ -211,13 +194,13 @@ impl ToTokens for CallFnItem {
                     quote!(#named_args)
                 )
             }
-            WasmPartsKind::Factory => (quote!(), quote!(Option::<#ty_runtime_args>::None))
+            Target::Factory => (quote!(), quote!(Option::<odra::casper_types::RuntimeArgs>::None))
         };
 
         tokens.extend(quote! {
             #[no_mangle]
             fn call() {
-                let #schemas = #ty_schemas(<#module_ident as #ty_has_events>::event_schemas());
+                let schemas = odra::casper_event_standard::Schemas(<#module_ident as odra::contract_def::HasEvents>::event_schemas());
                 let exec_env = {
                     let env = #new_env;
                     let env_rc = Rc::new(env);
@@ -225,8 +208,8 @@ impl ToTokens for CallFnItem {
                 };
                 #read_args
                 odra::odra_casper_wasm_env::host_functions::install_or_upgrade(
-                    #entry_points(),
-                    #schemas,
+                    entry_points(),
+                    schemas,
                     {
                         #[cfg(odra_contract_schema)]
                         let contract_schema = Some(include_str!(env!("ODRA_CONTRACT_SCHEMA_PATH")));
@@ -254,14 +237,14 @@ struct NoMangleFnItem {
 }
 
 impl NoMangleFnItem {
-    fn new(func: &FnIR, exec_parts_mod_ident: &Ident, kind: WasmPartsKind) -> Self {
+    fn new(func: &FnIR, exec_parts_mod_ident: &Ident, kind: Target) -> Self {
         Self {
             fn_ident: func.name(),
             exec_parts_mod_ident: exec_parts_mod_ident.clone(),
             execute_ident: func.execute_name(),
             returns_value: !matches!(func.return_type(), syn::ReturnType::Default),
-            override_caller: kind == WasmPartsKind::Factory
-                && [FnType::Constructor, FnType::Upgrader].contains(&func.fn_type())
+            override_caller: kind == Target::Factory
+                && matches!(func.fn_type(), FnType::Constructor | FnType::Upgrader)
         }
     }
 }
@@ -329,7 +312,7 @@ fn template_entry_point(func: &FnIR) -> syn::Expr {
 /// `vec![odra::args::parameter::<Ty>("name"), ..]` for the function's named arguments.
 pub(crate) fn parameters(func: &FnIR) -> syn::Expr {
     let params = func
-        .named_args()
+        .args()
         .iter()
         .map(|arg| new_parameter(arg.name_str(), arg.ty().clone()))
         .collect::<Vec<_>>();
@@ -415,13 +398,11 @@ fn new_parameter(name: String, ty: syn::Type) -> syn::Expr {
 }
 fn as_cl_type(ty: &syn::Type) -> syn::Expr {
     let ty = utils::ty::unreferenced_ty(ty);
-    let ty_cl_typed = utils::ty::cl_typed();
-    let ty = utils::syn::as_casted_ty_stream(&ty, ty_cl_typed);
+    let ty = utils::syn::as_casted_ty_stream(&ty, parse_quote!(odra::casper_types::CLTyped));
     parse_quote!(#ty::cl_type())
 }
 fn unit_cl_type() -> syn::Expr {
-    let ty_cl_typed = utils::ty::cl_typed();
-    parse_quote!(<() as #ty_cl_typed>::cl_type())
+    parse_quote!(<() as odra::casper_types::CLTyped>::cl_type())
 }
 
 #[cfg(test)]

@@ -72,7 +72,6 @@ chrono = { version = "0.4"}
 clap = { version = "4.5"}
 convert_case = "0.6"
 cucumber = "0.21"
-derive-try-from-ref = "0.1"
 derive_more = { version = "2.1.0", features = ["full"] }
 dotenvy = "0.15"
 futures = "0.3"

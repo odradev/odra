@@ -1,12 +1,12 @@
 mod validation {
-    use crate::ir::{FnIR, ModuleImplIR};
+    use crate::ir::{function::ImplContext, FnIR, ModuleImplIR};
 
     #[test]
     fn test_not_reserved_fn_arg() {
         let code: syn::ImplItemFn = syn::parse_quote!(
             pub fn abc(&self, arg_name: u64) {}
         );
-        let result = FnIR::try_from(code);
+        let result = FnIR::try_new_impl(code, ImplContext::default());
         assert!(result.is_ok());
     }
 
@@ -44,7 +44,7 @@ mod validation {
             #[odra(payable)]
             pub fn deposit(&mut self) {}
         );
-        assert!(FnIR::try_from(code).is_ok());
+        assert!(FnIR::try_new_impl(code, ImplContext::default()).is_ok());
     }
 
     #[test]
@@ -54,7 +54,21 @@ mod validation {
             #[allow(dead_code)]
             pub fn init(&mut self) {}
         );
-        assert!(FnIR::try_from(code).is_ok());
+        assert!(FnIR::try_new_impl(code, ImplContext::default()).is_ok());
+    }
+}
+
+mod rejected_items {
+    use crate::test_utils::mock;
+
+    #[test]
+    fn a_module_with_more_fields_than_the_storage_index_holds() {
+        assert!(mock::invalid_module_definition().is_err());
+    }
+
+    #[test]
+    fn a_union_is_not_an_odra_type() {
+        assert!(mock::custom_union().is_err());
     }
 }
 

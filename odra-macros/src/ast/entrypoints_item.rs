@@ -3,7 +3,7 @@ use quote::{quote, ToTokens};
 
 use crate::{
     ast::wasm_parts,
-    ir::{FnIR, ModuleImplIR},
+    ir::{FnIR, FnType, ModuleImplIR},
     utils
 };
 
@@ -20,7 +20,7 @@ impl TryFrom<&ModuleImplIR> for HasEntrypointsImplItem {
 
     fn try_from(module: &ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
-            module_ident: module.module_ident()?,
+            module_ident: module.module_ident(),
             entry_points: module
                 .onchain_functions()
                 .into_iter()
@@ -34,13 +34,10 @@ impl ToTokens for HasEntrypointsImplItem {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let module_ident = &self.module_ident;
         let entry_points = &self.entry_points;
-        let ty_has_entrypoints = utils::ty::has_entrypoints();
-        let ty_entrypoint = utils::ty::entry_point_def();
-        let entrypoints = utils::ident::entrypoints();
 
         tokens.extend(quote! {
-            impl #ty_has_entrypoints for #module_ident {
-                fn #entrypoints() -> odra::prelude::vec::Vec<#ty_entrypoint> {
+            impl odra::contract_def::HasEntrypoints for #module_ident {
+                fn entrypoints() -> odra::prelude::vec::Vec<odra::contract_def::Entrypoint> {
                     odra::prelude::vec![#(#entry_points),*]
                 }
             }
@@ -66,13 +63,13 @@ impl EntrypointDef {
         Ok(Self {
             name: f.name_str(),
             args: f
-                .named_args()
+                .args()
                 .iter()
                 .map(|arg| (arg.name_str(), utils::ty::unreferenced_ty(arg.ty())))
                 .collect(),
             is_mut: f.is_mut(),
             return_cl_type: wasm_parts::return_cl_type(f),
-            is_constructor: f.is_restricted(),
+            is_constructor: matches!(f.fn_type(), FnType::Constructor | FnType::Upgrader),
             is_payable: f.is_payable(),
             is_non_reentrant: f.is_non_reentrant()
         })
@@ -87,28 +84,26 @@ impl ToTokens for EntrypointDef {
             return_cl_type,
             ..
         } = self;
-        let ty_entrypoint = utils::ty::entry_point_def();
-        let ty_string = utils::ty::string();
         let args = self
             .args
             .iter()
             .map(|(name, ty)| quote!(odra::args::odra_argument::<#ty>(#name)));
         let ty = match self.is_constructor {
-            true => utils::ty::entry_point_def_ty_constructor(),
-            false => utils::ty::entry_point_def_ty_public()
+            true => quote!(odra::contract_def::EntrypointType::Constructor),
+            false => quote!(odra::contract_def::EntrypointType::Public)
         };
         let attributes = [
             self.is_payable
-                .then(utils::ty::entry_point_def_attr_payable),
+                .then(|| quote!(odra::contract_def::EntrypointAttribute::Payable)),
             self.is_non_reentrant
-                .then(utils::ty::entry_point_def_attr_non_reentrant)
+                .then(|| quote!(odra::contract_def::EntrypointAttribute::NonReentrant))
         ]
         .into_iter()
         .flatten();
 
         tokens.extend(quote! {
-            #ty_entrypoint {
-                name: #ty_string::from(#name),
+            odra::contract_def::Entrypoint {
+                name: odra::prelude::string::String::from(#name),
                 args: odra::prelude::vec![#(#args),*],
                 is_mutable: #is_mut,
                 return_ty: #return_cl_type,
