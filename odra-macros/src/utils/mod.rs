@@ -1,6 +1,5 @@
 pub mod attr;
 pub mod ident;
-pub mod string;
 pub mod syn;
 pub mod ty;
 

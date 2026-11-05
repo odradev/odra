@@ -7,8 +7,7 @@ use super::config::ModuleConfig;
 use super::delegate::{Delegate, DelegatedFn};
 use super::errors;
 use super::function::{FnArgIR, FnIR, ImplContext};
-use super::{CONSTRUCTOR_NAME, UPGRADER_NAME};
-use crate::utils;
+use super::{generated_mod_ident, CONSTRUCTOR_NAME, UPGRADER_NAME};
 
 /// The impl block or the trait `#[odra::module]` (or `#[odra::external_contract]`) is applied
 /// to. Built with every function validated, see [FnIR].
@@ -118,11 +117,8 @@ impl ModuleImplIR {
         Ident::new(&format!("{module_ident}{suffix}"), module_ident.span())
     }
 
-    /// `__<module>_<part>`, the name of a generated module, spanned as the module ident.
     fn parts_mod_ident(&self, part: &str) -> Ident {
-        let module_ident = self.module_ident();
-        let snake_cased = utils::string::camel_to_snake(&module_ident);
-        Ident::new(&format!("__{snake_cased}_{part}"), module_ident.span())
+        generated_mod_ident(&self.module_ident(), part)
     }
 
     pub fn host_ref_ident(&self) -> Ident {

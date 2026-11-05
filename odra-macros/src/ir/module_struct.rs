@@ -1,11 +1,10 @@
 use std::collections::BTreeMap;
 
 use proc_macro2::Ident;
-use quote::{format_ident, ToTokens};
+use quote::ToTokens;
 
 use super::config::ModuleConfig;
-use super::errors;
-use crate::utils;
+use super::{errors, generated_mod_ident};
 
 /// A module has at most this many fields: the storage index of a field is a `u8`.
 const MAX_FIELDS: usize = 255;
@@ -72,19 +71,12 @@ impl ModuleStructIR {
         Ident::new(&format!("{}Factory", module_ident), module_ident.span())
     }
 
-    pub fn module_mod_ident(&self) -> syn::Ident {
-        format_ident!(
-            "__{}_module",
-            utils::string::camel_to_snake(self.module_ident())
-        )
+    pub fn module_mod_ident(&self) -> Ident {
+        generated_mod_ident(&self.code.ident, "module")
     }
 
     pub fn contract_schema_mod_ident(&self) -> Ident {
-        let ident = self.module_ident();
-        Ident::new(
-            utils::string::camel_to_snake(format!("__{}_contract_schema", ident)).as_str(),
-            ident.span()
-        )
+        generated_mod_ident(&self.code.ident, "contract_schema")
     }
 
     /// The fields in declaration order, each with its storage index.

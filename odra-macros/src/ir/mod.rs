@@ -8,6 +8,9 @@
 //! An IR is built from the parsed item with a `try_new`, which runs every check and combines
 //! the errors ([errors::collect_all]); after that, its queries cannot fail on the user's input.
 
+use convert_case::{Boundary, Case, Casing};
+use proc_macro2::Ident;
+
 mod attr;
 mod config;
 pub mod delegate;
@@ -37,6 +40,17 @@ pub enum FnType {
     FactoryUpgrader,
     FactoryBatchUpgrader,
     Regular
+}
+
+/// `__<module>_<part>`, the name of a module the macros generate next to `Module`: the module's
+/// name in snake case, spanned as the module ident so an error inside points at it.
+fn generated_mod_ident(module_ident: &Ident, part: &str) -> Ident {
+    let snake_cased = module_ident
+        .to_string()
+        .from_case(Case::UpperCamel)
+        .without_boundaries(&[Boundary::UpperDigit, Boundary::LowerDigit])
+        .to_case(Case::Snake);
+    Ident::new(&format!("__{snake_cased}_{part}"), module_ident.span())
 }
 
 #[cfg(test)]
