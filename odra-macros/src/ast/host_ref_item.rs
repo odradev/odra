@@ -211,7 +211,7 @@ impl TryFrom<&ModuleImplIR> for HostRefItem {
     fn try_from(module: &ModuleImplIR) -> Result<Self, Self::Error> {
         let ref_ident = module.host_ref_ident();
         let is_trait_impl = module.is_trait_impl();
-        let host_functions = module.host_functions();
+        let host_functions = module.functions();
         let mut_ret_functions = module.host_mut_ret_functions();
 
         let fns_impl_item = HostRefFnsImplItem {

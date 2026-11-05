@@ -3,7 +3,7 @@ use quote::{quote, ToTokens};
 
 use crate::{
     ast::wasm_parts,
-    ir::{FnIR, ModuleImplIR},
+    ir::{FnIR, FnType, ModuleImplIR},
     utils
 };
 
@@ -66,13 +66,13 @@ impl EntrypointDef {
         Ok(Self {
             name: f.name_str(),
             args: f
-                .named_args()
+                .args()
                 .iter()
                 .map(|arg| (arg.name_str(), utils::ty::unreferenced_ty(arg.ty())))
                 .collect(),
             is_mut: f.is_mut(),
             return_cl_type: wasm_parts::return_cl_type(f),
-            is_constructor: f.is_restricted(),
+            is_constructor: matches!(f.fn_type(), FnType::Constructor | FnType::Upgrader),
             is_payable: f.is_payable(),
             is_non_reentrant: f.is_non_reentrant()
         })

@@ -61,10 +61,6 @@ pub fn odra_error() -> syn::Type {
     parse_quote!(OdraError)
 }
 
-pub fn odra_result(ty: syn::Type) -> syn::Type {
-    parse_quote!(OdraResult<#ty>)
-}
-
 pub fn odra_result_unit() -> syn::Type {
     parse_quote!(OdraResult<()>)
 }

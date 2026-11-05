@@ -1,10 +1,6 @@
 use proc_macro2::TokenStream;
 use syn::parse_quote;
 
-pub fn function_name(sig: &syn::Signature) -> String {
-    sig.ident.to_string()
-}
-
 pub fn function_typed_args(sig: &syn::Signature) -> Vec<syn::PatType> {
     sig.inputs
         .iter()
@@ -20,10 +16,6 @@ pub fn receiver_arg(sig: &syn::Signature) -> Option<syn::Receiver> {
         syn::FnArg::Receiver(receiver) => Some(receiver.clone()),
         _ => None
     })
-}
-
-pub fn function_return_type(sig: &syn::Signature) -> syn::ReturnType {
-    sig.output.clone()
 }
 
 pub fn visibility_pub() -> syn::Visibility {

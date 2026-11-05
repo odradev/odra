@@ -33,7 +33,6 @@ mod events_item;
 mod exec_parts;
 mod external_contract_item;
 mod factory;
-mod fn_utils;
 mod host_ref_item;
 mod ident_item;
 mod module_def;

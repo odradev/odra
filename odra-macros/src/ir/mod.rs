@@ -29,7 +29,7 @@ const FACTORY_UPGRADE_NAME: &str = "upgrade_child_contract";
 const BATCH_FACTORY_UPGRADE_NAME: &str = "batch_upgrade_child_contract";
 
 /// What a function is to the contract, by its name.
-#[derive(PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum FnType {
     Constructor,
     Upgrader,

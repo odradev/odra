@@ -1,9 +1,3 @@
-use syn::parse_quote;
-
-pub fn ret_ty(ty: &syn::Type) -> syn::ReturnType {
-    parse_quote!(-> #ty)
-}
-
 pub fn field(ident: &syn::Ident, ty: &syn::Type) -> syn::Field {
     syn::Field {
         attrs: vec![],

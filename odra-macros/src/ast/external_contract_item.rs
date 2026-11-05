@@ -78,7 +78,7 @@ impl TraitImplItem {
             trait_ident: ir.module_ident(),
             ref_ident: ir.host_ref_ident(),
             functions: ir
-                .host_functions()
+                .functions()
                 .iter()
                 .map(|f| ref_utils::host_function_item(f, true))
                 .collect()

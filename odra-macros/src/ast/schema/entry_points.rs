@@ -147,14 +147,9 @@ impl SchemaEntryPoint {
             // The batch upgrade argument is generic, so its schema type is given explicitly.
             FnType::FactoryBatchUpgrader => vec![(String::from("args"), utils::ty::bytes())],
             _ => f
-                .raw_typed_args()
+                .args()
                 .iter()
-                .map(|syn::PatType { pat, ty, .. }| {
-                    (
-                        pat.to_token_stream().to_string(),
-                        utils::ty::unreferenced_ty(ty)
-                    )
-                })
+                .map(|arg| (arg.name_str(), utils::ty::unreferenced_ty(arg.ty())))
                 .collect()
         };
         if f.is_payable() {

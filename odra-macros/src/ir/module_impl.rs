@@ -6,7 +6,7 @@ use super::attr::{self, OdraAttribute};
 use super::config::ConfigItem;
 use super::delegate::{Delegate, DelegatedFn};
 use super::errors::{self, OffchainMisuse};
-use super::function::{FnArgIR, FnIR, FnImplIR};
+use super::function::{FnArgIR, FnIR};
 use super::{CONSTRUCTOR_NAME, UPGRADER_NAME};
 use crate::utils;
 
@@ -176,10 +176,6 @@ impl ModuleImplIR {
         self.parts_mod_ident("exec_parts")
     }
 
-    pub fn host_functions(&self) -> &[FnIR] {
-        self.functions()
-    }
-
     /// The functions that become entry points of the deployed contract: everything but the
     /// `#[odra(offchain)]` ones.
     pub fn onchain_functions(&self) -> Vec<&FnIR> {
@@ -199,7 +195,7 @@ impl ModuleImplIR {
     }
 
     pub fn host_mut_ret_functions(&self) -> Vec<&FnIR> {
-        self.host_functions()
+        self.functions()
             .iter()
             .filter(|f| f.is_mut() && f.return_type() != syn::ReturnType::Default)
             .collect()
@@ -220,25 +216,25 @@ impl ModuleImplIR {
             pub fn new_contract(&mut self, contract_name: #ty_string, #args) -> (#ty_address, #ty_uref) {
             }
         };
-        FnIR::Impl(FnImplIR::new(factory_fn))
+        FnIR::unchecked(factory_fn)
     }
 
     pub fn factory_upgrade_fn(&self) -> FnIR {
         let args = self.upgrader_args();
         let ty_string = utils::ty::string();
-        FnIR::Impl(FnImplIR::new(parse_quote! {
+        FnIR::unchecked(parse_quote! {
             pub fn upgrade_child_contract(&mut self, contract_name: #ty_string, #args) {
             }
-        }))
+        })
     }
 
     pub fn factory_batch_upgrade_fn(&self) -> FnIR {
         let rt_args = utils::ty::runtime_args();
         let btree_map = utils::ty::typed_btree_map(&utils::ty::string(), &parse_quote!(T));
-        FnIR::Impl(FnImplIR::new(parse_quote! {
+        FnIR::unchecked(parse_quote! {
             pub fn batch_upgrade_child_contract<T: Into<#rt_args>>(&mut self, args: #btree_map) {
             }
-        }))
+        })
     }
 
     pub fn upgrader(&self) -> Option<&FnIR> {
@@ -258,7 +254,7 @@ impl ModuleImplIR {
 
     fn constructor_args(&self) -> syn::punctuated::Punctuated<syn::FnArg, syn::token::Comma> {
         self.constructor()
-            .map(|fn_ir| fn_ir.named_args())
+            .map(|fn_ir| fn_ir.args())
             .unwrap_or_default()
             .iter()
             .map(FnArgIR::raw)
@@ -267,7 +263,7 @@ impl ModuleImplIR {
 
     fn upgrader_args(&self) -> syn::punctuated::Punctuated<syn::FnArg, syn::token::Comma> {
         self.upgrader()
-            .map(|fn_ir| fn_ir.named_args())
+            .map(|fn_ir| fn_ir.args())
             .unwrap_or_default()
             .iter()
             .map(FnArgIR::raw)
@@ -318,11 +314,13 @@ impl ModuleIR {
     pub(super) fn self_code(&self) -> syn::ItemImpl {
         let mut code = self.code.clone();
         // include delegated functions
-        code.items
-            .extend(self.functions.iter().filter_map(|f| match f {
-                FnIR::Impl(ir) if ir.is_delegated() => Some(syn::ImplItem::Fn(ir.raw())),
-                _ => None
-            }));
+        code.items.extend(
+            self.functions
+                .iter()
+                .filter(|f| f.is_delegated())
+                .filter_map(FnIR::raw_impl)
+                .map(syn::ImplItem::Fn)
+        );
         // remove odra attributes
         code.items.iter_mut().for_each(|item| {
             if let syn::ImplItem::Fn(func) = item {
@@ -362,12 +360,8 @@ impl ModuleIR {
         let delegated_functions = Self::delegated_functions(code)?
             .into_iter()
             .map(|delegated| {
-                FnIR::try_from(delegated.function).map(|fn_ir| match fn_ir {
-                    FnIR::Impl(ir) => {
-                        FnIR::Impl(ir.delegated_to(delegated.target, delegated.has_own_docs))
-                    }
-                    FnIR::Def(ir) => FnIR::Def(ir)
-                })
+                FnIR::try_from(delegated.function)
+                    .map(|fn_ir| fn_ir.delegated_to(delegated.target, delegated.has_own_docs))
             });
         errors::collect_all(own_functions.chain(delegated_functions))
     }
@@ -404,7 +398,7 @@ impl ModuleIR {
             .iter()
             .filter_map(|item| match item {
                 syn::ImplItem::Fn(func) if Self::is_entry_point(func, is_trait_impl) => {
-                    Some(FnIR::Impl(FnImplIR::new(func.clone())))
+                    Some(FnIR::unchecked(func.clone()))
                 }
                 _ => None
             })

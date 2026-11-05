@@ -35,8 +35,8 @@ impl ModuleExecPartsItem {
             exec_functions: module
                 .functions()
                 .iter()
-                .map(|f| ExecFunctionItem::try_new(f, &module_ident, kind))
-                .collect::<syn::Result<_>>()?
+                .map(|f| ExecFunctionItem::new(f, &module_ident))
+                .collect()
         })
     }
 }
@@ -73,25 +73,16 @@ impl ToTokens for ModuleExecPartsItem {
 struct ExecFunctionItem {
     execute_ident: Ident,
     return_type: syn::ReturnType,
-    /// `None` for a factory's function named `factory`, which is emitted with an empty body and
-    /// no return type.
-    body: Option<ExecFnBody>
+    body: ExecFnBody
 }
 
 impl ExecFunctionItem {
-    fn try_new(func: &FnIR, module_ident: &Ident, kind: ExecPartsKind) -> syn::Result<Self> {
-        let is_factory_placeholder = kind == ExecPartsKind::Factory && func.is_factory();
-        Ok(Self {
+    fn new(func: &FnIR, module_ident: &Ident) -> Self {
+        Self {
             execute_ident: func.execute_name(),
-            return_type: match is_factory_placeholder {
-                true => syn::ReturnType::Default,
-                false => func.return_type()
-            },
-            body: match is_factory_placeholder {
-                true => None,
-                false => Some(ExecFnBody::try_new(func, module_ident)?)
-            }
-        })
+            return_type: func.return_type(),
+            body: ExecFnBody::new(func, module_ident)
+        }
     }
 }
 
@@ -136,9 +127,9 @@ struct ExecArg {
 }
 
 impl ExecFnBody {
-    fn try_new(func: &FnIR, module_ident: &Ident) -> syn::Result<Self> {
+    fn new(func: &FnIR, module_ident: &Ident) -> Self {
         let args = func
-            .named_args()
+            .args()
             .iter()
             .map(|arg| ExecArg {
                 name: arg.name(),
@@ -146,7 +137,7 @@ impl ExecFnBody {
                 by_ref: arg.is_ref()
             })
             .collect();
-        Ok(Self {
+        Self {
             module_ident: module_ident.clone(),
             fn_ident: func.name(),
             uses_exec_env: func.is_payable()
@@ -157,7 +148,7 @@ impl ExecFnBody {
             is_mut: func.is_mut(),
             is_payable: func.is_payable(),
             is_non_reentrant: func.is_non_reentrant()
-        })
+        }
     }
 }
 

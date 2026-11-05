@@ -37,7 +37,7 @@ impl DeployerItem {
                         role: ArgsRole::Init,
                         module_name: module_name.clone(),
                         ident: module.init_args_ident(),
-                        fields: f.named_args().iter().map(FnArgIR::name_and_ty).collect()
+                        fields: f.args().iter().map(FnArgIR::name_and_ty).collect()
                     }),
                     _ => None
                 },
@@ -46,7 +46,7 @@ impl DeployerItem {
                         role: ArgsRole::Upgrade,
                         module_name,
                         ident: module.upgrade_args_ident(),
-                        fields: f.named_args().iter().map(FnArgIR::name_and_ty).collect()
+                        fields: f.args().iter().map(FnArgIR::name_and_ty).collect()
                     }),
                     _ => None
                 },
@@ -58,7 +58,7 @@ impl DeployerItem {
                         .map(|f| {
                             new_entry_point(
                                 f.name_str(),
-                                f.raw_typed_args(),
+                                f.args(),
                                 f.is_payable(),
                                 f.is_offchain()
                             )
@@ -103,7 +103,7 @@ impl DeployerItem {
                             .map(|f| {
                                 new_entry_point(
                                     f.name_str(),
-                                    f.raw_typed_args(),
+                                    f.args(),
                                     f.is_payable(),
                                     false
                                 )
@@ -292,7 +292,7 @@ impl ToTokens for CallerProviderImplItem {
 /// `odra::entry_point_callback::EntryPoint::new[_payable|_offchain](name, args)`.
 fn new_entry_point(
     name: String,
-    args: Vec<syn::PatType>,
+    args: &[FnArgIR],
     is_payable: bool,
     is_offchain: bool
 ) -> syn::Expr {
@@ -311,10 +311,10 @@ fn new_entry_point(
         parse_quote!(#ty::new(#name, #args_vec))
     }
 }
-fn new_entry_point_arg(arg: &syn::PatType) -> syn::Expr {
+fn new_entry_point_arg(arg: &FnArgIR) -> syn::Expr {
     let ty = utils::ty::odra_entry_point_arg();
-    let arg_ty = utils::ty::unreferenced_ty(&arg.ty);
-    let name = string_from(&arg.pat.to_token_stream().to_string());
+    let arg_ty = utils::ty::unreferenced_ty(arg.ty());
+    let name = string_from(&arg.name_str());
     parse_quote!(#ty::new::<#arg_ty>(#name))
 }
 

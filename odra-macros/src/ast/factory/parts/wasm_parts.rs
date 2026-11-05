@@ -68,7 +68,7 @@ impl TryFrom<&ModuleImplIR> for NewContractFnItem {
             event_ident: format_ident!("{}ContractDeployed", module.module_ident()),
             init_args: module
                 .constructor()
-                .map(|f| f.named_args())
+                .map(|f| f.args().to_vec())
                 .unwrap_or_default()
         })
     }
@@ -143,11 +143,8 @@ impl TryFrom<&ModuleImplIR> for UpgradeChildContractFnsItem {
     fn try_from(module: &ModuleImplIR) -> Result<Self, Self::Error> {
         let upgrade_args = module
             .upgrader()
-            .map(|f| f.named_args())
-            .unwrap_or_default()
-            .iter()
-            .map(FnArgIR::name_and_ty)
-            .collect();
+            .map(|f| f.args().iter().map(FnArgIR::name_and_ty).collect())
+            .unwrap_or_default();
         Ok(Self {
             child_ident: module.child_module_ident(),
             event_ident: format_ident!("{}ContractDeployed", module.module_ident()),

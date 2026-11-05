@@ -61,14 +61,7 @@ impl TryFrom<&ModuleImplIR> for FactoryModuleImplItem {
         Ok(Self {
             is_factory: ir.is_factory(),
             factory_module_ident: ir.factory_module_ident(),
-            functions: ir
-                .functions()
-                .iter()
-                .filter_map(|f| match f {
-                    FnIR::Impl(fn_impl_ir) => Some(fn_impl_ir.raw()),
-                    _ => None
-                })
-                .collect()
+            functions: ir.functions().iter().filter_map(FnIR::raw_impl).collect()
         })
     }
 }

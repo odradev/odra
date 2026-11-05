@@ -168,8 +168,8 @@ impl CallFnItem {
         Ok(Self {
             kind,
             module_ident: module.module_ident(),
-            init_args: module.constructor().map(|f| f.named_args()),
-            upgrade_args: module.upgrader().map(|f| f.named_args())
+            init_args: module.constructor().map(|f| f.args().to_vec()),
+            upgrade_args: module.upgrader().map(|f| f.args().to_vec())
         })
     }
 }
@@ -261,7 +261,7 @@ impl NoMangleFnItem {
             execute_ident: func.execute_name(),
             returns_value: !matches!(func.return_type(), syn::ReturnType::Default),
             override_caller: kind == WasmPartsKind::Factory
-                && [FnType::Constructor, FnType::Upgrader].contains(&func.fn_type())
+                && matches!(func.fn_type(), FnType::Constructor | FnType::Upgrader)
         }
     }
 }
@@ -329,7 +329,7 @@ fn template_entry_point(func: &FnIR) -> syn::Expr {
 /// `vec![odra::args::parameter::<Ty>("name"), ..]` for the function's named arguments.
 pub(crate) fn parameters(func: &FnIR) -> syn::Expr {
     let params = func
-        .named_args()
+        .args()
         .iter()
         .map(|arg| new_parameter(arg.name_str(), arg.ty().clone()))
         .collect::<Vec<_>>();
