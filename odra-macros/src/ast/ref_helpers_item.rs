@@ -1,5 +1,4 @@
 use crate::ir::errors;
-use crate::utils;
 use proc_macro2::TokenStream;
 
 /// Emits `impl XxxContractRef { .. }` and `impl XxxHostRef { .. }` with the items of an
@@ -68,14 +67,13 @@ impl quote::ToTokens for RefHelpersItem {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let contract_ref_impl = &self.contract_ref_impl;
         let host_ref_impl = &self.host_ref_impl;
-        let not_wasm32 = utils::attr::not_wasm32();
         tokens.extend(quote::quote! {
             const _: () = {
                 use odra::ContractAddress as _;
                 #contract_ref_impl
             };
 
-            #not_wasm32
+            #[cfg(not(target_arch = "wasm32"))]
             const _: () = {
                 use odra::host::HostRef as _;
                 #host_ref_impl

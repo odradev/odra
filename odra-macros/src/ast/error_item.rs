@@ -3,8 +3,7 @@ use quote::{quote, ToTokens};
 
 use crate::{
     ast::{schema::SchemaErrorItem},
-    ir::{TypeIR, VariantIR},
-    utils
+    ir::{TypeIR, VariantIR}
 };
 
 /// Emits everything `#[odra::odra_error]` adds to an error enum: the `From` impls
@@ -59,26 +58,21 @@ impl ToTokens for OdraErrorItem {
             ident,
             variants
         } = self;
-        let ty_odra_error = utils::ty::odra_error();
-        let ty_from = utils::ty::from(ident);
-        let wasm32_attr = utils::attr::wasm32();
-        let not_wasm32_attr = utils::attr::not_wasm32();
-        let derived_attr = utils::attr::automatically_derived();
 
         tokens.extend(quote! {
             #item
 
-            #wasm32_attr
-            #derived_attr
-            impl #ty_from for #ty_odra_error {
+            #[cfg(target_arch = "wasm32")]
+            #[automatically_derived]
+            impl ::core::convert::From<#ident> for OdraError {
                 fn from(error: #ident) -> Self {
-                    #ty_odra_error::user(error as u16)
+                    OdraError::user(error as u16)
                 }
             }
 
-            #not_wasm32_attr
-            #derived_attr
-            impl #ty_from for #ty_odra_error {
+            #[cfg(not(target_arch = "wasm32"))]
+            #[automatically_derived]
+            impl ::core::convert::From<#ident> for OdraError {
                 fn from(error: #ident) -> Self {
                     match error {
                         #(#ident::#variants => OdraError::user(error as u16, stringify!(#variants)),)*

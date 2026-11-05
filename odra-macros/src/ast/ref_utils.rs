@@ -4,7 +4,6 @@
 
 use crate::ir::FnType;
 use crate::utils::syn::visibility_default;
-use crate::utils::ty;
 use crate::{
     ir::{FnArgIR, FnIR},
     utils::{self, syn::visibility_pub}
@@ -68,11 +67,10 @@ pub fn host_mut_no_ret_function_item(fun: &FnIR) -> syn::ItemFn {
 pub fn host_mut_try_no_ret_function_item(fun: &FnIR) -> syn::ItemFn {
     let mut attrs = function_filtered_attrs(fun);
     attrs.push(parse_quote!(#[doc = " Ignores the result of the call."]));
-    let ret_ty = utils::ty::odra_result_unit();
     let signature = function_signature(fun);
     let signature = syn::Signature {
         ident: fun.try_no_ret_name(),
-        output: syn::parse_quote!(-> #ret_ty),
+        output: syn::parse_quote!(-> OdraResult<()>),
         ..signature
     };
     let call_def_expr = call_def_with_amount(fun);
@@ -106,14 +104,12 @@ fn env_call(
     docs: Vec<Attribute>,
     vis: Visibility
 ) -> syn::ItemFn {
-    let m_env = utils::member::env();
-    let m_address = utils::member::address();
 
     syn::parse_quote!(
         #(#docs)*
         #vis #sig {
-            #m_env.call_contract(
-                #m_address,
+            self.env.call_contract(
+                self.address,
                 #call_def_expr
             )
         }
@@ -121,47 +117,42 @@ fn env_call(
 }
 
 fn call_def_with_amount(fun: &FnIR) -> syn::Expr {
-    let ty_call_def = utils::ty::call_def();
     let fun_name_str = fun.name_str();
     let args_block = runtime_args_with_amount_block(fun);
     let is_mut = fun.is_mut();
-    let attached_value = utils::member::attached_value();
     let fun_name = string_from(fun_name_str);
 
-    syn::parse_quote!(#ty_call_def::new(#fun_name, #is_mut, #args_block).with_amount(#attached_value))
+    syn::parse_quote!(odra::CallDef::new(#fun_name, #is_mut, #args_block).with_amount(self.attached_value))
 }
 
 fn factory_call_def_with_amount(fun: &FnIR) -> syn::Expr {
-    let ty_call_def = utils::ty::call_def();
     let fun_name_str = fun.name_str();
     let new_runtime_args = new_runtime_args();
     let args = utils::ident::named_args();
     let is_mut = fun.is_mut();
     let fun_name = string_from(fun_name_str);
-    let ty_ep_arg = utils::ty::entry_point_arg();
     let fn_args = fun.args().iter().map(insert_arg_stmt).collect::<Vec<_>>();
-    let ty_args = utils::ty::batch_upgrade_args();
     // The flags that tell `call` on the child it is being upgraded, or installed.
     let upgrade_cfg = quote::quote! {
-        #ty_ep_arg::insert_runtime_arg(true, "odra_cfg_is_factory_upgrade", &mut #args);
-        #ty_ep_arg::insert_runtime_arg(true, "odra_cfg_allow_key_override", &mut #args);
-        #ty_ep_arg::insert_runtime_arg(false, "odra_cfg_create_upgrade_group", &mut #args);
+        odra::args::EntrypointArgument::insert_runtime_arg(true, "odra_cfg_is_factory_upgrade", &mut #args);
+        odra::args::EntrypointArgument::insert_runtime_arg(true, "odra_cfg_allow_key_override", &mut #args);
+        odra::args::EntrypointArgument::insert_runtime_arg(false, "odra_cfg_create_upgrade_group", &mut #args);
     };
     let install_cfg = quote::quote! {
-        #ty_ep_arg::insert_runtime_arg(true, "odra_cfg_is_upgradable", &mut #args);
-        #ty_ep_arg::insert_runtime_arg(false, "odra_cfg_is_upgrade", &mut #args);
-        #ty_ep_arg::insert_runtime_arg(true, "odra_cfg_allow_key_override", &mut #args);
-        #ty_ep_arg::insert_runtime_arg(contract_name.clone(), "odra_cfg_package_hash_key_name", &mut #args);
+        odra::args::EntrypointArgument::insert_runtime_arg(true, "odra_cfg_is_upgradable", &mut #args);
+        odra::args::EntrypointArgument::insert_runtime_arg(false, "odra_cfg_is_upgrade", &mut #args);
+        odra::args::EntrypointArgument::insert_runtime_arg(true, "odra_cfg_allow_key_override", &mut #args);
+        odra::args::EntrypointArgument::insert_runtime_arg(contract_name.clone(), "odra_cfg_package_hash_key_name", &mut #args);
     };
     let inserts = match fun.fn_type() {
         FnType::FactoryUpgrader => quote::quote!(#(#fn_args)* #upgrade_cfg),
         FnType::FactoryBatchUpgrader => quote::quote! {
-            #ty_ep_arg::insert_runtime_arg(#ty_args::from(args), "args", &mut #args);
+            odra::args::EntrypointArgument::insert_runtime_arg(odra::args::BatchUpgradeArgs::from(args), "args", &mut #args);
             #upgrade_cfg
         },
         _ => quote::quote!(#install_cfg #(#fn_args)*)
     };
-    syn::parse_quote!(#ty_call_def::new(#fun_name, #is_mut, {
+    syn::parse_quote!(odra::CallDef::new(#fun_name, #is_mut, {
         let mut #args = #new_runtime_args;
         #inserts
         #args
@@ -215,11 +206,10 @@ fn runtime_args_with_amount_block(fun: &FnIR) -> syn::Block {
 fn insert_amount_arg_stmt() -> syn::Stmt {
     let ident = utils::ident::named_args();
     let zero = u512_zero();
-    let attached_value = utils::member::attached_value();
 
     syn::parse_quote!(
-        if #attached_value > #zero {
-            let _ = #ident.insert("amount", #attached_value);
+        if self.attached_value > #zero {
+            let _ = #ident.insert("amount", self.attached_value);
         }
     )
 }
@@ -228,19 +218,15 @@ fn insert_arg_stmt(arg: &FnArgIR) -> syn::Stmt {
     let ident = arg.name_spanned_as_type();
     let name = arg.name_str();
     let args = utils::ident::named_args();
-    let ty = ty::entry_point_arg();
-    syn::parse_quote!(#ty::insert_runtime_arg(#ident, #name, &mut #args);)
+    syn::parse_quote!(odra::args::EntrypointArgument::insert_runtime_arg(#ident, #name, &mut #args);)
 }
 
 fn new_runtime_args() -> syn::Expr {
-    let ty = utils::ty::runtime_args();
-    parse_quote!(#ty::new())
+    parse_quote!(odra::casper_types::RuntimeArgs::new())
 }
 fn u512_zero() -> syn::Expr {
-    let ty = utils::ty::u512();
-    parse_quote!(#ty::zero())
+    parse_quote!(odra::casper_types::U512::zero())
 }
 fn string_from(string: String) -> syn::Expr {
-    let ty = utils::ty::string();
-    parse_quote!(#ty::from(#string))
+    parse_quote!(odra::prelude::string::String::from(#string))
 }

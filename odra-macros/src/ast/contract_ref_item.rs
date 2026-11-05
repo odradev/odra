@@ -3,8 +3,7 @@ use quote::{quote, ToTokens};
 
 use crate::{
     ast::{ref_utils, Target},
-    ir::ModuleImplIR,
-    utils
+    ir::ModuleImplIR
 };
 
 /// Emits the whole contract ref of a module: the struct, `impl ContractRef`, the impl block with
@@ -95,16 +94,13 @@ impl ToTokens for ContractRefStructItem {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let ref_ident = &self.ref_ident;
         let doc = format!(" [{}] Contract Ref.", self.module_name);
-        let ty_rc_contract_env = utils::ty::rc_contract_env();
-        let ty_address = utils::ty::address();
-        let ty_u512 = utils::ty::u512();
 
         tokens.extend(quote! {
             #[doc = #doc]
             pub struct #ref_ident {
-                env: #ty_rc_contract_env,
-                address: #ty_address,
-                attached_value: #ty_u512,
+                env: odra::prelude::Rc<odra::ContractEnv>,
+                address: odra::prelude::Address,
+                attached_value: odra::casper_types::U512,
             }
         });
     }
@@ -118,23 +114,19 @@ struct ContractRefTraitImplItem {
 impl ToTokens for ContractRefTraitImplItem {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let ref_ident = &self.ref_ident;
-        let ty_contract_ref = utils::ty::contract_ref();
-        let ty_rc_contract_env = utils::ty::rc_contract_env();
-        let ty_address = utils::ty::address();
-        let ty_u512 = utils::ty::u512();
         let with_tokens_fn = WithTokensFnItem;
 
         tokens.extend(quote! {
-            impl #ty_contract_ref for #ref_ident {
-                fn new(env: #ty_rc_contract_env, address: #ty_address) -> Self {
+            impl odra::ContractRef for #ref_ident {
+                fn new(env: odra::prelude::Rc<odra::ContractEnv>, address: odra::prelude::Address) -> Self {
                     Self {
                         env,
                         address,
-                        attached_value: #ty_u512::zero()
+                        attached_value: odra::casper_types::U512::zero()
                     }
                 }
 
-                fn address(&self) -> &#ty_address {
+                fn address(&self) -> &odra::prelude::Address {
                     &self.address
                 }
 
@@ -150,17 +142,13 @@ pub(crate) struct WithTokensFnItem;
 
 impl ToTokens for WithTokensFnItem {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let ty_u512 = utils::ty::u512();
-        let address = utils::ident::address();
-        let env = utils::ident::env();
-        let attached_value = utils::ident::attached_value();
 
         tokens.extend(quote! {
-            fn with_tokens(&self, tokens: #ty_u512) -> Self {
+            fn with_tokens(&self, tokens: odra::casper_types::U512) -> Self {
                 Self {
-                    #address: self.#address,
-                    #env: self.#env.clone(),
-                    #attached_value: tokens
+                    address: self.address,
+                    env: self.env.clone(),
+                    attached_value: tokens
                 }
             }
         });

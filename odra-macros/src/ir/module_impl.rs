@@ -204,11 +204,8 @@ impl ModuleImplIR {
 
     pub fn factory_fn(&self) -> FnIR {
         let args = self.constructor_args();
-        let ty_address = utils::ty::address();
-        let ty_uref = utils::ty::uref();
-        let ty_string = utils::ty::string();
         let factory_fn = parse_quote! {
-            pub fn new_contract(&mut self, contract_name: #ty_string, #args) -> (#ty_address, #ty_uref) {
+            pub fn new_contract(&mut self, contract_name: odra::prelude::string::String, #args) -> (odra::prelude::Address, odra::casper_types::URef) {
             }
         };
         FnIR::unchecked(factory_fn)
@@ -216,18 +213,15 @@ impl ModuleImplIR {
 
     pub fn factory_upgrade_fn(&self) -> FnIR {
         let args = self.upgrader_args();
-        let ty_string = utils::ty::string();
         FnIR::unchecked(parse_quote! {
-            pub fn upgrade_child_contract(&mut self, contract_name: #ty_string, #args) {
+            pub fn upgrade_child_contract(&mut self, contract_name: odra::prelude::string::String, #args) {
             }
         })
     }
 
     pub fn factory_batch_upgrade_fn(&self) -> FnIR {
-        let rt_args = utils::ty::runtime_args();
-        let btree_map = utils::ty::typed_btree_map(&utils::ty::string(), &parse_quote!(T));
         FnIR::unchecked(parse_quote! {
-            pub fn batch_upgrade_child_contract<T: Into<#rt_args>>(&mut self, args: #btree_map) {
+            pub fn batch_upgrade_child_contract<T: Into<odra::casper_types::RuntimeArgs>>(&mut self, args: odra::prelude::BTreeMap<odra::prelude::string::String, T>) {
             }
         })
     }

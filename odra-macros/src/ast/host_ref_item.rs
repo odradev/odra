@@ -3,8 +3,7 @@ use quote::{quote, ToTokens};
 
 use crate::{
     ast::{contract_ref_item::WithTokensFnItem, ref_utils, Target},
-    ir::ModuleImplIR,
-    utils
+    ir::ModuleImplIR
 };
 
 /// Emits `pub struct XxxHostRef { address, env, attached_value }`, the handle a test holds on a
@@ -29,19 +28,13 @@ impl ToTokens for HostRefStructItem {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let ref_ident = &self.ref_ident;
         let doc = format!(" [{}] Host Ref.", self.module_name);
-        let address = utils::ident::address();
-        let env = utils::ident::env();
-        let attached_value = utils::ident::attached_value();
-        let ty_address = utils::ty::address();
-        let ty_host_env = utils::ty::host_env();
-        let ty_u512 = utils::ty::u512();
 
         tokens.extend(quote! {
             #[doc = #doc]
             pub struct #ref_ident {
-                #address: #ty_address,
-                #env: #ty_host_env,
-                #attached_value: #ty_u512
+                address: odra::prelude::Address,
+                env: odra::host::HostEnv,
+                attached_value: odra::casper_types::U512
             }
         });
     }
@@ -70,61 +63,48 @@ impl TryFrom<&ModuleImplIR> for HostRefTraitImplItem {
 impl ToTokens for HostRefTraitImplItem {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let ref_ident = &self.ref_ident;
-        let ty_host_ref = utils::ty::host_ref();
-        let ty_address = utils::ty::address();
-        let ty_host_env = utils::ty::host_env();
-        let ty_has_ident = utils::ty::has_ident();
-        let ty_caller_provider = utils::ty::entry_point_caller_provider();
-        let ty_event_instance = utils::ty::event_instance();
-        let ty_from_bytes = utils::ty::from_bytes();
-        let ty_event_error = utils::ty::event_error();
-        let ty_call_result = utils::ty::contract_call_result();
-        let address = utils::ident::address();
-        let env = utils::ident::env();
-        let attached_value = utils::ident::attached_value();
-        let contract_address = utils::ident::contract_address();
         let with_tokens_fn = WithTokensFnItem;
 
         let register = self.register.then(|| {
             quote! {
-                #env.register_contract_ref(
-                    #address,
-                    <Self as #ty_has_ident>::ident(),
-                    <Self as #ty_caller_provider>::entry_points_caller
+                env.register_contract_ref(
+                    address,
+                    <Self as odra::contract_def::HasIdent>::ident(),
+                    <Self as odra::host::EntryPointsCallerProvider>::entry_points_caller
                 );
             }
         });
 
         tokens.extend(quote! {
-            impl #ty_host_ref for #ref_ident {
-                fn new(#address: #ty_address, #env: #ty_host_env) -> Self {
+            impl odra::host::HostRef for #ref_ident {
+                fn new(address: odra::prelude::Address, env: odra::host::HostEnv) -> Self {
                     #register
                     Self {
-                        #address,
-                        #env,
-                        #attached_value: Default::default()
+                        address,
+                        env,
+                        attached_value: Default::default()
                     }
                 }
 
                 #with_tokens_fn
 
-                fn #contract_address(&self) -> #ty_address {
-                    self.#address
+                fn contract_address(&self) -> odra::prelude::Address {
+                    self.address
                 }
 
-                fn #env(&self) -> &#ty_host_env {
-                    &self.#env
+                fn env(&self) -> &odra::host::HostEnv {
+                    &self.env
                 }
 
-                fn get_event<T>(&self, index: i32) -> Result<T, #ty_event_error>
+                fn get_event<T>(&self, index: i32) -> Result<T, odra::EventError>
                 where
-                    T: #ty_from_bytes + #ty_event_instance
+                    T: odra::casper_types::bytesrepr::FromBytes + odra::casper_event_standard::EventInstance
                 {
-                    self.#env.get_event(self, index)
+                    self.env.get_event(self, index)
                 }
 
-                fn last_call(&self) -> #ty_call_result {
-                    self.#env.last_call_result(self.#address)
+                fn last_call(&self) -> odra::ContractCallResult {
+                    self.env.last_call_result(self.address)
                 }
             }
         });
@@ -155,17 +135,14 @@ impl ToTokens for HasIdentTraitImplItem {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let module_ident = &self.module_ident;
         let ref_ident = &self.ref_ident;
-        let ty_has_ident = utils::ty::has_ident();
-        let ty_string = utils::ty::string();
-        let ident = utils::ident::ident();
 
         tokens.extend(quote! {
-            impl #ty_has_ident for #ref_ident {
-                fn #ident() -> #ty_string {
-                    #module_ident::#ident()
+            impl odra::contract_def::HasIdent for #ref_ident {
+                fn ident() -> odra::prelude::string::String {
+                    #module_ident::ident()
                 }
-                fn contract_name() -> #ty_string {
-                    <#module_ident as #ty_has_ident>::contract_name()
+                fn contract_name() -> odra::prelude::string::String {
+                    <#module_ident as odra::contract_def::HasIdent>::contract_name()
                 }
             }
         });

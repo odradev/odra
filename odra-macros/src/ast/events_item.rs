@@ -65,30 +65,21 @@ impl TryFrom<&TypeIR> for HasEventsImplItem {
 impl ToTokens for HasEventsImplItem {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let ty_ident = &self.ty_ident;
-        let ty_has_events = utils::ty::has_events();
-        let ty_event = utils::ty::event();
-        let ty_schema = utils::ty::schema();
-        let ty_string = utils::ty::string();
-        let ty_vec = utils::ty::vec();
-        let ty_btree_map = utils::ty::btree_map();
-        let ty_event_instance = utils::ty::event_instance();
-        let events = utils::ident::events();
-        let event_schemas = utils::ident::event_schemas();
         let result = utils::ident::result();
 
         let into_event = |ty: &syn::Type| quote!(<#ty as odra::contract_def::IntoEvent>::into_event());
         let name_and_schema = |ty: &syn::Type| {
-            quote!((<#ty as #ty_event_instance>::name(), <#ty as #ty_event_instance>::schema()))
+            quote!((<#ty as odra::casper_event_standard::EventInstance>::name(), <#ty as odra::casper_event_standard::EventInstance>::schema()))
         };
 
         let (events_body, event_schemas_body) = match &self.sources {
-            EventSources::None => (quote!(#ty_vec::new()), quote!(#ty_btree_map::new())),
+            EventSources::None => (quote!(odra::prelude::vec::Vec::new()), quote!(odra::prelude::BTreeMap::new())),
             EventSources::Only(ty) => {
                 let into_event = into_event(ty);
                 let name_and_schema = name_and_schema(ty);
                 (
                     quote!(odra::prelude::vec![#into_event]),
-                    quote!(#ty_btree_map::from_iter(odra::prelude::vec![#name_and_schema]))
+                    quote!(odra::prelude::BTreeMap::from_iter(odra::prelude::vec![#name_and_schema]))
                 )
             }
             EventSources::Module {
@@ -99,21 +90,21 @@ impl ToTokens for HasEventsImplItem {
                 let names_and_schemas = declared.iter().map(name_and_schema);
                 let field_events = field_types
                     .iter()
-                    .map(|ty| quote!(.chain(<#ty as #ty_has_events>::events())));
+                    .map(|ty| quote!(.chain(<#ty as odra::contract_def::HasEvents>::events())));
                 let field_schemas = field_types
                     .iter()
-                    .map(|ty| quote!(.chain(<#ty as #ty_has_events>::event_schemas())));
+                    .map(|ty| quote!(.chain(<#ty as odra::contract_def::HasEvents>::event_schemas())));
                 (
                     quote! {
-                        let #events = odra::prelude::vec![#(#into_events),*];
-                        odra::prelude::BTreeSet::<#ty_event>::new()
+                        let events = odra::prelude::vec![#(#into_events),*];
+                        odra::prelude::BTreeSet::<odra::contract_def::Event>::new()
                             .into_iter()
-                            .chain(#events)
+                            .chain(events)
                             #(#field_events)*
                             .collect()
                     },
                     quote! {
-                        let #result = #ty_btree_map::from_iter(odra::prelude::vec![#(#names_and_schemas),*]);
+                        let #result = odra::prelude::BTreeMap::from_iter(odra::prelude::vec![#(#names_and_schemas),*]);
                         #result
                             .into_iter()
                             #(#field_schemas)*
@@ -124,12 +115,12 @@ impl ToTokens for HasEventsImplItem {
         };
 
         tokens.extend(quote! {
-            impl #ty_has_events for #ty_ident {
-                fn #events() -> #ty_vec<#ty_event> {
+            impl odra::contract_def::HasEvents for #ty_ident {
+                fn events() -> odra::prelude::vec::Vec<odra::contract_def::Event> {
                     #events_body
                 }
 
-                fn #event_schemas() -> #ty_btree_map<#ty_string, #ty_schema> {
+                fn event_schemas() -> odra::prelude::BTreeMap<odra::prelude::string::String, odra::casper_event_standard::Schema> {
                     #event_schemas_body
                 }
             }

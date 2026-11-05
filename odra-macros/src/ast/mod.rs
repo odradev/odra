@@ -15,8 +15,9 @@
 //! - `impl TryFrom<&XxxIR>` does every validation and raises every error (built in
 //!   `crate::ir::errors`); it never formats code.
 //! - `impl ToTokens` is one `quote!` per emitted item, with the `let` bindings it needs right
-//!   above it. Paths into the `odra` crate come from `crate::utils::ty` and `crate::utils::ident`,
-//!   so a path is spelled in one place.
+//!   above it. Paths into the `odra` crate are written out in the `quote!`, so the emitter reads
+//!   like the code it generates. The locals the generated code invents are named through
+//!   `crate::utils::ident`, so their `__odra_` prefix is spelled in one place.
 //! - Spans: a token copied from the user's code (an ident, a type, an attribute) is reused as its
 //!   syn node so it keeps the user's span and rustc points at it; a token the macro invents has
 //!   the call-site span. `quote_spanned!` is used only where an invented token must point at a

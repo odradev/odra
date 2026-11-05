@@ -1,5 +1,5 @@
 use proc_macro2::{Ident, TokenStream};
-use quote::{quote, ToTokens};
+use quote::{format_ident, quote, ToTokens};
 use syn::parse_quote;
 
 use crate::{
@@ -67,13 +67,12 @@ impl ToTokens for ModuleWasmPartsItem {
             factory_fns,
             entry_points
         } = self;
-        let wasm32_attr = utils::attr::wasm32();
         let odra_module_attr = utils::attr::odra_module(module_name);
         let use_super = UseSuperItem;
         let use_prelude = UsePreludeItem;
 
         tokens.extend(quote! {
-            #wasm32_attr
+            #[cfg(target_arch = "wasm32")]
             #odra_module_attr
             mod #mod_ident {
                 #use_super
@@ -123,26 +122,22 @@ impl EntryPointsFnItem {
 
 impl ToTokens for EntryPointsFnItem {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let ty_entry_points = utils::ty::entry_points();
-        let entry_points = utils::ident::entry_points();
-        let child_entry_points = utils::ident::child_contract_entry_points();
-        let add = utils::ident::add_entry_point();
 
-        let listing = |fn_ident: &Ident, items: &[syn::Expr]| {
+        let listing = |fn_ident: Ident, items: &[syn::Expr]| {
             quote! {
                 #[inline]
-                fn #fn_ident() -> #ty_entry_points {
+                fn #fn_ident() -> odra::casper_types::EntryPoints {
                     use odra::entry_point::EntityEntryPointsExt;
-                    let mut #entry_points = #ty_entry_points::new();
-                    #(#entry_points.#add(#items);)*
-                    #entry_points
+                    let mut entry_points = odra::casper_types::EntryPoints::new();
+                    #(entry_points.add(#items);)*
+                    entry_points
                 }
             }
         };
 
-        tokens.extend(listing(&entry_points, &self.entry_points));
+        tokens.extend(listing(format_ident!("entry_points"), &self.entry_points));
         if let Some(items) = &self.child_entry_points {
-            tokens.extend(listing(&child_entry_points, items));
+            tokens.extend(listing(format_ident!("child_contract_entry_points"), items));
         }
     }
 }
@@ -170,11 +165,6 @@ impl CallFnItem {
 impl ToTokens for CallFnItem {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let module_ident = &self.module_ident;
-        let ty_schemas = utils::ty::schemas();
-        let ty_has_events = utils::ty::has_events();
-        let ty_runtime_args = utils::ty::runtime_args();
-        let schemas = utils::ident::schemas();
-        let entry_points = utils::ident::entry_points();
         let named_args = utils::ident::named_args();
         let new_env = new_wasm_env_expr();
 
@@ -184,13 +174,13 @@ impl ToTokens for CallFnItem {
                 let inserts = args.iter().map(insert_arg_stmt);
                 quote! {{
                     Some({
-                        let mut #named_args = #ty_runtime_args::new();
+                        let mut #named_args = odra::casper_types::RuntimeArgs::new();
                         #(#inserts)*
                         #named_args
                     })
                 }}
             }
-            None => quote!(Option::<#ty_runtime_args>::None)
+            None => quote!(Option::<odra::casper_types::RuntimeArgs>::None)
         };
         let (read_args, install_args) = match self.kind {
             Target::Module => {
@@ -204,13 +194,13 @@ impl ToTokens for CallFnItem {
                     quote!(#named_args)
                 )
             }
-            Target::Factory => (quote!(), quote!(Option::<#ty_runtime_args>::None))
+            Target::Factory => (quote!(), quote!(Option::<odra::casper_types::RuntimeArgs>::None))
         };
 
         tokens.extend(quote! {
             #[no_mangle]
             fn call() {
-                let #schemas = #ty_schemas(<#module_ident as #ty_has_events>::event_schemas());
+                let schemas = odra::casper_event_standard::Schemas(<#module_ident as odra::contract_def::HasEvents>::event_schemas());
                 let exec_env = {
                     let env = #new_env;
                     let env_rc = Rc::new(env);
@@ -218,8 +208,8 @@ impl ToTokens for CallFnItem {
                 };
                 #read_args
                 odra::odra_casper_wasm_env::host_functions::install_or_upgrade(
-                    #entry_points(),
-                    #schemas,
+                    entry_points(),
+                    schemas,
                     {
                         #[cfg(odra_contract_schema)]
                         let contract_schema = Some(include_str!(env!("ODRA_CONTRACT_SCHEMA_PATH")));
@@ -408,13 +398,11 @@ fn new_parameter(name: String, ty: syn::Type) -> syn::Expr {
 }
 fn as_cl_type(ty: &syn::Type) -> syn::Expr {
     let ty = utils::ty::unreferenced_ty(ty);
-    let ty_cl_typed = utils::ty::cl_typed();
-    let ty = utils::syn::as_casted_ty_stream(&ty, ty_cl_typed);
+    let ty = utils::syn::as_casted_ty_stream(&ty, parse_quote!(odra::casper_types::CLTyped));
     parse_quote!(#ty::cl_type())
 }
 fn unit_cl_type() -> syn::Expr {
-    let ty_cl_typed = utils::ty::cl_typed();
-    parse_quote!(<() as #ty_cl_typed>::cl_type())
+    parse_quote!(<() as odra::casper_types::CLTyped>::cl_type())
 }
 
 #[cfg(test)]

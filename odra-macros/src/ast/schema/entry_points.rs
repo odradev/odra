@@ -145,7 +145,7 @@ impl SchemaEntryPoint {
         };
         let mut args = match f.fn_type() {
             // The batch upgrade argument is generic, so its schema type is given explicitly.
-            FnType::FactoryBatchUpgrader => vec![(String::from("args"), utils::ty::bytes())],
+            FnType::FactoryBatchUpgrader => vec![(String::from("args"), parse_quote!(odra::casper_types::bytesrepr::Bytes))],
             _ => f
                 .args()
                 .iter()

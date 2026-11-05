@@ -60,14 +60,13 @@ impl TryFrom<&TypeIR> for OdraTypeItem {
 impl ToTokens for OdraTypeItem {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let item = &self.item;
-        let derive_attr = utils::attr::common_derive_attr();
         let from_bytes_impl = self.impl_from_bytes();
         let to_bytes_impl = self.impl_to_bytes();
         let cl_typed_impl = self.impl_cl_typed();
         let has_events_impl = &self.has_events_impl;
 
         tokens.extend(quote! {
-            #derive_attr
+            #[derive(Clone, PartialEq, Eq, Debug)]
             #item
             #from_bytes_impl
             #to_bytes_impl
@@ -81,8 +80,6 @@ impl OdraTypeItem {
     /// `impl FromBytes`: `fn from_bytes(bytes) -> Result<(Self, rest), Error>`.
     fn impl_from_bytes(&self) -> TokenStream {
         let ident = &self.ident;
-        let ty_from_bytes = utils::ty::from_bytes();
-        let ty_error = utils::ty::bytes_err();
         let bytes = utils::ident::bytes();
         let read = utils::ident::result();
 
@@ -90,7 +87,7 @@ impl OdraTypeItem {
             TypeKind::Struct { fields } => {
                 let names = fields.iter().map(|(name, _)| name).collect::<Vec<_>>();
                 quote! {
-                    #(let (#names, #bytes) = #ty_from_bytes::from_bytes(#bytes)?;)*
+                    #(let (#names, #bytes) = odra::casper_types::bytesrepr::FromBytes::from_bytes(#bytes)?;)*
                     Ok((Self { #(#names),* }, #bytes))
                 }
             }
@@ -100,10 +97,10 @@ impl OdraTypeItem {
                     quote!(x if x == #value as u8 => Ok((#value, #bytes)))
                 });
                 quote! {
-                    let (#read, #bytes): (u8, _) = #ty_from_bytes::from_bytes(#bytes)?;
+                    let (#read, #bytes): (u8, _) = odra::casper_types::bytesrepr::FromBytes::from_bytes(#bytes)?;
                     match #read {
                         #(#arms,)*
-                        _ => Err(#ty_error::Formatting),
+                        _ => Err(odra::casper_types::bytesrepr::Error::Formatting),
                     }
                 }
             }
@@ -114,24 +111,24 @@ impl OdraTypeItem {
                     let value = variant_constructor(v);
                     quote! {
                         #index => {
-                            #(let (#names, #bytes) = #ty_from_bytes::from_bytes(#bytes)?;)*
+                            #(let (#names, #bytes) = odra::casper_types::bytesrepr::FromBytes::from_bytes(#bytes)?;)*
                             Ok((#value, #bytes))
                         }
                     }
                 });
                 quote! {
-                    let (#read, #bytes): (u8, _) = #ty_from_bytes::from_bytes(#bytes)?;
+                    let (#read, #bytes): (u8, _) = odra::casper_types::bytesrepr::FromBytes::from_bytes(#bytes)?;
                     match #read {
                         #(#arms,)*
-                        _ => Err(#ty_error::Formatting),
+                        _ => Err(odra::casper_types::bytesrepr::Error::Formatting),
                     }
                 }
             }
         };
 
         quote! {
-            impl #ty_from_bytes for #ident {
-                fn from_bytes(#bytes: &[u8]) -> Result<(Self, &[u8]), #ty_error> {
+            impl odra::casper_types::bytesrepr::FromBytes for #ident {
+                fn from_bytes(#bytes: &[u8]) -> Result<(Self, &[u8]), odra::casper_types::bytesrepr::Error> {
                     #body
                 }
             }
@@ -141,9 +138,6 @@ impl OdraTypeItem {
     /// `impl ToBytes`: `fn to_bytes(&self)` and `fn serialized_length(&self)`.
     fn impl_to_bytes(&self) -> TokenStream {
         let ident = &self.ident;
-        let ty_to_bytes = utils::ty::to_bytes();
-        let ty_error = utils::ty::bytes_err();
-        let ty_vec = utils::ty::vec();
         let result = utils::ident::result();
         let u8_len = quote!(odra::casper_types::bytesrepr::U8_SERIALIZED_LENGTH);
 
@@ -152,8 +146,8 @@ impl OdraTypeItem {
                 let names = fields.iter().map(|(name, _)| name).collect::<Vec<_>>();
                 (
                     quote! {
-                        let mut #result = #ty_vec::with_capacity(self.serialized_length());
-                        #(#result.extend(#ty_to_bytes::to_bytes(&self.#names)?);)*
+                        let mut #result = odra::prelude::vec::Vec::with_capacity(self.serialized_length());
+                        #(#result.extend(odra::casper_types::bytesrepr::ToBytes::to_bytes(&self.#names)?);)*
                         Ok(#result)
                     },
                     quote! {
@@ -193,8 +187,8 @@ impl OdraTypeItem {
         };
 
         quote! {
-            impl #ty_to_bytes for #ident {
-                fn to_bytes(&self) -> Result<#ty_vec<u8>, #ty_error> {
+            impl odra::casper_types::bytesrepr::ToBytes for #ident {
+                fn to_bytes(&self) -> Result<odra::prelude::vec::Vec<u8>, odra::casper_types::bytesrepr::Error> {
                     #to_bytes_body
                 }
 
@@ -208,16 +202,14 @@ impl OdraTypeItem {
     /// `impl CLTyped`: `U8` for a unit enum, `Any` for everything else.
     fn impl_cl_typed(&self) -> TokenStream {
         let ident = &self.ident;
-        let ty_cl_typed = utils::ty::cl_typed();
-        let ty_cl_type = utils::ty::cl_type();
         let cl_type = match &self.kind {
-            TypeKind::UnitEnum { .. } => quote!(#ty_cl_type::U8),
-            TypeKind::Enum { .. } | TypeKind::Struct { .. } => quote!(#ty_cl_type::Any)
+            TypeKind::UnitEnum { .. } => quote!(odra::casper_types::CLType::U8),
+            TypeKind::Enum { .. } | TypeKind::Struct { .. } => quote!(odra::casper_types::CLType::Any)
         };
 
         quote! {
-            impl #ty_cl_typed for #ident {
-                fn cl_type() -> #ty_cl_type {
+            impl odra::casper_types::CLTyped for #ident {
+                fn cl_type() -> odra::casper_types::CLType {
                     #cl_type
                 }
             }

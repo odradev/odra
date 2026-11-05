@@ -74,15 +74,11 @@ impl DeployerItem {
                 ];
                 let [new_contract_fn, upgrade_fn, batch_upgrade_fn] = &factory_fns;
                 // The batch upgrade argument is generic, so its type is given explicitly.
-                let ty_entry_point = utils::ty::odra_entry_point();
-                let ty_argument = utils::ty::odra_entry_point_arg();
-                let ty_batch_upgrade_args = utils::ty::batch_upgrade_args();
-                let ty_string = utils::ty::string();
                 let batch_upgrade_name = batch_upgrade_fn.name_str();
-                let batch_upgrade_entry_point: syn::Expr = syn::parse_quote!(#ty_entry_point::new(
-                    #ty_string::from(#batch_upgrade_name),
+                let batch_upgrade_entry_point: syn::Expr = syn::parse_quote!(odra::entry_point_callback::EntryPoint::new(
+                    odra::prelude::string::String::from(#batch_upgrade_name),
                     odra::prelude::vec![
-                        #ty_argument::new::<#ty_batch_upgrade_args<odra::host::NoArgs>>(#ty_string::from("args"))
+                        odra::entry_point_callback::Argument::new::<odra::args::BatchUpgradeArgs<odra::host::NoArgs>>(odra::prelude::string::String::from("args"))
                     ]
                 ));
                 Ok(Self {
@@ -161,15 +157,13 @@ impl ToTokens for ArgsStructItem {
         let (doc, ty_trait) = match self.role {
             ArgsRole::Init => (
                 format!(" [{}] contract constructor arguments.", self.module_name),
-                utils::ty::init_args()
+                quote!(odra::host::InitArgs)
             ),
             ArgsRole::Upgrade => (
                 format!(" [{}] contract upgrade arguments.", self.module_name),
-                utils::ty::upgrade_args()
+                quote!(odra::host::UpgradeArgs)
             )
         };
-        let missing_docs_attr = utils::attr::missing_docs();
-        let derive_attr = utils::attr::derive_into_runtime_args();
         let fields = self.fields.iter().map(|(name, ty)| {
             let name = format_ident!("{}", name);
             let ty = utils::ty::unreferenced_ty(ty);
@@ -177,9 +171,9 @@ impl ToTokens for ArgsStructItem {
         });
 
         tokens.extend(quote! {
-            #missing_docs_attr
+            #[allow(missing_docs)]
             #[doc = #doc]
-            #derive_attr
+            #[derive(odra::IntoRuntimeArgs)]
             pub struct #ident {
                 #(#fields),*
             }
@@ -219,9 +213,6 @@ impl ToTokens for CallerProviderImplItem {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let host_ref_ident = &self.host_ref_ident;
         let entry_points_exprs = &self.entry_points;
-        let ty_provider = utils::ty::entry_point_caller_provider();
-        let ty_caller = utils::ty::entry_points_caller();
-        let entry_points = utils::ident::entry_points();
         let contract_env = utils::ident::contract_env();
         let call_def = utils::ident::call_def();
         let result = utils::ident::result();
@@ -252,7 +243,7 @@ impl ToTokens for CallerProviderImplItem {
                         #name => odra::host::factory::#helper(
                             &#contract_env,
                             &#call_def,
-                            <#child_host_ref_ident as #ty_provider>::entry_points_caller,
+                            <#child_host_ref_ident as odra::host::EntryPointsCallerProvider>::entry_points_caller,
                             |contract_name, contract_address| #event_ident {
                                 contract_name,
                                 contract_address
@@ -264,10 +255,10 @@ impl ToTokens for CallerProviderImplItem {
         };
 
         tokens.extend(quote! {
-            impl #ty_provider for #host_ref_ident {
-                fn entry_points_caller() -> #ty_caller {
-                    let #entry_points = odra::prelude::vec![#(#entry_points_exprs),*];
-                    #ty_caller::new(#entry_points, |#contract_env, #call_def| {
+            impl odra::host::EntryPointsCallerProvider for #host_ref_ident {
+                fn entry_points_caller() -> odra::entry_point_callback::EntryPointsCaller {
+                    let entry_points = odra::prelude::vec![#(#entry_points_exprs),*];
+                    odra::entry_point_callback::EntryPointsCaller::new(entry_points, |#contract_env, #call_def| {
                         match #call_def.entry_point() {
                             #branches
                             name => Err(OdraError::VmError(
@@ -288,7 +279,6 @@ fn new_entry_point(
     is_payable: bool,
     is_offchain: bool
 ) -> syn::Expr {
-    let ty = utils::ty::odra_entry_point();
     let name = string_from(&name);
     let args_stream = args
         .iter()
@@ -296,23 +286,21 @@ fn new_entry_point(
         .collect::<Punctuated<_, syn::Token![,]>>();
     let args_vec: syn::Expr = parse_quote!(odra::prelude::vec![#args_stream]);
     if is_offchain {
-        parse_quote!(#ty::new_offchain(#name, #args_vec))
+        parse_quote!(odra::entry_point_callback::EntryPoint::new_offchain(#name, #args_vec))
     } else if is_payable {
-        parse_quote!(#ty::new_payable(#name, #args_vec))
+        parse_quote!(odra::entry_point_callback::EntryPoint::new_payable(#name, #args_vec))
     } else {
-        parse_quote!(#ty::new(#name, #args_vec))
+        parse_quote!(odra::entry_point_callback::EntryPoint::new(#name, #args_vec))
     }
 }
 fn new_entry_point_arg(arg: &FnArgIR) -> syn::Expr {
-    let ty = utils::ty::odra_entry_point_arg();
     let arg_ty = utils::ty::unreferenced_ty(arg.ty());
     let name = string_from(&arg.name_str());
-    parse_quote!(#ty::new::<#arg_ty>(#name))
+    parse_quote!(odra::entry_point_callback::Argument::new::<#arg_ty>(#name))
 }
 
 fn string_from(string: &str) -> syn::Expr {
-    let ty = utils::ty::string();
-    parse_quote!(#ty::from(#string))
+    parse_quote!(odra::prelude::string::String::from(#string))
 }
 
 #[cfg(test)]

@@ -1,7 +1,5 @@
 pub mod attr;
 pub mod ident;
-pub mod member;
-pub mod misc;
 pub mod string;
 pub mod syn;
 pub mod ty;

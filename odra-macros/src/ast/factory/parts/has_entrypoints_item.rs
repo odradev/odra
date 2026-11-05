@@ -1,7 +1,7 @@
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 
-use crate::{ast::wasm_parts, ir::ModuleImplIR, utils};
+use crate::{ast::wasm_parts, ir::ModuleImplIR};
 
 /// Emits `impl odra::contract_def::HasEntrypoints for XxxFactory`: a factory's entry points
 /// are its argument-less constructor and the three factory functions, listed as
@@ -38,13 +38,10 @@ impl ToTokens for FactoryHasEntrypointsImplItem {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let module_ident = &self.module_ident;
         let entry_points = &self.entry_points;
-        let ty_has_entrypoints = utils::ty::has_entrypoints();
-        let ty_entrypoint = utils::ty::entry_point_def();
-        let entrypoints = utils::ident::entrypoints();
 
         tokens.extend(quote! {
-            impl #ty_has_entrypoints for #module_ident {
-                fn #entrypoints() -> odra::prelude::vec::Vec<#ty_entrypoint> {
+            impl odra::contract_def::HasEntrypoints for #module_ident {
+                fn entrypoints() -> odra::prelude::vec::Vec<odra::contract_def::Entrypoint> {
                     odra::prelude::vec![#(#entry_points),*]
                         .into_iter()
                         .map(TryInto::try_into)

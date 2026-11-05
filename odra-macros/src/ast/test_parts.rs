@@ -8,8 +8,7 @@ use crate::{
         parts_utils::{UsePreludeItem, UseSuperItem},
         Target
     },
-    ir::ModuleImplIR,
-    utils
+    ir::ModuleImplIR
 };
 
 /// Emits `pub use __xxx_test_parts::*;` outside wasm, so the host ref and the deployer are in
@@ -31,9 +30,8 @@ impl TryFrom<&ModuleImplIR> for TestPartsReexportItem {
 impl ToTokens for TestPartsReexportItem {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let mod_ident = &self.mod_ident;
-        let not_wasm32_attr = utils::attr::not_wasm32();
         tokens.extend(quote! {
-            #not_wasm32_attr
+            #[cfg(not(target_arch = "wasm32"))]
             pub use #mod_ident::*;
         });
     }
@@ -89,11 +87,10 @@ impl ToTokens for TestPartsItem {
 /// `#[cfg(not(target_arch = "wasm32"))] mod #ident { use super::*; use odra::prelude::*; #body }`,
 /// the shape of every test parts module.
 pub(super) fn not_wasm32_mod(ident: &Ident, body: TokenStream) -> TokenStream {
-    let not_wasm32_attr = utils::attr::not_wasm32();
     let use_super = UseSuperItem;
     let use_prelude = UsePreludeItem;
     quote! {
-        #not_wasm32_attr
+        #[cfg(not(target_arch = "wasm32"))]
         mod #ident {
             #use_super
             #use_prelude
