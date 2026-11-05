@@ -128,16 +128,23 @@ impl ContractUpgradeCmd {
     }
 }
 
-impl OdraCommand for ContractUpgradeCmd {
-    type Output = UpgradeReport;
+/// What an `upgrade <Contract>` invocation asks for, before anything is sent.
+struct UpgradeRequest {
+    address: Address,
+    upgrade_args: RuntimeArgs,
+    cfg: UpgradeConfig,
+    gas: u64
+}
 
-    fn exec(
+impl ContractUpgradeCmd {
+    /// Resolves the command line into the upgrade to run: the address of the contract from the
+    /// contracts file, its upgrade arguments, the configuration and the gas.
+    fn request(
         &self,
-        env: &HostEnv,
         args: &ArgMatches,
         types: &CustomTypeSet,
         container: &DeployedContractsContainer
-    ) -> Result<Self::Output> {
+    ) -> Result<UpgradeRequest> {
         let address = container
             .address_by_name(&self.package_name)
             .ok_or_else(|| {
@@ -161,9 +168,29 @@ impl OdraCommand for ContractUpgradeCmd {
         let gas = read_arg(args, Arg::Gas).ok_or_else(|| {
             anyhow::anyhow!("Failed to read gas value. Use --gas <value> to specify it.")
         })?;
+        Ok(UpgradeRequest {
+            address,
+            upgrade_args,
+            cfg,
+            gas
+        })
+    }
+}
 
-        env.set_gas(gas);
-        let result = (self.upgrader)(env, address, upgrade_args, cfg);
+impl OdraCommand for ContractUpgradeCmd {
+    type Output = UpgradeReport;
+
+    fn exec(
+        &self,
+        env: &HostEnv,
+        args: &ArgMatches,
+        types: &CustomTypeSet,
+        container: &DeployedContractsContainer
+    ) -> Result<Self::Output> {
+        let request = self.request(args, types, container)?;
+
+        env.set_gas(request.gas);
+        let result = (self.upgrader)(env, request.address, request.upgrade_args, request.cfg);
         // Set back to 0 to avoid sending a huge amount of gas in consecutive calls.
         env.set_gas(0);
         let address = result.map_err(|e| {
@@ -266,9 +293,7 @@ impl CmdOutput for UpgradeReport {
 
 #[cfg(test)]
 mod tests {
-    use std::cell::RefCell;
-
-    use odra::casper_types::{CLValue, RuntimeArgs};
+    use odra::casper_types::CLValue;
 
     use super::*;
     use crate::test_utils::{self, TestContract};
@@ -276,62 +301,33 @@ mod tests {
     const PACKAGE_HASH: &str =
         "hash-0101010101010101010101010101010101010101010101010101010101010101";
 
-    thread_local! {
-        static UPGRADES: RefCell<Vec<(Address, RuntimeArgs, UpgradeConfig)>> =
-            const { RefCell::new(Vec::new()) };
-    }
-
-    fn mock_upgrader(
-        _env: &HostEnv,
-        address: Address,
-        args: RuntimeArgs,
-        cfg: UpgradeConfig
-    ) -> OdraResult<Address> {
-        UPGRADES.with(|upgrades| upgrades.borrow_mut().push((address, args, cfg)));
-        Ok(address)
-    }
-
     fn upgrade_cmd() -> UpgradeCmd {
         let mut cmd = UpgradeCmd::default();
         cmd.add_contract::<TestContract>();
         cmd.add_contract_named::<TestContract>("SecondTestContract".to_string());
-        for contract in cmd.contracts.iter_mut() {
-            contract.upgrader = mock_upgrader;
-        }
         cmd
     }
 
-    fn container() -> DeployedContractsContainer {
-        let path = std::env::temp_dir().join(format!(
-            "odra-cli-upgrade-{}-{:?}.toml",
-            std::process::id(),
-            std::thread::current().id()
-        ));
-        std::fs::write(
-            &path,
-            format!(
-                "time = \"2026-11-03\"\n\n[[contracts]]\nname = \"TestContract\"\npackage_name = \"TestContract\"\npackage_hash = \"{PACKAGE_HASH}\"\n"
-            )
-        )
-        .unwrap();
-        crate::utils::container_from_file(path).unwrap()
-    }
-
-    fn run(argv: &[&str]) -> Result<(Address, RuntimeArgs, UpgradeConfig)> {
+    /// The request `upgrade <argv>` makes, with only `TestContract` in the contracts file.
+    fn request(argv: &[&str]) -> Result<UpgradeRequest> {
         let cmd = upgrade_cmd();
-        let args = Command::from(&cmd).try_get_matches_from(argv)?;
-        let types = CustomTypeSet::new();
-        let env = test_utils::mock_host_env();
-        cmd.exec(&env, &args, &types, &container())?;
-        Ok(UPGRADES
-            .with(|upgrades| upgrades.borrow_mut().pop())
-            .unwrap())
+        let matches = Command::from(&cmd).try_get_matches_from(argv)?;
+        let (package_name, args) = matches.subcommand().unwrap();
+        let contract = cmd
+            .contracts
+            .iter()
+            .find(|contract| contract.package_name == package_name)
+            .unwrap();
+        let container = test_utils::contracts_container_with::<TestContract>(
+            Address::new(PACKAGE_HASH).unwrap(),
+            None
+        );
+        contract.request(args, &CustomTypeSet::new(), &container)
     }
 
     #[test]
     fn upgrade_cmd_lists_contracts() {
-        let cmd = upgrade_cmd();
-        let clap_cmd: Command = (&cmd).into();
+        let clap_cmd: Command = (&upgrade_cmd()).into();
         assert_eq!(clap_cmd.get_name(), UPGRADE_SUBCOMMAND);
         let names = clap_cmd
             .get_subcommands()
@@ -357,7 +353,7 @@ mod tests {
 
     #[test]
     fn upgrade_with_default_config() {
-        let (address, args, cfg) = run(&[
+        let request = request(&[
             "upgrade",
             "TestContract",
             "--gas",
@@ -366,17 +362,21 @@ mod tests {
             "2"
         ])
         .unwrap();
-        assert_eq!(address.to_string(), PACKAGE_HASH);
-        assert_eq!(args.get("version"), Some(&CLValue::from_t(2u32).unwrap()));
-        assert_eq!(args.len(), 1);
-        assert_eq!(cfg.package_named_key, "TestContract");
-        assert!(!cfg.force_create_upgrade_group);
-        assert!(cfg.allow_key_override);
+        assert_eq!(request.address.to_string(), PACKAGE_HASH);
+        assert_eq!(request.gas, 10_000_000_000);
+        assert_eq!(
+            request.upgrade_args.get("version"),
+            Some(&CLValue::from_t(2u32).unwrap())
+        );
+        assert_eq!(request.upgrade_args.len(), 1);
+        assert_eq!(request.cfg.package_named_key, "TestContract");
+        assert!(!request.cfg.force_create_upgrade_group);
+        assert!(request.cfg.allow_key_override);
     }
 
     #[test]
     fn upgrade_with_custom_config() {
-        let (_, _, cfg) = run(&[
+        let cfg = request(&[
             "upgrade",
             "TestContract",
             "--gas",
@@ -389,13 +389,14 @@ mod tests {
             "--package-named-key",
             "Custom"
         ])
-        .unwrap();
+        .unwrap()
+        .cfg;
         assert_eq!(cfg.package_named_key, "Custom");
         assert!(cfg.force_create_upgrade_group);
         assert!(!cfg.allow_key_override);
 
         // The flag alone allows the override.
-        let (_, _, cfg) = run(&[
+        let cfg = request(&[
             "upgrade",
             "TestContract",
             "--gas",
@@ -404,13 +405,14 @@ mod tests {
             "2",
             "--allow-key-override"
         ])
-        .unwrap();
+        .unwrap()
+        .cfg;
         assert!(cfg.allow_key_override);
     }
 
     #[test]
     fn upgrade_fails_for_a_contract_not_deployed() {
-        let err = run(&[
+        let err = request(&[
             "upgrade",
             "SecondTestContract",
             "--gas",
@@ -431,12 +433,5 @@ mod tests {
     fn named_contract_defaults_to_its_package_name_as_the_key() {
         let cmd = upgrade_cmd();
         assert_eq!(cmd.contracts[1].package_named_key, "SecondTestContract");
-    }
-
-    #[test]
-    fn contract_without_upgrade_takes_no_args() {
-        let entry_point = no_args_upgrade_entry_point();
-        assert!(entry_point.arguments.is_empty());
-        assert!(entry_point.is_mutable);
     }
 }

@@ -1,4 +1,5 @@
 #![allow(unused_variables)]
+use odra::contract_def::HasIdent;
 use odra::{
     casper_types::{
         bytesrepr::{Bytes, ToBytes},
@@ -414,4 +415,15 @@ impl ContractStorage for MockContractStorage {
 
 pub fn mock_contracts_container() -> DeployedContractsContainer {
     DeployedContractsContainer::instance(MockContractStorage)
+}
+
+/// A memory-backed container with the contract `T` deployed at `address`, under `package_name`
+/// or its ident.
+pub fn contracts_container_with<T: HasIdent>(
+    address: Address,
+    package_name: Option<String>
+) -> DeployedContractsContainer {
+    let mut data = ContractsData::default();
+    data.add_contract::<T>(address, package_name).unwrap();
+    DeployedContractsContainer::with_data(data, MockContractStorage)
 }
