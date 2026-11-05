@@ -19,7 +19,7 @@ impl TryFrom<&ModuleImplIR> for FactoryHasEntrypointsImplItem {
             .constructor()
             .map(|_| wasm_parts::constructor_ep(syn::parse_quote!(odra::prelude::vec![])));
         Ok(Self {
-            module_ident: module.module_ident()?,
+            module_ident: module.module_ident(),
             entry_points: constructor
                 .into_iter()
                 .chain([

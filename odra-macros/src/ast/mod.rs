@@ -46,7 +46,6 @@ mod ref_helpers_item;
 mod ref_utils;
 mod schema;
 mod test_parts;
-mod utils;
 mod wasm_parts;
 
 pub(crate) use error_item::OdraErrorAttrItem;

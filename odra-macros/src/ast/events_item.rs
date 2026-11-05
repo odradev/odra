@@ -2,7 +2,6 @@ use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 
 use crate::{
-    ast::utils::Named,
     ir::{ModuleStructIR, TypeIR},
     utils
 };
@@ -46,7 +45,7 @@ impl TryFrom<&ModuleStructIR> for HasEventsImplItem {
             ty_ident: ir.module_ident(),
             sources: EventSources::Module {
                 declared: ir.events(),
-                field_types: ir.unique_fields_ty()?
+                field_types: ir.unique_fields_ty()
             }
         })
     }
@@ -57,7 +56,7 @@ impl TryFrom<&TypeIR> for HasEventsImplItem {
 
     fn try_from(ir: &TypeIR) -> Result<Self, Self::Error> {
         Ok(Self {
-            ty_ident: ir.name()?,
+            ty_ident: ir.ident(),
             sources: EventSources::None
         })
     }

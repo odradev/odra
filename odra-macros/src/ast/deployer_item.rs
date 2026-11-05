@@ -28,15 +28,15 @@ pub struct DeployerItem {
 
 impl DeployerItem {
     pub(crate) fn try_new(module: &ModuleImplIR, kind: DeployerKind) -> syn::Result<Self> {
-        let module_name = module.module_str()?;
-        let host_ref_ident = module.host_ref_ident()?;
+        let module_name = module.module_str();
+        let host_ref_ident = module.host_ref_ident();
         match kind {
             DeployerKind::Module => Ok(Self {
                 init_args: match module.constructor() {
                     Some(f) if f.has_args() => Some(ArgsStructItem {
                         role: ArgsRole::Init,
                         module_name: module_name.clone(),
-                        ident: module.init_args_ident()?,
+                        ident: module.init_args_ident(),
                         fields: f.named_args().iter().map(FnArgIR::name_and_ty).collect()
                     }),
                     _ => None
@@ -45,7 +45,7 @@ impl DeployerItem {
                     Some(f) if f.has_args() => Some(ArgsStructItem {
                         role: ArgsRole::Upgrade,
                         module_name,
-                        ident: module.upgrade_args_ident()?,
+                        ident: module.upgrade_args_ident(),
                         fields: f.named_args().iter().map(FnArgIR::name_and_ty).collect()
                     }),
                     _ => None
@@ -65,7 +65,7 @@ impl DeployerItem {
                         })
                         .collect(),
                     branches: CallerBranches::ExecParts {
-                        exec_parts_mod_ident: module.exec_parts_mod_ident()?,
+                        exec_parts_mod_ident: module.exec_parts_mod_ident(),
                         functions: module
                             .functions()
                             .iter()
@@ -113,9 +113,9 @@ impl DeployerItem {
                         branches: CallerBranches::FactoryHelpers {
                             child_host_ref_ident: format_ident!(
                                 "{}HostRef",
-                                module.child_module_ident()?
+                                module.child_module_ident()
                             ),
-                            event_ident: format_ident!("{}ContractDeployed", module.module_ident()?),
+                            event_ident: format_ident!("{}ContractDeployed", module.module_ident()),
                             helpers: factory_fns.iter().map(|f| (f.name_str(), f.name())).collect()
                         }
                     }

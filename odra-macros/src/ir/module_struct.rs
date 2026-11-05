@@ -1,15 +1,21 @@
-use std::collections::HashSet;
+use std::collections::BTreeMap;
 
 use proc_macro2::Ident;
 use quote::{format_ident, ToTokens};
 
 use super::config::{ConfigItem, ModuleConfiguration};
+use super::errors;
 use crate::utils;
 
-/// The struct `#[odra::module(..)]` is applied to, with the macro's arguments.
+/// A module has at most this many fields: the storage index of a field is a `u8`.
+const MAX_FIELDS: usize = 255;
+
+/// The struct `#[odra::module(..)]` is applied to, with the macro's arguments. Its fields are
+/// named, or there are none, and there are at most [MAX_FIELDS] of them.
 pub struct ModuleStructIR {
     code: syn::ItemStruct,
-    config: ConfigItem
+    config: ConfigItem,
+    fields: Vec<EnumeratedTypedField>
 }
 
 /// The IR from the macro's token streams, for the test mocks.
@@ -28,7 +34,29 @@ impl ModuleStructIR {
     /// The IR of the struct, with `attr` the arguments of the macro.
     pub fn try_new(attr: &proc_macro2::TokenStream, code: syn::ItemStruct) -> syn::Result<Self> {
         let config = syn::parse2::<ConfigItem>(attr.clone())?;
-        Ok(Self { code, config })
+        if code.fields.len() > MAX_FIELDS {
+            return Err(errors::module_too_many_fields(&code.fields, MAX_FIELDS));
+        }
+        let fields = match &code.fields {
+            fields if fields.is_empty() => Vec::new(),
+            syn::Fields::Named(named) => named
+                .named
+                .iter()
+                .enumerate()
+                .map(|(idx, f)| EnumeratedTypedField {
+                    idx: idx as u8 + 1,
+                    // The field is named: the fields are.
+                    ident: f.ident.clone().unwrap_or_else(|| unreachable!()),
+                    ty: f.ty.clone()
+                })
+                .collect(),
+            fields => return Err(errors::module_fields_unnamed(fields))
+        };
+        Ok(Self {
+            code,
+            config,
+            fields
+        })
     }
 
     pub fn self_code(&self) -> &syn::ItemStruct {
@@ -36,7 +64,7 @@ impl ModuleStructIR {
     }
 
     pub fn module_ident(&self) -> syn::Ident {
-        utils::syn::ident_from_struct(&self.code)
+        self.code.ident.clone()
     }
 
     pub fn factory_module_ident(&self) -> syn::Ident {
@@ -59,17 +87,19 @@ impl ModuleStructIR {
         )
     }
 
-    pub fn typed_fields(&self) -> syn::Result<Vec<EnumeratedTypedField>> {
-        utils::syn::struct_typed_fields(&self.code)?
+    /// The fields in declaration order, each with its storage index.
+    pub fn typed_fields(&self) -> &[EnumeratedTypedField] {
+        &self.fields
+    }
+
+    /// The types of the fields, each once, ordered by their spelling so the generated code is
+    /// stable.
+    pub fn unique_fields_ty(&self) -> Vec<syn::Type> {
+        self.fields
             .iter()
-            .enumerate()
-            .map(|(idx, (ident, ty))| {
-                Ok(EnumeratedTypedField {
-                    idx: idx as u8 + 1,
-                    ident: ident.clone(),
-                    ty: ty.clone()
-                })
-            })
+            .map(|f| (f.ty.to_token_stream().to_string(), f.ty.clone()))
+            .collect::<BTreeMap<_, _>>()
+            .into_values()
             .collect()
     }
 
@@ -116,37 +146,10 @@ impl ModuleStructIR {
             .map(|cfg| (*cfg.version).clone())
             .unwrap_or_default()
     }
-
-    pub fn unique_fields_ty(&self) -> syn::Result<Vec<syn::Type>> {
-        // A hack to sort types by their string representation. Otherwise, we would get an unstable
-        // order of types in the generated code and tests would fail.
-        #[derive(Eq, PartialEq)]
-        struct OrdType(syn::Type);
-
-        impl PartialOrd for OrdType {
-            fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-                Some(self.cmp(other))
-            }
-        }
-
-        impl Ord for OrdType {
-            fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-                self.0
-                    .to_token_stream()
-                    .to_string()
-                    .cmp(&other.0.to_token_stream().to_string())
-            }
-        }
-        let fields = utils::syn::struct_typed_fields(&self.code)?;
-        let set = HashSet::<syn::Type>::from_iter(fields.iter().map(|(_, ty)| ty.clone()));
-        let mut fields = set.into_iter().map(OrdType).collect::<Vec<_>>();
-        fields.sort();
-
-        Ok(fields.into_iter().map(|i| i.0).collect())
-    }
 }
 
 /// A field of the module struct with its 1-based position, which is its storage index.
+#[derive(Clone)]
 pub struct EnumeratedTypedField {
     pub idx: u8,
     pub ident: syn::Ident,

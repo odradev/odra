@@ -17,9 +17,9 @@ impl TryFrom<&ModuleImplIR> for BlueprintItem {
 
     fn try_from(module: &ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
-            module_name: module.module_str()?,
-            mod_ident: module.schema_mod_ident()?,
-            module_ident: module.module_ident()?
+            module_name: module.module_str(),
+            mod_ident: module.schema_mod_ident(),
+            module_ident: module.module_ident()
         })
     }
 }

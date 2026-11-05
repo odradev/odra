@@ -3,8 +3,8 @@ use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote, ToTokens};
 
 use crate::{
-    ast::{events_item::HasEventsImplItem, schema::SchemaCustomTypeItem, utils::Named},
-    ir::{TypeIR, TypeKind},
+    ast::{events_item::HasEventsImplItem, schema::SchemaCustomTypeItem},
+    ir::{TypeIR, TypeKind, VariantIR},
     utils
 };
 
@@ -43,8 +43,8 @@ impl TryFrom<&TypeIR> for OdraTypeItem {
     fn try_from(ir: &TypeIR) -> Result<Self, Self::Error> {
         Ok(Self {
             item: ir.self_code().clone(),
-            ident: ir.name()?,
-            kind: ir.kind()?,
+            ident: ir.ident(),
+            kind: ir.kind().clone(),
             has_events_impl: ir.try_into()?
         })
     }
@@ -220,7 +220,7 @@ impl OdraTypeItem {
 
 /// The names the variant's fields are bound to: their own for named fields, `f0`, `f1`, .. for
 /// a tuple variant.
-fn variant_field_names(variant: &syn::Variant) -> Vec<Ident> {
+fn variant_field_names(variant: &VariantIR) -> Vec<Ident> {
     variant
         .fields
         .iter()
@@ -234,7 +234,7 @@ fn variant_field_names(variant: &syn::Variant) -> Vec<Ident> {
 
 /// `Self::A { a, b }`, `Self::B(f0, f1)` or `Self::C`, matching the variant with its fields
 /// bound to [variant_field_names].
-fn variant_pattern(variant: &syn::Variant) -> TokenStream {
+fn variant_pattern(variant: &VariantIR) -> TokenStream {
     let ident = &variant.ident;
     let names = variant_field_names(variant);
     match &variant.fields {
@@ -246,7 +246,7 @@ fn variant_pattern(variant: &syn::Variant) -> TokenStream {
 
 /// The variant built from the bound [variant_field_names]; for a unit variant, the same tokens
 /// as its pattern.
-fn variant_constructor(variant: &syn::Variant) -> TokenStream {
+fn variant_constructor(variant: &VariantIR) -> TokenStream {
     let ident = &variant.ident;
     let names = variant_field_names(variant);
     match &variant.fields {

@@ -20,7 +20,7 @@ impl TryFrom<&ModuleImplIR> for HasEntrypointsImplItem {
 
     fn try_from(module: &ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
-            module_ident: module.module_ident()?,
+            module_ident: module.module_ident(),
             entry_points: module
                 .onchain_functions()
                 .into_iter()

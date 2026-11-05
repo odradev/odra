@@ -63,8 +63,8 @@ struct TraitImplItem {
 impl TraitImplItem {
     fn contract_ref(ir: &ModuleImplIR) -> syn::Result<Self> {
         Ok(Self {
-            trait_ident: ir.module_ident()?,
-            ref_ident: ir.contract_ref_ident()?,
+            trait_ident: ir.module_ident(),
+            ref_ident: ir.contract_ref_ident(),
             functions: ir
                 .functions()
                 .iter()
@@ -75,8 +75,8 @@ impl TraitImplItem {
 
     fn host_ref(ir: &ModuleImplIR) -> syn::Result<Self> {
         Ok(Self {
-            trait_ident: ir.module_ident()?,
-            ref_ident: ir.host_ref_ident()?,
+            trait_ident: ir.module_ident(),
+            ref_ident: ir.host_ref_ident(),
             functions: ir
                 .host_functions()
                 .iter()
@@ -105,7 +105,7 @@ impl ToTokens for TraitImplItem {
 #[source(ModuleImplIR)]
 #[err(syn::Error)]
 struct TestPartsItem {
-    #[expr(input.test_parts_mod_ident()?)]
+    #[expr(input.test_parts_mod_ident())]
     mod_ident: syn::Ident,
     host_ref: HostRefItem,
     #[expr(TraitImplItem::host_ref(input)?)]

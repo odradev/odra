@@ -80,10 +80,10 @@ impl ModuleImplIR {
         }
     }
 
-    pub fn module_ident(&self) -> syn::Result<Ident> {
+    pub fn module_ident(&self) -> Ident {
         match self {
-            ModuleImplIR::Impl(ir) => utils::syn::ident_from_impl(&ir.code),
-            ModuleImplIR::Trait(ir) => Ok(ir.module_ident())
+            ModuleImplIR::Impl(ir) => ir.ident.clone(),
+            ModuleImplIR::Trait(ir) => ir.code.ident.clone()
         }
     }
 
@@ -113,98 +113,67 @@ impl ModuleImplIR {
         }
     }
 
-    pub fn module_str(&self) -> syn::Result<String> {
-        self.module_ident().map(|i| i.to_string())
+    pub fn module_str(&self) -> String {
+        self.module_ident().to_string()
     }
 
-    pub fn snake_cased_module_ident(&self) -> syn::Result<Ident> {
-        let ident = self.module_ident()?;
-        Ok(Ident::new(
-            utils::string::camel_to_snake(&ident).as_str(),
-            ident.span()
-        ))
+    /// `<Module><suffix>`, spanned as the module ident.
+    fn suffixed(&self, suffix: &str) -> Ident {
+        let module_ident = self.module_ident();
+        Ident::new(&format!("{module_ident}{suffix}"), module_ident.span())
     }
 
-    pub fn host_ref_ident(&self) -> syn::Result<Ident> {
-        let module_ident = self.module_ident()?;
-        Ok(Ident::new(
-            &format!("{}HostRef", module_ident),
-            module_ident.span()
-        ))
+    /// `__<module>_<part>`, the name of a generated module, spanned as the module ident.
+    fn parts_mod_ident(&self, part: &str) -> Ident {
+        let module_ident = self.module_ident();
+        let snake_cased = utils::string::camel_to_snake(&module_ident);
+        Ident::new(&format!("__{snake_cased}_{part}"), module_ident.span())
     }
 
-    pub fn contract_ref_ident(&self) -> syn::Result<Ident> {
-        let module_ident = self.module_ident()?;
-        Ok(Ident::new(
-            &format!("{}ContractRef", module_ident),
-            module_ident.span()
-        ))
+    pub fn host_ref_ident(&self) -> Ident {
+        self.suffixed("HostRef")
     }
 
-    pub fn factory_module_ident(&self) -> syn::Result<Ident> {
-        let module_ident = self.module_ident()?;
-        Ok(Ident::new(
-            &format!("{}Factory", module_ident),
-            module_ident.span()
-        ))
+    pub fn contract_ref_ident(&self) -> Ident {
+        self.suffixed("ContractRef")
+    }
+
+    pub fn factory_module_ident(&self) -> Ident {
+        self.suffixed("Factory")
     }
 
     /// The module a factory impl stands for. `#[odra::factory]` sees only the `<Module>Factory`
     /// ident that [factory_module_ident](Self::factory_module_ident) made, so the suffix is
     /// stripped back; for any other module it is the module ident itself.
-    pub fn child_module_ident(&self) -> syn::Result<Ident> {
-        let module_ident = self.module_ident()?;
+    pub fn child_module_ident(&self) -> Ident {
+        let module_ident = self.module_ident();
         let module_str = module_ident.to_string();
         let child = module_str.strip_suffix("Factory").unwrap_or(&module_str);
-        Ok(Ident::new(child, module_ident.span()))
+        Ident::new(child, module_ident.span())
     }
 
-    pub fn init_args_ident(&self) -> syn::Result<syn::Ident> {
-        let module_ident = self.module_ident()?;
-        Ok(Ident::new(
-            &format!("{}InitArgs", module_ident),
-            module_ident.span()
-        ))
+    pub fn init_args_ident(&self) -> Ident {
+        self.suffixed("InitArgs")
     }
 
-    pub fn upgrade_args_ident(&self) -> syn::Result<syn::Ident> {
-        let module_ident = self.module_ident()?;
-        Ok(Ident::new(
-            &format!("{}UpgradeArgs", module_ident),
-            module_ident.span()
-        ))
+    pub fn upgrade_args_ident(&self) -> Ident {
+        self.suffixed("UpgradeArgs")
     }
 
-    pub fn schema_mod_ident(&self) -> syn::Result<Ident> {
-        let module_ident = self.snake_cased_module_ident()?;
-        Ok(Ident::new(
-            &format!("__{}_schema", module_ident),
-            module_ident.span()
-        ))
+    pub fn schema_mod_ident(&self) -> Ident {
+        self.parts_mod_ident("schema")
     }
 
-    pub fn test_parts_mod_ident(&self) -> syn::Result<syn::Ident> {
-        let module_ident = self.snake_cased_module_ident()?;
-        Ok(Ident::new(
-            &format!("__{}_test_parts", module_ident),
-            module_ident.span()
-        ))
+    pub fn test_parts_mod_ident(&self) -> Ident {
+        self.parts_mod_ident("test_parts")
     }
 
-    pub fn wasm_parts_mod_ident(&self) -> syn::Result<syn::Ident> {
-        let module_ident = self.snake_cased_module_ident()?;
-        Ok(Ident::new(
-            &format!("__{}_wasm_parts", module_ident),
-            module_ident.span()
-        ))
+    pub fn wasm_parts_mod_ident(&self) -> Ident {
+        self.parts_mod_ident("wasm_parts")
     }
 
-    pub fn exec_parts_mod_ident(&self) -> syn::Result<syn::Ident> {
-        let module_ident = self.snake_cased_module_ident()?;
-        Ok(Ident::new(
-            &format!("__{}_exec_parts", module_ident),
-            module_ident.span()
-        ))
+    pub fn exec_parts_mod_ident(&self) -> Ident {
+        self.parts_mod_ident("exec_parts")
     }
 
     pub fn host_functions(&self) -> &[FnIR] {
@@ -309,6 +278,8 @@ impl ModuleImplIR {
 /// A plain or trait `impl` block of a module.
 pub struct ModuleIR {
     code: syn::ItemImpl,
+    /// The module: the last segment of the impl's self type, which is a path.
+    ident: Ident,
     config: ConfigItem,
     functions: Vec<FnIR>
 }
@@ -317,15 +288,31 @@ impl ModuleIR {
     fn try_new(code: syn::ItemImpl, config: ConfigItem) -> syn::Result<Self> {
         let is_trait_impl = code.trait_.is_some();
         let is_factory = matches!(&config, ConfigItem::Module(cfg) if *cfg.factory);
-        let functions = errors::checked(
-            Self::parse_functions(&code, is_trait_impl),
-            Self::validate_offchain_functions(&code, is_trait_impl, is_factory)
+        let (ident, functions) = errors::both(
+            Self::module_ident(&code.self_ty),
+            errors::checked(
+                Self::parse_functions(&code, is_trait_impl),
+                Self::validate_offchain_functions(&code, is_trait_impl, is_factory)
+            )
         )?;
         Ok(Self {
             code,
+            ident,
             config,
             functions
         })
+    }
+
+    fn module_ident(self_ty: &syn::Type) -> syn::Result<Ident> {
+        match self_ty {
+            syn::Type::Path(type_path) => type_path
+                .path
+                .segments
+                .last()
+                .map(|seg| seg.ident.clone())
+                .ok_or_else(|| errors::impl_self_type_not_a_path(self_ty)),
+            ty => Err(errors::impl_self_type_not_a_path(ty))
+        }
     }
 
     pub(super) fn self_code(&self) -> syn::ItemImpl {
@@ -481,9 +468,5 @@ impl ModuleTraitIR {
             }
         });
         code
-    }
-
-    pub(super) fn module_ident(&self) -> syn::Ident {
-        self.code.ident.clone()
     }
 }

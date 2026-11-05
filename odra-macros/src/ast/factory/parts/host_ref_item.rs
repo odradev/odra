@@ -50,7 +50,7 @@ impl TryFrom<&ModuleImplIR> for FactoryHostRefImplItem {
     fn try_from(module: &ModuleImplIR) -> Result<Self, Self::Error> {
         let fns = [module.factory_fn(), module.factory_upgrade_fn(), module.factory_batch_upgrade_fn()];
         Ok(Self {
-            ref_ident: module.host_ref_ident()?,
+            ref_ident: module.host_ref_ident(),
             factory_fns: fns.iter().map(|f| ref_utils::host_function_item(f, false)).collect()
         })
     }
@@ -80,7 +80,7 @@ impl TryFrom<&ModuleImplIR> for FactoryHostRefTryImplItem {
         let fns = [module.factory_fn(), module.factory_upgrade_fn(), module.factory_batch_upgrade_fn()];
 
         Ok(Self {
-            ref_ident: module.host_ref_ident()?,
+            ref_ident: module.host_ref_ident(),
             factory_fns: fns.iter().map(ref_utils::factory_try_function_item).collect()
         })
     }

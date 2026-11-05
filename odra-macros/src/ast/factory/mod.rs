@@ -60,7 +60,7 @@ impl TryFrom<&ModuleImplIR> for FactoryModuleImplItem {
     fn try_from(ir: &ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
             is_factory: ir.is_factory(),
-            factory_module_ident: ir.factory_module_ident()?,
+            factory_module_ident: ir.factory_module_ident(),
             functions: ir
                 .functions()
                 .iter()

@@ -58,6 +58,20 @@ mod validation {
     }
 }
 
+mod rejected_items {
+    use crate::test_utils::mock;
+
+    #[test]
+    fn a_module_with_more_fields_than_the_storage_index_holds() {
+        assert!(mock::invalid_module_definition().is_err());
+    }
+
+    #[test]
+    fn a_union_is_not_an_odra_type() {
+        assert!(mock::custom_union().is_err());
+    }
+}
+
 mod offchain {
     use crate::ir::{FnIR, ModuleImplIR};
     use quote::quote;

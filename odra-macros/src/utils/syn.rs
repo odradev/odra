@@ -1,15 +1,5 @@
 use proc_macro2::TokenStream;
-use syn::{parse_quote, Fields};
-
-use crate::ir::errors;
-
-pub fn ident_from_impl(impl_code: &syn::ItemImpl) -> syn::Result<syn::Ident> {
-    last_segment_ident(&impl_code.self_ty)
-}
-
-pub fn ident_from_struct(struct_code: &syn::ItemStruct) -> syn::Ident {
-    struct_code.ident.clone()
-}
+use syn::parse_quote;
 
 pub fn function_name(sig: &syn::Signature) -> String {
     sig.ident.to_string()
@@ -34,29 +24,6 @@ pub fn receiver_arg(sig: &syn::Signature) -> Option<syn::Receiver> {
 
 pub fn function_return_type(sig: &syn::Signature) -> syn::ReturnType {
     sig.output.clone()
-}
-
-pub fn struct_typed_fields(item: &syn::ItemStruct) -> syn::Result<Vec<(syn::Ident, syn::Type)>> {
-    map_fields(item, |f| {
-        f.ident
-            .clone()
-            .ok_or_else(|| errors::module_fields_unnamed(&item.fields))
-            .map(|i| (i, f.ty.clone()))
-    })
-}
-
-fn map_fields<T, F: FnMut(&syn::Field) -> syn::Result<T>>(
-    item: &syn::ItemStruct,
-    f: F
-) -> syn::Result<Vec<T>> {
-    if item.fields.is_empty() {
-        return Ok(vec![]);
-    }
-    if let syn::Fields::Named(named) = &item.fields {
-        named.named.iter().map(f).collect()
-    } else {
-        Err(errors::module_fields_unnamed(&item.fields))
-    }
 }
 
 pub fn visibility_pub() -> syn::Visibility {
@@ -104,18 +71,6 @@ pub fn string_docs(attrs: &[syn::Attribute]) -> Vec<String> {
     docs
 }
 
-pub fn last_segment_ident(ty: &syn::Type) -> syn::Result<syn::Ident> {
-    match ty {
-        syn::Type::Path(type_path) => type_path
-            .path
-            .segments
-            .last()
-            .map(|seg| seg.ident.clone())
-            .ok_or_else(|| errors::impl_self_type_not_a_path(ty)),
-        ty => Err(errors::impl_self_type_not_a_path(ty))
-    }
-}
-
 // A path like <Option::<U256> as odra::casper_types::CLTyped>
 pub fn as_casted_ty_stream(ty: &syn::Type, as_ty: syn::Type) -> TokenStream {
     let ty = match ty {
@@ -146,37 +101,4 @@ pub fn as_casted_ty_stream(ty: &syn::Type, as_ty: syn::Type) -> TokenStream {
 
 pub fn is_ref(ty: &syn::Type) -> bool {
     matches!(ty, syn::Type::Reference(_))
-}
-
-pub fn extract_unit_variants(input: &syn::ItemEnum) -> syn::Result<Vec<syn::Variant>> {
-    errors::collect_all(input.variants.iter().map(|v| match v.fields {
-        syn::Fields::Unit => Ok(v.clone()),
-        _ => Err(errors::error_variant_with_data(v))
-    }))
-}
-
-pub fn transform_variants<F: Fn(String, Fields, u16, Vec<String>) -> TokenStream>(
-    variants: &[syn::Variant],
-    f: F
-) -> TokenStream {
-    let mut discriminant = 0u16;
-    let variants = variants.iter().map(|v| {
-        let docs = string_docs(&v.attrs);
-        let name = v.ident.to_string();
-        let fields = v.fields.clone();
-
-        // A discriminant is a `u16` literal: `TypeIR::kind` has rejected anything else.
-        if let Some((_, syn::Expr::Lit(lit))) = &v.discriminant {
-            if let syn::Lit::Int(int) = &lit.lit {
-                if let Ok(value) = int.base10_parse() {
-                    discriminant = value;
-                }
-            }
-        };
-        let result = f(name, fields, discriminant, docs);
-        discriminant += 1;
-        result
-    });
-
-    quote::quote!(odra::prelude::vec![#(#variants)*])
 }

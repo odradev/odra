@@ -1,10 +1,8 @@
 use proc_macro2::TokenStream;
 use quote::ToTokens;
 
-use crate::ir::{errors, ModuleStructIR};
+use crate::ir::ModuleStructIR;
 use crate::utils;
-
-const MAX_FIELDS: usize = 255;
 
 /// Emits the user's module struct with the hidden `__odra_env: Rc<ContractEnv>` field appended,
 /// which `Module::new` fills and `env()` reads.
@@ -27,10 +25,6 @@ impl TryFrom<&ModuleStructIR> for ModuleDefItem {
             &utils::ident::prefixed_env(),
             &utils::ty::rc_contract_env()
         );
-
-        if item_struct.fields.len() > MAX_FIELDS {
-            return Err(errors::module_too_many_fields(&item_struct.fields, MAX_FIELDS));
-        }
 
         let fields = item_struct
             .fields

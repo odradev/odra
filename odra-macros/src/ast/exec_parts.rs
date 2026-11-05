@@ -27,11 +27,11 @@ pub struct ModuleExecPartsItem {
 impl ModuleExecPartsItem {
     pub(crate) fn try_new(module: &ModuleImplIR, kind: ExecPartsKind) -> syn::Result<Self> {
         let module_ident = match kind {
-            ExecPartsKind::Module => module.module_ident()?,
-            ExecPartsKind::Factory => module.child_module_ident()?
+            ExecPartsKind::Module => module.module_ident(),
+            ExecPartsKind::Factory => module.child_module_ident()
         };
         Ok(Self {
-            mod_ident: module.exec_parts_mod_ident()?,
+            mod_ident: module.exec_parts_mod_ident(),
             exec_functions: module
                 .functions()
                 .iter()

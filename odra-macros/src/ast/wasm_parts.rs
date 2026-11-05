@@ -38,10 +38,10 @@ impl ModuleWasmPartsItem {
             WasmPartsKind::Module => module.onchain_functions(),
             WasmPartsKind::Factory => module.functions().iter().collect()
         };
-        let exec_parts_mod_ident = module.exec_parts_mod_ident()?;
+        let exec_parts_mod_ident = module.exec_parts_mod_ident();
         Ok(Self {
-            module_name: module.module_str()?,
-            mod_ident: module.wasm_parts_mod_ident()?,
+            module_name: module.module_str(),
+            mod_ident: module.wasm_parts_mod_ident(),
             entry_points_fn: EntryPointsFnItem::new(module, kind, &functions),
             call_fn: CallFnItem::try_new(module, kind)?,
             factory_fns: match kind {
@@ -167,7 +167,7 @@ impl CallFnItem {
     fn try_new(module: &ModuleImplIR, kind: WasmPartsKind) -> syn::Result<Self> {
         Ok(Self {
             kind,
-            module_ident: module.module_ident()?,
+            module_ident: module.module_ident(),
             init_args: module.constructor().map(|f| f.named_args()),
             upgrade_args: module.upgrader().map(|f| f.named_args())
         })

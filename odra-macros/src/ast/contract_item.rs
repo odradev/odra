@@ -20,15 +20,15 @@ impl TryFrom<&ModuleImplIR> for ContractItem {
         let no_args: syn::Path = syn::parse_quote!(odra::host::NoArgs);
         let has_args = |f: Option<&crate::ir::FnIR>| f.is_some_and(|f| f.has_args());
         Ok(Self {
-            module_ident: module.module_ident()?,
-            host_ref_ident: module.host_ref_ident()?,
-            contract_ref_ident: module.contract_ref_ident()?,
+            module_ident: module.module_ident(),
+            host_ref_ident: module.host_ref_ident(),
+            contract_ref_ident: module.contract_ref_ident(),
             init_args: match has_args(module.constructor()) {
-                true => module.init_args_ident()?.into(),
+                true => module.init_args_ident().into(),
                 false => no_args.clone()
             },
             upgrade_args: match has_args(module.upgrader()) {
-                true => module.upgrade_args_ident()?.into(),
+                true => module.upgrade_args_ident().into(),
                 false => no_args
             }
         })

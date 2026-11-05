@@ -3,8 +3,8 @@ use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 
 use crate::{
-    ast::{schema::SchemaErrorItem, utils::Named},
-    ir::{errors, TypeIR, TypeKind},
+    ast::{schema::SchemaErrorItem},
+    ir::TypeIR,
     utils
 };
 
@@ -37,14 +37,10 @@ impl TryFrom<&TypeIR> for OdraErrorItem {
     type Error = syn::Error;
 
     fn try_from(ty: &TypeIR) -> Result<Self, Self::Error> {
-        let variants = match ty.kind()? {
-            TypeKind::Enum { variants } | TypeKind::UnitEnum { variants } => variants,
-            TypeKind::Struct { .. } => return Err(errors::error_on_struct(ty.self_code()))
-        };
         Ok(Self {
             item: ty.self_code().clone(),
-            ident: ty.name()?,
-            variants: variants.iter().map(|v| v.ident.clone()).collect()
+            ident: ty.ident(),
+            variants: ty.error_variants()?.iter().map(|v| v.ident.clone()).collect()
         })
     }
 }

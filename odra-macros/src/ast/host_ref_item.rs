@@ -19,8 +19,8 @@ impl TryFrom<&ModuleImplIR> for HostRefStructItem {
 
     fn try_from(module: &ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
-            module_name: module.module_str()?,
-            ref_ident: module.host_ref_ident()?
+            module_name: module.module_str(),
+            ref_ident: module.host_ref_ident()
         })
     }
 }
@@ -61,7 +61,7 @@ impl TryFrom<&ModuleImplIR> for HostRefTraitImplItem {
 
     fn try_from(module: &ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
-            ref_ident: module.host_ref_ident()?,
+            ref_ident: module.host_ref_ident(),
             register: matches!(module, ModuleImplIR::Impl(_))
         })
     }
@@ -145,8 +145,8 @@ impl TryFrom<&ModuleImplIR> for HasIdentTraitImplItem {
 
     fn try_from(module: &ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
-            module_ident: module.module_ident()?,
-            ref_ident: module.host_ref_ident()?
+            module_ident: module.module_ident(),
+            ref_ident: module.host_ref_ident()
         })
     }
 }
@@ -209,7 +209,7 @@ impl TryFrom<&ModuleImplIR> for HostRefItem {
     type Error = syn::Error;
 
     fn try_from(module: &ModuleImplIR) -> Result<Self, Self::Error> {
-        let ref_ident = module.host_ref_ident()?;
+        let ref_ident = module.host_ref_ident();
         let is_trait_impl = module.is_trait_impl();
         let host_functions = module.host_functions();
         let mut_ret_functions = module.host_mut_ret_functions();

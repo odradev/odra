@@ -44,10 +44,10 @@ impl RefItem {
                 .collect()
             )
         };
-        let ref_ident = module.contract_ref_ident()?;
+        let ref_ident = module.contract_ref_ident();
         Ok(Self {
             struct_item: ContractRefStructItem {
-                module_name: module.module_str()?,
+                module_name: module.module_str(),
                 ref_ident: ref_ident.clone()
             },
             trait_impl_item: ContractRefTraitImplItem {

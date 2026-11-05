@@ -71,8 +71,8 @@ where
 /// cloning and [HasEvents](../odra_core/contract_def/trait.HasEvents.html) trait.
 #[proc_macro_attribute]
 pub fn odra_type(_attr: TokenStream, item: TokenStream) -> TokenStream {
-    let item = item.into();
-    TypeIR::try_from(&item)
+    syn::parse2::<syn::Item>(item.into())
+        .and_then(TypeIR::try_new)
         .and_then(|ir| OdraTypeAttrItem::try_from(&ir))
         .into_code()
 }
@@ -80,8 +80,8 @@ pub fn odra_type(_attr: TokenStream, item: TokenStream) -> TokenStream {
 /// Implements `Into<OdraError>` for an error enum.
 #[proc_macro_attribute]
 pub fn odra_error(_attr: TokenStream, item: TokenStream) -> TokenStream {
-    let item = item.into();
-    TypeIR::try_from(&item)
+    syn::parse2::<syn::Item>(item.into())
+        .and_then(TypeIR::try_new)
         .and_then(|ir| OdraErrorAttrItem::try_from(&ir))
         .into_code()
 }

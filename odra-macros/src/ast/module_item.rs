@@ -22,7 +22,7 @@ impl TryFrom<&ModuleStructIR> for ModuleModItem {
         Ok(Self {
             mod_ident: ir.module_mod_ident(),
             module_ident: ir.module_ident(),
-            fields: ir.typed_fields()?
+            fields: ir.typed_fields().to_vec()
         })
     }
 }

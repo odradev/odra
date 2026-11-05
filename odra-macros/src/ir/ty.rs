@@ -1,38 +1,40 @@
-use super::errors;
+use proc_macro2::{Ident, Span};
+use syn::spanned::Spanned;
 
-/// The struct or enum `#[odra::odra_type]` or `#[odra::odra_error]` is applied to.
+use super::errors;
+use crate::utils;
+
+/// The struct or enum `#[odra::odra_type]` or `#[odra::odra_error]` is applied to: a struct
+/// with named fields, or an enum whose explicit discriminants are `u16` literals.
 pub struct TypeIR {
-    code: syn::Item
+    code: syn::Item,
+    ident: Ident,
+    kind: TypeKind
 }
 
+/// The IR from the macro's token stream, for the test mocks.
+#[cfg(test)]
 impl TryFrom<&proc_macro2::TokenStream> for TypeIR {
     type Error = syn::Error;
 
     fn try_from(stream: &proc_macro2::TokenStream) -> Result<Self, Self::Error> {
-        Ok(Self {
-            code: syn::parse2::<syn::Item>(stream.clone())?
-        })
+        Self::try_new(syn::parse2(stream.clone())?)
     }
 }
 
 impl TypeIR {
-    pub fn self_code(&self) -> &syn::Item {
-        &self.code
-    }
-
-    pub fn kind(&self) -> syn::Result<TypeKind> {
-        match &self.code {
+    pub fn try_new(code: syn::Item) -> syn::Result<Self> {
+        let (ident, kind) = match &code {
             syn::Item::Enum(e) => {
-                errors::check_all(e.variants.iter().map(validate_discriminant))?;
-                let is_unit = e.variants.iter().all(|v| v.fields.is_empty());
-                let variants = e.variants.iter().cloned().collect();
-                if is_unit {
-                    Ok(TypeKind::UnitEnum { variants })
-                } else {
-                    Ok(TypeKind::Enum { variants })
-                }
+                let variants = VariantIR::try_all(&e.variants)?;
+                let is_unit = variants.iter().all(|v| v.fields.is_empty());
+                let kind = match is_unit {
+                    true => TypeKind::UnitEnum { variants },
+                    false => TypeKind::Enum { variants }
+                };
+                (e.ident.clone(), kind)
             }
-            syn::Item::Struct(syn::ItemStruct { fields, .. }) => {
+            syn::Item::Struct(syn::ItemStruct { ident, fields, .. }) => {
                 let fields = fields
                     .iter()
                     .map(|f| {
@@ -42,41 +44,104 @@ impl TypeIR {
                             .ok_or_else(|| errors::type_fields_unnamed(fields))
                     })
                     .collect::<Result<Vec<_>, _>>()?;
-                Ok(TypeKind::Struct { fields })
+                (ident.clone(), TypeKind::Struct { fields })
             }
-            _ => Err(errors::type_on_other_item(&self.code))
-        }
+            _ => return Err(errors::type_on_other_item(&code))
+        };
+        Ok(Self { code, ident, kind })
     }
-}
 
-/// A variant's discriminant, when given, is a `u16` literal: it is the code of an error and the
-/// tag of a serialized enum.
-fn validate_discriminant(variant: &syn::Variant) -> syn::Result<()> {
-    let Some((_, discriminant)) = &variant.discriminant else {
-        return Ok(());
-    };
-    let is_u16 = match discriminant {
-        syn::Expr::Lit(syn::ExprLit {
-            lit: syn::Lit::Int(int),
-            ..
-        }) => int.base10_parse::<u16>().is_ok(),
-        _ => false
-    };
-    match is_u16 {
-        true => Ok(()),
-        false => Err(errors::discriminant_not_u16(discriminant))
+    pub fn self_code(&self) -> &syn::Item {
+        &self.code
+    }
+
+    pub fn ident(&self) -> Ident {
+        self.ident.clone()
+    }
+
+    pub fn kind(&self) -> &TypeKind {
+        &self.kind
+    }
+
+    /// The variants of an `#[odra::odra_error]` enum: bare names, as an error is only its code.
+    pub fn error_variants(&self) -> syn::Result<&[VariantIR]> {
+        let variants = match &self.kind {
+            TypeKind::UnitEnum { variants } | TypeKind::Enum { variants } => variants,
+            TypeKind::Struct { .. } => return Err(errors::error_on_struct(&self.code))
+        };
+        errors::check_all(variants.iter().map(|v| match v.fields.is_empty() {
+            true => Ok(()),
+            false => Err(errors::error_variant_with_data(&v.ident, v.span))
+        }))?;
+        Ok(variants)
     }
 }
 
 /// What the type is, with the parts the emitters read.
+#[derive(Clone)]
 pub enum TypeKind {
+    /// An enum of bare variants: one byte on the wire, its discriminant.
     UnitEnum {
-        variants: Vec<syn::Variant>
+        variants: Vec<VariantIR>
     },
+    /// An enum with at least one variant carrying fields.
     Enum {
-        variants: Vec<syn::Variant>
+        variants: Vec<VariantIR>
     },
     Struct {
-        fields: Vec<(syn::Ident, syn::Type)>
+        fields: Vec<(Ident, syn::Type)>
     }
+}
+
+/// A variant of the enum with the code Rust gives it: its discriminant when written, else the
+/// previous variant's code plus one. The code is the error's code and the tag of a serialized
+/// unit enum.
+#[derive(Clone)]
+pub struct VariantIR {
+    pub ident: Ident,
+    pub fields: syn::Fields,
+    pub code: u16,
+    pub docs: Vec<String>,
+    span: Span
+}
+
+impl VariantIR {
+    /// Every variant with its code; every discriminant that is not a `u16` literal is reported.
+    fn try_all<'a>(variants: impl IntoIterator<Item = &'a syn::Variant>) -> syn::Result<Vec<Self>> {
+        let variants = variants.into_iter().collect::<Vec<_>>();
+        let discriminants = errors::collect_all(variants.iter().map(|v| discriminant(v)))?;
+        let mut next = 0u16;
+        Ok(variants
+            .into_iter()
+            .zip(discriminants)
+            .map(|(v, discriminant)| {
+                let code = discriminant.unwrap_or(next);
+                next = code.wrapping_add(1);
+                Self {
+                    ident: v.ident.clone(),
+                    fields: v.fields.clone(),
+                    code,
+                    docs: utils::syn::string_docs(&v.attrs),
+                    span: v.span()
+                }
+            })
+            .collect())
+    }
+}
+
+/// The variant's discriminant when written, which has to be a `u16` literal.
+fn discriminant(variant: &syn::Variant) -> syn::Result<Option<u16>> {
+    let Some((_, discriminant)) = &variant.discriminant else {
+        return Ok(None);
+    };
+    let value = match discriminant {
+        syn::Expr::Lit(syn::ExprLit {
+            lit: syn::Lit::Int(int),
+            ..
+        }) => int.base10_parse::<u16>().ok(),
+        _ => None
+    };
+    value
+        .map(Some)
+        .ok_or_else(|| errors::discriminant_not_u16(discriminant))
 }

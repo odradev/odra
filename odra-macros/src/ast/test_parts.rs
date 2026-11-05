@@ -31,7 +31,7 @@ impl TryFrom<&ModuleImplIR> for TestPartsReexportItem {
 
     fn try_from(module: &ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
-            mod_ident: module.test_parts_mod_ident()?
+            mod_ident: module.test_parts_mod_ident()
         })
     }
 }
@@ -69,7 +69,7 @@ impl TestPartsItem {
             )
         };
         Ok(Self {
-            mod_ident: module.test_parts_mod_ident()?,
+            mod_ident: module.test_parts_mod_ident(),
             host_ref,
             has_ident_impl: HasIdentTraitImplItem::try_from(module)?,
             deployer

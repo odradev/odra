@@ -48,7 +48,7 @@ impl TryFrom<&ModuleImplIR> for SchemaCustomTypesItem {
 
     fn try_from(ir: &ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
-            module_ident: ir.module_ident()?,
+            module_ident: ir.module_ident(),
             types: ir
                 .functions()
                 .iter()

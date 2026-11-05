@@ -74,7 +74,7 @@ impl TryFrom<&ModuleStructIR> for SchemaStorageLayoutItem {
         Ok(Self {
             module_ident: ir.module_ident(),
             layout: ir.storage_layout(),
-            fields: ir.typed_fields()?
+            fields: ir.typed_fields().to_vec()
         })
     }
 }

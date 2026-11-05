@@ -21,7 +21,7 @@ impl TryFrom<&ModuleImplIR> for SchemaEntrypointsItem {
 
     fn try_from(module: &ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
-            module_ident: module.module_ident()?,
+            module_ident: module.module_ident(),
             entry_points: module
                 .onchain_functions()
                 .into_iter()
@@ -93,7 +93,7 @@ impl TryFrom<&ModuleImplIR> for FactorySchemaEntrypointsItem {
             module.factory_batch_upgrade_fn()
         ];
         Ok(Self(SchemaEntrypointsItem {
-            module_ident: module.module_ident()?,
+            module_ident: module.module_ident(),
             entry_points: bare_constructor
                 .into_iter()
                 .chain(factory_fns.iter().map(SchemaEntryPoint::new))

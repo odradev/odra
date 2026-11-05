@@ -44,16 +44,21 @@ where
     collect_all(checks).map(|_| ())
 }
 
-/// The value when it and the check both succeed; otherwise the errors of both, the value's first.
-pub fn checked<T>(value: syn::Result<T>, check: syn::Result<()>) -> syn::Result<T> {
-    match (value, check) {
-        (Ok(value), Ok(())) => Ok(value),
+/// Both values when both succeed; otherwise the errors of both, the first one's first.
+pub fn both<A, B>(a: syn::Result<A>, b: syn::Result<B>) -> syn::Result<(A, B)> {
+    match (a, b) {
+        (Ok(a), Ok(b)) => Ok((a, b)),
         (Err(mut error), Err(other)) => {
             error.combine(other);
             Err(error)
         }
-        (Err(error), Ok(())) | (Ok(_), Err(error)) => Err(error)
+        (Err(error), Ok(_)) | (Ok(_), Err(error)) => Err(error)
     }
+}
+
+/// The value when it and the check both succeed; otherwise the errors of both, the value's first.
+pub fn checked<T>(value: syn::Result<T>, check: syn::Result<()>) -> syn::Result<T> {
+    both(value, check).map(|(value, ())| value)
 }
 
 // --- What the attribute macro is applied to -------------------------------------------------
@@ -101,12 +106,11 @@ pub fn error_on_struct(item: &syn::Item) -> syn::Error {
 }
 
 /// An error enum variant carrying data: `Overflow(u32)` or `Overflow { by: u32 }`.
-pub fn error_variant_with_data(variant: &syn::Variant) -> syn::Error {
-    syn::Error::new_spanned(
-        variant,
+pub fn error_variant_with_data(ident: &syn::Ident, span: Span) -> syn::Error {
+    syn::Error::new(
+        span,
         format!(
-            "`{}` carries data; an error variant is a bare name, as an error is only its code",
-            variant.ident
+            "`{ident}` carries data; an error variant is a bare name, as an error is only its code"
         )
     )
 }

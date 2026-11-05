@@ -20,7 +20,7 @@ mod ty;
 pub use function::{FnArgIR, FnIR};
 pub use module_impl::ModuleImplIR;
 pub use module_struct::{EnumeratedTypedField, ModuleStructIR};
-pub use ty::{TypeIR, TypeKind};
+pub use ty::{TypeIR, TypeKind, VariantIR};
 
 const CONSTRUCTOR_NAME: &str = "init";
 const UPGRADER_NAME: &str = "upgrade";
