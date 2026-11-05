@@ -96,7 +96,7 @@
     },
     {
       "name": "get_dapp_registry",
-      "description": "Returns the dapp registry the contract belongs to.  Reverts with [`Error::DappRegistryNotSet`] if the registry has not been set.",
+      "description": "Returns the dapp registry the contract belongs to. Reverts with [`Error::DappRegistryNotSet`] if the registry has not been set.",
       "is_mutable": false,
       "is_payable": false,
       "arguments": [],

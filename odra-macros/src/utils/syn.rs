@@ -119,10 +119,12 @@ pub fn docs_attrs(attrs: &[syn::Attribute]) -> Vec<syn::Attribute> {
 /// Joins every doc-comment line into a single description, trimming each line.
 ///
 /// `///` doc comments are often wrapped across several lines; using only the first one truncates
-/// the description, so all lines are folded into one space-separated sentence.
+/// the description, so all lines are folded into one space-separated sentence. Blank lines
+/// (paragraph breaks) are dropped, otherwise they would leave a double space in the description.
 pub fn docs_description(docs: &[String]) -> String {
     docs.iter()
         .map(|line| line.trim())
+        .filter(|line| !line.is_empty())
         .collect::<Vec<_>>()
         .join(" ")
 }
@@ -228,4 +230,31 @@ pub fn transform_variants<F: Fn(String, Fields, u16, Vec<String>) -> TokenStream
     });
 
     quote::quote!(odra::prelude::vec![#(#variants)*])
+}
+
+#[cfg(test)]
+mod tests {
+    use super::docs_description;
+
+    #[test]
+    fn docs_description_joins_lines_with_a_single_space() {
+        let docs = vec![" First line. ".to_string(), "Second line.".to_string()];
+        assert_eq!(docs_description(&docs), "First line. Second line.");
+    }
+
+    #[test]
+    fn docs_description_drops_blank_lines() {
+        let docs = vec![
+            " First paragraph.".to_string(),
+            "".to_string(),
+            " Second paragraph.".to_string(),
+            "   ".to_string(),
+            "".to_string(),
+            " Third paragraph.".to_string(),
+        ];
+        assert_eq!(
+            docs_description(&docs),
+            "First paragraph. Second paragraph. Third paragraph."
+        );
+    }
 }
