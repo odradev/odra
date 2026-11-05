@@ -17,39 +17,56 @@ pub enum ModuleImplIR {
     Trait(ModuleTraitIR)
 }
 
+impl ModuleImplIR {
+    /// The IR of an impl block, with `attr` the arguments of the macro.
+    pub fn try_new_impl(attr: &proc_macro2::TokenStream, code: syn::ItemImpl) -> syn::Result<Self> {
+        let config = syn::parse2::<ConfigItem>(attr.clone())?;
+        if let ConfigItem::Module(cfg) = &config {
+            errors::check_all(
+                cfg.struct_only_args()
+                    .map(|(name, span)| Err(errors::module_arg_on_impl(name, *span)))
+            )?;
+        }
+        ModuleIR::try_new(code, config).map(Self::Impl)
+    }
+
+    /// The IR of a trait, with `attr` the arguments of the macro.
+    pub fn try_new_trait(
+        attr: &proc_macro2::TokenStream,
+        code: syn::ItemTrait
+    ) -> syn::Result<Self> {
+        let config = syn::parse2::<ConfigItem>(attr.clone())?;
+        if let ConfigItem::Module(cfg) = &config {
+            errors::check_all(
+                cfg.args()
+                    .map(|(name, span)| Err(errors::module_arg_on_trait(name, *span)))
+            )?;
+        }
+        // A trait function with a visibility (`pub fn`) is a `Verbatim` item to syn. Parsing it
+        // as a function reports the `pub` here, instead of skipping the function and leaving the
+        // error to rustc on the emitted trait.
+        for item in code.items.iter() {
+            if let syn::TraitItem::Verbatim(func) = item {
+                syn::parse2::<syn::TraitItemFn>(func.clone())?;
+            }
+        }
+        ModuleTraitIR::try_new(code, config).map(Self::Trait)
+    }
+}
+
+/// The IR from the macro's token streams, for the test mocks.
+#[cfg(test)]
 impl TryFrom<(&proc_macro2::TokenStream, &proc_macro2::TokenStream)> for ModuleImplIR {
     type Error = syn::Error;
 
     fn try_from(
-        stream: (&proc_macro2::TokenStream, &proc_macro2::TokenStream)
+        (attr, item): (&proc_macro2::TokenStream, &proc_macro2::TokenStream)
     ) -> Result<Self, Self::Error> {
-        let config = syn::parse2::<ConfigItem>(stream.0.clone())?;
-        if let Ok(code) = syn::parse2::<syn::ItemImpl>(stream.1.clone()) {
-            if let ConfigItem::Module(cfg) = &config {
-                errors::check_all(
-                    cfg.struct_only_args()
-                        .map(|(name, span)| Err(errors::module_arg_on_impl(name, *span)))
-                )?;
-            }
-            return ModuleIR::try_new(code, config).map(Self::Impl);
+        match syn::parse2::<syn::Item>(item.clone())? {
+            syn::Item::Impl(code) => Self::try_new_impl(attr, code),
+            syn::Item::Trait(code) => Self::try_new_trait(attr, code),
+            other => Err(errors::external_contract_on_other_item(&other))
         }
-
-        if let Ok(code) = syn::parse2::<syn::ItemTrait>(stream.1.clone()) {
-            if let ConfigItem::Module(cfg) = &config {
-                errors::check_all(
-                    cfg.args()
-                        .map(|(name, span)| Err(errors::module_arg_on_trait(name, *span)))
-                )?;
-            }
-            for c in code.items.iter() {
-                if let syn::TraitItem::Verbatim(func) = c {
-                    syn::parse2::<syn::TraitItemFn>(func.clone())?;
-                }
-            }
-            return ModuleTraitIR::try_new(code, config).map(Self::Trait);
-        }
-
-        Err(errors::impl_or_trait_expected(stream.1))
     }
 }
 

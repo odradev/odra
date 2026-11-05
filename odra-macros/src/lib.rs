@@ -22,55 +22,47 @@ mod utils;
 /// The macro produces all the required code to use the module as a standalone smart contract.
 #[proc_macro_attribute]
 pub fn module(attr: TokenStream, item: TokenStream) -> TokenStream {
-    let attr: TokenStream2 = attr.into();
-    let item: TokenStream2 = item.into();
-    if is_impl_or_trait(&item) {
-        return match ModuleImplIR::try_from((&attr, &item)) {
-            Ok(ir) => ModuleImplItem::try_from(&ir).into_code(),
-            Err(e) => e.to_compile_error().into()
-        };
-    }
-    if is_struct(&item) {
-        return match ModuleStructIR::try_from((&attr, &item)) {
-            Ok(ir) => ModuleStructItem::try_from(&ir).into_code(),
-            Err(e) => e.to_compile_error().into()
-        };
-    }
-    errors::module_on_other_item(&item)
-        .to_compile_error()
-        .into()
-}
-
-fn is_impl_or_trait(item: &TokenStream2) -> bool {
-    syn::parse2::<syn::ItemImpl>(item.clone()).is_ok()
-        || syn::parse2::<syn::ItemTrait>(item.clone()).is_ok()
-}
-
-fn is_struct(item: &TokenStream2) -> bool {
-    syn::parse2::<syn::ItemStruct>(item.clone()).is_ok()
+    expand_module::<ModuleStructItem, ModuleImplItem>(attr, item, errors::module_on_other_item)
 }
 
 /// Implements boilerplate for a factory module.
 #[proc_macro_attribute]
 pub fn factory(attr: TokenStream, item: TokenStream) -> TokenStream {
-    let attr: TokenStream2 = attr.into();
-    let item: TokenStream2 = item.into();
+    expand_module::<FactoryModuleStructItem, FactoryModuleImplItem>(
+        attr,
+        item,
+        errors::factory_on_other_item
+    )
+}
 
-    if is_struct(&item) {
-        return match ModuleStructIR::try_from((&attr, &item)) {
-            Ok(ir) => FactoryModuleStructItem::try_from(&ir).into_code(),
-            Err(e) => e.to_compile_error().into()
-        };
+/// Expands a module-like macro: the struct is emitted by `S`, the impl block or the trait by
+/// `I`, and anything else is reported with `on_other_item`.
+fn expand_module<S, I>(
+    attr: TokenStream,
+    item: TokenStream,
+    on_other_item: fn(&syn::Item) -> syn::Error
+) -> TokenStream
+where
+    S: for<'a> TryFrom<&'a ModuleStructIR, Error = syn::Error> + quote::ToTokens,
+    I: for<'a> TryFrom<&'a ModuleImplIR, Error = syn::Error> + quote::ToTokens
+{
+    let attr: TokenStream2 = attr.into();
+    let item = match syn::parse2::<syn::Item>(item.into()) {
+        Ok(item) => item,
+        Err(e) => return e.to_compile_error().into()
+    };
+    match item {
+        syn::Item::Struct(code) => ModuleStructIR::try_new(&attr, code)
+            .and_then(|ir| S::try_from(&ir))
+            .into_code(),
+        syn::Item::Impl(code) => ModuleImplIR::try_new_impl(&attr, code)
+            .and_then(|ir| I::try_from(&ir))
+            .into_code(),
+        syn::Item::Trait(code) => ModuleImplIR::try_new_trait(&attr, code)
+            .and_then(|ir| I::try_from(&ir))
+            .into_code(),
+        other => on_other_item(&other).to_compile_error().into()
     }
-    if is_impl_or_trait(&item) {
-        return match ModuleImplIR::try_from((&attr, &item)) {
-            Ok(ir) => FactoryModuleImplItem::try_from(&ir).into_code(),
-            Err(e) => e.to_compile_error().into()
-        };
-    }
-    errors::factory_on_other_item(&item)
-        .to_compile_error()
-        .into()
 }
 
 /// Implements boilerplate for a type to be used in an Odra module.
@@ -102,16 +94,20 @@ pub fn odra_error(_attr: TokenStream, item: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn external_contract(attr: TokenStream, item: TokenStream) -> TokenStream {
     let attr: TokenStream2 = attr.into();
-    let item: TokenStream2 = item.into();
-
-    if let Ok(item_impl) = syn::parse2::<syn::ItemImpl>(item.clone()) {
-        return errors::external_contract_on_impl(&item_impl)
+    let item = match syn::parse2::<syn::Item>(item.into()) {
+        Ok(item) => item,
+        Err(e) => return e.to_compile_error().into()
+    };
+    match item {
+        syn::Item::Trait(code) => ModuleImplIR::try_new_trait(&attr, code)
+            .and_then(|ir| ExternalContractImpl::try_from(&ir))
+            .into_code(),
+        syn::Item::Impl(code) => errors::external_contract_on_impl(&code)
             .to_compile_error()
-            .into();
-    }
-    match ModuleImplIR::try_from((&attr, &item)) {
-        Ok(ir) => ExternalContractImpl::try_from(&ir).into_code(),
-        Err(e) => e.to_compile_error().into()
+            .into(),
+        other => errors::external_contract_on_other_item(&other)
+            .to_compile_error()
+            .into()
     }
 }
 

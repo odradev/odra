@@ -19,8 +19,10 @@ impl TryFrom<&'_ TokenStream> for RefHelpersItem {
     type Error = syn::Error;
 
     fn try_from(item: &'_ TokenStream) -> Result<Self, Self::Error> {
-        let item_impl = syn::parse2::<syn::ItemImpl>(item.clone())
-            .map_err(|_| errors::ref_helpers_on_non_impl(item))?;
+        let item_impl = match syn::parse2::<syn::Item>(item.clone())? {
+            syn::Item::Impl(item_impl) => item_impl,
+            other => return Err(errors::ref_helpers_on_non_impl(&other))
+        };
         if let Some((_, path, _)) = &item_impl.trait_ {
             return Err(errors::ref_helpers_on_trait_impl(path));
         }

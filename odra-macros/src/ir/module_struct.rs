@@ -12,18 +12,25 @@ pub struct ModuleStructIR {
     config: ConfigItem
 }
 
+/// The IR from the macro's token streams, for the test mocks.
+#[cfg(test)]
 impl TryFrom<(&proc_macro2::TokenStream, &proc_macro2::TokenStream)> for ModuleStructIR {
     type Error = syn::Error;
 
     fn try_from(
-        stream: (&proc_macro2::TokenStream, &proc_macro2::TokenStream)
+        (attr, item): (&proc_macro2::TokenStream, &proc_macro2::TokenStream)
     ) -> Result<Self, Self::Error> {
-        let (config, code) = super::parse_attr_and_item(stream)?;
-        Ok(Self { code, config })
+        Self::try_new(attr, syn::parse2(item.clone())?)
     }
 }
 
 impl ModuleStructIR {
+    /// The IR of the struct, with `attr` the arguments of the macro.
+    pub fn try_new(attr: &proc_macro2::TokenStream, code: syn::ItemStruct) -> syn::Result<Self> {
+        let config = syn::parse2::<ConfigItem>(attr.clone())?;
+        Ok(Self { code, config })
+    }
+
     pub fn self_code(&self) -> &syn::ItemStruct {
         &self.code
     }

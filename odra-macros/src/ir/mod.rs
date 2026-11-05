@@ -5,8 +5,8 @@
 //! - [ModuleImplIR]: the `#[odra::module]` impl block or trait, with its [FnIR] functions.
 //! - [TypeIR]: the struct or enum of `#[odra::odra_type]` and `#[odra::odra_error]`.
 //!
-//! An IR is built with `TryFrom`, which runs every check and combines the errors
-//! ([errors::collect_all]); after that, its queries cannot fail on the user's input.
+//! An IR is built from the parsed item with a `try_new`, which runs every check and combines
+//! the errors ([errors::collect_all]); after that, its queries cannot fail on the user's input.
 
 mod attr;
 mod config;
@@ -37,16 +37,6 @@ pub enum FnType {
     FactoryUpgrader,
     FactoryBatchUpgrader,
     Regular
-}
-
-/// Parses the attribute arguments and the item a `#[odra::module]`-like macro was applied to.
-fn parse_attr_and_item<T: syn::parse::Parse>(
-    stream: (&proc_macro2::TokenStream, &proc_macro2::TokenStream)
-) -> syn::Result<(config::ConfigItem, T)> {
-    Ok((
-        syn::parse2::<config::ConfigItem>(stream.0.clone())?,
-        syn::parse2::<T>(stream.1.clone())?
-    ))
 }
 
 #[cfg(test)]
