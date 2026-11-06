@@ -162,8 +162,10 @@ coverage:
     # grcov . --binary-path ./target/debug/deps/ -s . -t html --branch --ignore '../*' --ignore "/*" -o target/coverage/html
     grcov . --binary-path ./target/debug/deps/ -s . -t lcov --branch --ignore-not-existing --ignore '../*' --ignore "/*" -o target/coverage/tests.lcov
 
+# The schema is generated first, so the deploy cost includes the embedded contract schema and
+# the `__contract_schema` named key, as it does for a contract built with `cargo odra build`.
 benchmark:
-    cd benchmark && cargo odra build && ODRA_BACKEND=casper cargo run --bin benchmark --features=benchmark
+    cd benchmark && cargo odra schema && cargo odra build && ODRA_BACKEND=casper cargo run --bin benchmark --features=benchmark
 
 evaluate-benchmark: benchmark
     cd benchmark && cargo run --bin evaluate_benchmark gas_report.json base/gas_report.json
