@@ -13,7 +13,11 @@ on:
 run-name: Running lints and tests for ${{ github.head_ref }}
 
 # The suite is split into independent jobs so the OdraVM tests (no wasm needed) report in minutes
-# while the wasm-based ones build. Every job restores the same cache and saves under its own key.
+# while the wasm-based ones build.
+#
+# Every job restores its compiled dependencies and the cargo binaries it installs (cargo-odra,
+# grcov) with rust-cache under its own `shared-key`. A cache saved from a PR branch is visible to
+# that branch only, so the caches are saved from the release branches, which every PR can read.
 jobs:
   deny:
     name: Dependency check
@@ -31,80 +35,64 @@ jobs:
     steps:
       - uses: extractions/setup-just@v1
       - uses: actions/checkout@v4
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target/debug/.fingerprint
-            target/debug/build
-          key: odra-cache-lint-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            odra-cache-lint-
-            odra-cache-
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: nightly-2026-01-01
           target: wasm32-unknown-unknown
           components: rustfmt, clippy, rust-src
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: lint
+          save-if: ${{ github.event_name == 'push' }}
       - name: Set key for speculative execution
         run: echo "WASM_CLIENT_SK=${{ secrets.CLIENT_SK }}" >> $GITHUB_ENV
       - name: Run lints
         run: just check-lint
 
+  # The OdraVM suite runs instrumented for coverage, so one run is both the test gate and the
+  # source of the coverage report, instead of a second, uninstrumented run of the same tests.
   odra-vm:
     name: OdraVM tests
     runs-on: ubuntu-latest
     steps:
       - uses: extractions/setup-just@v1
-      - name: Set key for speculative execution
-        run: echo "WASM_CLIENT_SK=${{ secrets.CLIENT_SK }}" >> $GITHUB_ENV
       - uses: actions/checkout@v4
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target/debug/.fingerprint
-            target/debug/build
-          key: odra-cache-odra-vm-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            odra-cache-odra-vm-
-            odra-cache-
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: nightly-2026-01-01
-          target: wasm32-unknown-unknown
-          components: rust-src
-      - name: Install cargo-odra
-        run: just install-cargo-odra
-      - name: Run OdraVM tests
-        run: just test-odra test-modules-on-odravm test-examples-on-odravm
+          components: llvm-tools-preview
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: odra-vm
+          save-if: ${{ github.event_name == 'push' }}
+      - name: Set key for speculative execution
+        run: echo "WASM_CLIENT_SK=${{ secrets.CLIENT_SK }}" >> $GITHUB_ENV
+      - name: Install grcov
+        run: just install-grcov
+      - name: Run OdraVM tests with coverage
+        run: just coverage
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v3
+        with:
+          files: target/coverage/*.lcov
 
   casper-vm:
     name: CasperVM tests
     runs-on: ubuntu-latest
     steps:
       - uses: extractions/setup-just@v1
-      - name: Set key for speculative execution
-        run: echo "WASM_CLIENT_SK=${{ secrets.CLIENT_SK }}" >> $GITHUB_ENV
       - uses: actions/checkout@v4
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target/debug/.fingerprint
-            target/debug/build
-          key: odra-cache-casper-vm-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            odra-cache-casper-vm-
-            odra-cache-
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: nightly-2026-01-01
           target: wasm32-unknown-unknown
           components: rust-src
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: casper-vm
+          save-if: ${{ github.event_name == 'push' }}
+      - name: Set key for speculative execution
+        run: echo "WASM_CLIENT_SK=${{ secrets.CLIENT_SK }}" >> $GITHUB_ENV
       - name: Prepare test environment
         run: just prepare-test-env
       - name: Run CasperVM tests
@@ -128,25 +116,20 @@ jobs:
     steps:
       - uses: extractions/setup-just@v1
       - uses: actions/checkout@v4
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target/debug/.fingerprint
-            target/debug/build
-          key: odra-cache-livenet-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            odra-cache-livenet-
-            odra-cache-
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: nightly-2026-01-01
           target: wasm32-unknown-unknown
           components: rust-src
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: livenet
+          save-if: ${{ github.event_name == 'push' }}
       - name: Prepare test environment
         run: just prepare-test-env
+      # The committed schemas are checked by the Schemas workflow; regenerating them here would
+      # take longer than the wasm build itself.
       - name: Build the wasm files
-        run: just build-livenet-wasm
+        run: just build-livenet-wasm --skip-schema
       - name: Run livenet tests
         run: just test-livenet
