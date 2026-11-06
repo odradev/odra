@@ -86,8 +86,11 @@ fn to_snake_case(s: &str) -> String {
 /// When building a wasm contract, looks for the module's contract schema file
 /// (`resources/casper_contract_schemas/<module>_schema.json`) in the crate directory and its
 /// ancestors (to support workspaces). If found, sets the `odra_contract_schema` cfg flag and
-/// exposes the file path via `ODRA_CONTRACT_SCHEMA_PATH`, so the schema is embedded in the wasm
-/// and stored under the `__contract_schema` named key on install.
+/// exposes the path of a minified copy via `ODRA_CONTRACT_SCHEMA_PATH`, so the schema is
+/// embedded in the wasm and stored under the `__contract_schema` named key on install.
+///
+/// The file in `resources` stays pretty-printed for people and diffs; the embedded copy is
+/// written to `OUT_DIR` without whitespace, so the wasm does not carry the indentation.
 fn contract_schema_flags() -> Vec<String> {
     let mut flags = vec![];
     if std::env::var("CARGO_CFG_TARGET_ARCH").as_deref() != Ok("wasm32") {
@@ -108,12 +111,23 @@ fn contract_schema_flags() -> Vec<String> {
 
     match schema_path {
         Some(path) => {
-            let path = path.display();
-            flags.push(format!("cargo:rerun-if-changed={}", path));
+            flags.push(format!("cargo:rerun-if-changed={}", path.display()));
             flags.push("cargo:rustc-cfg=odra_contract_schema".to_string());
+            let out_dir = std::env::var("OUT_DIR").unwrap_or_default();
+            let embedded = match minified_copy(&path, Path::new(&out_dir)) {
+                Ok(minified) => minified,
+                Err(err) => {
+                    flags.push(format!(
+                        "cargo:warning=Contract schema {} could not be minified ({}); embedding it as is.",
+                        path.display(),
+                        err
+                    ));
+                    path
+                }
+            };
             flags.push(format!(
                 "cargo:rustc-env=ODRA_CONTRACT_SCHEMA_PATH={}",
-                path
+                embedded.display()
             ));
         }
         None => {
@@ -136,6 +150,42 @@ fn contract_schema_flags() -> Vec<String> {
         }
     }
     flags
+}
+
+/// Writes the JSON at `path` to `out_dir` under the same file name, without the whitespace
+/// between tokens, and returns the path of the copy.
+fn minified_copy(path: &Path, out_dir: &Path) -> Result<std::path::PathBuf, String> {
+    let content = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
+    serde_json::from_str::<serde_json::Value>(&content).map_err(|e| e.to_string())?;
+    let file_name = path.file_name().ok_or("the schema path has no file name")?;
+    let copy = out_dir.join(file_name);
+    std::fs::write(&copy, minify_json(&content)).map_err(|e| e.to_string())?;
+    Ok(copy)
+}
+
+/// Drops the whitespace outside string literals of a valid JSON document, keeping the keys in
+/// their order.
+fn minify_json(json: &str) -> String {
+    let mut out = String::with_capacity(json.len());
+    let mut in_string = false;
+    let mut escaped = false;
+    for c in json.chars() {
+        if in_string {
+            out.push(c);
+            match c {
+                _ if escaped => escaped = false,
+                '\\' => escaped = true,
+                '"' => in_string = false,
+                _ => {}
+            }
+        } else if c == '"' {
+            in_string = true;
+            out.push(c);
+        } else if !c.is_whitespace() {
+            out.push(c);
+        }
+    }
+    out
 }
 
 /// Checks if the `Odra.toml` closest to `dir` lists a contract named `contract_name`
@@ -198,6 +248,36 @@ mod test {
         std::fs::remove_dir_all(&root).unwrap();
         // No Odra.toml at all.
         assert!(!super::odra_toml_lists_contract(&root, "DogContract"));
+    }
+
+    #[test]
+    fn test_minified_copy() {
+        let root = std::env::temp_dir().join(format!("odra-build-minify-{}", std::process::id()));
+        let out_dir = root.join("out");
+        std::fs::create_dir_all(&out_dir).unwrap();
+        let schema = root.join("counter_schema.json");
+        std::fs::write(
+            &schema,
+            "{\n  \"name\": \"Counter\",\n  \"errors\": [ ]\n}\n"
+        )
+        .unwrap();
+
+        let copy = super::minified_copy(&schema, &out_dir).unwrap();
+        assert_eq!(copy, out_dir.join("counter_schema.json"));
+        assert_eq!(
+            std::fs::read_to_string(copy).unwrap(),
+            "{\"name\":\"Counter\",\"errors\":[]}"
+        );
+        // Whitespace and escaped quotes inside strings are kept.
+        assert_eq!(
+            super::minify_json("{ \"a\" : \"x y \\\" z\" ,\n \"b\": 1 }"),
+            "{\"a\":\"x y \\\" z\",\"b\":1}"
+        );
+
+        std::fs::write(&schema, "not json").unwrap();
+        assert!(super::minified_copy(&schema, &out_dir).is_err());
+
+        std::fs::remove_dir_all(&root).unwrap();
     }
 
     #[test]
