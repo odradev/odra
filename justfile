@@ -32,11 +32,15 @@ install-cargo-odra:
     rustup toolchain install stable
     cargo +stable install cargo-odra --git {{CARGO_ODRA_GIT_REPO}} --branch {{CARGO_ODRA_BRANCH}} --locked
 
-prepare-test-env: install-cargo-odra
-    rustup target add wasm32-unknown-unknown
+# grcov and the llvm tools are only needed by `coverage`.
+install-grcov:
+    rustup toolchain install stable
     rustup component add llvm-tools-preview
     # `--locked` takes the dependency versions grcov ships, which also survive a yank of one of them.
     cargo +stable install grcov --locked
+
+prepare-test-env: install-cargo-odra
+    rustup target add wasm32-unknown-unknown
     sudo apt-get update && sudo apt-get install -y wabt
     wget https://github.com/WebAssembly/binaryen/releases/download/{{BINARYEN_VERSION}}/binaryen-{{BINARYEN_VERSION}}-x86_64-linux.tar.gz || { echo "Download failed"; exit 1; }
     sha256sum binaryen-{{BINARYEN_VERSION}}-x86_64-linux.tar.gz | grep {{BINARYEN_CHECKSUM}} || { echo "Checksum verification failed"; exit 1; }
@@ -114,8 +118,10 @@ run-nctl:
     docker run --rm -it --cpus=1 --name mynctl -d -p 11101:11101 -p 14101:14101 -p 18101:18101 -p 25101:25101 makesoftware/casper-nctl:v203
 
 # Wasm files the livenet suite deploys; `just test` builds them as a side effect, CI does not.
-build-livenet-wasm:
-    cd examples && cargo odra build
+# CI passes `--skip-schema`: the committed schemas are checked by the Schemas workflow, and
+# regenerating them costs more than the wasm build itself.
+build-livenet-wasm *args:
+    cd examples && cargo odra build {{args}}
 
 test-livenet:
     set shell := bash
