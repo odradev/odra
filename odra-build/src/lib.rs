@@ -1,5 +1,5 @@
 use serde::Serialize;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 pub fn build() {
     // Declare the cfg flags set below, so rustc's check-cfg does not report them as unexpected.
@@ -20,7 +20,6 @@ const CONTRACT_SCHEMAS_DIR: &str = "resources/casper_contract_schemas";
 /// `resources/casper_contract_schemas/<module>_schema.json`.
 pub fn contract_schema<S: Serialize>(schema: S) {
     let module = std::env::var("ODRA_MODULE").expect("ODRA_MODULE environment variable is not set");
-    let module = to_snake_case(module_file_name(&module));
 
     write_schema_file(CONTRACT_SCHEMAS_DIR, &module, schema);
 }
@@ -44,7 +43,7 @@ where
     if !std::path::Path::new(path).exists() {
         std::fs::create_dir_all(path).expect("Failed to create resources directory");
     }
-    let filename = format!("{}/{}_schema.json", path, module);
+    let filename = Path::new(path).join(schema_file_name(module));
     let mut schema_file = std::fs::File::create(filename).expect("Failed to create schema file");
 
     std::io::Write::write_all(&mut schema_file, &json.into_bytes())
@@ -57,6 +56,25 @@ where
 /// build may pass the bare struct name (`Erc20`); both name the same schema file.
 fn module_file_name(module: &str) -> &str {
     module.rsplit("::").next().unwrap_or(module)
+}
+
+/// The schema file name of an `ODRA_MODULE` value: `erc20_schema.json` for `Erc20` as well as for
+/// `odra_modules::Erc20`. Both the writer and the build-script lookup go through here, so a
+/// schema written for a module is also the one found when its wasm is built.
+fn schema_file_name(module: &str) -> String {
+    format!("{}_schema.json", to_snake_case(module_file_name(module)))
+}
+
+/// Looks for the schema file of `module` in `manifest_dir` and its ancestors (a workspace keeps
+/// the schemas at its root). Returns the path found, or the path under `manifest_dir` where
+/// the schema would be written.
+fn find_contract_schema(manifest_dir: &Path, module: &str) -> Result<PathBuf, PathBuf> {
+    let file_name = schema_file_name(module);
+    manifest_dir
+        .ancestors()
+        .map(|dir| dir.join(CONTRACT_SCHEMAS_DIR).join(&file_name))
+        .find(|path| path.is_file())
+        .ok_or_else(|| manifest_dir.join(CONTRACT_SCHEMAS_DIR).join(&file_name))
 }
 
 fn to_snake_case(s: &str) -> String {
@@ -103,14 +121,8 @@ fn contract_schema_flags() -> Vec<String> {
     let Ok(manifest_dir) = std::env::var("CARGO_MANIFEST_DIR") else {
         return flags;
     };
-    let file_name = format!("{}_schema.json", to_snake_case(&module));
-    let schema_path = Path::new(&manifest_dir)
-        .ancestors()
-        .map(|dir| dir.join(CONTRACT_SCHEMAS_DIR).join(&file_name))
-        .find(|path| path.is_file());
-
-    match schema_path {
-        Some(path) => {
+    match find_contract_schema(Path::new(&manifest_dir), &module) {
+        Ok(path) => {
             flags.push(format!("cargo:rerun-if-changed={}", path.display()));
             flags.push("cargo:rustc-cfg=odra_contract_schema".to_string());
             let out_dir = std::env::var("OUT_DIR").unwrap_or_default();
@@ -130,22 +142,20 @@ fn contract_schema_flags() -> Vec<String> {
                 embedded.display()
             ));
         }
-        None => {
+        Err(path) => {
             // Rerun once the schema gets generated.
-            let path = Path::new(&manifest_dir)
-                .join(CONTRACT_SCHEMAS_DIR)
-                .join(&file_name);
             flags.push(format!("cargo:rerun-if-changed={}", path.display()));
             // Dependencies are built with the same `ODRA_MODULE`, so warn only in the crate that
             // defines the contract.
-            if !odra_toml_lists_contract(Path::new(&manifest_dir), &module) {
+            let contract = module_file_name(&module);
+            if !odra_toml_lists_contract(Path::new(&manifest_dir), contract) {
                 return flags;
             }
             flags.push(format!(
                 "cargo:warning=Contract schema for {} not found at {}. The contract will be built without an embedded schema. Run `cargo odra schema -c {}` to generate it.",
                 module,
                 path.display(),
-                module
+                to_snake_case(contract)
             ));
         }
     }
@@ -303,10 +313,50 @@ mod test {
 
     #[test]
     fn test_schema_file_name() {
-        let name = |module| super::to_snake_case(super::module_file_name(module));
-        assert_eq!(name("Erc20"), "erc20");
-        assert_eq!(name("odra_modules::Erc20"), "erc20");
-        assert_eq!(name("odra_modules::Cep18"), "cep18");
-        assert_eq!(name("odra_examples::PartyContract"), "party_contract");
+        let name = super::schema_file_name;
+        assert_eq!(name("Erc20"), "erc20_schema.json");
+        assert_eq!(name("odra_modules::Erc20"), "erc20_schema.json");
+        assert_eq!(name("odra_modules::Cep18"), "cep18_schema.json");
+        assert_eq!(
+            name("odra_examples::PartyContract"),
+            "party_contract_schema.json"
+        );
+    }
+
+    /// The build script looks the schema up under the crate-qualified `ODRA_MODULE` that
+    /// `cargo odra` passes; snake-casing the whole value used to look for
+    /// `odra_modules::_erc20_schema.json` and silently build without the schema.
+    #[test]
+    fn test_find_contract_schema() {
+        let root = std::env::temp_dir().join(format!("odra-build-find-{}", std::process::id()));
+        let member = root.join("member");
+        let schemas = root.join(super::CONTRACT_SCHEMAS_DIR);
+        std::fs::create_dir_all(&member).unwrap();
+        std::fs::create_dir_all(&schemas).unwrap();
+        let erc20 = schemas.join("erc20_schema.json");
+        std::fs::write(&erc20, "{}").unwrap();
+
+        // Found under the bare and the qualified name, from the root and from a member.
+        assert_eq!(
+            super::find_contract_schema(&root, "Erc20"),
+            Ok(erc20.clone())
+        );
+        assert_eq!(
+            super::find_contract_schema(&root, "odra_modules::Erc20"),
+            Ok(erc20.clone())
+        );
+        assert_eq!(
+            super::find_contract_schema(&member, "odra_modules::Erc20"),
+            Ok(erc20)
+        );
+        // Missing: the path the schema would be written to, in the crate being built.
+        assert_eq!(
+            super::find_contract_schema(&member, "odra_modules::Cep18"),
+            Err(member
+                .join(super::CONTRACT_SCHEMAS_DIR)
+                .join("cep18_schema.json"))
+        );
+
+        std::fs::remove_dir_all(&root).unwrap();
     }
 }
