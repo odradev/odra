@@ -15,12 +15,12 @@ fn test_contract_item() {
             }
 
             fn event_schemas() -> odra::prelude::BTreeMap<odra::prelude::string::String, odra::casper_event_standard::Schema> {
-                odra::prelude::BTreeMap::from_iter(
-                    odra::prelude::vec![(
-                        <CounterPackContractDeployed as odra::casper_event_standard::EventInstance>::name(), 
-                        <CounterPackContractDeployed as odra::casper_event_standard::EventInstance>::schema()
-                    )]
-                )
+                let mut __odra_result = odra::prelude::BTreeMap::new();
+                __odra_result.insert(
+                    <CounterPackContractDeployed as odra::casper_event_standard::EventInstance>::name(),
+                    <CounterPackContractDeployed as odra::casper_event_standard::EventInstance>::schema()
+                );
+                __odra_result
             }
         }
     );

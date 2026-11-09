@@ -2,8 +2,18 @@
 
 Changelog for `odra`.
 
-## [Unreleased]
+## [2.10.0]
 ### Added
+- OdraCLI `upgrade` command: `upgrade <Contract> --gas <amount> [--<upgrade args>]` upgrades a contract from the
+  contracts file with its wasm, calling its `upgrade` entry point with the given arguments, without a custom
+  scenario (#690). `--force-create-upgrade-group`, `--allow-key-override` and `--package-named-key` set the
+  `UpgradeConfig`. `upgrade` is no longer listed among the entry points of the `contract` command.
+- `Deployer::try_upgrade_with_runtime_args` upgrades a contract with upgrade arguments composed at runtime.
+- OdraCLI `upgrade-children` command: `upgrade-children <Factory> --gas <amount> [--<upgrade args>]` upgrades all
+  child contracts of a factory from the contracts file with the factory's current code, in one
+  `batch_upgrade_child_contract` call with the same upgrade arguments for every child, or one call per
+  `--batch-size` children. The children are read from the factory's `ContractDeployed` events.
+- `odra::consts` re-exports the names of the `odra_cfg_*` arguments.
 - Factory modules (`#[odra::module(factory = on)]`) work on OdraVM: `new_contract`,
   `upgrade_child_contract` and `batch_upgrade_child_contract` deploy and upgrade the children like on
   Casper, only the account that installed the factory may upgrade them, and their events are tracked.
@@ -65,6 +75,9 @@ Changelog for `odra`.
 - `const fn u512` in the prelude; `cspr!` with a literal is a constant expression.
 
 ### Changed
+- `cargo odra schema` writes only the contract schema (`resources/casper_contract_schemas`), no longer the
+  legacy one (`resources/legacy`) (#689). `bin/build_schema.rs` calls the new `odra_build::contract_schema`;
+  `odra_build::schema` still compiles but ignores the legacy schema passed to it.
 - `Erc20::mint`, `Erc20::burn` and `Ownable::unchecked_transfer_ownership` are no longer entry points
   of contracts built from `odra-modules` (a deployed `Erc20` let anyone mint); call them from a
   wrapping module that adds its own access control.
@@ -96,6 +109,9 @@ Changelog for `odra`.
   `storage` and `types` fields instead of the removed `StorageLayoutFile`/`STORAGE_LAYOUT_VERSION`.
 
 ### Fixed
+- The OdraCLI `contract` command calls `new_contract` and `upgrade_child_contract` of a factory with the
+  `odra_cfg_*` arguments the factory expects; they failed with `MissingArgument`. `batch_upgrade_child_contract`,
+  whose arguments the schema does not describe, is left to the `upgrade-children` command.
 - A factory that was never upgraded could not upgrade its children on Casper ("Function not found:
   migrate_events"): its wasm, which the children run, was stripped of the `migrate_events` an upgrade calls. A
   factory keeps the entry point from its installation now.

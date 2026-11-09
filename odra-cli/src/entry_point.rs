@@ -13,7 +13,8 @@ use crate::container;
 use crate::container::ContractProvider;
 
 pub(crate) mod cmd_args;
-mod runtime_args;
+pub(crate) mod factory;
+pub(crate) mod runtime_args;
 mod utils;
 
 #[derive(Debug, thiserror::Error)]
@@ -42,7 +43,9 @@ pub enum CallError {
     #[error("Invalid gas value: {0}")]
     InvalidGasValue(String),
     #[error("Decoding error: {0}")]
-    DecodingError(#[from] odra_schema::codec::DecodeError)
+    DecodingError(#[from] odra_schema::codec::DecodeError),
+    #[error("Invalid arg value: {0:?}")]
+    CLValueError(odra::casper_types::CLValueError)
 }
 
 /// The outcome of a contract call: the decoded return value plus any events captured when
@@ -62,17 +65,24 @@ pub(crate) struct ContractEvents {
     pub events: Vec<String>
 }
 
+/// Calls `entry_point` of the contract `contract_name`. For a factory (`is_factory`) the call
+/// carries the `odra_cfg_*` arguments its generated ref would add.
 pub fn call<T: ContractProvider>(
     env: &HostEnv,
     contract_name: &str,
     entry_point: &Entrypoint,
+    is_factory: bool,
     args: &ArgMatches,
     types: &CustomTypeSet,
     contract_provider: &T
 ) -> Result<CallOutcome, CallError> {
     let amount = read_arg::<U512>(args, Arg::AttachedValue).unwrap_or_default();
 
-    let runtime_args = runtime_args::compose(entry_point, args, types)?;
+    let mut runtime_args = runtime_args::compose(entry_point, args, types)?;
+    if is_factory {
+        factory::insert_cfg_args(&entry_point.name, &mut runtime_args)
+            .map_err(CallError::CLValueError)?;
+    }
     let contract_address = contract_provider
         .address_by_name(contract_name)
         .ok_or(CallError::ContractNotFound)?;

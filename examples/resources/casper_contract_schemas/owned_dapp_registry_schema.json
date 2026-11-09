@@ -217,7 +217,7 @@
     },
     {
       "name": "add_dapp_contract",
-      "description": "Adds a contract to the dapp.",
+      "description": "Adds a contract to the dapp. The owner may add any contract. A registrar may add contracts that are not registrars. Anyone else is rejected with `CallerNotTheOwner`, and an unregistered contract with `CallerNotDappRegistrar`.",
       "is_mutable": true,
       "is_payable": false,
       "arguments": [

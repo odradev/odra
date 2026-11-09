@@ -592,15 +592,15 @@ impl ExecutionEnv {
     pub fn migrate_schemas(&self, new_schemas: BTreeMap<String, Schema>) {
         let mut old_schemas: Schemas = self.env.get_named_value(EVENTS_SCHEMA).unwrap_or_default();
 
-        for (name, new_schema) in new_schemas.iter() {
-            match old_schemas.0.get(name) {
+        for (name, new_schema) in new_schemas {
+            match old_schemas.0.get(&name) {
                 // If the schema is not present in the old schemas, we add it.
                 None => {
-                    old_schemas.0.insert(name.clone(), new_schema.clone());
+                    old_schemas.0.insert(name, new_schema);
                 }
                 // If an existing schema is different from the new one, we revert.
                 Some(old_schema) => {
-                    if old_schema != new_schema {
+                    if *old_schema != new_schema {
                         self.env.revert(ExecutionError::SchemaMismatch);
                     }
                 }

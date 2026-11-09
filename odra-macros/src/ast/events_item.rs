@@ -68,18 +68,26 @@ impl ToTokens for HasEventsImplItem {
         let result = utils::ident::result();
 
         let into_event = |ty: &syn::Type| quote!(<#ty as odra::contract_def::IntoEvent>::into_event());
-        let name_and_schema = |ty: &syn::Type| {
-            quote!((<#ty as odra::casper_event_standard::EventInstance>::name(), <#ty as odra::casper_event_standard::EventInstance>::schema()))
+        // `event_schemas()` is one map filled with `insert` for the type's own events and `extend`
+        // for the fields' maps. Building it with `BTreeMap::from_iter` over a chain of the fields'
+        // iterators made rustc instantiate a sort for every module (about 7 KB of wasm each);
+        // `insert` and `extend` reuse the code the schema migration needs anyway.
+        let insert_schema = |ty: &syn::Type| {
+            quote!(#result.insert(<#ty as odra::casper_event_standard::EventInstance>::name(), <#ty as odra::casper_event_standard::EventInstance>::schema());)
         };
 
         let (events_body, event_schemas_body) = match &self.sources {
             EventSources::None => (quote!(odra::prelude::vec::Vec::new()), quote!(odra::prelude::BTreeMap::new())),
             EventSources::Only(ty) => {
                 let into_event = into_event(ty);
-                let name_and_schema = name_and_schema(ty);
+                let insert = insert_schema(ty);
                 (
                     quote!(odra::prelude::vec![#into_event]),
-                    quote!(odra::prelude::BTreeMap::from_iter(odra::prelude::vec![#name_and_schema]))
+                    quote! {
+                        let mut #result = odra::prelude::BTreeMap::new();
+                        #insert
+                        #result
+                    }
                 )
             }
             EventSources::Module {
@@ -87,13 +95,23 @@ impl ToTokens for HasEventsImplItem {
                 field_types
             } => {
                 let into_events = declared.iter().map(into_event);
-                let names_and_schemas = declared.iter().map(name_and_schema);
                 let field_events = field_types
                     .iter()
                     .map(|ty| quote!(.chain(<#ty as odra::contract_def::HasEvents>::events())));
-                let field_schemas = field_types
+                let inserts = declared.iter().map(insert_schema);
+                let extends = field_types
                     .iter()
-                    .map(|ty| quote!(.chain(<#ty as odra::contract_def::HasEvents>::event_schemas())));
+                    .map(|ty| quote!(#result.extend(<#ty as odra::contract_def::HasEvents>::event_schemas());));
+                let schema_stmts = inserts.chain(extends).collect::<Vec<_>>();
+                let event_schemas_body = if schema_stmts.is_empty() {
+                    quote!(odra::prelude::BTreeMap::new())
+                } else {
+                    quote! {
+                        let mut #result = odra::prelude::BTreeMap::new();
+                        #(#schema_stmts)*
+                        #result
+                    }
+                };
                 (
                     quote! {
                         let events = odra::prelude::vec![#(#into_events),*];
@@ -103,13 +121,7 @@ impl ToTokens for HasEventsImplItem {
                             #(#field_events)*
                             .collect()
                     },
-                    quote! {
-                        let #result = odra::prelude::BTreeMap::from_iter(odra::prelude::vec![#(#names_and_schemas),*]);
-                        #result
-                            .into_iter()
-                            #(#field_schemas)*
-                            .collect()
-                    }
+                    event_schemas_body
                 )
             }
         };

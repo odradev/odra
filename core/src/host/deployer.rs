@@ -61,6 +61,17 @@ pub trait Deployer<R: OdraContract>: Sized {
         upgrade_args: R::UpgradeArgs,
         cfg: UpgradeConfig
     ) -> OdraResult<R::HostRef>;
+
+    /// Tries to upgrade a contract with given upgrade args as [RuntimeArgs] and configuration.
+    ///
+    /// Like `try_upgrade_with_cfg`, for callers that compose the arguments at runtime (e.g. a
+    /// command line interface) instead of building the typed [UpgradeArgs].
+    fn try_upgrade_with_runtime_args(
+        env: &HostEnv,
+        address: Address,
+        upgrade_args: RuntimeArgs,
+        cfg: UpgradeConfig
+    ) -> OdraResult<R::HostRef>;
 }
 
 /// A type which can be used as initialization arguments for a contract.
@@ -235,7 +246,15 @@ impl<R: OdraContract> Deployer<R> for R {
         upgrade_args: <R as OdraContract>::UpgradeArgs,
         cfg: UpgradeConfig
     ) -> OdraResult<<R as OdraContract>::HostRef> {
-        let mut upgrade_args = upgrade_args.into();
+        Self::try_upgrade_with_runtime_args(env, contract_to_upgrade, upgrade_args.into(), cfg)
+    }
+
+    fn try_upgrade_with_runtime_args(
+        env: &HostEnv,
+        contract_to_upgrade: Address,
+        mut upgrade_args: RuntimeArgs,
+        cfg: UpgradeConfig
+    ) -> OdraResult<<R as OdraContract>::HostRef> {
         upgrade_args.insert(consts::IS_UPGRADE_ARG, true)?;
         upgrade_args.insert(
             consts::PACKAGE_HASH_TO_UPGRADE_ARG,

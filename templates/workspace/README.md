@@ -8,7 +8,7 @@ A smart contract project for the Casper Network, built with the
 
 This project needs three things on your machine:
 
-- Rust toolchain (see [rustup.rs](https://rustup.rs/)) — the pinned nightly from `rust-toolchain`
+- Rust toolchain (see [rustup.rs](https://rustup.rs/)) — the pinned nightly from `rust-toolchain.toml`
   is installed automatically on the first build
 - The `wasm32-unknown-unknown` target: `rustup target add wasm32-unknown-unknown`
 - [`cargo-odra`](https://github.com/odradev/cargo-odra): `cargo install cargo-odra --locked`
@@ -20,7 +20,7 @@ details, or [Ubuntu / WSL setup](https://odra.dev/docs/getting-started/ubuntu-ws
 verified command-by-command walkthrough.
 
 Run `rustup target add wasm32-unknown-unknown` **from inside this directory** — the toolchain is
-pinned in `rust-toolchain`, and running it elsewhere adds the target to the wrong toolchain.
+pinned in `rust-toolchain.toml`, and running it elsewhere adds the target to the wrong toolchain.
 
 ## Usage
 
