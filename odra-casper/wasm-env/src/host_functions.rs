@@ -62,8 +62,6 @@ use odra_core::{
 ///
 /// Wasm is single-threaded and the host runs one entry point at a time, so a plain
 /// [`core::cell::OnceCell`] is enough; the `Sync` impl only lets it live in a `static`.
-/// `lazy_static` with its `spin` lock did the same job with about 1 KB of code the contract
-/// never needs.
 struct OncePerExecution<T>(core::cell::OnceCell<T>);
 
 // SAFETY: a contract runs on a single thread, so the cell is never shared between threads.
