@@ -127,7 +127,7 @@ pub fn install_new_contract(
     }
 
     // Prepare named keys.
-    let named_keys = initial_named_keys(events, contract_schema);
+    let named_keys = initial_named_keys(&events, contract_schema);
 
     // Prepare message topic
     let mut message_topics = BTreeMap::new();
@@ -273,7 +273,7 @@ pub fn upgrade_contract(
     }
 
     // Prepare named keys.
-    let named_keys = initial_named_keys(events.clone(), None);
+    let named_keys = initial_named_keys(&events, None);
 
     let contract_package_hash = ContractPackageHash::new(package_hash_to_upgrade);
     let previous_contract_hash = get_latest_contract_hash(contract_package_hash);
@@ -780,7 +780,7 @@ pub fn get_main_purse() -> Option<URef> {
     runtime::get_key(consts::CONTRACT_MAIN_PURSE).and_then(|key| key.as_uref().cloned())
 }
 
-fn initial_named_keys(schemas: Schemas, contract_schema: Option<&str>) -> NamedKeys {
+fn initial_named_keys(schemas: &Schemas, contract_schema: Option<&str>) -> NamedKeys {
     let mut named_keys = NamedKeys::new();
     named_keys.insert(
         String::from(consts::STATE_KEY),
