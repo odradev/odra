@@ -23,18 +23,13 @@ fn counter_pack() {
             }
 
             fn event_schemas() -> odra::prelude::BTreeMap<odra::prelude::string::String, odra::casper_event_standard::Schema> {
-                let __odra_result = odra::prelude::BTreeMap::from_iter(
-                    odra::prelude::vec![
-                        (<OnTransfer as odra::casper_event_standard::EventInstance>::name(), <OnTransfer as odra::casper_event_standard::EventInstance>::schema()),
-                        (<OnApprove as odra::casper_event_standard::EventInstance>::name(), <OnApprove as odra::casper_event_standard::EventInstance>::schema())
-                    ]
-                );
+                let mut __odra_result = odra::prelude::BTreeMap::new();
+                __odra_result.insert(<OnTransfer as odra::casper_event_standard::EventInstance>::name(), <OnTransfer as odra::casper_event_standard::EventInstance>::schema());
+                __odra_result.insert(<OnApprove as odra::casper_event_standard::EventInstance>::name(), <OnApprove as odra::casper_event_standard::EventInstance>::schema());
+                __odra_result.extend(<Mapping<u8, Counter> as odra::contract_def::HasEvents>::event_schemas());
+                __odra_result.extend(<SubModule<Counter> as odra::contract_def::HasEvents>::event_schemas());
+                __odra_result.extend(<Var<u32> as odra::contract_def::HasEvents>::event_schemas());
                 __odra_result
-                    .into_iter()
-                    .chain(<Mapping<u8, Counter> as odra::contract_def::HasEvents>::event_schemas())
-                    .chain(<SubModule<Counter> as odra::contract_def::HasEvents>::event_schemas())
-                    .chain(<Var<u32> as odra::contract_def::HasEvents>::event_schemas())
-                    .collect()
             }
         }
     );

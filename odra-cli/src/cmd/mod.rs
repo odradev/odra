@@ -14,6 +14,8 @@ mod scenario;
 mod status;
 mod storage;
 mod transfer;
+mod upgrade;
+mod upgrade_children;
 mod whoami;
 
 pub(crate) use completions::CompletionsCmd;
@@ -30,6 +32,8 @@ pub use scenario::{Scenario, ScenarioArgs, ScenarioError, ScenarioMetadata};
 pub(crate) use status::StatusCmd;
 pub(crate) use storage::StorageCmd;
 pub(crate) use transfer::TransferCmd;
+pub(crate) use upgrade::UpgradeCmd;
+pub(crate) use upgrade_children::UpgradeChildrenCmd;
 pub(crate) use whoami::WhoamiCmd;
 
 use crate::{
@@ -49,6 +53,8 @@ pub(crate) const STORAGE_SUBCOMMAND: &str = "storage";
 pub(crate) const CONFIG_SUBCOMMAND: &str = "config";
 pub(crate) const TRANSFER_SUBCOMMAND: &str = "transfer";
 pub(crate) const COMPLETIONS_SUBCOMMAND: &str = "completions";
+pub(crate) const UPGRADE_SUBCOMMAND: &str = "upgrade";
+pub(crate) const UPGRADE_CHILDREN_SUBCOMMAND: &str = "upgrade-children";
 
 /// OdraCommand is a trait that represents a command that can be run in the Odra CLI.
 pub(crate) trait OdraCommand {

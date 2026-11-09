@@ -1,4 +1,5 @@
 #![allow(unused_variables)]
+use odra::contract_def::HasIdent;
 use odra::{
     casper_types::{
         bytesrepr::{Bytes, ToBytes},
@@ -156,6 +157,8 @@ impl TestContract {
 
     pub fn mutable(&mut self) {}
 
+    pub fn upgrade(&mut self, version: u32) {}
+
     pub fn set_status(&mut self, status: Status) {}
 
     #[allow(clippy::too_many_arguments)]
@@ -184,6 +187,22 @@ impl TestContract {
     }
 }
 
+#[odra::module(factory = on)]
+pub struct TestCounter {
+    value: Var<u32>
+}
+
+#[odra::module(factory = on)]
+impl TestCounter {
+    pub fn init(&mut self, value: u32) {
+        self.value.set(value);
+    }
+
+    pub fn upgrade(&mut self, new_value: u32) {
+        self.value.set(new_value);
+    }
+}
+
 struct DummyHostCtx;
 
 impl HostContext for DummyHostCtx {
@@ -193,9 +212,7 @@ impl HostContext for DummyHostCtx {
     }
 
     #[doc = " Sets the gas limit for the current contract execution."]
-    fn set_gas(&self, gas: u64) {
-        todo!()
-    }
+    fn set_gas(&self, gas: u64) {}
 
     #[doc = " Returns the caller address for the current contract execution."]
     fn caller(&self) -> Address {
@@ -398,4 +415,15 @@ impl ContractStorage for MockContractStorage {
 
 pub fn mock_contracts_container() -> DeployedContractsContainer {
     DeployedContractsContainer::instance(MockContractStorage)
+}
+
+/// A memory-backed container with the contract `T` deployed at `address`, under `package_name`
+/// or its ident.
+pub fn contracts_container_with<T: HasIdent>(
+    address: Address,
+    package_name: Option<String>
+) -> DeployedContractsContainer {
+    let mut data = ContractsData::default();
+    data.add_contract::<T>(address, package_name).unwrap();
+    DeployedContractsContainer::with_data(data, MockContractStorage)
 }

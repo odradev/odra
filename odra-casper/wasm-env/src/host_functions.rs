@@ -127,14 +127,14 @@ pub fn install_new_contract(
     }
 
     // Prepare named keys.
-    let named_keys = initial_named_keys(events, contract_schema);
+    let named_keys = initial_named_keys(&events, contract_schema);
 
     // Prepare message topic
     let mut message_topics = BTreeMap::new();
     message_topics.insert(NATIVE_EVENT_TOPIC.to_string(), MessageTopicOperation::Add);
 
     // Create new contract.
-    let access_uref_key = format!("{}_access_token", package_hash_key_name);
+    let access_uref_key = concat_str(&package_hash_key_name, "_access_token");
     if is_upgradable {
         storage::new_contract(
             entry_points,
@@ -182,7 +182,7 @@ pub fn install_new_contract(
         let factory_group_uref =
             create_contract_user_group(contract_package_hash, FACTORY_GROUP_NAME);
         runtime::put_key(
-            &format!("{}_factory_access", package_hash_key_name),
+            &concat_str(&package_hash_key_name, "_factory_access"),
             Key::URef(factory_group_uref)
         );
         return (contract_package_hash, factory_group_uref);
@@ -273,7 +273,7 @@ pub fn upgrade_contract(
     }
 
     // Prepare named keys.
-    let named_keys = initial_named_keys(events.clone(), None);
+    let named_keys = initial_named_keys(&events, None);
 
     let contract_package_hash = ContractPackageHash::new(package_hash_to_upgrade);
     let previous_contract_hash = get_latest_contract_hash(contract_package_hash);
@@ -780,7 +780,7 @@ pub fn get_main_purse() -> Option<URef> {
     runtime::get_key(consts::CONTRACT_MAIN_PURSE).and_then(|key| key.as_uref().cloned())
 }
 
-fn initial_named_keys(schemas: Schemas, contract_schema: Option<&str>) -> NamedKeys {
+fn initial_named_keys(schemas: &Schemas, contract_schema: Option<&str>) -> NamedKeys {
     let mut named_keys = NamedKeys::new();
     named_keys.insert(
         String::from(consts::STATE_KEY),
@@ -826,6 +826,15 @@ fn deserialize_contract_result(bytes_written: usize) -> Vec<u8> {
         read_host_buffer_into(&mut dest).unwrap_or_revert();
         dest
     }
+}
+
+/// Joins two strings without `format!`, which would be the only user of the core formatting
+/// machinery in the wasm and would keep about 2 KB of it alive.
+fn concat_str(a: &str, b: &str) -> String {
+    let mut result = String::with_capacity(a.len() + b.len());
+    result.push_str(a);
+    result.push_str(b);
+    result
 }
 
 fn take_nth_caller_from_stack(n: usize) -> CallerInfo {

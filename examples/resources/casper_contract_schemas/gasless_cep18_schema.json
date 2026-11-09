@@ -508,7 +508,7 @@
     },
     {
       "name": "transfer_with_authorization",
-      "description": "Consumes a signed `TransferWithAuthorization` and moves `value` tokens from `from` to `to`. Any account may submit this call — the signature, not the caller, is what authorizes the transfer.  Reverts with [`Error::InvalidNonceLength`], [`Error::NonceAlreadyUsed`], [`Error::AuthorizationNotYetValid`], [`Error::AuthorizationExpired`], [`Error::InvalidPublicKey`], or [`Error::InvalidSignature`] if the corresponding precondition fails. On success, marks the nonce used, emits [`AuthorizationUsed`], and performs the transfer via [`Cep18::raw_transfer`].",
+      "description": "Consumes a signed `TransferWithAuthorization` and moves `value` tokens from `from` to `to`. Any account may submit this call — the signature, not the caller, is what authorizes the transfer. Reverts with [`Error::InvalidNonceLength`], [`Error::NonceAlreadyUsed`], [`Error::AuthorizationNotYetValid`], [`Error::AuthorizationExpired`], [`Error::InvalidPublicKey`], or [`Error::InvalidSignature`] if the corresponding precondition fails. On success, marks the nonce used, emits [`AuthorizationUsed`], and performs the transfer via [`Cep18::raw_transfer`].",
       "is_mutable": true,
       "is_payable": false,
       "arguments": [
@@ -571,7 +571,7 @@
     },
     {
       "name": "receive_with_authorization",
-      "description": "Like [`Self::transfer_with_authorization`], but requires `caller == to`. This lets a receiving contract atomically accept a pre-signed transfer and act on it within the same call (e.g. a \"deposit then mint LP token\" flow), while preventing any other account from triggering the transfer at a moment of their choosing.  Reverts with [`Error::InvalidCaller`] if `caller != to`. All other checks and effects mirror `transfer_with_authorization`.",
+      "description": "Like [`Self::transfer_with_authorization`], but requires `caller == to`. This lets a receiving contract atomically accept a pre-signed transfer and act on it within the same call (e.g. a \"deposit then mint LP token\" flow), while preventing any other account from triggering the transfer at a moment of their choosing. Reverts with [`Error::InvalidCaller`] if `caller != to`. All other checks and effects mirror `transfer_with_authorization`.",
       "is_mutable": true,
       "is_payable": false,
       "arguments": [
@@ -634,7 +634,7 @@
     },
     {
       "name": "permit",
-      "description": "Consumes an off-chain permit signature and sets `spender`'s allowance over `owner`'s tokens to `value`.  The caller (typically a relayer, not `owner`) supplies the signed `Permit(owner, spender, value, nonce, deadline)` typed-data digest. The contract:  1. Rejects the call if `deadline != u64::MAX` and the current block time (in seconds) is past `deadline`, a Unix timestamp in seconds (`PermitExpired`). 2. Rejects the call if `Address::from(public_key) != owner` (`InvalidPublicKey`). 3. Recomputes the EIP-712 digest using the on-chain nonce for `owner` and verifies `signature` against `public_key`. A mismatch — wrong field value or a replayed signature whose nonce has already been consumed — yields `InvalidSignature`. 4. Increments the owner's nonce and overwrites the allowance via [`Cep18::raw_approve`] (it does not add to the existing allowance).",
+      "description": "Consumes an off-chain permit signature and sets `spender`'s allowance over `owner`'s tokens to `value`. The caller (typically a relayer, not `owner`) supplies the signed `Permit(owner, spender, value, nonce, deadline)` typed-data digest. The contract: 1. Rejects the call if `deadline != u64::MAX` and the current block time (in seconds) is past `deadline`, a Unix timestamp in seconds (`PermitExpired`). 2. Rejects the call if `Address::from(public_key) != owner` (`InvalidPublicKey`). 3. Recomputes the EIP-712 digest using the on-chain nonce for `owner` and verifies `signature` against `public_key`. A mismatch — wrong field value or a replayed signature whose nonce has already been consumed — yields `InvalidSignature`. 4. Increments the owner's nonce and overwrites the allowance via [`Cep18::raw_approve`] (it does not add to the existing allowance).",
       "is_mutable": true,
       "is_payable": false,
       "arguments": [
