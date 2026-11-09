@@ -87,6 +87,11 @@ impl<T: FromBytes> FromBytes for Maybe<T> {
 }
 
 /// A trait for types that can be used as entrypoint arguments.
+#[diagnostic::on_unimplemented(
+    message = "`{Self}` cannot be an entry point argument",
+    label = "not an entry point argument type",
+    note = "an argument type is serializable and has a `CLType`: a Casper type, a type from `odra::prelude`, or a struct or enum with `#[odra::odra_type]`"
+)]
 pub trait EntrypointArgument: Sized {
     /// Returns `true` if the argument is required.
     fn is_required() -> bool;

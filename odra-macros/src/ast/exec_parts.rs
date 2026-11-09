@@ -1,421 +1,220 @@
-use super::parts_utils::{UsePreludeItem, UseSuperItem};
+use proc_macro2::{Ident, TokenStream};
+use quote::{quote, ToTokens};
+
 use crate::{
+    ast::parts_utils::{UsePreludeItem, UseSuperItem},
     ir::{FnIR, ModuleImplIR},
     utils
 };
-use quote::TokenStreamExt;
-use syn::parse_quote;
 
-#[derive(syn_derive::ToTokens)]
+/// Which contract the exec parts are built for: the module itself, or the factory that deploys
+/// instances of it. A factory's exec parts instantiate the child module.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum ExecPartsKind {
+    Module,
+    Factory
+}
+
+/// Emits `mod __xxx_exec_parts`: one `execute_<name>(env)` per function, the body every entry
+/// point runs on both the host and in wasm. It reads the arguments from the call, instantiates
+/// the module, calls the function and returns its result, with the reentrancy guard and the
+/// attached value handled around the call when the function asks for them.
 pub struct ModuleExecPartsItem {
-    parts_module: ExecPartsModuleItem,
-    #[syn(braced)]
-    brace_token: syn::token::Brace,
-    #[syn(in = brace_token)]
-    use_super: UseSuperItem,
-    #[syn(in = brace_token)]
-    use_prelude: UsePreludeItem,
-    #[syn(in = brace_token)]
-    #[to_tokens(|tokens, f| tokens.append_all(f))]
+    mod_ident: Ident,
     exec_functions: Vec<ExecFunctionItem>
 }
 
-impl TryFrom<&'_ ModuleImplIR> for ModuleExecPartsItem {
-    type Error = syn::Error;
-
-    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
+impl ModuleExecPartsItem {
+    pub(crate) fn try_new(module: &ModuleImplIR, kind: ExecPartsKind) -> syn::Result<Self> {
+        let module_ident = match kind {
+            ExecPartsKind::Module => module.module_ident()?,
+            ExecPartsKind::Factory => module.child_module_ident()?
+        };
         Ok(Self {
-            parts_module: module.try_into()?,
-            brace_token: Default::default(),
-            use_prelude: UsePreludeItem,
-            use_super: UseSuperItem,
+            mod_ident: module.exec_parts_mod_ident()?,
             exec_functions: module
-                .functions()?
+                .functions()
                 .iter()
-                .map(|f| (module, f))
-                .map(TryInto::try_into)
-                .collect::<Result<Vec<_>, _>>()?
+                .map(|f| ExecFunctionItem::try_new(f, &module_ident, kind))
+                .collect::<syn::Result<_>>()?
         })
     }
 }
 
-#[derive(syn_derive::ToTokens)]
-struct ExecFunctionItem {
-    inline_attr: syn::Attribute,
-    sig: ExecFnSignature,
-    #[syn(braced)]
-    braces: syn::token::Brace,
-    #[syn(in = braces)]
-    env_rc_stmt: syn::Stmt,
-    #[syn(in = braces)]
-    exec_env_stmt: Option<syn::Stmt>,
-    #[syn(in = braces)]
-    non_reentrant_before_stmt: Option<ExecEnvStmt>,
-    #[syn(in = braces)]
-    handle_attached_value_stmt: Option<ExecEnvStmt>,
-    #[syn(in = braces)]
-    #[to_tokens(|tokens, f| tokens.append_all(f))]
-    args: Vec<syn::Stmt>,
-    #[syn(in = braces)]
-    init_contract_stmt: syn::Stmt,
-    #[syn(in = braces)]
-    call_contract_stmt: syn::Stmt,
-    #[syn(in = braces)]
-    clear_attached_value_stmt: Option<ExecEnvStmt>,
-    #[syn(in = braces)]
-    non_reentrant_after_stmt: Option<ExecEnvStmt>,
-    #[syn(in = braces)]
-    return_stmt: syn::Stmt
-}
-
-impl TryFrom<(&'_ ModuleImplIR, &'_ FnIR)> for ExecFunctionItem {
+impl TryFrom<&ModuleImplIR> for ModuleExecPartsItem {
     type Error = syn::Error;
 
-    fn try_from(value: (&'_ ModuleImplIR, &'_ FnIR)) -> Result<Self, Self::Error> {
-        let (module, func) = value;
-        let fn_ident = func.name();
-        let result_ident = utils::ident::result();
-        let env_rc_ident = utils::ident::env_rc();
-        let env_ident = utils::ident::prefixed_env();
-        let exec_env_ident = utils::ident::exec_env();
-        let exec_env_stmt =
-            (func.is_payable() || func.is_non_reentrant() || func.has_args() || func.is_upgrader())
-                .then(|| utils::stmt::new_execution_env(&exec_env_ident, &env_rc_ident));
-        let contract_ident = utils::ident::contract();
-        let module_ident = module.module_ident()?;
-        let fn_args = func
-            .named_args()
-            .iter()
-            .map(|arg| {
-                let ident = arg.name()?;
-                let ref_token = arg.is_ref().then(|| quote::quote!(&));
-                let expr: syn::Expr = parse_quote!(#ref_token #ident);
-                Ok(expr)
-            })
-            .collect::<syn::Result<syn::punctuated::Punctuated<syn::Expr, syn::token::Comma>>>()?;
+    fn try_from(module: &ModuleImplIR) -> Result<Self, Self::Error> {
+        Self::try_new(module, ExecPartsKind::Module)
+    }
+}
 
+impl ToTokens for ModuleExecPartsItem {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let mod_ident = &self.mod_ident;
+        let exec_functions = &self.exec_functions;
+        let missing_docs_attr = utils::attr::missing_docs();
+        let use_super = UseSuperItem;
+        let use_prelude = UsePreludeItem;
+
+        tokens.extend(quote! {
+            #missing_docs_attr
+            mod #mod_ident {
+                #use_super
+                #use_prelude
+
+                #(#exec_functions)*
+            }
+        });
+    }
+}
+
+/// Emits `pub fn execute_<name>(__odra_env: ContractEnv) -> Ret { .. }`.
+struct ExecFunctionItem {
+    execute_ident: Ident,
+    return_type: syn::ReturnType,
+    /// `None` for a factory's function named `factory`, which is emitted with an empty body and
+    /// no return type.
+    body: Option<ExecFnBody>
+}
+
+impl ExecFunctionItem {
+    fn try_new(func: &FnIR, module_ident: &Ident, kind: ExecPartsKind) -> syn::Result<Self> {
+        let is_factory_placeholder = kind == ExecPartsKind::Factory && func.is_factory();
+        Ok(Self {
+            execute_ident: func.execute_name(),
+            return_type: match is_factory_placeholder {
+                true => syn::ReturnType::Default,
+                false => func.return_type()
+            },
+            body: match is_factory_placeholder {
+                true => None,
+                false => Some(ExecFnBody::try_new(func, module_ident)?)
+            }
+        })
+    }
+}
+
+impl ToTokens for ExecFunctionItem {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let Self {
+            execute_ident,
+            return_type,
+            body
+        } = self;
+        let env = utils::ident::prefixed_env();
+        let ty_contract_env = utils::ty::contract_env();
+
+        tokens.extend(quote! {
+            #[inline]
+            pub fn #execute_ident(#env: #ty_contract_env) #return_type {
+                #body
+            }
+        });
+    }
+}
+
+/// The body of an `execute_` function: what it reads from the call and how it calls the module.
+struct ExecFnBody {
+    module_ident: Ident,
+    fn_ident: Ident,
+    args: Vec<ExecArg>,
+    is_mut: bool,
+    is_payable: bool,
+    is_non_reentrant: bool,
+    /// Whether the body needs the `ExecutionEnv`: to read arguments, to guard reentrancy, to
+    /// handle the attached value, or because `upgrade` always gets one.
+    uses_exec_env: bool
+}
+
+/// An argument read from the call with `get_named_arg` and passed to the function, by reference
+/// when the function takes a reference.
+struct ExecArg {
+    name: Ident,
+    ty: syn::Type,
+    by_ref: bool
+}
+
+impl ExecFnBody {
+    fn try_new(func: &FnIR, module_ident: &Ident) -> syn::Result<Self> {
         let args = func
             .named_args()
             .iter()
-            .map(|arg| {
-                let ty = utils::ty::unreferenced_ty(&arg.ty()?);
-                Ok(utils::stmt::get_named_arg(
-                    &arg.name()?,
-                    &exec_env_ident,
-                    &ty
-                ))
+            .map(|arg| ExecArg {
+                name: arg.name(),
+                ty: utils::ty::unreferenced_ty(arg.ty()),
+                by_ref: arg.is_ref()
             })
-            .collect::<syn::Result<Vec<syn::Stmt>>>()?;
-
-        let init_contract_stmt = match func.is_mut() {
-            true => utils::stmt::new_mut_module(&contract_ident, &module_ident, &env_rc_ident),
-            false => utils::stmt::new_module(&contract_ident, &module_ident, &env_rc_ident)
-        };
-
+            .collect();
         Ok(Self {
-            inline_attr: utils::attr::inline(),
-            sig: func.try_into()?,
-            braces: Default::default(),
-            env_rc_stmt: utils::stmt::new_rc(&env_rc_ident, &env_ident),
-            exec_env_stmt,
-            non_reentrant_before_stmt: func
-                .is_non_reentrant()
-                .then(ExecEnvStmt::non_reentrant_before),
-            handle_attached_value_stmt: func.is_payable().then(ExecEnvStmt::handle_attached_value),
+            module_ident: module_ident.clone(),
+            fn_ident: func.name(),
+            uses_exec_env: func.is_payable()
+                || func.is_non_reentrant()
+                || func.has_args()
+                || func.is_upgrader(),
             args,
-            init_contract_stmt,
-            call_contract_stmt: parse_quote!(let #result_ident = #contract_ident.#fn_ident(#fn_args);),
-            clear_attached_value_stmt: func.is_payable().then(ExecEnvStmt::clear_attached_value),
-            non_reentrant_after_stmt: func
-                .is_non_reentrant()
-                .then(ExecEnvStmt::non_reentrant_after),
-            return_stmt: parse_quote!(return #result_ident;)
+            is_mut: func.is_mut(),
+            is_payable: func.is_payable(),
+            is_non_reentrant: func.is_non_reentrant()
         })
     }
 }
 
-#[derive(syn_derive::ToTokens)]
-struct ExecFnSignature {
-    vis: syn::Visibility,
-    fn_token: syn::token::Fn,
-    ident: syn::Ident,
-    #[syn(parenthesized)]
-    paren: syn::token::Paren,
-    #[syn(in = paren)]
-    env_ident: syn::Ident,
-    #[syn(in = paren)]
-    colon_token: syn::token::Colon,
-    #[syn(in = paren)]
-    env_type: syn::Type,
-    ret_ty: syn::ReturnType
-}
+impl ToTokens for ExecFnBody {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let Self {
+            module_ident,
+            fn_ident,
+            args,
+            ..
+        } = self;
+        let env = utils::ident::prefixed_env();
+        let env_rc = utils::ident::env_rc();
+        let exec_env = utils::ident::exec_env();
+        let contract = utils::ident::contract();
+        let result = utils::ident::result();
+        let ty_module = utils::ty::module();
 
-impl TryFrom<&'_ FnIR> for ExecFnSignature {
-    type Error = syn::Error;
+        let new_exec_env = self
+            .uses_exec_env
+            .then(|| quote!(let #exec_env = odra::ExecutionEnv::new(#env_rc.clone());));
+        let non_reentrant_before = self
+            .is_non_reentrant
+            .then(|| quote!(#exec_env.non_reentrant_before();));
+        let non_reentrant_after = self
+            .is_non_reentrant
+            .then(|| quote!(#exec_env.non_reentrant_after();));
+        let handle_attached_value = self
+            .is_payable
+            .then(|| quote!(#exec_env.handle_attached_value();));
+        let clear_attached_value = self
+            .is_payable
+            .then(|| quote!(#exec_env.clear_attached_value();));
+        let read_args = args.iter().map(|ExecArg { name, ty, .. }| {
+            let arg_name = name.to_string();
+            quote!(let #name = #exec_env.get_named_arg::<#ty>(#arg_name);)
+        });
+        let pass_args = args.iter().map(|ExecArg { name, by_ref, .. }| {
+            let ref_token = by_ref.then(|| quote!(&));
+            quote!(#ref_token #name)
+        });
+        let mut_token = self.is_mut.then(|| quote!(mut));
 
-    fn try_from(func: &'_ FnIR) -> Result<Self, Self::Error> {
-        Ok(Self {
-            vis: utils::syn::visibility_pub(),
-            fn_token: Default::default(),
-            ident: func.execute_name(),
-            paren: Default::default(),
-            env_ident: utils::ident::prefixed_env(),
-            colon_token: Default::default(),
-            env_type: utils::ty::contract_env(),
-            ret_ty: func.return_type()
-        })
-    }
-}
-
-#[derive(syn_derive::ToTokens)]
-struct ExecPartsModuleItem {
-    missing_docs_attr: syn::Attribute,
-    mod_token: syn::token::Mod,
-    ident: syn::Ident
-}
-
-impl TryFrom<&'_ ModuleImplIR> for ExecPartsModuleItem {
-    type Error = syn::Error;
-
-    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
-        let ident = module.exec_parts_mod_ident()?;
-        Ok(Self {
-            missing_docs_attr: utils::attr::missing_docs(),
-            mod_token: Default::default(),
-            ident
-        })
-    }
-}
-
-#[derive(syn_derive::ToTokens)]
-struct ExecEnvStmt {
-    ident: syn::Ident,
-    dot_token: syn::token::Dot,
-    call_expr: syn::ExprCall,
-    semi_token: syn::token::Semi
-}
-
-impl ExecEnvStmt {
-    fn new(call_expr: syn::ExprCall) -> Self {
-        Self {
-            ident: utils::ident::exec_env(),
-            dot_token: Default::default(),
-            call_expr,
-            semi_token: Default::default()
-        }
-    }
-
-    fn non_reentrant_before() -> Self {
-        Self::new(parse_quote!(non_reentrant_before()))
-    }
-
-    fn non_reentrant_after() -> Self {
-        Self::new(parse_quote!(non_reentrant_after()))
-    }
-
-    fn handle_attached_value() -> Self {
-        Self::new(parse_quote!(handle_attached_value()))
-    }
-
-    fn clear_attached_value() -> Self {
-        Self::new(parse_quote!(clear_attached_value()))
+        tokens.extend(quote! {
+            let #env_rc = Rc::new(#env);
+            #new_exec_env
+            #non_reentrant_before
+            #handle_attached_value
+            #(#read_args)*
+            let #mut_token #contract = <#module_ident as #ty_module>::new(#env_rc);
+            let #result = #contract.#fn_ident(#(#pass_args),*);
+            #clear_attached_value
+            #non_reentrant_after
+            return #result;
+        });
     }
 }
 
 #[cfg(test)]
-mod test {
-    use super::*;
-    use crate::test_utils::{self, mock};
-
-    #[test]
-    fn test_parts() {
-        let module = mock::module_impl();
-        let actual = ModuleExecPartsItem::try_from(&module).unwrap();
-
-        let expected = quote::quote! {
-            #[allow(missing_docs)]
-            mod __erc20_exec_parts {
-                use super::*;
-                use odra::prelude::*;
-
-                #[inline]
-                pub fn execute_init(__odra_env: odra::ContractEnv) {
-                    let __odra_env_rc = Rc::new(__odra_env);
-                    let __odra_exec_env = odra::ExecutionEnv::new(__odra_env_rc.clone());
-                    let total_supply = __odra_exec_env.get_named_arg::<Option<U256>>("total_supply");
-                    let mut __odra_contract = <Erc20 as Module>::new(__odra_env_rc);
-                    let __odra_result = __odra_contract.init(total_supply);
-                    return __odra_result;
-                }
-
-                #[inline]
-                pub fn execute_upgrade(__odra_env: odra::ContractEnv) {
-                    let __odra_env_rc = Rc::new(__odra_env);
-                    let __odra_exec_env = odra::ExecutionEnv::new(__odra_env_rc.clone());
-                    let total_supply = __odra_exec_env.get_named_arg::<Option<U256>>("total_supply");
-                    let mut __odra_contract = <Erc20 as Module>::new(__odra_env_rc);
-                    let __odra_result = __odra_contract.upgrade(total_supply);
-                    return __odra_result;
-                }
-
-                #[inline]
-                pub fn execute_total_supply(__odra_env: odra::ContractEnv) -> U256 {
-                    let __odra_env_rc = Rc::new(__odra_env);
-                    let __odra_contract = <Erc20 as Module>::new(__odra_env_rc);
-                    let __odra_result = __odra_contract.total_supply();
-                    return __odra_result;
-                }
-
-                #[inline]
-                pub fn execute_pay_to_mint(__odra_env: odra::ContractEnv) {
-                    let __odra_env_rc = Rc::new(__odra_env);
-                    let __odra_exec_env = odra::ExecutionEnv::new(__odra_env_rc.clone());
-                    __odra_exec_env.handle_attached_value();
-                    let mut __odra_contract = <Erc20 as Module>::new(__odra_env_rc);
-                    let __odra_result = __odra_contract.pay_to_mint();
-                    __odra_exec_env.clear_attached_value();
-                    return __odra_result;
-                }
-
-                #[inline]
-                pub fn execute_approve(__odra_env: odra::ContractEnv) {
-                    let __odra_env_rc = Rc::new(__odra_env);
-                    let __odra_exec_env = odra::ExecutionEnv::new(__odra_env_rc.clone());
-                    __odra_exec_env.non_reentrant_before();
-                    let to = __odra_exec_env.get_named_arg::<Address>("to");
-                    let amount = __odra_exec_env.get_named_arg::<U256>("amount");
-                    let msg = __odra_exec_env.get_named_arg::<Maybe<String>>("msg");
-                    let mut __odra_contract = <Erc20 as Module>::new(__odra_env_rc);
-                    let __odra_result = __odra_contract.approve(&to, &amount, msg);
-                    __odra_exec_env.non_reentrant_after();
-                    return __odra_result;
-                }
-
-                #[inline]
-                pub fn execute_airdrop(__odra_env: odra::ContractEnv) {
-                    let __odra_env_rc = Rc::new(__odra_env);
-                    let __odra_exec_env = odra::ExecutionEnv::new(__odra_env_rc.clone());
-                    let to = __odra_exec_env.get_named_arg::<odra::prelude::vec::Vec<Address>>("to");
-                    let amount = __odra_exec_env.get_named_arg::<U256>("amount");
-                    let __odra_contract = <Erc20 as Module>::new(__odra_env_rc);
-                    let __odra_result = __odra_contract.airdrop(&to, &amount);
-                    return __odra_result;
-                }
-
-                #[inline]
-                pub fn execute_swap(__odra_env: odra::ContractEnv) -> U256 {
-                    let __odra_env_rc = Rc::new(__odra_env);
-                    let __odra_exec_env = odra::ExecutionEnv::new(__odra_env_rc.clone());
-                    let to = __odra_exec_env.get_named_arg::<Address>("to");
-                    let amount = __odra_exec_env.get_named_arg::<U256>("amount");
-                    let mut __odra_contract = <Erc20 as Module>::new(__odra_env_rc);
-                    let __odra_result = __odra_contract.swap(to, amount);
-                    return __odra_result;
-                }
-            }
-        };
-
-        test_utils::assert_eq(actual, expected);
-    }
-
-    #[test]
-    fn test_trait_impl_parts() {
-        let module = mock::module_trait_impl();
-        let actual = ModuleExecPartsItem::try_from(&module).unwrap();
-
-        let expected = quote::quote! {
-            #[allow(missing_docs)]
-            mod __erc20_exec_parts {
-                use super::*;
-                use odra::prelude::*;
-
-                #[inline]
-                pub fn execute_total_supply(__odra_env: odra::ContractEnv) -> U256 {
-                    let __odra_env_rc = Rc::new(__odra_env);
-                    let __odra_contract = <Erc20 as Module>::new(__odra_env_rc);
-                    let __odra_result = __odra_contract.total_supply();
-                    return __odra_result;
-                }
-
-                #[inline]
-                pub fn execute_set_total_supply(__odra_env: odra::ContractEnv) -> U256 {
-                    let __odra_env_rc = Rc::new(__odra_env);
-                    let mut __odra_contract = <Erc20 as Module>::new(__odra_env_rc);
-                    let __odra_result = __odra_contract.set_total_supply();
-                    return __odra_result;
-                }
-
-                #[inline]
-                pub fn execute_pay_to_mint(__odra_env: odra::ContractEnv) {
-                    let __odra_env_rc = Rc::new(__odra_env);
-                    let __odra_exec_env = odra::ExecutionEnv::new(__odra_env_rc.clone());
-                    __odra_exec_env.handle_attached_value();
-                    let mut __odra_contract = <Erc20 as Module>::new(__odra_env_rc);
-                    let __odra_result = __odra_contract.pay_to_mint();
-                    __odra_exec_env.clear_attached_value();
-                    return __odra_result;
-                }
-            }
-        };
-
-        test_utils::assert_eq(actual, expected);
-    }
-
-    #[test]
-    fn test_delegated_parts() {
-        let module = mock::module_delegation();
-        let actual = ModuleExecPartsItem::try_from(&module).unwrap();
-
-        let expected = quote::quote! {
-            #[allow(missing_docs)]
-            mod __erc20_exec_parts {
-                use super::*;
-                use odra::prelude::*;
-
-                #[inline]
-                pub fn execute_total_supply(__odra_env: odra::ContractEnv) -> U256 {
-                    let __odra_env_rc = Rc::new(__odra_env);
-                    let __odra_contract = <Erc20 as Module>::new(__odra_env_rc);
-                    let __odra_result = __odra_contract.total_supply();
-                    return __odra_result;
-                }
-
-                #[inline]
-                pub fn execute_get_owner(__odra_env: odra::ContractEnv) -> Address {
-                    let __odra_env_rc = Rc::new(__odra_env);
-                    let __odra_contract = <Erc20 as Module>::new(__odra_env_rc);
-                    let __odra_result = __odra_contract.get_owner();
-                    return __odra_result;
-                }
-
-                #[inline]
-                pub fn execute_set_owner(__odra_env: odra::ContractEnv) {
-                    let __odra_env_rc = Rc::new(__odra_env);
-                    let __odra_exec_env = odra::ExecutionEnv::new(__odra_env_rc.clone());
-                    let new_owner = __odra_exec_env.get_named_arg::<Address>("new_owner");
-                    let mut __odra_contract = <Erc20 as Module>::new(__odra_env_rc);
-                    let __odra_result = __odra_contract.set_owner(new_owner);
-                    return __odra_result;
-                }
-
-                #[inline]
-                pub fn execute_name(__odra_env: odra::ContractEnv) -> String {
-                    let __odra_env_rc = Rc::new(__odra_env);
-                    let __odra_contract = <Erc20 as Module>::new(__odra_env_rc);
-                    let __odra_result = __odra_contract.name();
-                    return __odra_result;
-                }
-
-                #[inline]
-                pub fn execute_symbol(__odra_env: odra::ContractEnv) -> String {
-                    let __odra_env_rc = Rc::new(__odra_env);
-                    let __odra_contract = <Erc20 as Module>::new(__odra_env_rc);
-                    let __odra_result = __odra_contract.symbol();
-                    return __odra_result;
-                }
-            }
-        };
-
-        test_utils::assert_eq(actual, expected);
-    }
-}
+mod tests;

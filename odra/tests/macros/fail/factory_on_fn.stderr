@@ -1,0 +1,5 @@
+error: `#[odra::factory]` goes on the factory struct and on its impl block; this is a function
+ --> tests/macros/fail/factory_on_fn.rs:2:8
+  |
+2 | pub fn not_a_module() {}
+  |        ^^^^^^^^^^^^

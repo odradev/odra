@@ -1,8 +1,5 @@
-error: Struct or impl block expected
- --> tests/macros/fail/module_on_enum.rs:2:1
+error: `#[odra::module]` goes on the module struct and on its impl or trait block; this is an enum
+ --> tests/macros/fail/module_on_enum.rs:2:10
   |
-2 | / pub enum Contract {
-3 | |     A,
-4 | |     B
-5 | | }
-  | |_^
+2 | pub enum Contract {
+  |          ^^^^^^^^

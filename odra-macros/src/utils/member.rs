@@ -10,10 +10,6 @@ pub fn env() -> syn::ExprField {
     member(super::ident::env())
 }
 
-pub fn prefixed_env() -> syn::ExprField {
-    member(super::ident::prefixed_env())
-}
-
 fn member(ident: syn::Ident) -> syn::ExprField {
     syn::parse_quote!(self.#ident)
 }

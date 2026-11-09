@@ -1,467 +1,327 @@
-#![allow(unused_variables)]
+use proc_macro2::{Ident, TokenStream};
+use quote::{format_ident, quote, ToTokens};
+use syn::{parse_quote, punctuated::Punctuated};
 
-use crate::{ir::ModuleImplIR, utils};
-use derive_try_from_ref::TryFromRef;
-use quote::{ToTokens, TokenStreamExt};
+use crate::{
+    ir::{FnArgIR, ModuleImplIR},
+    utils
+};
 
-use super::deployer_utils::{EntrypointCallerExpr, EntrypointsInitExpr, EpcSignature};
-
-pub struct DeployImplItem {
-    ident: syn::Ident,
-    epc_fn: ContractEpcFn
+/// Which contract the deployer is built for: the module itself, or the factory that deploys
+/// instances of it. A factory has no argument structs, lists its own three entry points and runs
+/// them with the helpers of `odra::host::factory`.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum DeployerKind {
+    Module,
+    Factory
 }
 
-impl TryFrom<&'_ ModuleImplIR> for DeployImplItem {
-    type Error = syn::Error;
+/// Emits what a test needs to deploy the contract on a host: the `XxxInitArgs` and
+/// `XxxUpgradeArgs` structs when `init` and `upgrade` take arguments, and
+/// `impl EntryPointsCallerProvider for XxxHostRef`, which lists the entry points and dispatches
+/// a call by name.
+pub struct DeployerItem {
+    init_args: Option<ArgsStructItem>,
+    upgrade_args: Option<ArgsStructItem>,
+    caller_provider_impl: CallerProviderImplItem
+}
 
-    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
-        Ok(Self {
-            ident: module.host_ref_ident()?,
-            epc_fn: module.try_into()?
-        })
+impl DeployerItem {
+    pub(crate) fn try_new(module: &ModuleImplIR, kind: DeployerKind) -> syn::Result<Self> {
+        let module_name = module.module_str()?;
+        let host_ref_ident = module.host_ref_ident()?;
+        match kind {
+            DeployerKind::Module => Ok(Self {
+                init_args: match module.constructor() {
+                    Some(f) if f.has_args() => Some(ArgsStructItem {
+                        role: ArgsRole::Init,
+                        module_name: module_name.clone(),
+                        ident: module.init_args_ident()?,
+                        fields: f.named_args().iter().map(FnArgIR::name_and_ty).collect()
+                    }),
+                    _ => None
+                },
+                upgrade_args: match module.upgrader() {
+                    Some(f) if f.has_args() => Some(ArgsStructItem {
+                        role: ArgsRole::Upgrade,
+                        module_name,
+                        ident: module.upgrade_args_ident()?,
+                        fields: f.named_args().iter().map(FnArgIR::name_and_ty).collect()
+                    }),
+                    _ => None
+                },
+                caller_provider_impl: CallerProviderImplItem {
+                    host_ref_ident,
+                    entry_points: module
+                        .functions()
+                        .iter()
+                        .map(|f| {
+                            new_entry_point(
+                                f.name_str(),
+                                f.raw_typed_args(),
+                                f.is_payable(),
+                                f.is_offchain()
+                            )
+                        })
+                        .collect(),
+                    branches: CallerBranches::ExecParts {
+                        exec_parts_mod_ident: module.exec_parts_mod_ident()?,
+                        functions: module
+                            .functions()
+                            .iter()
+                            .map(|f| (f.name_str(), f.execute_name()))
+                            .collect()
+                    }
+                }
+            }),
+            DeployerKind::Factory => {
+                let factory_fns = [
+                    module.factory_fn(),
+                    module.factory_upgrade_fn(),
+                    module.factory_batch_upgrade_fn()
+                ];
+                let [new_contract_fn, upgrade_fn, batch_upgrade_fn] = &factory_fns;
+                // The batch upgrade argument is generic, so its type is given explicitly.
+                let ty_entry_point = utils::ty::odra_entry_point();
+                let ty_argument = utils::ty::odra_entry_point_arg();
+                let ty_batch_upgrade_args = utils::ty::batch_upgrade_args();
+                let ty_string = utils::ty::string();
+                let batch_upgrade_name = batch_upgrade_fn.name_str();
+                let batch_upgrade_entry_point: syn::Expr = syn::parse_quote!(#ty_entry_point::new(
+                    #ty_string::from(#batch_upgrade_name),
+                    odra::prelude::vec![
+                        #ty_argument::new::<#ty_batch_upgrade_args<odra::host::NoArgs>>(#ty_string::from("args"))
+                    ]
+                ));
+                Ok(Self {
+                    init_args: None,
+                    upgrade_args: None,
+                    caller_provider_impl: CallerProviderImplItem {
+                        host_ref_ident,
+                        entry_points: [new_contract_fn, upgrade_fn]
+                            .into_iter()
+                            .map(|f| {
+                                new_entry_point(
+                                    f.name_str(),
+                                    f.raw_typed_args(),
+                                    f.is_payable(),
+                                    false
+                                )
+                            })
+                            .chain([batch_upgrade_entry_point])
+                            .collect(),
+                        branches: CallerBranches::FactoryHelpers {
+                            child_host_ref_ident: format_ident!(
+                                "{}HostRef",
+                                module.child_module_ident()?
+                            ),
+                            event_ident: format_ident!("{}ContractDeployed", module.module_ident()?),
+                            helpers: factory_fns.iter().map(|f| (f.name_str(), f.name())).collect()
+                        }
+                    }
+                })
+            }
+        }
     }
 }
 
-impl ToTokens for DeployImplItem {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let epc_ty = utils::ty::entry_point_caller_provider();
-        let ident = &self.ident;
-        let epc_fn = &self.epc_fn;
+impl TryFrom<&ModuleImplIR> for DeployerItem {
+    type Error = syn::Error;
 
-        tokens.append_all(quote::quote! {
-            impl #epc_ty for #ident {
-                #epc_fn
+    fn try_from(module: &ModuleImplIR) -> Result<Self, Self::Error> {
+        Self::try_new(module, DeployerKind::Module)
+    }
+}
+
+impl ToTokens for DeployerItem {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let Self {
+            init_args,
+            upgrade_args,
+            caller_provider_impl
+        } = self;
+        tokens.extend(quote! {
+            #init_args
+            #upgrade_args
+            #caller_provider_impl
+        });
+    }
+}
+
+enum ArgsRole {
+    Init,
+    Upgrade
+}
+
+/// Emits `pub struct XxxInitArgs { pub a: A, .. }` deriving `IntoRuntimeArgs`, and its empty
+/// `impl odra::host::InitArgs` (or the `UpgradeArgs` pair): the typed arguments a test passes
+/// to deploy or upgrade the contract.
+struct ArgsStructItem {
+    role: ArgsRole,
+    module_name: String,
+    ident: Ident,
+    fields: Vec<(String, syn::Type)>
+}
+
+impl ToTokens for ArgsStructItem {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let ident = &self.ident;
+        let (doc, ty_trait) = match self.role {
+            ArgsRole::Init => (
+                format!(" [{}] contract constructor arguments.", self.module_name),
+                utils::ty::init_args()
+            ),
+            ArgsRole::Upgrade => (
+                format!(" [{}] contract upgrade arguments.", self.module_name),
+                utils::ty::upgrade_args()
+            )
+        };
+        let missing_docs_attr = utils::attr::missing_docs();
+        let derive_attr = utils::attr::derive_into_runtime_args();
+        let fields = self.fields.iter().map(|(name, ty)| {
+            let name = format_ident!("{}", name);
+            let ty = utils::ty::unreferenced_ty(ty);
+            quote!(pub #name: #ty)
+        });
+
+        tokens.extend(quote! {
+            #missing_docs_attr
+            #[doc = #doc]
+            #derive_attr
+            pub struct #ident {
+                #(#fields),*
+            }
+
+            impl #ty_trait for #ident {}
+        });
+    }
+}
+
+/// Emits `impl EntryPointsCallerProvider for XxxHostRef`: `entry_points_caller()` lists the
+/// entry points with their arguments and dispatches a call by its entry point name.
+struct CallerProviderImplItem {
+    host_ref_ident: Ident,
+    entry_points: Vec<syn::Expr>,
+    branches: CallerBranches
+}
+
+/// How a dispatched call is run.
+enum CallerBranches {
+    /// A module runs `__xxx_exec_parts::execute_<name>` and serializes its result.
+    ExecParts {
+        exec_parts_mod_ident: Ident,
+        /// Entry point name and the `execute_` function of each.
+        functions: Vec<(String, Ident)>
+    },
+    /// A factory runs `odra::host::factory::<name>`, which deploys or upgrades a child with the
+    /// child's entry points caller and emits `XxxContractDeployed`.
+    FactoryHelpers {
+        child_host_ref_ident: Ident,
+        event_ident: Ident,
+        /// Entry point name and the helper of each.
+        helpers: Vec<(String, Ident)>
+    }
+}
+
+impl ToTokens for CallerProviderImplItem {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let host_ref_ident = &self.host_ref_ident;
+        let entry_points_exprs = &self.entry_points;
+        let ty_provider = utils::ty::entry_point_caller_provider();
+        let ty_caller = utils::ty::entry_points_caller();
+        let entry_points = utils::ident::entry_points();
+        let contract_env = utils::ident::contract_env();
+        let call_def = utils::ident::call_def();
+        let result = utils::ident::result();
+
+        let branches = match &self.branches {
+            CallerBranches::ExecParts {
+                exec_parts_mod_ident,
+                functions
+            } => functions
+                .iter()
+                .map(|(name, execute_fn)| {
+                    quote! {
+                        #name => {
+                            let #result = #exec_parts_mod_ident::#execute_fn(#contract_env);
+                            odra::utils::try_serialize(&#result)
+                        }
+                    }
+                })
+                .collect::<TokenStream>(),
+            CallerBranches::FactoryHelpers {
+                child_host_ref_ident,
+                event_ident,
+                helpers
+            } => helpers
+                .iter()
+                .map(|(name, helper)| {
+                    quote! {
+                        #name => odra::host::factory::#helper(
+                            &#contract_env,
+                            &#call_def,
+                            <#child_host_ref_ident as #ty_provider>::entry_points_caller,
+                            |contract_name, contract_address| #event_ident {
+                                contract_name,
+                                contract_address
+                            }
+                        ),
+                    }
+                })
+                .collect::<TokenStream>()
+        };
+
+        tokens.extend(quote! {
+            impl #ty_provider for #host_ref_ident {
+                fn entry_points_caller() -> #ty_caller {
+                    let #entry_points = odra::prelude::vec![#(#entry_points_exprs),*];
+                    #ty_caller::new(#entry_points, |#contract_env, #call_def| {
+                        match #call_def.entry_point() {
+                            #branches
+                            name => Err(OdraError::VmError(
+                                odra::VmError::NoSuchMethod(odra::prelude::String::from(name))
+                            ))
+                        }
+                    })
+                }
             }
         });
     }
 }
 
-#[derive(syn_derive::ToTokens, TryFromRef)]
-#[source(ModuleImplIR)]
-#[err(syn::Error)]
-pub struct ContractEpcFn {
-    sig: EpcSignature,
-    #[syn(braced)]
-    #[default]
-    braces: syn::token::Brace,
-    #[syn(in = braces)]
-    entry_points: EntrypointsInitExpr,
-    #[syn(in = braces)]
-    caller: EntrypointCallerExpr
-}
-
-struct InitArgsItem {
-    missing_docs: syn::Attribute,
-    docs: syn::Attribute,
-    attr: syn::Attribute,
-    vis: syn::Visibility,
-    struct_token: syn::token::Struct,
-    ident: syn::Ident,
-    braces: Option<syn::token::Brace>,
-    fields: syn::punctuated::Punctuated<syn::Field, syn::Token![,]>,
-    semi: Option<syn::token::Semi>,
-    init_args_impl_item: InitArgsImplItem
-}
-
-impl quote::ToTokens for InitArgsItem {
-    fn to_tokens(&self, tokens: &mut ::proc_macro2::TokenStream) {
-        self.missing_docs.to_tokens(tokens);
-        self.docs.to_tokens(tokens);
-        self.attr.to_tokens(tokens);
-        self.vis.to_tokens(tokens);
-        self.struct_token.to_tokens(tokens);
-        self.ident.to_tokens(tokens);
-        if let Some(ref braces) = self.braces {
-            braces.surround(tokens, |tokens| {
-                self.fields.to_tokens(tokens);
-            });
-        }
-        self.semi.to_tokens(tokens);
-        self.init_args_impl_item.to_tokens(tokens);
+/// `odra::entry_point_callback::EntryPoint::new[_payable|_offchain](name, args)`.
+fn new_entry_point(
+    name: String,
+    args: Vec<syn::PatType>,
+    is_payable: bool,
+    is_offchain: bool
+) -> syn::Expr {
+    let ty = utils::ty::odra_entry_point();
+    let name = string_from(&name);
+    let args_stream = args
+        .iter()
+        .map(new_entry_point_arg)
+        .collect::<Punctuated<_, syn::Token![,]>>();
+    let args_vec: syn::Expr = parse_quote!(odra::prelude::vec![#args_stream]);
+    if is_offchain {
+        parse_quote!(#ty::new_offchain(#name, #args_vec))
+    } else if is_payable {
+        parse_quote!(#ty::new_payable(#name, #args_vec))
+    } else {
+        parse_quote!(#ty::new(#name, #args_vec))
     }
 }
-
-impl TryFrom<&'_ ModuleImplIR> for InitArgsItem {
-    type Error = syn::Error;
-
-    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
-        let constructor = module.constructor().unwrap();
-        let fields = constructor
-            .named_args()
-            .iter()
-            .map(|arg| {
-                let ty = utils::ty::unreferenced_ty(&arg.ty().unwrap());
-                let ident = arg.name().unwrap();
-                let field: syn::Field = syn::parse_quote!(pub #ident: #ty);
-                field
-            })
-            .collect::<syn::punctuated::Punctuated<syn::Field, syn::Token![,]>>();
-        let (braces, semi) = match fields.is_empty() {
-            true => (None, Some(Default::default())),
-            false => (Some(Default::default()), None)
-        };
-        Ok(Self {
-            missing_docs: utils::attr::missing_docs(),
-            docs: utils::attr::init_args_docs(module.module_str()?),
-            attr: utils::attr::derive_into_runtime_args(),
-            vis: utils::syn::visibility_pub(),
-            struct_token: Default::default(),
-            ident: module.init_args_ident()?,
-            braces,
-            fields,
-            semi,
-            init_args_impl_item: module.try_into()?
-        })
-    }
+fn new_entry_point_arg(arg: &syn::PatType) -> syn::Expr {
+    let ty = utils::ty::odra_entry_point_arg();
+    let arg_ty = utils::ty::unreferenced_ty(&arg.ty);
+    let name = string_from(&arg.pat.to_token_stream().to_string());
+    parse_quote!(#ty::new::<#arg_ty>(#name))
 }
 
-#[derive(syn_derive::ToTokens)]
-struct InitArgsImplItem {
-    impl_token: syn::token::Impl,
-    trait_ty: syn::Type,
-    for_token: syn::token::For,
-    ident: syn::Ident,
-    #[syn(braced)]
-    brace_token: syn::token::Brace
-}
-
-impl TryFrom<&'_ ModuleImplIR> for InitArgsImplItem {
-    type Error = syn::Error;
-
-    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
-        Ok(Self {
-            impl_token: Default::default(),
-            trait_ty: utils::ty::init_args(),
-            for_token: Default::default(),
-            ident: module.init_args_ident()?,
-            brace_token: Default::default()
-        })
-    }
-}
-
-struct UpgradeArgsItem {
-    missing_docs: syn::Attribute,
-    docs: syn::Attribute,
-    attr: syn::Attribute,
-    vis: syn::Visibility,
-    struct_token: syn::token::Struct,
-    ident: syn::Ident,
-    braces: Option<syn::token::Brace>,
-    fields: syn::punctuated::Punctuated<syn::Field, syn::Token![,]>,
-    semi: Option<syn::token::Semi>,
-    upgrade_args_impl_item: UpgradeArgsImplItem
-}
-
-impl quote::ToTokens for UpgradeArgsItem {
-    fn to_tokens(&self, tokens: &mut ::proc_macro2::TokenStream) {
-        self.missing_docs.to_tokens(tokens);
-        self.docs.to_tokens(tokens);
-        self.attr.to_tokens(tokens);
-        self.vis.to_tokens(tokens);
-        self.struct_token.to_tokens(tokens);
-        self.ident.to_tokens(tokens);
-        if let Some(ref braces) = self.braces {
-            braces.surround(tokens, |tokens| {
-                self.fields.to_tokens(tokens);
-            });
-        }
-        self.semi.to_tokens(tokens);
-        self.upgrade_args_impl_item.to_tokens(tokens);
-    }
-}
-
-impl TryFrom<&'_ ModuleImplIR> for UpgradeArgsItem {
-    type Error = syn::Error;
-
-    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
-        let upgrader = module.upgrader().unwrap();
-        let fields = upgrader
-            .named_args()
-            .iter()
-            .map(|arg| {
-                let ty = utils::ty::unreferenced_ty(&arg.ty().unwrap());
-                let ident = arg.name().unwrap();
-                let field: syn::Field = syn::parse_quote!(pub #ident: #ty);
-                field
-            })
-            .collect::<syn::punctuated::Punctuated<syn::Field, syn::Token![,]>>();
-        let (braces, semi) = match fields.is_empty() {
-            true => (None, Some(Default::default())),
-            false => (Some(Default::default()), None)
-        };
-        Ok(Self {
-            missing_docs: utils::attr::missing_docs(),
-            docs: utils::attr::upgrade_args_docs(module.module_str()?),
-            attr: utils::attr::derive_into_runtime_args(),
-            vis: utils::syn::visibility_pub(),
-            struct_token: Default::default(),
-            ident: module.upgrade_args_ident()?,
-            braces,
-            fields,
-            semi,
-            upgrade_args_impl_item: module.try_into()?
-        })
-    }
-}
-
-#[derive(syn_derive::ToTokens)]
-struct UpgradeArgsImplItem {
-    impl_token: syn::token::Impl,
-    trait_ty: syn::Type,
-    for_token: syn::token::For,
-    ident: syn::Ident,
-    #[syn(braced)]
-    brace_token: syn::token::Brace
-}
-
-impl TryFrom<&'_ ModuleImplIR> for UpgradeArgsImplItem {
-    type Error = syn::Error;
-
-    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
-        Ok(Self {
-            impl_token: Default::default(),
-            trait_ty: utils::ty::upgrade_args(),
-            for_token: Default::default(),
-            ident: module.upgrade_args_ident()?,
-            brace_token: Default::default()
-        })
-    }
-}
-
-#[derive(syn_derive::ToTokens)]
-pub struct DeployerItem {
-    args: Option<InitArgsItem>,
-    upgrade_args: Option<UpgradeArgsItem>,
-    impl_item: DeployImplItem
-}
-
-impl TryFrom<&'_ ModuleImplIR> for DeployerItem {
-    type Error = syn::Error;
-
-    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
-        let args = match module.constructor() {
-            Some(f) => {
-                if f.has_args() {
-                    Some(InitArgsItem::try_from(module)?)
-                } else {
-                    None
-                }
-            }
-            None => None
-        };
-        let upgrade_args = match module.upgrader() {
-            Some(f) => {
-                if f.has_args() {
-                    Some(UpgradeArgsItem::try_from(module)?)
-                } else {
-                    None
-                }
-            }
-            None => None
-        };
-        Ok(Self {
-            args,
-            upgrade_args,
-            impl_item: module.try_into()?
-        })
-    }
+fn string_from(string: &str) -> syn::Expr {
+    let ty = utils::ty::string();
+    parse_quote!(#ty::from(#string))
 }
 
 #[cfg(test)]
-mod deployer_impl {
-    use super::DeployerItem;
-    use crate::test_utils;
-    use quote::quote;
-
-    #[test]
-    fn deployer_impl() {
-        let module = test_utils::mock::module_impl();
-        let expected = quote! {
-            #[allow(missing_docs)]
-            /// [Erc20] contract constructor arguments.
-            #[derive(odra::IntoRuntimeArgs)]
-            pub struct Erc20InitArgs {
-                pub total_supply: Option<U256>
-            }
-
-            impl odra::host::InitArgs for Erc20InitArgs {
-            }
-
-            #[allow(missing_docs)]
-            /// [Erc20] contract upgrade arguments.
-            #[derive(odra::IntoRuntimeArgs)]
-            pub struct Erc20UpgradeArgs {
-                pub total_supply: Option<U256>
-            }
-            impl odra::host::UpgradeArgs for Erc20UpgradeArgs {
-            }
-
-            impl odra::host::EntryPointsCallerProvider for Erc20HostRef {
-                fn entry_points_caller() -> odra::entry_point_callback::EntryPointsCaller {
-                    let entry_points = odra::prelude::vec![
-                        odra::entry_point_callback::EntryPoint::new(
-                            odra::prelude::string::String::from("init"),
-                            odra::prelude::vec![
-                                odra::entry_point_callback::Argument::new::<Option<U256> >(odra::prelude::string::String::from("total_supply"))
-                            ]
-                        ),
-                        odra::entry_point_callback::EntryPoint::new(
-                            odra::prelude::string::String::from("upgrade"),
-                            odra::prelude::vec![
-                                odra::entry_point_callback::Argument::new::<Option<U256> >(odra::prelude::string::String::from("total_supply"))
-                            ]
-                        ),
-                        odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("total_supply"), odra::prelude::vec![]),
-                        odra::entry_point_callback::EntryPoint::new_payable(odra::prelude::string::String::from("pay_to_mint"), odra::prelude::vec![]),
-                        odra::entry_point_callback::EntryPoint::new(
-                            odra::prelude::string::String::from("approve"),
-                            odra::prelude::vec![
-                                odra::entry_point_callback::Argument::new::<Address>(odra::prelude::string::String::from("to")),
-                                odra::entry_point_callback::Argument::new::<U256>(odra::prelude::string::String::from("amount")),
-                                odra::entry_point_callback::Argument::new::<Maybe<String> >(odra::prelude::string::String::from("msg"))
-                            ]
-                        ),
-                        odra::entry_point_callback::EntryPoint::new(
-                            odra::prelude::string::String::from("airdrop"),
-                            odra::prelude::vec![
-                                odra::entry_point_callback::Argument::new::<odra::prelude::vec::Vec<Address> >(odra::prelude::string::String::from("to")),
-                                odra::entry_point_callback::Argument::new::<U256>(odra::prelude::string::String::from("amount"))
-                            ]
-                        ),
-                        odra::entry_point_callback::EntryPoint::new(
-                            odra::prelude::string::String::from("swap"),
-                            odra::prelude::vec![
-                                odra::entry_point_callback::Argument::new::<Address>(odra::prelude::string::String::from("to")),
-                                odra::entry_point_callback::Argument::new::<U256>(odra::prelude::string::String::from("amount"))
-                            ]
-                        )
-                    ];
-
-                    odra::entry_point_callback::EntryPointsCaller::new(entry_points, |__odra_contract_env, __odra_call_def| {
-                        match __odra_call_def.entry_point() {
-                            "init" => {
-                                let __odra_result = __erc20_exec_parts::execute_init(__odra_contract_env);
-                                odra::utils::try_serialize(&__odra_result)
-                            }
-                            "upgrade" => {
-                                let __odra_result = __erc20_exec_parts::execute_upgrade(__odra_contract_env);
-                                odra::utils::try_serialize(&__odra_result)
-                            }
-                            "total_supply" => {
-                                let __odra_result = __erc20_exec_parts::execute_total_supply(__odra_contract_env);
-                                odra::utils::try_serialize(&__odra_result)
-                            }
-                            "pay_to_mint" => {
-                                let __odra_result = __erc20_exec_parts::execute_pay_to_mint(__odra_contract_env);
-                                odra::utils::try_serialize(&__odra_result)
-                            }
-                            "approve" => {
-                                let __odra_result = __erc20_exec_parts::execute_approve(__odra_contract_env);
-                                odra::utils::try_serialize(&__odra_result)
-                            }
-                            "airdrop" => {
-                                let __odra_result = __erc20_exec_parts::execute_airdrop(__odra_contract_env);
-                                odra::utils::try_serialize(&__odra_result)
-                            }
-                            "swap" => {
-                                let __odra_result = __erc20_exec_parts::execute_swap(__odra_contract_env);
-                                odra::utils::try_serialize(&__odra_result)
-                            }
-                            name => Err(OdraError::VmError(
-                                odra::VmError::NoSuchMethod(odra::prelude::String::from(name)),
-                            ))
-                        }
-                    })
-                }
-            }
-        };
-        let deployer_item = DeployerItem::try_from(&module).unwrap();
-        test_utils::assert_eq(deployer_item, &expected);
-    }
-
-    #[test]
-    fn deployer_trait_impl() {
-        let module = test_utils::mock::module_trait_impl();
-        let expected = quote! {
-            impl odra::host::EntryPointsCallerProvider for Erc20HostRef {
-                fn entry_points_caller() -> odra::entry_point_callback::EntryPointsCaller {
-                    let entry_points = odra::prelude::vec![
-                        odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("total_supply"), odra::prelude::vec![]),
-                        odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("set_total_supply"), odra::prelude::vec![]),
-                        odra::entry_point_callback::EntryPoint::new_payable(odra::prelude::string::String::from("pay_to_mint"), odra::prelude::vec![])
-                    ];
-                    odra::entry_point_callback::EntryPointsCaller::new(entry_points, |__odra_contract_env, __odra_call_def| {
-                        match __odra_call_def.entry_point() {
-                            "total_supply" => {
-                                let __odra_result = __erc20_exec_parts::execute_total_supply(__odra_contract_env);
-                                odra::utils::try_serialize(&__odra_result)
-                            }
-                            "set_total_supply" => {
-                                let __odra_result = __erc20_exec_parts::execute_set_total_supply(__odra_contract_env);
-                                odra::utils::try_serialize(&__odra_result)
-                            }
-                            "pay_to_mint" => {
-                                let __odra_result = __erc20_exec_parts::execute_pay_to_mint(__odra_contract_env);
-                                odra::utils::try_serialize(&__odra_result)
-                            }
-                            name => Err(OdraError::VmError(
-                                odra::VmError::NoSuchMethod(odra::prelude::String::from(name)),
-                            ))
-                        }
-                    })
-                }
-            }
-        };
-        let deployer_item = DeployerItem::try_from(&module).unwrap();
-        test_utils::assert_eq(deployer_item, &expected);
-    }
-
-    #[test]
-    fn deployer_delegated() {
-        let module = test_utils::mock::module_delegation();
-        let expected = quote! {
-            impl odra::host::EntryPointsCallerProvider for Erc20HostRef {
-                fn entry_points_caller() -> odra::entry_point_callback::EntryPointsCaller {
-                    let entry_points = odra::prelude::vec![
-                        odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("total_supply"), odra::prelude::vec![]),
-                        odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("get_owner"), odra::prelude::vec![]),
-                        odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("set_owner"), odra::prelude::vec![
-                            odra::entry_point_callback::Argument::new::<Address>(odra::prelude::string::String::from("new_owner"))
-                        ]),
-                        odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("name"), odra::prelude::vec![]),
-                        odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("symbol"), odra::prelude::vec![])
-                    ];
-                    odra::entry_point_callback::EntryPointsCaller::new(entry_points, |__odra_contract_env, __odra_call_def| {
-                        match __odra_call_def.entry_point() {
-                            "total_supply" => {
-                                let __odra_result = __erc20_exec_parts::execute_total_supply(__odra_contract_env);
-                                odra::utils::try_serialize(&__odra_result)
-                            }
-                            "get_owner" => {
-                                let __odra_result = __erc20_exec_parts::execute_get_owner(__odra_contract_env);
-                                odra::utils::try_serialize(&__odra_result)
-                            }
-                            "set_owner" => {
-                                let __odra_result = __erc20_exec_parts::execute_set_owner(__odra_contract_env);
-                                odra::utils::try_serialize(&__odra_result)
-                            }
-                            "name" => {
-                                let __odra_result = __erc20_exec_parts::execute_name(__odra_contract_env);
-                                odra::utils::try_serialize(&__odra_result)
-                            }
-                            "symbol" => {
-                                let __odra_result = __erc20_exec_parts::execute_symbol(__odra_contract_env);
-                                odra::utils::try_serialize(&__odra_result)
-                            }
-                            name => Err(OdraError::VmError(
-                                odra::VmError::NoSuchMethod(odra::prelude::String::from(name)),
-                            ))
-                        }
-                    })
-                }
-            }
-        };
-        let deployer_item = DeployerItem::try_from(&module).unwrap();
-        test_utils::assert_eq(deployer_item, &expected);
-    }
-}
+mod tests;

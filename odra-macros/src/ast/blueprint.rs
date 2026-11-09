@@ -1,87 +1,57 @@
-use derive_try_from_ref::TryFromRef;
-use syn::parse_quote;
+use proc_macro2::{Ident, TokenStream};
+use quote::{quote, ToTokens};
 
-use crate::{ir::ModuleImplIR, utils};
+use crate::{ast::parts_utils::UseSuperItem, ir::ModuleImplIR, utils};
 
-use super::parts_utils::UseSuperItem;
-
-#[derive(syn_derive::ToTokens, TryFromRef)]
-#[source(ModuleImplIR)]
-#[err(syn::Error)]
+/// Emits `mod __xxx_schema { fn module_schema() -> ContractBlueprint }`, compiled only when the
+/// crate is built for this module: the symbol `cargo odra` calls to read the contract's
+/// blueprint out of the host build.
 pub struct BlueprintItem {
-    #[expr(utils::attr::odra_module(&input.module_str()?))]
-    attr: syn::Attribute,
-    mod_item: BlueprintModItem
+    module_name: String,
+    mod_ident: Ident,
+    module_ident: Ident
 }
 
-#[derive(syn_derive::ToTokens, TryFromRef)]
-#[source(ModuleImplIR)]
-#[err(syn::Error)]
-struct BlueprintModItem {
-    #[default]
-    mod_token: syn::token::Mod,
-    #[expr(input.schema_mod_ident()?)]
-    ident: syn::Ident,
-    #[syn(braced)]
-    #[default]
-    brace_token: syn::token::Brace,
-    #[default]
-    #[syn(in = brace_token)]
-    use_super: UseSuperItem,
-    #[syn(in = brace_token)]
-    schema_fn: SchemaFnItem
-}
-
-#[derive(syn_derive::ToTokens)]
-struct SchemaFnItem {
-    no_mangle_attr: syn::Attribute,
-    not_wasm32_attr: syn::Attribute,
-    sig: syn::Signature,
-    #[syn(braced)]
-    brace_token: syn::token::Brace,
-    #[syn(in = brace_token)]
-    expr: syn::Expr
-}
-
-impl TryFrom<&'_ ModuleImplIR> for SchemaFnItem {
+impl TryFrom<&ModuleImplIR> for BlueprintItem {
     type Error = syn::Error;
 
-    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
-        let ty_blueprint = utils::ty::contract_blueprint();
-        let ident_module_schema = utils::ident::module_schema();
-
+    fn try_from(module: &ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
-            no_mangle_attr: utils::attr::no_mangle(),
-            not_wasm32_attr: utils::attr::not_wasm32(),
-            sig: parse_quote!(fn #ident_module_schema() -> #ty_blueprint),
-            brace_token: Default::default(),
-            expr: utils::expr::new_blueprint(&module.module_ident()?)
+            module_name: module.module_str()?,
+            mod_ident: module.schema_mod_ident()?,
+            module_ident: module.module_ident()?
         })
     }
 }
 
-#[cfg(test)]
-mod test {
-    use super::BlueprintItem;
-    use crate::test_utils;
-    use quote::quote;
+impl ToTokens for BlueprintItem {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let Self {
+            module_name,
+            mod_ident,
+            module_ident
+        } = self;
+        let odra_module_attr = utils::attr::odra_module(module_name);
+        let not_wasm32_attr = utils::attr::not_wasm32();
+        let no_mangle_attr = utils::attr::no_mangle();
+        let use_super = UseSuperItem;
+        let module_schema = utils::ident::module_schema();
+        let ty_blueprint = utils::ty::contract_blueprint();
 
-    #[test]
-    fn blueprint_item() {
-        let module = test_utils::mock::module_impl();
-        let item = BlueprintItem::try_from(&module).unwrap();
-        let expected = quote!(
-            #[cfg(any(odra_module = "Erc20", odra_module = "unknown_crate::Erc20"))]
-            mod __erc20_schema {
-                use super::*;
+        tokens.extend(quote! {
+            #odra_module_attr
+            mod #mod_ident {
+                #use_super
 
-                #[no_mangle]
-                #[cfg(not(target_arch = "wasm32"))]
-                fn module_schema() -> odra::contract_def::ContractBlueprint {
-                    odra::contract_def::ContractBlueprint::new::<Erc20>()
+                #no_mangle_attr
+                #not_wasm32_attr
+                fn #module_schema() -> #ty_blueprint {
+                    #ty_blueprint::new::<#module_ident>()
                 }
             }
-        );
-        test_utils::assert_eq(item, &expected);
+        });
     }
 }
+
+#[cfg(test)]
+mod tests;

@@ -1,7 +1,5 @@
-error: Expected an enum or unit enum for #[odra_error]
- --> tests/macros/fail/odra_error_on_struct.rs:2:1
+error: `#[odra::odra_error]` goes on an enum, one variant per error; this is a struct
+ --> tests/macros/fail/odra_error_on_struct.rs:2:12
   |
-2 | / pub struct Error {
-3 | |     pub code: u16
-4 | | }
-  | |_^
+2 | pub struct Error {
+  |            ^^^^^

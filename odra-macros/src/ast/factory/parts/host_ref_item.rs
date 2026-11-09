@@ -1,5 +1,6 @@
 use derive_try_from_ref::TryFromRef;
-use quote::ToTokens;
+use proc_macro2::TokenStream;
+use quote::{quote, ToTokens};
 
 use crate::{
     ast::{
@@ -9,7 +10,9 @@ use crate::{
     ModuleImplIR
 };
 
-#[derive(syn_derive::ToTokens, TryFromRef)]
+/// Emits the host ref of a factory: the same struct and HostRef impl as a module's, with the
+/// three factory functions and their try_ versions as its methods.
+#[derive(TryFromRef)]
 #[source(ModuleImplIR)]
 #[err(syn::Error)]
 pub struct FactoryHostRefItem {
@@ -19,15 +22,32 @@ pub struct FactoryHostRefItem {
     try_impl_item: FactoryHostRefTryImplItem
 }
 
+impl ToTokens for FactoryHostRefItem {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let Self {
+            struct_item,
+            trait_impl_item,
+            impl_item,
+            try_impl_item
+        } = self;
+        tokens.extend(quote! {
+            #struct_item
+            #trait_impl_item
+            #impl_item
+            #try_impl_item
+        });
+    }
+}
+
 struct FactoryHostRefImplItem {
     ref_ident: syn::Ident,
     factory_fns: Vec<syn::ItemFn>
 }
 
-impl TryFrom<&'_ ModuleImplIR> for FactoryHostRefImplItem {
+impl TryFrom<&ModuleImplIR> for FactoryHostRefImplItem {
     type Error = syn::Error;
 
-    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
+    fn try_from(module: &ModuleImplIR) -> Result<Self, Self::Error> {
         let fns = [module.factory_fn(), module.factory_upgrade_fn(), module.factory_batch_upgrade_fn()];
         Ok(Self {
             ref_ident: module.host_ref_ident()?,
@@ -37,10 +57,10 @@ impl TryFrom<&'_ ModuleImplIR> for FactoryHostRefImplItem {
 }
 
 impl ToTokens for FactoryHostRefImplItem {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
         let ref_ident = &self.ref_ident;
         let factory_fns = &self.factory_fns;
-        tokens.extend(quote::quote! {
+        tokens.extend(quote! {
             impl #ref_ident {
                 #(#factory_fns)*
             }
@@ -53,10 +73,10 @@ struct FactoryHostRefTryImplItem {
     factory_fns: Vec<syn::ItemFn>
 }
 
-impl TryFrom<&'_ ModuleImplIR> for FactoryHostRefTryImplItem {
+impl TryFrom<&ModuleImplIR> for FactoryHostRefTryImplItem {
     type Error = syn::Error;
 
-    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
+    fn try_from(module: &ModuleImplIR) -> Result<Self, Self::Error> {
         let fns = [module.factory_fn(), module.factory_upgrade_fn(), module.factory_batch_upgrade_fn()];
 
         Ok(Self {
@@ -67,10 +87,10 @@ impl TryFrom<&'_ ModuleImplIR> for FactoryHostRefTryImplItem {
 }
 
 impl ToTokens for FactoryHostRefTryImplItem {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
         let ref_ident = &self.ref_ident;
         let factory_fns = &self.factory_fns;
-        tokens.extend(quote::quote! {
+        tokens.extend(quote! {
             impl #ref_ident {
                 #(#factory_fns)*
             }

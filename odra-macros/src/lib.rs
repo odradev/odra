@@ -1,9 +1,8 @@
 #![doc = "This crate provides a set of macros and derive attributes to simplify the process of writing"]
 #![doc = "smart contracts for the Odra platform."]
-#![feature(box_patterns)]
 use crate::utils::IntoCode;
 use ast::*;
-use ir::{ModuleImplIR, ModuleStructIR, TypeIR};
+use ir::{errors, ModuleImplIR, ModuleStructIR, TypeIR};
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 
@@ -12,14 +11,6 @@ mod ir;
 #[cfg(test)]
 mod test_utils;
 mod utils;
-
-macro_rules! span_error {
-    ($span:ident, $msg:expr) => {
-        syn::Error::new(syn::spanned::Spanned::span(&$span), $msg)
-            .to_compile_error()
-            .into()
-    };
-}
 
 /// Core element of the Odra framework, entry point for writing smart contracts.
 ///
@@ -45,7 +36,9 @@ pub fn module(attr: TokenStream, item: TokenStream) -> TokenStream {
             Err(e) => e.to_compile_error().into()
         };
     }
-    span_error!(item, "Struct or impl block expected")
+    errors::module_on_other_item(&item)
+        .to_compile_error()
+        .into()
 }
 
 fn is_impl_or_trait(item: &TokenStream2) -> bool {
@@ -75,7 +68,9 @@ pub fn factory(attr: TokenStream, item: TokenStream) -> TokenStream {
             Err(e) => e.to_compile_error().into()
         };
     }
-    span_error!(item, "Struct or impl block expected")
+    errors::factory_on_other_item(&item)
+        .to_compile_error()
+        .into()
 }
 
 /// Implements boilerplate for a type to be used in an Odra module.
@@ -85,20 +80,18 @@ pub fn factory(attr: TokenStream, item: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn odra_type(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let item = item.into();
-    if let Ok(ir) = TypeIR::try_from(&item) {
-        return OdraTypeAttrItem::try_from(&ir).into_code();
-    }
-    span_error!(item, "Struct or Enum expected")
+    TypeIR::try_from(&item)
+        .and_then(|ir| OdraTypeAttrItem::try_from(&ir))
+        .into_code()
 }
 
 /// Implements `Into<OdraError>` for an error enum.
 #[proc_macro_attribute]
 pub fn odra_error(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let item = item.into();
-    if let Ok(ir) = TypeIR::try_from(&item) {
-        return OdraErrorAttrItem::try_from(&ir).into_code();
-    }
-    span_error!(item, "Struct or Enum expected")
+    TypeIR::try_from(&item)
+        .and_then(|ir| OdraErrorAttrItem::try_from(&ir))
+        .into_code()
 }
 
 /// Provides implementation of a reference to an external contract.
@@ -111,11 +104,10 @@ pub fn external_contract(attr: TokenStream, item: TokenStream) -> TokenStream {
     let attr: TokenStream2 = attr.into();
     let item: TokenStream2 = item.into();
 
-    if syn::parse2::<syn::ItemImpl>(item.clone()).is_ok() {
-        return span_error!(
-            attr,
-            "#[external_contract] can be only applied to trait only"
-        );
+    if let Ok(item_impl) = syn::parse2::<syn::ItemImpl>(item.clone()) {
+        return errors::external_contract_on_impl(&item_impl)
+            .to_compile_error()
+            .into();
     }
     match ModuleImplIR::try_from((&attr, &item)) {
         Ok(ir) => ExternalContractImpl::try_from(&ir).into_code(),
@@ -145,7 +137,9 @@ pub fn external_contract(attr: TokenStream, item: TokenStream) -> TokenStream {
 pub fn ref_helpers(attr: TokenStream, item: TokenStream) -> TokenStream {
     let attr: TokenStream2 = attr.into();
     if !attr.is_empty() {
-        return span_error!(attr, "#[odra::ref_helpers] takes no arguments");
+        return errors::ref_helpers_with_args(&attr)
+            .to_compile_error()
+            .into();
     }
     let item: TokenStream2 = item.into();
     RefHelpersItem::try_from(&item).into_code()
@@ -160,36 +154,41 @@ pub fn event(_attr: TokenStream, input: TokenStream) -> TokenStream {
 
 /// Implements `Into<odra::casper_types::RuntimeArgs>` for a struct.
 ///
-/// This macro is used to convert a struct into a `RuntimeArgs` object.
-/// If applied to an enum or a union type, it will panic.
+/// This macro is used to convert a struct into a `RuntimeArgs` object, one named field per
+/// argument. Applied to an enum, a union or a tuple struct, it is a compile error.
 #[proc_macro_derive(IntoRuntimeArgs)]
 pub fn derive_into_runtime_args(item: TokenStream) -> TokenStream {
     let item = syn::parse_macro_input!(item as syn::DeriveInput);
-    let args_ident = syn::Ident::new("args", item.ident.span());
-    match item {
-        syn::DeriveInput {
-            ident,
-            data: syn::Data::Struct(syn::DataStruct { fields, .. }),
-            ..
-        } => {
-            let fields = fields
-                .into_iter()
-                .map(|f| {
-                    let name = f.ident.unwrap();
-                    quote::quote!(odra::args::EntrypointArgument::insert_runtime_arg(self.#name, stringify!(#name), &mut #args_ident);)
-                })
-                .collect::<proc_macro2::TokenStream>();
-            let res = quote::quote! {
-                impl Into<odra::casper_types::RuntimeArgs> for #ident {
-                    fn into(self) -> odra::casper_types::RuntimeArgs {
-                        let mut #args_ident = odra::casper_types::RuntimeArgs::new();
-                        #fields
-                        #args_ident
-                    }
-                }
-            };
-            res.into()
+    into_runtime_args(&item).into_code()
+}
+
+fn into_runtime_args(item: &syn::DeriveInput) -> syn::Result<TokenStream2> {
+    let syn::Data::Struct(syn::DataStruct { fields, .. }) = &item.data else {
+        return Err(errors::runtime_args_on_non_struct(item));
+    };
+    let names = match fields {
+        syn::Fields::Named(named) => named.named.iter().filter_map(|f| f.ident.as_ref()),
+        syn::Fields::Unnamed(_) => return Err(errors::runtime_args_on_unnamed_fields(fields)),
+        syn::Fields::Unit => return Ok(into_runtime_args_impl(&item.ident, [].into_iter()))
+    };
+    Ok(into_runtime_args_impl(&item.ident, names))
+}
+
+fn into_runtime_args_impl<'a>(
+    ident: &syn::Ident,
+    names: impl Iterator<Item = &'a syn::Ident>
+) -> TokenStream2 {
+    let args_ident = syn::Ident::new("args", ident.span());
+    let inserts = names.map(|name| {
+        quote::quote!(odra::args::EntrypointArgument::insert_runtime_arg(self.#name, stringify!(#name), &mut #args_ident);)
+    });
+    quote::quote! {
+        impl Into<odra::casper_types::RuntimeArgs> for #ident {
+            fn into(self) -> odra::casper_types::RuntimeArgs {
+                let mut #args_ident = odra::casper_types::RuntimeArgs::new();
+                #(#inserts)*
+                #args_ident
+            }
         }
-        _ => panic!("Struct expected")
     }
 }

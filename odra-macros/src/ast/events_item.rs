@@ -1,234 +1,154 @@
-use syn::parse_quote;
+use proc_macro2::{Ident, TokenStream};
+use quote::{quote, ToTokens};
 
-use crate::ast::fn_utils::FnItem;
-use crate::ast::utils::ImplItem;
-use crate::ir::TypeIR;
-use crate::utils::misc::AsBlock;
-use crate::{ir::ModuleStructIR, utils};
+use crate::{
+    ast::utils::Named,
+    ir::{ModuleStructIR, TypeIR},
+    utils
+};
 
-#[derive(syn_derive::ToTokens)]
+/// Emits `impl odra::contract_def::HasEvents for Xxx`: `events()` and `event_schemas()`, which
+/// the host and the schema use to know every event the contract can emit.
 pub struct HasEventsImplItem {
-    impl_item: ImplItem,
-    #[syn(braced)]
-    brace_token: syn::token::Brace,
-    #[syn(in = brace_token)]
-    events_fn: EventsFnsItem
+    ty_ident: Ident,
+    sources: EventSources
 }
 
-impl TryFrom<&'_ ModuleStructIR> for HasEventsImplItem {
-    type Error = syn::Error;
-
-    fn try_from(ir: &'_ ModuleStructIR) -> Result<Self, Self::Error> {
-        Ok(Self {
-            impl_item: ImplItem::has_events(ir)?,
-            brace_token: Default::default(),
-            events_fn: ir.try_into()?
-        })
+/// Where a type's events come from.
+enum EventSources {
+    /// An `#[odra::odra_type]` emits nothing.
+    None,
+    /// A factory emits its one `XxxContractDeployed` event.
+    Only(syn::Type),
+    /// A module emits the events of `#[odra::module(events = [..])]` plus those of the types of
+    /// its fields, each field type counted once.
+    Module {
+        declared: Vec<syn::Type>,
+        field_types: Vec<syn::Type>
     }
 }
 
-impl TryFrom<&'_ TypeIR> for HasEventsImplItem {
-    type Error = syn::Error;
-
-    fn try_from(ir: &'_ TypeIR) -> Result<Self, Self::Error> {
-        Ok(Self {
-            impl_item: ImplItem::has_events(ir)?,
-            brace_token: Default::default(),
-            events_fn: EventsFnsItem::empty()
-        })
-    }
-}
-
-#[derive(syn_derive::ToTokens)]
-pub struct EventsFnsItem {
-    events_fn: FnItem,
-    event_schemas_fn: FnItem
-}
-
-impl EventsFnsItem {
-    pub fn empty() -> Self {
+impl HasEventsImplItem {
+    /// The impl of a type that emits only `event_ty`.
+    pub(crate) fn only(ty_ident: Ident, event_ty: syn::Type) -> Self {
         Self {
-            events_fn: FnItem::new(
-                &utils::ident::events(),
-                vec![],
-                Self::events_ret_ty(),
-                utils::expr::empty_vec().as_block()
-            ),
-            event_schemas_fn: FnItem::new(
-                &utils::ident::event_schemas(),
-                vec![],
-                Self::schemas_ret_ty(),
-                utils::expr::empty_btree_map().as_block()
-            )
+            ty_ident,
+            sources: EventSources::Only(event_ty)
         }
     }
-
-    pub fn single(ty: &syn::Type) -> Self {
-        let into_event = utils::expr::into_event(ty);
-        Self {
-            events_fn: FnItem::new(
-                &utils::ident::events(),
-                vec![],
-                Self::events_ret_ty(),
-                utils::expr::vec(into_event).as_block()
-            ),
-            event_schemas_fn: FnItem::new(
-                &utils::ident::event_schemas(),
-                vec![],
-                Self::schemas_ret_ty(),
-                event_schemas_block(core::slice::from_ref(ty), &[])
-            )
-        }
-    }
-
-    fn events_ret_ty() -> syn::ReturnType {
-        let ev_ty = utils::ty::event();
-        let vec = utils::ty::vec_of(&ev_ty);
-        utils::misc::ret_ty(&vec)
-    }
-
-    fn schemas_ret_ty() -> syn::ReturnType {
-        let string_ty = utils::ty::string();
-        let schema_ty = utils::ty::schema();
-        let btree = utils::ty::typed_btree_map(&string_ty, &schema_ty);
-        utils::misc::ret_ty(&btree)
-    }
-
-    fn events_fn(ir: &ModuleStructIR) -> syn::Result<FnItem> {
-        let ident_events = utils::ident::events();
-        let struct_events_stmt = struct_events_stmt(ir);
-        let chain_events_expr = chain_events_expr(ir)?;
-        Ok(FnItem::new(
-            &ident_events,
-            vec![],
-            EventsFnsItem::events_ret_ty(),
-            parse_quote!({
-                #struct_events_stmt
-                #chain_events_expr
-            })
-        ))
-    }
-
-    fn event_schemas_fn(ir: &ModuleStructIR) -> Result<FnItem, syn::Error> {
-        let ident_events = utils::ident::event_schemas();
-        Ok(FnItem::new(
-            &ident_events,
-            vec![],
-            EventsFnsItem::schemas_ret_ty(),
-            event_schemas_block(&ir.events(), &ir.unique_fields_ty()?)
-        ))
-    }
 }
 
-impl TryFrom<&'_ ModuleStructIR> for EventsFnsItem {
+impl TryFrom<&ModuleStructIR> for HasEventsImplItem {
     type Error = syn::Error;
 
-    fn try_from(ir: &'_ ModuleStructIR) -> Result<Self, Self::Error> {
+    fn try_from(ir: &ModuleStructIR) -> Result<Self, Self::Error> {
         Ok(Self {
-            events_fn: Self::events_fn(ir)?,
-            event_schemas_fn: Self::event_schemas_fn(ir)?
+            ty_ident: ir.module_ident(),
+            sources: EventSources::Module {
+                declared: ir.events(),
+                field_types: ir.unique_fields_ty()?
+            }
         })
     }
 }
 
-fn struct_events_stmt(ir: &ModuleStructIR) -> syn::Stmt {
-    let events_ident = utils::ident::events();
+impl TryFrom<&TypeIR> for HasEventsImplItem {
+    type Error = syn::Error;
 
-    let struct_events = ir
-        .events()
-        .iter()
-        .map(utils::expr::into_event)
-        .collect::<syn::punctuated::Punctuated<_, syn::token::Comma>>();
-    let vec = utils::expr::vec(struct_events);
-    parse_quote!(let #events_ident = #vec;)
-}
-
-fn chain_events_expr(ir: &ModuleStructIR) -> syn::Result<syn::Expr> {
-    let ev_ty = utils::ty::event();
-    let events_ident = utils::ident::events();
-    let fields_events = ir
-        .unique_fields_ty()?
-        .iter()
-        .map(utils::expr::events)
-        .map(|expr| quote::quote!(.chain(#expr)))
-        .collect::<Vec<_>>();
-
-    Ok(parse_quote!(
-        odra::prelude::BTreeSet::<#ev_ty>::new()
-            .into_iter()
-            .chain(#events_ident)
-            #(#fields_events)*
-            .collect()
-    ))
-}
-
-/// The body of `event_schemas()`: one map, filled with `insert` for the module's own events and
-/// `extend` for the fields' maps.
-///
-/// Building it with `BTreeMap::from_iter` over a chain of the fields' iterators made rustc
-/// instantiate a sort for every module (about 7 KB of wasm each); `insert` and `extend` reuse the
-/// code the schema migration needs anyway.
-fn event_schemas_block(events: &[syn::Type], fields: &[syn::Type]) -> syn::Block {
-    let result_ident = utils::ident::result();
-    let inserts = events.iter().map(|ty| -> syn::Stmt {
-        let name = utils::expr::event_instance_name(ty);
-        let schema = utils::expr::event_instance_schema(ty);
-        parse_quote!(#result_ident.insert(#name, #schema);)
-    });
-    let extends = fields.iter().map(|ty| -> syn::Stmt {
-        let schemas = utils::expr::event_schemas(ty);
-        parse_quote!(#result_ident.extend(#schemas);)
-    });
-    let stmts = inserts.chain(extends).collect::<Vec<_>>();
-    if stmts.is_empty() {
-        return utils::expr::empty_btree_map().as_block();
+    fn try_from(ir: &TypeIR) -> Result<Self, Self::Error> {
+        Ok(Self {
+            ty_ident: ir.name()?,
+            sources: EventSources::None
+        })
     }
-    let new_btree_map = utils::expr::empty_btree_map();
-    parse_quote!({
-        let mut #result_ident = #new_btree_map;
-        #(#stmts)*
-        #result_ident
-    })
+}
+
+impl ToTokens for HasEventsImplItem {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let ty_ident = &self.ty_ident;
+        let ty_has_events = utils::ty::has_events();
+        let ty_event = utils::ty::event();
+        let ty_schema = utils::ty::schema();
+        let ty_string = utils::ty::string();
+        let ty_vec = utils::ty::vec();
+        let ty_btree_map = utils::ty::btree_map();
+        let ty_event_instance = utils::ty::event_instance();
+        let events = utils::ident::events();
+        let event_schemas = utils::ident::event_schemas();
+        let result = utils::ident::result();
+
+        let into_event = |ty: &syn::Type| quote!(<#ty as odra::contract_def::IntoEvent>::into_event());
+        // `event_schemas()` is one map filled with `insert` for the type's own events and `extend`
+        // for the fields' maps. Building it with `BTreeMap::from_iter` over a chain of the fields'
+        // iterators made rustc instantiate a sort for every module (about 7 KB of wasm each);
+        // `insert` and `extend` reuse the code the schema migration needs anyway.
+        let insert_schema = |ty: &syn::Type| {
+            quote!(#result.insert(<#ty as #ty_event_instance>::name(), <#ty as #ty_event_instance>::schema());)
+        };
+
+        let (events_body, event_schemas_body) = match &self.sources {
+            EventSources::None => (quote!(#ty_vec::new()), quote!(#ty_btree_map::new())),
+            EventSources::Only(ty) => {
+                let into_event = into_event(ty);
+                let insert = insert_schema(ty);
+                (
+                    quote!(odra::prelude::vec![#into_event]),
+                    quote! {
+                        let mut #result = #ty_btree_map::new();
+                        #insert
+                        #result
+                    }
+                )
+            }
+            EventSources::Module {
+                declared,
+                field_types
+            } => {
+                let into_events = declared.iter().map(into_event);
+                let field_events = field_types
+                    .iter()
+                    .map(|ty| quote!(.chain(<#ty as #ty_has_events>::events())));
+                let inserts = declared.iter().map(insert_schema);
+                let extends = field_types
+                    .iter()
+                    .map(|ty| quote!(#result.extend(<#ty as #ty_has_events>::event_schemas());));
+                let schema_stmts = inserts.chain(extends).collect::<Vec<_>>();
+                let event_schemas_body = if schema_stmts.is_empty() {
+                    quote!(#ty_btree_map::new())
+                } else {
+                    quote! {
+                        let mut #result = #ty_btree_map::new();
+                        #(#schema_stmts)*
+                        #result
+                    }
+                };
+                (
+                    quote! {
+                        let #events = odra::prelude::vec![#(#into_events),*];
+                        odra::prelude::BTreeSet::<#ty_event>::new()
+                            .into_iter()
+                            .chain(#events)
+                            #(#field_events)*
+                            .collect()
+                    },
+                    event_schemas_body
+                )
+            }
+        };
+
+        tokens.extend(quote! {
+            impl #ty_has_events for #ty_ident {
+                fn #events() -> #ty_vec<#ty_event> {
+                    #events_body
+                }
+
+                fn #event_schemas() -> #ty_btree_map<#ty_string, #ty_schema> {
+                    #event_schemas_body
+                }
+            }
+        });
+    }
 }
 
 #[cfg(test)]
-mod test {
-    use crate::test_utils;
-    use quote::quote;
-
-    use super::HasEventsImplItem;
-
-    #[test]
-    fn counter_pack() {
-        let module = test_utils::mock::module_definition();
-        let expected = quote!(
-            impl odra::contract_def::HasEvents for CounterPack {
-                fn events() -> odra::prelude::vec::Vec<odra::contract_def::Event> {
-                    let events = odra::prelude::vec![
-                        <OnTransfer as odra::contract_def::IntoEvent>::into_event(),
-                        <OnApprove as odra::contract_def::IntoEvent>::into_event()
-                    ];
-                    odra::prelude::BTreeSet::<odra::contract_def::Event>::new()
-                        .into_iter()
-                        .chain(events)
-                        .chain(<Mapping<u8, Counter> as odra::contract_def::HasEvents>::events())
-                        .chain(<SubModule<Counter> as odra::contract_def::HasEvents>::events())
-                        .chain(<Var<u32> as odra::contract_def::HasEvents>::events())
-                        .collect()
-                }
-
-                fn event_schemas() -> odra::prelude::BTreeMap<odra::prelude::string::String, odra::casper_event_standard::Schema> {
-                    let mut __odra_result = odra::prelude::BTreeMap::new();
-                    __odra_result.insert(<OnTransfer as odra::casper_event_standard::EventInstance>::name(), <OnTransfer as odra::casper_event_standard::EventInstance>::schema());
-                    __odra_result.insert(<OnApprove as odra::casper_event_standard::EventInstance>::name(), <OnApprove as odra::casper_event_standard::EventInstance>::schema());
-                    __odra_result.extend(<Mapping<u8, Counter> as odra::contract_def::HasEvents>::event_schemas());
-                    __odra_result.extend(<SubModule<Counter> as odra::contract_def::HasEvents>::event_schemas());
-                    __odra_result.extend(<Var<u32> as odra::contract_def::HasEvents>::event_schemas());
-                    __odra_result
-                }
-            }
-        );
-        let actual = HasEventsImplItem::try_from(&module).unwrap();
-        test_utils::assert_eq(actual, expected);
-    }
-}
+mod tests;

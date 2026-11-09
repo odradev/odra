@@ -1,35 +1,35 @@
-error: Entrypoint name `new` is reserved
-  --> tests/macros/fail/reserved_entrypoint_names.rs:11:9
+error: `new` is a reserved entry point name; rename the function
+  --> tests/macros/fail/reserved_entrypoint_names.rs:11:12
    |
 11 |     pub fn new(&self) -> u32 {
-   |         ^^^^^^^^^^^^^^^^^^^^
+   |            ^^^
 
-error: Entrypoint name `env` is reserved
-  --> tests/macros/fail/reserved_entrypoint_names.rs:23:9
+error: `env` is a reserved entry point name; rename the function
+  --> tests/macros/fail/reserved_entrypoint_names.rs:23:12
    |
 23 |     pub fn env(&self) -> u32 {
-   |         ^^^^^^^^^^^^^^^^^^^^
+   |            ^^^
 
-error: Entrypoint name `address` is reserved
-  --> tests/macros/fail/reserved_entrypoint_names.rs:35:9
+error: `address` is a reserved entry point name; rename the function
+  --> tests/macros/fail/reserved_entrypoint_names.rs:35:12
    |
 35 |     pub fn address(&self) -> u32 {
-   |         ^^^^^^^^^^^^^^^^^^^^^^^^
+   |            ^^^^^^^
 
-error: Entrypoint name `new_contract` is reserved
-  --> tests/macros/fail/reserved_entrypoint_names.rs:47:9
+error: `new_contract` is a reserved entry point name; rename the function
+  --> tests/macros/fail/reserved_entrypoint_names.rs:47:12
    |
 47 |     pub fn new_contract(&self) -> u32 {
-   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |            ^^^^^^^^^^^^
 
-error: Entrypoint name `upgrade_child_contract` is reserved
-  --> tests/macros/fail/reserved_entrypoint_names.rs:59:9
+error: `upgrade_child_contract` is a reserved entry point name; rename the function
+  --> tests/macros/fail/reserved_entrypoint_names.rs:59:12
    |
 59 |     pub fn upgrade_child_contract(&self) -> u32 {
-   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |            ^^^^^^^^^^^^^^^^^^^^^^
 
-error: Entrypoint name `batch_upgrade_child_contract` is reserved
-  --> tests/macros/fail/reserved_entrypoint_names.rs:71:9
+error: `batch_upgrade_child_contract` is a reserved entry point name; rename the function
+  --> tests/macros/fail/reserved_entrypoint_names.rs:71:12
    |
 71 |     pub fn batch_upgrade_child_contract(&self) -> u32 {
-   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^

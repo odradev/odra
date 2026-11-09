@@ -1,4 +1,8 @@
-use crate::ir::{FnType, ModuleImplIR};
+//! The functions of the contract ref and the host ref: one per entry point, each a call to
+//! the contract with the arguments as runtime args. Built once here for the module and the
+//! factory refs.
+
+use crate::ir::FnType;
 use crate::utils::syn::visibility_default;
 use crate::utils::ty;
 use crate::{
@@ -6,7 +10,7 @@ use crate::{
     ir::{FnArgIR, FnIR},
     utils::{self, syn::visibility_pub}
 };
-use quote::{ToTokens, format_ident};
+use quote::format_ident;
 use syn::{parse_quote, Attribute, Visibility};
 
 pub fn host_try_function_item(fun: &FnIR) -> syn::ItemFn {
@@ -128,7 +132,7 @@ fn call_def_with_amount(fun: &FnIR) -> syn::Expr {
     let args_block = runtime_args_with_amount_block(fun, insert_arg_stmt);
     let is_mut = fun.is_mut();
     let attached_value = utils::member::attached_value();
-    let fun_name = utils::expr::string_from(fun_name_str);
+    let fun_name = string_from(fun_name_str);
 
     syn::parse_quote!(#ty_call_def::new(#fun_name, #is_mut, #args_block).with_amount(#attached_value))
 }
@@ -136,17 +140,17 @@ fn call_def_with_amount(fun: &FnIR) -> syn::Expr {
 fn factory_call_def_with_amount(fun: &FnIR) -> syn::Expr {
     let ty_call_def = utils::ty::call_def();
     let fun_name_str = fun.name_str();
-    let new_runtime_args = utils::expr::new_runtime_args();
+    let new_runtime_args = new_runtime_args();
     let args = utils::ident::named_args();
     let is_mut = fun.is_mut();
-    let fun_name = utils::expr::string_from(fun_name_str);
+    let fun_name = string_from(fun_name_str);
     let ty_ep_arg = utils::ty::entry_point_arg();
     let fn_args = fun
         .named_args()
         .iter()
         .map(|arg| {
-            let ident = arg.name().unwrap();
-            let name = ident.to_string();
+            let ident = arg.name_spanned_as_type();
+            let name = arg.name_str();
             quote::quote!(#ty_ep_arg::insert_runtime_arg(#ident, #name, &mut #args);)
         })
         .collect::<Vec<_>>();
@@ -213,7 +217,7 @@ fn runtime_args_with_amount_block<F: FnMut(&FnArgIR) -> syn::Stmt>(
     fun: &FnIR,
     insert_arg_fn: F
 ) -> syn::Block {
-    let runtime_args = utils::expr::new_runtime_args();
+    let runtime_args = new_runtime_args();
     let args = utils::ident::named_args();
     let insert_amount = insert_amount_arg_stmt();
     let ty = utils::ty::entry_point_arg();
@@ -237,7 +241,7 @@ fn runtime_args_with_amount_block<F: FnMut(&FnArgIR) -> syn::Stmt>(
 
 fn insert_amount_arg_stmt() -> syn::Stmt {
     let ident = utils::ident::named_args();
-    let zero = utils::expr::u512_zero();
+    let zero = u512_zero();
     let attached_value = utils::member::attached_value();
 
     syn::parse_quote!(
@@ -248,61 +252,22 @@ fn insert_amount_arg_stmt() -> syn::Stmt {
 }
 
 pub fn insert_arg_stmt(arg: &FnArgIR) -> syn::Stmt {
-    let ident = arg.name().unwrap();
-    let name = ident.to_string();
+    let ident = arg.name_spanned_as_type();
+    let name = arg.name_str();
     let args = utils::ident::named_args();
     let ty = ty::entry_point_arg();
     syn::parse_quote!(#ty::insert_runtime_arg(#ident, #name, &mut #args);)
 }
 
-pub struct SchemaErrorsItem {
-    ident: syn::Ident
+fn new_runtime_args() -> syn::Expr {
+    let ty = utils::ty::runtime_args();
+    parse_quote!(#ty::new())
 }
-
-impl TryFrom<&ModuleImplIR> for SchemaErrorsItem {
-    type Error = syn::Error;
-
-    fn try_from(ir: &ModuleImplIR) -> Result<Self, Self::Error> {
-        Ok(Self {
-            ident: ir.contract_ref_ident()?
-        })
-    }
+fn u512_zero() -> syn::Expr {
+    let ty = utils::ty::u512();
+    parse_quote!(#ty::zero())
 }
-
-impl ToTokens for SchemaErrorsItem {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let ident = &self.ident;
-        let item = quote::quote!(
-            #[automatically_derived]
-            #[cfg(not(target_arch = "wasm32"))]
-            impl odra::schema::SchemaErrors for #ident {}
-        );
-        item.to_tokens(tokens);
-    }
-}
-
-pub struct SchemaEventsItem {
-    ident: syn::Ident
-}
-
-impl TryFrom<&ModuleImplIR> for SchemaEventsItem {
-    type Error = syn::Error;
-
-    fn try_from(ir: &ModuleImplIR) -> Result<Self, Self::Error> {
-        Ok(Self {
-            ident: ir.contract_ref_ident()?
-        })
-    }
-}
-
-impl ToTokens for SchemaEventsItem {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let ident = &self.ident;
-        let item = quote::quote!(
-            #[automatically_derived]
-            #[cfg(not(target_arch = "wasm32"))]
-            impl odra::schema::SchemaEvents for #ident {}
-        );
-        item.to_tokens(tokens);
-    }
+fn string_from(string: String) -> syn::Expr {
+    let ty = utils::ty::string();
+    parse_quote!(#ty::from(#string))
 }

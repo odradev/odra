@@ -7,6 +7,10 @@ pub mod impl_item;
 mod parts;
 pub mod struct_item;
 
+pub(crate) use parts::{FactoryDeployImplItem, FactoryHostRefItem, FactoryWasmFnsItem};
+
+/// Emits `#[odra::factory] pub struct XxxFactory;` for a module with `factory = on`: the
+/// factory's own struct, expanded by the factory macro in turn. Nothing for other modules.
 pub struct FactoryModuleItem {
     is_factory: bool,
     factory_module_ident: syn::Ident,
@@ -40,22 +44,31 @@ impl ToTokens for FactoryModuleItem {
     }
 }
 
+/// Emits `#[odra::factory] impl XxxFactory { .. }` for a module with `factory = on`: the
+/// module's entry points with bodies that revert, as a factory's instance is never called with
+/// them; only their signatures matter, for the child's templates. Nothing for other modules.
 pub struct FactoryModuleImplItem {
     is_factory: bool,
     factory_module_ident: syn::Ident,
-    functions: Vec<FnIR>
+    /// The functions of the impl block, as written.
+    functions: Vec<syn::ImplItemFn>
 }
 
 impl TryFrom<&ModuleImplIR> for FactoryModuleImplItem {
     type Error = syn::Error;
 
     fn try_from(ir: &ModuleImplIR) -> Result<Self, Self::Error> {
-        let functions = ir.functions()?;
-        // functions.push(ir.factory_fn());
         Ok(Self {
             is_factory: ir.is_factory(),
             factory_module_ident: ir.factory_module_ident()?,
-            functions
+            functions: ir
+                .functions()
+                .iter()
+                .filter_map(|f| match f {
+                    FnIR::Impl(fn_impl_ir) => Some(fn_impl_ir.raw()),
+                    _ => None
+                })
+                .collect()
         })
     }
 }
@@ -71,12 +84,7 @@ impl ToTokens for FactoryModuleImplItem {
         let functions = &self
             .functions
             .iter()
-            .filter_map(|f| match f {
-                FnIR::Impl(fn_impl_ir) => Some(fn_impl_ir),
-                _ => None
-            })
-            .map(|f| {
-                let raw = f.raw();
+            .map(|raw| {
                 // The body only reverts, so the arguments of the copied signature go unused.
                 let mut attrs = raw.attrs.clone();
                 attrs.push(parse_quote!(#[allow(unused_variables)]));
@@ -85,7 +93,7 @@ impl ToTokens for FactoryModuleImplItem {
                     block: parse_quote!({
                         self.env().revert(OdraError::ExecutionError(ExecutionError::FactoryModuleCall));
                     }),
-                    ..raw
+                    ..raw.clone()
                 }
             })
             .collect::<Vec<_>>();
@@ -101,54 +109,4 @@ impl ToTokens for FactoryModuleImplItem {
 }
 
 #[cfg(test)]
-mod test {
-    use super::*;
-    use crate::test_utils::{self, mock};
-
-    #[test]
-    fn test_factory_module_item_generation() {
-        let ir = mock::factory_module_definition();
-        let actual = FactoryModuleItem::try_from(&ir).expect("A valid FactoryModuleItem");
-
-        let expected = quote::quote! {
-            #[automatically_derived]
-            #[odra::factory]
-            pub struct CounterPackFactory;
-        };
-        test_utils::assert_eq(actual, expected);
-    }
-
-    #[test]
-    fn test_non_factory_module_item_generation() {
-        let ir = mock::module_definition();
-        let actual = FactoryModuleItem::try_from(&ir).expect("A valid FactoryModuleItem");
-
-        let expected = quote::quote! {};
-        test_utils::assert_eq(actual, expected);
-    }
-
-    #[test]
-    fn test_factory_module_impl_item_generation() {
-        let ir = mock::module_factory_on();
-        let actual = FactoryModuleImplItem::try_from(&ir).expect("A valid FactoryModuleImplItem");
-
-        let expected = quote::quote! {
-            #[automatically_derived]
-            #[odra::factory]
-            impl Erc20Factory {
-                /// Returns the total supply of the token.
-                #[allow(unused_variables)]
-                pub fn total_supply(&self) -> U256 {
-                    self.env().revert(OdraError::ExecutionError(ExecutionError::FactoryModuleCall));
-                }
-                /// Pay to mint.
-                #[odra(payable)]
-                #[allow(unused_variables)]
-                pub fn pay_to_mint(&mut self) {
-                    self.env().revert(OdraError::ExecutionError(ExecutionError::FactoryModuleCall));
-                }
-            }
-        };
-        test_utils::assert_eq(actual, expected);
-    }
-}
+mod tests;

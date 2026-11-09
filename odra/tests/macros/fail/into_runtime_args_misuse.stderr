@@ -1,0 +1,11 @@
+error: `#[derive(IntoRuntimeArgs)]` goes on a struct with named fields, one field per argument; this is not a struct
+ --> tests/macros/fail/into_runtime_args_misuse.rs:5:10
+  |
+5 | pub enum Args {
+  |          ^^^^
+
+error: `#[derive(IntoRuntimeArgs)]` needs named fields, as a field's name is the argument's name; write `struct Args { name: Type }`
+  --> tests/macros/fail/into_runtime_args_misuse.rs:11:17
+   |
+11 | pub struct Tuple(u32, u32);
+   |                 ^^^^^^^^^^

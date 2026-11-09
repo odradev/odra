@@ -100,14 +100,6 @@ pub fn cl_type() -> syn::Type {
     parse_quote!(odra::casper_types::CLType)
 }
 
-pub fn cl_type_any() -> syn::Type {
-    parse_quote!(odra::casper_types::CLType::Any)
-}
-
-pub fn cl_type_u8() -> syn::Type {
-    parse_quote!(odra::casper_types::CLType::U8)
-}
-
 pub fn runtime_args() -> syn::Type {
     parse_quote!(odra::casper_types::RuntimeArgs)
 }
@@ -156,49 +148,8 @@ pub fn string() -> syn::Type {
     parse_quote!(odra::prelude::string::String)
 }
 
-pub fn result(ty: &syn::Type, err_ty: &syn::Type) -> syn::Type {
-    parse_quote!(Result<#ty, #err_ty>)
-}
-
-pub fn bytes_result(ty: &syn::Type) -> syn::Type {
-    result(ty, &bytes_err())
-}
-
-pub fn self_ref() -> syn::Type {
-    parse_quote!(&self)
-}
-
-pub fn bytes_slice() -> syn::Type {
-    parse_quote!(&[u8])
-}
-
-#[allow(non_snake_case)]
-pub fn _Self() -> syn::Type {
-    parse_quote!(Self)
-}
-
-pub fn _self() -> syn::Type {
-    parse_quote!(self)
-}
-
 pub fn vec() -> syn::Type {
     parse_quote!(odra::prelude::vec::Vec)
-}
-
-pub fn vec_of(ty: &syn::Type) -> syn::Type {
-    parse_quote!(odra::prelude::vec::Vec<#ty>)
-}
-
-pub fn bytes_vec() -> syn::Type {
-    parse_quote!(odra::prelude::vec::Vec<u8>)
-}
-
-pub fn usize() -> syn::Type {
-    parse_quote!(usize)
-}
-
-pub fn u8() -> syn::Type {
-    parse_quote!(u8)
 }
 
 pub fn from<T: ToTokens>(ty: &T) -> syn::Type {
@@ -227,7 +178,9 @@ pub fn odra_entry_point_arg() -> syn::Type {
 
 fn slice_to_vec(ty: &syn::Type) -> syn::Type {
     match ty {
-        syn::Type::Slice(ty) => vec_of(ty.elem.as_ref()),
+        syn::Type::Slice(syn::TypeSlice { elem, .. }) => {
+            parse_quote!(odra::prelude::vec::Vec<#elem>)
+        }
         _ => ty.clone()
     }
 }
