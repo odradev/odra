@@ -1,21 +1,28 @@
-use derive_try_from_ref::TryFromRef;
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 
 use crate::{
-    ast::{schema::SchemaErrorItem, utils::Named},
-    ir::{errors, TypeIR, TypeKind},
-    utils
+    ast::{schema::SchemaErrorItem},
+    ir::{TypeIR, VariantIR}
 };
 
 /// Emits everything `#[odra::odra_error]` adds to an error enum: the `From` impls
 /// ([OdraErrorItem]) and its schema.
-#[derive(TryFromRef)]
-#[source(TypeIR)]
-#[err(syn::Error)]
 pub struct OdraErrorAttrItem {
     item: OdraErrorItem,
     schema: SchemaErrorItem
+}
+
+impl TryFrom<&TypeIR> for OdraErrorAttrItem {
+    type Error = syn::Error;
+
+    fn try_from(ir: &TypeIR) -> Result<Self, Self::Error> {
+        let variants = ir.error_variants()?;
+        Ok(Self {
+            item: OdraErrorItem::new(ir, variants),
+            schema: SchemaErrorItem::new(ir.ident(), variants)
+        })
+    }
 }
 
 impl ToTokens for OdraErrorAttrItem {
@@ -33,19 +40,14 @@ pub struct OdraErrorItem {
     variants: Vec<Ident>
 }
 
-impl TryFrom<&TypeIR> for OdraErrorItem {
-    type Error = syn::Error;
-
-    fn try_from(ty: &TypeIR) -> Result<Self, Self::Error> {
-        let variants = match ty.kind()? {
-            TypeKind::Enum { variants } | TypeKind::UnitEnum { variants } => variants,
-            TypeKind::Struct { .. } => return Err(errors::error_on_struct(ty.self_code()))
-        };
-        Ok(Self {
+impl OdraErrorItem {
+    /// `variants` are the enum's, see [TypeIR::error_variants].
+    pub fn new(ty: &TypeIR, variants: &[VariantIR]) -> Self {
+        Self {
             item: ty.self_code().clone(),
-            ident: ty.name()?,
+            ident: ty.ident(),
             variants: variants.iter().map(|v| v.ident.clone()).collect()
-        })
+        }
     }
 }
 
@@ -56,26 +58,21 @@ impl ToTokens for OdraErrorItem {
             ident,
             variants
         } = self;
-        let ty_odra_error = utils::ty::odra_error();
-        let ty_from = utils::ty::from(ident);
-        let wasm32_attr = utils::attr::wasm32();
-        let not_wasm32_attr = utils::attr::not_wasm32();
-        let derived_attr = utils::attr::automatically_derived();
 
         tokens.extend(quote! {
             #item
 
-            #wasm32_attr
-            #derived_attr
-            impl #ty_from for #ty_odra_error {
+            #[cfg(target_arch = "wasm32")]
+            #[automatically_derived]
+            impl ::core::convert::From<#ident> for OdraError {
                 fn from(error: #ident) -> Self {
-                    #ty_odra_error::user(error as u16)
+                    OdraError::user(error as u16)
                 }
             }
 
-            #not_wasm32_attr
-            #derived_attr
-            impl #ty_from for #ty_odra_error {
+            #[cfg(not(target_arch = "wasm32"))]
+            #[automatically_derived]
+            impl ::core::convert::From<#ident> for OdraError {
                 fn from(error: #ident) -> Self {
                     match error {
                         #(#ident::#variants => OdraError::user(error as u16, stringify!(#variants)),)*

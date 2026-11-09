@@ -16,10 +16,10 @@ impl TryFrom<&'_ ModuleImplIR> for FactoryContractItem {
 
     fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
-            module_ident: module.module_ident()?,
-            child_ident: module.child_module_ident()?,
-            host_ref: module.host_ref_ident()?,
-            contract_ref: module.contract_ref_ident()?
+            module_ident: module.module_ident(),
+            child_ident: module.child_module_ident(),
+            host_ref: module.host_ref_ident(),
+            contract_ref: module.contract_ref_ident()
         })
     }
 }

@@ -1,6 +1,5 @@
 use crate::{
-    ast::utils::Named,
-    ir::{errors, EnumeratedTypedField, ModuleStructIR, TypeIR},
+    ir::{EnumeratedTypedField, ModuleStructIR, VariantIR},
     utils
 };
 use quote::ToTokens;
@@ -50,7 +49,7 @@ impl TryFrom<&ModuleStructIR> for SchemaErrorsItem {
         Ok(Self {
             module_ident: ir.module_ident(),
             errors: ir.errors(),
-            fields: ir.typed_fields()?
+            fields: ir.typed_fields().to_vec()
         })
     }
 }
@@ -59,20 +58,23 @@ impl TryFrom<&ModuleStructIR> for SchemaErrorsItem {
 /// `odra::schema::error(name, description, code)` per variant.
 pub struct SchemaErrorItem {
     ty_ident: syn::Ident,
-    errors: Vec<syn::Variant>
+    /// Name, description and code of each error.
+    errors: Vec<(String, String, u16)>
 }
 
 impl ToTokens for SchemaErrorItem {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let ident = &self.ty_ident;
-        let errors = enum_variants(&self.errors);
+        let errors = self.errors.iter().map(|(name, description, code)| {
+            quote::quote!(odra::schema::error(#name, #description, #code),)
+        });
 
         let item = quote::quote! {
             #[automatically_derived]
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::SchemaErrors for #ident {
                 fn schema_errors() -> odra::prelude::Vec<odra::schema::casper_contract_schema::UserError> {
-                    #errors
+                    odra::prelude::vec![#(#errors)*]
                 }
             }
         };
@@ -80,27 +82,23 @@ impl ToTokens for SchemaErrorItem {
     }
 }
 
-impl TryFrom<&TypeIR> for SchemaErrorItem {
-    type Error = syn::Error;
-
-    fn try_from(ir: &TypeIR) -> Result<Self, Self::Error> {
-        if let syn::Item::Enum(e) = ir.self_code() {
-            let variants = utils::syn::extract_unit_variants(e)?;
-            Ok(Self {
-                ty_ident: ir.name()?,
-                errors: variants
-            })
-        } else {
-            Err(errors::error_on_struct(ir.self_code()))
+impl SchemaErrorItem {
+    /// `variants` are the enum's, see [crate::ir::TypeIR::error_variants].
+    pub fn new(ty_ident: syn::Ident, variants: &[VariantIR]) -> Self {
+        Self {
+            ty_ident,
+            errors: variants
+                .iter()
+                .map(|v| {
+                    (
+                        v.ident.to_string(),
+                        utils::syn::docs_description(&v.docs),
+                        v.code
+                    )
+                })
+                .collect()
         }
     }
-}
-
-fn enum_variants(variants: &[syn::Variant]) -> proc_macro2::TokenStream {
-    utils::syn::transform_variants(variants, |name, _, discriminant, docs| {
-        let description = utils::syn::docs_description(&docs);
-        quote::quote!(odra::schema::error(#name, #description, #discriminant),)
-    })
 }
 
 /// Emits an empty `impl odra::schema::SchemaErrors` for a factory, which has no errors of its own.

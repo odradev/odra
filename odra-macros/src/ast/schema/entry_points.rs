@@ -21,7 +21,7 @@ impl TryFrom<&ModuleImplIR> for SchemaEntrypointsItem {
 
     fn try_from(module: &ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
-            module_ident: module.module_ident()?,
+            module_ident: module.module_ident(),
             entry_points: module
                 .onchain_functions()
                 .into_iter()
@@ -93,7 +93,7 @@ impl TryFrom<&ModuleImplIR> for FactorySchemaEntrypointsItem {
             module.factory_batch_upgrade_fn()
         ];
         Ok(Self(SchemaEntrypointsItem {
-            module_ident: module.module_ident()?,
+            module_ident: module.module_ident(),
             entry_points: bare_constructor
                 .into_iter()
                 .chain(factory_fns.iter().map(SchemaEntryPoint::new))
@@ -145,16 +145,11 @@ impl SchemaEntryPoint {
         };
         let mut args = match f.fn_type() {
             // The batch upgrade argument is generic, so its schema type is given explicitly.
-            FnType::FactoryBatchUpgrader => vec![(String::from("args"), utils::ty::bytes())],
+            FnType::FactoryBatchUpgrader => vec![(String::from("args"), parse_quote!(odra::casper_types::bytesrepr::Bytes))],
             _ => f
-                .raw_typed_args()
+                .args()
                 .iter()
-                .map(|syn::PatType { pat, ty, .. }| {
-                    (
-                        pat.to_token_stream().to_string(),
-                        utils::ty::unreferenced_ty(ty)
-                    )
-                })
+                .map(|arg| (arg.name_str(), utils::ty::unreferenced_ty(arg.ty())))
                 .collect()
         };
         if f.is_payable() {

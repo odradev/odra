@@ -1,7 +1,7 @@
 use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote, ToTokens};
 
-use crate::{ast::events_item::HasEventsImplItem, ir::ModuleStructIR, utils};
+use crate::{ast::events_item::HasEventsImplItem, ir::ModuleStructIR};
 
 /// Emits `#[odra::event] pub struct XxxContractDeployed { contract_name, contract_address }`,
 /// the event a factory emits for every child it deploys or upgrades.
@@ -22,13 +22,11 @@ impl TryFrom<&ModuleStructIR> for FactoryEventItem {
 impl ToTokens for FactoryEventItem {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let event_ident = &self.event_ident;
-        let ty_string = utils::ty::string();
-        let ty_address = utils::ty::address();
         tokens.extend(quote! {
             #[odra::event]
             pub struct #event_ident {
-                pub contract_name: #ty_string,
-                pub contract_address: #ty_address
+                pub contract_name: odra::prelude::string::String,
+                pub contract_address: odra::prelude::Address
             }
         });
     }

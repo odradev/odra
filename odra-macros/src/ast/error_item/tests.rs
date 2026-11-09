@@ -4,7 +4,7 @@ use crate::test_utils;
 #[test]
 fn test_odra_error_item() {
     let ty = test_utils::mock::custom_enum();
-    let item = OdraErrorItem::try_from(&ty).unwrap();
+    let item = OdraErrorItem::new(&ty, ty.error_variants().unwrap());
     let expected = quote::quote! {
         enum MyType {
             /// Description of A

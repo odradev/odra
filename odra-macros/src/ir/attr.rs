@@ -1,148 +1,138 @@
-use std::{collections::HashSet, convert::TryFrom};
-
 use quote::ToTokens;
 use syn::{punctuated::Punctuated, Meta, Path, Token};
 
 use super::errors;
 
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct OdraAttribute {
-    types: Vec<AttrType>
+/// The `#[odra(..)]` attributes of a function, parsed: each attribute with the flags it
+/// carries, in source order. A flag is given at most once across all of them.
+#[derive(Debug, Default, PartialEq, Eq, Clone)]
+pub struct OdraAttrs {
+    attrs: Vec<(syn::Attribute, Vec<OdraFlag>)>
 }
 
-impl OdraAttribute {
+impl OdraAttrs {
+    /// Parses the `#[odra(..)]` attributes among `attrs`, failing at the first unknown,
+    /// malformed or duplicated flag.
+    pub fn parse(attrs: &[syn::Attribute]) -> syn::Result<Self> {
+        let mut parsed = Self::default();
+        for attr in attrs.iter().filter(|attr| attr.path().is_ident("odra")) {
+            let flags = parsed.parse_attribute(attr)?;
+            parsed.attrs.push((attr.clone(), flags));
+        }
+        Ok(parsed)
+    }
+
+    /// The flags of one `#[odra(..)]`, checked against the ones already read.
+    fn parse_attribute(&self, attr: &syn::Attribute) -> syn::Result<Vec<OdraFlag>> {
+        let metas = match &attr.meta {
+            Meta::List(list) => {
+                list.parse_args_with(Punctuated::<syn::Meta, Token![,]>::parse_terminated)?
+            }
+            _ => return Err(errors::odra_attr_malformed(attr, &OdraFlag::expected()))
+        };
+        if metas.is_empty() {
+            return Err(errors::odra_attr_empty(attr, &OdraFlag::expected()));
+        }
+        let mut flags = Vec::with_capacity(metas.len());
+        for meta in metas.iter() {
+            let flag = OdraFlag::try_from(meta)?;
+            if self.has(flag) || flags.contains(&flag) {
+                return Err(errors::odra_attr_duplicate(meta, flag.name()));
+            }
+            flags.push(flag);
+        }
+        Ok(flags)
+    }
+
+    fn has(&self, flag: OdraFlag) -> bool {
+        self.attrs.iter().any(|(_, flags)| flags.contains(&flag))
+    }
+
     pub fn is_payable(&self) -> bool {
-        self.types
-            .iter()
-            .any(|attr_kind| matches!(attr_kind, &AttrType::Payable))
+        self.has(OdraFlag::Payable)
     }
 
     pub fn is_non_reentrant(&self) -> bool {
-        self.types
-            .iter()
-            .any(|attr_kind| matches!(attr_kind, &AttrType::NonReentrant))
+        self.has(OdraFlag::NonReentrant)
     }
 
     pub fn is_offchain(&self) -> bool {
-        self.types
+        self.has(OdraFlag::Offchain)
+    }
+
+    /// The attribute that says `offchain`, for an error about it.
+    pub fn offchain_attribute(&self) -> Option<&syn::Attribute> {
+        self.attrs
             .iter()
-            .any(|attr_kind| matches!(attr_kind, &AttrType::Offchain))
+            .find(|(_, flags)| flags.contains(&OdraFlag::Offchain))
+            .map(|(attr, _)| attr)
     }
 
-    /// Names of the arguments this attribute carries, as written by the user,
-    /// eg. `["payable"]` for `#[odra(payable)]`.
-    pub fn arg_names(&self) -> Vec<&'static str> {
-        self.types.iter().map(AttrType::name).collect()
-    }
-}
-
-impl TryFrom<syn::Attribute> for OdraAttribute {
-    type Error = syn::Error;
-
-    fn try_from(attr: syn::Attribute) -> Result<Self, Self::Error> {
-        let mut seen = HashSet::new();
-        parse_odra_attribute(&attr, &mut seen)
+    /// Each attribute with the name of its first flag, for an error about the attribute.
+    pub fn each_attribute(&self) -> impl Iterator<Item = (&syn::Attribute, &'static str)> {
+        // An attribute has at least one flag: an empty one is rejected when parsed.
+        self.attrs
+            .iter()
+            .filter_map(|(attr, flags)| Some((attr, flags.first()?.name())))
     }
 }
 
-/// Parses the arguments of a single `#[odra(..)]`, rejecting unknown, malformed and duplicated
-/// ones (`seen` carries the arguments of the previous `#[odra(..)]` attributes of the same item).
-fn parse_odra_attribute(
-    attr: &syn::Attribute,
-    seen: &mut HashSet<AttrType>
-) -> syn::Result<OdraAttribute> {
-    let metas = match &attr.meta {
-        Meta::List(list) => {
-            list.parse_args_with(Punctuated::<syn::Meta, Token![,]>::parse_terminated)?
-        }
-        _ => return Err(errors::odra_attr_malformed(attr, &AttrType::expected()))
-    };
-    if metas.is_empty() {
-        return Err(errors::odra_attr_empty(attr, &AttrType::expected()));
-    }
-    let mut types = Vec::with_capacity(metas.len());
-    for meta in metas.iter() {
-        let ty = AttrType::try_from(meta)?;
-        if !seen.insert(ty.clone()) {
-            return Err(errors::odra_attr_duplicate(meta, ty.name()));
-        }
-        types.push(ty);
-    }
-    Ok(OdraAttribute { types })
-}
-
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
-enum AttrType {
+/// A flag of `#[odra(..)]`.
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+enum OdraFlag {
     Payable,
     NonReentrant,
     Offchain
 }
 
-impl AttrType {
-    const ALL: [AttrType; 3] = [
-        AttrType::Payable,
-        AttrType::NonReentrant,
-        AttrType::Offchain
+impl OdraFlag {
+    const ALL: [OdraFlag; 3] = [
+        OdraFlag::Payable,
+        OdraFlag::NonReentrant,
+        OdraFlag::Offchain
     ];
 
-    fn name(&self) -> &'static str {
+    fn name(self) -> &'static str {
         match self {
-            AttrType::Payable => "payable",
-            AttrType::NonReentrant => "non_reentrant",
-            AttrType::Offchain => "offchain"
+            OdraFlag::Payable => "payable",
+            OdraFlag::NonReentrant => "non_reentrant",
+            OdraFlag::Offchain => "offchain"
         }
     }
 
-    /// The accepted arguments, for error messages: "payable, non_reentrant, offchain".
+    /// The accepted flags, for error messages: "payable, non_reentrant, offchain".
     fn expected() -> String {
         Self::ALL
             .iter()
-            .map(Self::name)
+            .map(|flag| flag.name())
             .collect::<Vec<_>>()
             .join(", ")
     }
 }
 
-impl TryFrom<&'_ syn::Meta> for AttrType {
+impl TryFrom<&'_ syn::Meta> for OdraFlag {
     type Error = syn::Error;
 
     fn try_from(meta: &'_ syn::Meta) -> Result<Self, Self::Error> {
-        let known = |path: &Path| Self::ALL.into_iter().find(|ty| path.is_ident(ty.name()));
+        let known = |path: &Path| {
+            Self::ALL
+                .into_iter()
+                .find(|flag| path.is_ident(flag.name()))
+        };
         let path_str = |path: &Path| path.to_token_stream().to_string().replace(' ', "");
         match meta {
             Meta::Path(path) => known(path)
                 .ok_or_else(|| errors::odra_attr_unknown(meta, &path_str(path), &Self::expected())),
             Meta::List(syn::MetaList { path, .. })
             | Meta::NameValue(syn::MetaNameValue { path, .. }) => Err(match known(path) {
-                Some(ty) => errors::odra_attr_with_value(meta, ty.name()),
+                Some(flag) => errors::odra_attr_with_value(meta, flag.name()),
                 None => errors::odra_attr_unknown(meta, &path_str(path), &Self::expected())
             })
         }
     }
 }
 
-/// Splits the attributes of an item into the parsed `#[odra(..)]` ones and the others.
-///
-/// Fails at the span of the first unknown, malformed or duplicated `#[odra(..)]` argument; the
-/// duplicate check spans all the `#[odra(..)]` attributes of the item.
-pub fn partition_attributes<I>(attrs: I) -> syn::Result<(Vec<OdraAttribute>, Vec<syn::Attribute>)>
-where
-    I: IntoIterator<Item = syn::Attribute>
-{
-    let mut seen = HashSet::new();
-    let mut odra_attrs = Vec::new();
-    let mut other_attrs = Vec::new();
-    for attr in attrs {
-        if attr.path().is_ident("odra") {
-            odra_attrs.push(parse_odra_attribute(&attr, &mut seen)?);
-        } else {
-            other_attrs.push(attr);
-        }
-    }
-    Ok((odra_attrs, other_attrs))
-}
-
-/// The attributes other than `#[odra(..)]` (which are validated by [partition_attributes]).
+/// The attributes other than `#[odra(..)]` (which [OdraAttrs::parse] validates).
 pub fn other_attributes<I>(attrs: I) -> Vec<syn::Attribute>
 where
     I: IntoIterator<Item = syn::Attribute>

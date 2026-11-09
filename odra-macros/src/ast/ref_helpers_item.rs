@@ -1,5 +1,4 @@
 use crate::ir::errors;
-use crate::utils;
 use proc_macro2::TokenStream;
 
 /// Emits `impl XxxContractRef { .. }` and `impl XxxHostRef { .. }` with the items of an
@@ -19,8 +18,10 @@ impl TryFrom<&'_ TokenStream> for RefHelpersItem {
     type Error = syn::Error;
 
     fn try_from(item: &'_ TokenStream) -> Result<Self, Self::Error> {
-        let item_impl = syn::parse2::<syn::ItemImpl>(item.clone())
-            .map_err(|_| errors::ref_helpers_on_non_impl(item))?;
+        let item_impl = match syn::parse2::<syn::Item>(item.clone())? {
+            syn::Item::Impl(item_impl) => item_impl,
+            other => return Err(errors::ref_helpers_on_non_impl(&other))
+        };
         if let Some((_, path, _)) = &item_impl.trait_ {
             return Err(errors::ref_helpers_on_trait_impl(path));
         }
@@ -66,14 +67,13 @@ impl quote::ToTokens for RefHelpersItem {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let contract_ref_impl = &self.contract_ref_impl;
         let host_ref_impl = &self.host_ref_impl;
-        let not_wasm32 = utils::attr::not_wasm32();
         tokens.extend(quote::quote! {
             const _: () = {
                 use odra::ContractAddress as _;
                 #contract_ref_impl
             };
 
-            #not_wasm32
+            #[cfg(not(target_arch = "wasm32"))]
             const _: () = {
                 use odra::host::HostRef as _;
                 #host_ref_impl

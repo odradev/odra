@@ -1,7 +1,5 @@
 use crate::{
-    ast::utils::Named,
-    ir::{TypeIR, TypeKind},
-    utils
+    ir::{TypeIR, TypeKind, VariantIR}
 };
 use quote::ToTokens;
 use syn::Fields;
@@ -85,38 +83,41 @@ impl ToTokens for SchemaCustomTypeItem {
     }
 }
 
-fn custom_enum(name: &str, variants: &[syn::Variant]) -> proc_macro2::TokenStream {
-    let variants = utils::syn::transform_variants(
-        variants,
-        |name, _, discriminant, _| quote::quote!(odra::schema::enum_variant(#name, #discriminant),)
-    );
+fn custom_enum(name: &str, variants: &[VariantIR]) -> proc_macro2::TokenStream {
+    let variants = variants.iter().map(|v| {
+        let name = v.ident.to_string();
+        let code = v.code;
+        quote::quote!(odra::schema::enum_variant(#name, #code),)
+    });
 
-    quote::quote!(odra::schema::custom_enum(#name, #variants))
+    quote::quote!(odra::schema::custom_enum(#name, odra::prelude::vec![#(#variants)*]))
 }
 
-fn custom_complex_enum(enum_name: &str, variants: &[syn::Variant]) -> proc_macro2::TokenStream {
-    let variants = utils::syn::transform_variants(variants, |name, fields, discriminant, _| {
-        match fields {
-            Fields::Named(_) => match fields.len() {
-                0 => quote::quote!(odra::schema::enum_variant(#name, #discriminant),),
+fn custom_complex_enum(enum_name: &str, variants: &[VariantIR]) -> proc_macro2::TokenStream {
+    let variants = variants.iter().map(|v| {
+        let name = v.ident.to_string();
+        let code = v.code;
+        match &v.fields {
+            Fields::Named(_) => match v.fields.len() {
+                0 => quote::quote!(odra::schema::enum_variant(#name, #code),),
                 _ => {
                     let ty_name = format!("{}::{}", enum_name, name);
-                    quote::quote!(odra::schema::enum_custom_type_variant(#name, #discriminant, #ty_name),)
+                    quote::quote!(odra::schema::enum_custom_type_variant(#name, #code, #ty_name),)
                 }
             },
             // A tuple variant is typed as its one field, or as the tuple of its fields.
             Fields::Unnamed(unnamed) => {
                 let tys = unnamed.unnamed.iter().map(|f| &f.ty).collect::<Vec<_>>();
                 match tys.as_slice() {
-                    [] => quote::quote!(odra::schema::enum_variant(#name, #discriminant),),
-                    [ty] => quote::quote!(odra::schema::enum_typed_variant::<#ty>(#name, #discriminant),),
-                    tys => quote::quote!(odra::schema::enum_typed_variant::<(#(#tys,)*)>(#name, #discriminant),)
+                    [] => quote::quote!(odra::schema::enum_variant(#name, #code),),
+                    [ty] => quote::quote!(odra::schema::enum_typed_variant::<#ty>(#name, #code),),
+                    tys => quote::quote!(odra::schema::enum_typed_variant::<(#(#tys,)*)>(#name, #code),)
                 }
             }
-            Fields::Unit => quote::quote!(odra::schema::enum_variant(#name, #discriminant),)
+            Fields::Unit => quote::quote!(odra::schema::enum_variant(#name, #code),)
         }
     });
-    quote::quote!(odra::schema::custom_enum(#enum_name, #variants))
+    quote::quote!(odra::schema::custom_enum(#enum_name, odra::prelude::vec![#(#variants)*]))
 }
 fn custom_struct(name: &str, fields: &[(syn::Ident, syn::Type)]) -> proc_macro2::TokenStream {
     let members = fields.iter().map(|(ident, ty)| {
@@ -132,8 +133,8 @@ impl TryFrom<&TypeIR> for SchemaCustomTypeItem {
 
     fn try_from(ir: &TypeIR) -> Result<Self, Self::Error> {
         Ok(Self {
-            ty_ident: ir.name()?,
-            kind: ir.kind()?
+            ty_ident: ir.ident(),
+            kind: ir.kind().clone()
         })
     }
 }

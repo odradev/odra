@@ -76,7 +76,7 @@ impl TryFrom<&ModuleStructIR> for SchemaEventsItem {
         Ok(Self {
             module_ident: ir.module_ident(),
             events: ir.events(),
-            fields: ir.typed_fields()?
+            fields: ir.typed_fields().to_vec()
         })
     }
 }

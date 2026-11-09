@@ -2,18 +2,13 @@ use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 
 use crate::{
-    ast::parts_utils::{UsePreludeItem, UseSuperItem},
+    ast::{
+        parts_utils::{UsePreludeItem, UseSuperItem},
+        Target
+    },
     ir::{FnIR, ModuleImplIR},
     utils
 };
-
-/// Which contract the exec parts are built for: the module itself, or the factory that deploys
-/// instances of it. A factory's exec parts instantiate the child module.
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub enum ExecPartsKind {
-    Module,
-    Factory
-}
 
 /// Emits `mod __xxx_exec_parts`: one `execute_<name>(env)` per function, the body every entry
 /// point runs on both the host and in wasm. It reads the arguments from the call, instantiates
@@ -25,18 +20,18 @@ pub struct ModuleExecPartsItem {
 }
 
 impl ModuleExecPartsItem {
-    pub(crate) fn try_new(module: &ModuleImplIR, kind: ExecPartsKind) -> syn::Result<Self> {
+    pub(crate) fn try_new(module: &ModuleImplIR, kind: Target) -> syn::Result<Self> {
         let module_ident = match kind {
-            ExecPartsKind::Module => module.module_ident()?,
-            ExecPartsKind::Factory => module.child_module_ident()?
+            Target::Module => module.module_ident(),
+            Target::Factory => module.child_module_ident()
         };
         Ok(Self {
-            mod_ident: module.exec_parts_mod_ident()?,
+            mod_ident: module.exec_parts_mod_ident(),
             exec_functions: module
                 .functions()
                 .iter()
-                .map(|f| ExecFunctionItem::try_new(f, &module_ident, kind))
-                .collect::<syn::Result<_>>()?
+                .map(|f| ExecFunctionItem::new(f, &module_ident))
+                .collect()
         })
     }
 }
@@ -45,7 +40,7 @@ impl TryFrom<&ModuleImplIR> for ModuleExecPartsItem {
     type Error = syn::Error;
 
     fn try_from(module: &ModuleImplIR) -> Result<Self, Self::Error> {
-        Self::try_new(module, ExecPartsKind::Module)
+        Self::try_new(module, Target::Module)
     }
 }
 
@@ -53,12 +48,11 @@ impl ToTokens for ModuleExecPartsItem {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let mod_ident = &self.mod_ident;
         let exec_functions = &self.exec_functions;
-        let missing_docs_attr = utils::attr::missing_docs();
         let use_super = UseSuperItem;
         let use_prelude = UsePreludeItem;
 
         tokens.extend(quote! {
-            #missing_docs_attr
+            #[allow(missing_docs)]
             mod #mod_ident {
                 #use_super
                 #use_prelude
@@ -73,25 +67,16 @@ impl ToTokens for ModuleExecPartsItem {
 struct ExecFunctionItem {
     execute_ident: Ident,
     return_type: syn::ReturnType,
-    /// `None` for a factory's function named `factory`, which is emitted with an empty body and
-    /// no return type.
-    body: Option<ExecFnBody>
+    body: ExecFnBody
 }
 
 impl ExecFunctionItem {
-    fn try_new(func: &FnIR, module_ident: &Ident, kind: ExecPartsKind) -> syn::Result<Self> {
-        let is_factory_placeholder = kind == ExecPartsKind::Factory && func.is_factory();
-        Ok(Self {
+    fn new(func: &FnIR, module_ident: &Ident) -> Self {
+        Self {
             execute_ident: func.execute_name(),
-            return_type: match is_factory_placeholder {
-                true => syn::ReturnType::Default,
-                false => func.return_type()
-            },
-            body: match is_factory_placeholder {
-                true => None,
-                false => Some(ExecFnBody::try_new(func, module_ident)?)
-            }
-        })
+            return_type: func.return_type(),
+            body: ExecFnBody::new(func, module_ident)
+        }
     }
 }
 
@@ -103,11 +88,10 @@ impl ToTokens for ExecFunctionItem {
             body
         } = self;
         let env = utils::ident::prefixed_env();
-        let ty_contract_env = utils::ty::contract_env();
 
         tokens.extend(quote! {
             #[inline]
-            pub fn #execute_ident(#env: #ty_contract_env) #return_type {
+            pub fn #execute_ident(#env: odra::ContractEnv) #return_type {
                 #body
             }
         });
@@ -136,9 +120,9 @@ struct ExecArg {
 }
 
 impl ExecFnBody {
-    fn try_new(func: &FnIR, module_ident: &Ident) -> syn::Result<Self> {
+    fn new(func: &FnIR, module_ident: &Ident) -> Self {
         let args = func
-            .named_args()
+            .args()
             .iter()
             .map(|arg| ExecArg {
                 name: arg.name(),
@@ -146,7 +130,7 @@ impl ExecFnBody {
                 by_ref: arg.is_ref()
             })
             .collect();
-        Ok(Self {
+        Self {
             module_ident: module_ident.clone(),
             fn_ident: func.name(),
             uses_exec_env: func.is_payable()
@@ -157,7 +141,7 @@ impl ExecFnBody {
             is_mut: func.is_mut(),
             is_payable: func.is_payable(),
             is_non_reentrant: func.is_non_reentrant()
-        })
+        }
     }
 }
 
@@ -174,7 +158,6 @@ impl ToTokens for ExecFnBody {
         let exec_env = utils::ident::exec_env();
         let contract = utils::ident::contract();
         let result = utils::ident::result();
-        let ty_module = utils::ty::module();
 
         let new_exec_env = self
             .uses_exec_env
@@ -207,7 +190,7 @@ impl ToTokens for ExecFnBody {
             #non_reentrant_before
             #handle_attached_value
             #(#read_args)*
-            let #mut_token #contract = <#module_ident as #ty_module>::new(#env_rc);
+            let #mut_token #contract = <#module_ident as Module>::new(#env_rc);
             let #result = #contract.#fn_ident(#(#pass_args),*);
             #clear_attached_value
             #non_reentrant_after

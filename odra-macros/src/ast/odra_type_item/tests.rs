@@ -208,10 +208,3 @@ fn test_complex_enum() {
 
     test_utils::assert_eq(item, expected);
 }
-
-#[test]
-fn test_union() {
-    let ir = test_utils::mock::custom_union();
-    let item = OdraTypeItem::try_from(&ir);
-    assert!(item.is_err());
-}
