@@ -58,16 +58,24 @@ use odra_core::{
     casper_event_standard::{self, Schema, Schemas}
 };
 
-lazy_static::lazy_static! {
-    static ref STATE: URef = {
+/// A cell for a value computed once per execution.
+///
+/// Wasm is single-threaded and the host runs one entry point at a time, so a plain
+/// [`core::cell::OnceCell`] is enough; the `Sync` impl only lets it live in a `static`.
+struct OncePerExecution<T>(core::cell::OnceCell<T>);
+
+// SAFETY: a contract runs on a single thread, so the cell is never shared between threads.
+unsafe impl<T> Sync for OncePerExecution<T> {}
+
+/// The serialized `URef` of the state dictionary, read from the named keys on first use.
+static STATE_BYTES: OncePerExecution<Vec<u8>> = OncePerExecution(core::cell::OnceCell::new());
+
+fn state_bytes() -> &'static [u8] {
+    STATE_BYTES.0.get_or_init(|| {
         let key = runtime::get_key(consts::STATE_KEY).unwrap_or_revert();
         let state_uref: URef = *key.as_uref().unwrap_or_revert();
-        state_uref
-    };
-
-    static ref STATE_BYTES: Vec<u8> = {
-        (*STATE).into_bytes().unwrap_or_revert()
-    };
+        state_uref.into_bytes().unwrap_or_revert()
+    })
 }
 
 pub(crate) static mut ATTACHED_VALUE: U512 = U512::zero();
@@ -400,8 +408,9 @@ pub fn blake2b(input: &[u8]) -> [u8; 32] {
 
 /// Writes a value under a key to the contract's storage.
 pub fn set_value(key: &[u8], value: &[u8]) {
-    let uref_ptr = (*STATE_BYTES).as_ptr();
-    let uref_size = (*STATE_BYTES).len();
+    let state_bytes = state_bytes();
+    let uref_ptr = state_bytes.as_ptr();
+    let uref_size = state_bytes.len();
 
     let dictionary_item_key_size = key.len();
     let dictionary_item_key_ptr = key.as_ptr();
@@ -426,8 +435,9 @@ pub fn set_value(key: &[u8], value: &[u8]) {
 
 /// Gets a value under a key from the contract's storage.
 pub fn get_value(key: &[u8]) -> Option<Vec<u8>> {
-    let uref_ptr = (*STATE_BYTES).as_ptr();
-    let uref_size = (*STATE_BYTES).len();
+    let state_bytes = state_bytes();
+    let uref_ptr = state_bytes.as_ptr();
+    let uref_size = state_bytes.len();
 
     let dictionary_item_key_size = key.len();
     let dictionary_item_key_ptr = key.as_ptr();
