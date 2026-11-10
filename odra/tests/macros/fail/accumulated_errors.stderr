@@ -1,0 +1,23 @@
+error: `new` is a reserved entry point name; rename the function
+  --> tests/macros/fail/accumulated_errors.rs:11:12
+   |
+11 |     pub fn new(&self) -> u32 {
+   |            ^^^
+
+error: `address` is a reserved entry point name; rename the function
+  --> tests/macros/fail/accumulated_errors.rs:15:12
+   |
+15 |     pub fn address(&self, gas: u64) -> u64 {
+   |            ^^^^^^^
+
+error: `gas` is a reserved argument name; rename the argument
+  --> tests/macros/fail/accumulated_errors.rs:15:27
+   |
+15 |     pub fn address(&self, gas: u64) -> u64 {
+   |                           ^^^
+
+error: `#[odra(offchain)]` on `bump`: an offchain function runs on the host and cannot change the state: take `&self`
+  --> tests/macros/fail/accumulated_errors.rs:20:17
+   |
+20 |     pub fn bump(&mut self) {
+   |                 ^^^^^^^^^

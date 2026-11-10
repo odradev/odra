@@ -1,0 +1,5 @@
+error: `name` is given twice; a `#[odra::module(..)]` argument is given at most once
+ --> tests/macros/fail/module_arg_twice.rs:2:32
+  |
+2 | #[odra::module(name = "First", name = "Second")]
+  |                                ^^^^

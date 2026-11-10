@@ -1,45 +1,5 @@
 use proc_macro2::TokenStream;
-use syn::{parse_quote, spanned::Spanned, Fields};
-
-pub fn ident_from_impl(impl_code: &syn::ItemImpl) -> syn::Result<syn::Ident> {
-    last_segment_ident(&impl_code.self_ty)
-}
-
-pub fn ident_from_struct(struct_code: &syn::ItemStruct) -> syn::Ident {
-    struct_code.ident.clone()
-}
-
-pub fn function_name(sig: &syn::Signature) -> String {
-    sig.ident.to_string()
-}
-
-pub fn function_arg_names(sig: &syn::Signature) -> Vec<syn::Ident> {
-    sig.inputs
-        .iter()
-        .filter_map(|arg| match arg {
-            syn::FnArg::Typed(syn::PatType {
-                pat: box syn::Pat::Ident(pat),
-                ..
-            }) => Some(pat.ident.clone()),
-            _ => None
-        })
-        .collect()
-}
-
-pub fn function_named_args(sig: &syn::Signature) -> Vec<&syn::FnArg> {
-    sig.inputs
-        .iter()
-        .filter(|arg| {
-            matches!(
-                arg,
-                syn::FnArg::Typed(syn::PatType {
-                    pat: box syn::Pat::Ident(_),
-                    ..
-                })
-            )
-        })
-        .collect::<Vec<_>>()
-}
+use syn::parse_quote;
 
 pub fn function_typed_args(sig: &syn::Signature) -> Vec<syn::PatType> {
     sig.inputs
@@ -56,48 +16,6 @@ pub fn receiver_arg(sig: &syn::Signature) -> Option<syn::Receiver> {
         syn::FnArg::Receiver(receiver) => Some(receiver.clone()),
         _ => None
     })
-}
-
-pub fn function_return_type(sig: &syn::Signature) -> syn::ReturnType {
-    sig.output.clone()
-}
-
-pub fn struct_fields_ident(item: &syn::ItemStruct) -> syn::Result<Vec<syn::Ident>> {
-    map_fields(item, |f| {
-        f.ident.clone().ok_or(syn::Error::new(
-            f.span(),
-            "Invalid field. Module fields must be named"
-        ))
-    })
-}
-
-pub fn struct_typed_fields(item: &syn::ItemStruct) -> syn::Result<Vec<(syn::Ident, syn::Type)>> {
-    map_fields(item, |f| {
-        f.ident
-            .clone()
-            .ok_or(syn::Error::new_spanned(
-                f,
-                "Invalid field. Module fields must be named"
-            ))
-            .map(|i| (i, f.ty.clone()))
-    })
-}
-
-fn map_fields<T, F: FnMut(&syn::Field) -> syn::Result<T>>(
-    item: &syn::ItemStruct,
-    f: F
-) -> syn::Result<Vec<T>> {
-    if item.fields.is_empty() {
-        return Ok(vec![]);
-    }
-    if let syn::Fields::Named(named) = &item.fields {
-        named.named.iter().map(f).collect()
-    } else {
-        Err(syn::Error::new_spanned(
-            &item.fields,
-            "Invalid fields. Module fields must be named"
-        ))
-    }
 }
 
 pub fn visibility_pub() -> syn::Visibility {
@@ -147,21 +65,6 @@ pub fn string_docs(attrs: &[syn::Attribute]) -> Vec<String> {
     docs
 }
 
-pub fn last_segment_ident(ty: &syn::Type) -> syn::Result<syn::Ident> {
-    match ty {
-        syn::Type::Path(type_path) => type_path
-            .path
-            .segments
-            .last()
-            .map(|seg| seg.ident.clone())
-            .ok_or(syn::Error::new(type_path.span(), "Invalid type path")),
-        ty => Err(syn::Error::new(
-            ty.span(),
-            "Only support impl for type path"
-        ))
-    }
-}
-
 // A path like <Option::<U256> as odra::casper_types::CLTyped>
 pub fn as_casted_ty_stream(ty: &syn::Type, as_ty: syn::Type) -> TokenStream {
     let ty = match ty {
@@ -192,44 +95,6 @@ pub fn as_casted_ty_stream(ty: &syn::Type, as_ty: syn::Type) -> TokenStream {
 
 pub fn is_ref(ty: &syn::Type) -> bool {
     matches!(ty, syn::Type::Reference(_))
-}
-
-pub fn extract_unit_variants(input: &syn::ItemEnum) -> syn::Result<Vec<syn::Variant>> {
-    let variants = &input.variants;
-    let is_valid = variants
-        .iter()
-        .all(|v| matches!(v.fields, syn::Fields::Unit));
-    if is_valid {
-        Ok(variants.into_iter().cloned().collect())
-    } else {
-        Err(syn::Error::new_spanned(
-            variants,
-            "Expected a unit enum variant."
-        ))
-    }
-}
-
-pub fn transform_variants<F: Fn(String, Fields, u16, Vec<String>) -> TokenStream>(
-    variants: &[syn::Variant],
-    f: F
-) -> TokenStream {
-    let mut discriminant = 0u16;
-    let variants = variants.iter().map(|v| {
-        let docs = string_docs(&v.attrs);
-        let name = v.ident.to_string();
-        let fields = v.fields.clone();
-
-        if let Some((_, syn::Expr::Lit(lit))) = &v.discriminant {
-            if let syn::Lit::Int(int) = &lit.lit {
-                discriminant = int.base10_parse().unwrap();
-            }
-        };
-        let result = f(name, fields, discriminant, docs);
-        discriminant += 1;
-        result
-    });
-
-    quote::quote!(odra::prelude::vec![#(#variants)*])
 }
 
 #[cfg(test)]

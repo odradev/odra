@@ -28,6 +28,12 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: benchmark
+      # rust-cache prunes ~/.cargo/registry/src before saving, and cargo re-extracts the crates from
+      # their archives on restore. casper-engine-test-support generates resources/chainspec.toml
+      # into its own source dir from build.rs, and that build script is cached as fresh, so the
+      # generated file would be missing at test run time. Cleaning the crate forces the rerun.
+      - name: Regenerate the casper-engine-test-support chainspec
+        run: cargo clean -p casper-engine-test-support
       - name: Prepare test environment
         run: just prepare-test-env
       - name: Run benchmark

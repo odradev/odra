@@ -395,8 +395,8 @@ mod tests {
         // from multiple tests at the same time. Should be to protected with a Mutex. Each function has
         // a separate Mutex.
         // https://github.com/asomers/mockall/blob/master/mockall/tests/mock_struct_with_static_method.rs
-        let _e = EPC_MTX.lock();
         let _i = IDENT_MTX.lock();
+        let _e = EPC_MTX.lock();
 
         // stubs
         let epc_ctx = MockTestRef::entry_points_caller_context();

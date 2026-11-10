@@ -1,0 +1,5 @@
+error: `#[odra::external_contract]` goes on a trait describing the contract's entry points; this is a struct
+ --> tests/macros/fail/external_contract_on_struct.rs:2:12
+  |
+2 | pub struct Token;
+  |            ^^^^^
