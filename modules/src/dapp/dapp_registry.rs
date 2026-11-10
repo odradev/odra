@@ -55,9 +55,18 @@ pub struct DappRegistryBase {
 
 #[odra::module]
 impl DappRegistryBase {
-    /// Creates the `__dapp` dictionary holding the registry's data.
+    /// Creates the `__dapp` dictionary holding the registry's data, with empty `contracts` and
+    /// `registrars` lists, so a registry can be told apart from a member contract right after its
+    /// install or upgrade, before any contract is added. A registry that already has the lists keeps
+    /// them.
     pub fn init(&mut self) {
         self.contracts.init();
+        if self.contracts.get().is_none() {
+            self.contracts.set(Vec::new());
+        }
+        if self.registrars.get().is_none() {
+            self.registrars.set(Vec::new());
+        }
     }
 
     /// Returns the dapp metadata, or empty metadata if it has not been set.
@@ -204,9 +213,20 @@ mod tests {
 
     #[test]
     fn empty_registry() {
+        use crate::dapp::storage::{CONTRACTS_KEY, DAPP_KEY, REGISTRARS_KEY};
+        use odra::casper_types::bytesrepr::FromBytes;
+
         let env = odra_test::odra_env();
         let registry = DappRegistryBase::deploy(&env, NoArgs);
         let address = registry.address();
+        // The lists exist, empty, from the start: they tell a registry from a member contract.
+        for key in [CONTRACTS_KEY, REGISTRARS_KEY] {
+            let bytes = env
+                .get_dictionary_value(&address, DAPP_KEY, key.as_bytes())
+                .unwrap_or_else(|| panic!("{DAPP_KEY}->{key} should be stored"));
+            let (list, _) = Vec::<Address>::from_bytes(&bytes).unwrap();
+            assert!(list.is_empty(), "{key}");
+        }
         assert_eq!(registry.get_dapp_contracts(), vec![address]);
         assert!(registry.is_dapp_contract(&address));
         assert!(!registry.is_dapp_contract(&env.get_account(0)));
