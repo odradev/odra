@@ -12,7 +12,8 @@
 //! The dapp data of a contract lives in one dictionary under the `__dapp` named key, every item a whole
 //! value (`__dapp->registry`, `__dapp->name`, the `__dapp->contracts` list, ..., see [`storage`]), so it
 //! can be read from the chain without calling the contracts. A contract composing [`DappRegistryBase`]
-//! calls its `init`, which creates the dictionary.
+//! calls its `init`, which creates the dictionary with empty `contracts` and `registrars` lists, so a
+//! registry is recognizable before any contract is added.
 //!
 //! A contract that creates other contracts of the dapp, e.g. a factory, is registered as a registrar.
 //! It passes [`DappContractBase::register_address`] to each contract it creates, so that one points to
