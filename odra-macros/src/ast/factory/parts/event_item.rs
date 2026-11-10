@@ -1,94 +1,62 @@
+use proc_macro2::{Ident, TokenStream};
+use quote::{format_ident, quote, ToTokens};
 
+use crate::{ast::events_item::HasEventsImplItem, ir::ModuleStructIR};
 
-use quote::{format_ident, ToTokens, TokenStreamExt};
-
-use crate::{ast::{events_item::EventsFnsItem, utils::ImplItem}, utils::{self, misc::AsType}, ModuleStructIR};
-
+/// Emits `#[odra::event] pub struct XxxContractDeployed { contract_name, contract_address }`,
+/// the event a factory emits for every child it deploys or upgrades.
 pub struct FactoryEventItem {
-    event_ident: syn::Ident,
+    event_ident: Ident
 }
 
-impl TryFrom<&'_ ModuleStructIR> for FactoryEventItem {
+impl TryFrom<&ModuleStructIR> for FactoryEventItem {
     type Error = syn::Error;
 
-    fn try_from(module: &'_ ModuleStructIR) -> Result<Self, Self::Error> {
+    fn try_from(module: &ModuleStructIR) -> Result<Self, Self::Error> {
         Ok(Self {
-            event_ident: format_ident!("{}ContractDeployed", module.module_ident()),
+            event_ident: deployed_event_ident(module)
         })
     }
 }
 
 impl ToTokens for FactoryEventItem {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
         let event_ident = &self.event_ident;
-        let ty_string = utils::ty::string();
-        let ty_address = utils::ty::address();
-        tokens.append_all(quote::quote! {
+        tokens.extend(quote! {
             #[odra::event]
             pub struct #event_ident {
-                pub contract_name: #ty_string,
-                pub contract_address: #ty_address
+                pub contract_name: odra::prelude::string::String,
+                pub contract_address: odra::prelude::Address
             }
         });
     }
 }
 
-pub struct FactoryHasEventsImplItem {
-    impl_item: ImplItem,
-    event_ident: EventsFnsItem
-}
+/// Emits `impl HasEvents` for the factory: its one `XxxContractDeployed` event, see
+/// [HasEventsImplItem].
+pub struct FactoryHasEventsImplItem(HasEventsImplItem);
 
-impl TryFrom<&'_ ModuleStructIR> for FactoryHasEventsImplItem {
+impl TryFrom<&ModuleStructIR> for FactoryHasEventsImplItem {
     type Error = syn::Error;
 
-    fn try_from(ir: &'_ ModuleStructIR) -> Result<Self, Self::Error> {
-        let event_ident = format_ident!("{}ContractDeployed", ir.module_ident());
-        Ok(Self {
-            impl_item: ImplItem::has_events(ir)?,
-            event_ident: EventsFnsItem::single(&event_ident.as_type())
-        })
+    fn try_from(module: &ModuleStructIR) -> Result<Self, Self::Error> {
+        let event_ident = deployed_event_ident(module);
+        Ok(Self(HasEventsImplItem::only(
+            module.module_ident(),
+            syn::parse_quote!(#event_ident)
+        )))
     }
 }
+
 impl ToTokens for FactoryHasEventsImplItem {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let impl_item = &self.impl_item;
-        let event_ident = &self.event_ident;
-        tokens.append_all(quote::quote! {
-            #impl_item {
-                #event_ident
-            }
-        });
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        self.0.to_tokens(tokens);
     }
+}
+
+fn deployed_event_ident(module: &ModuleStructIR) -> Ident {
+    format_ident!("{}ContractDeployed", module.module_ident())
 }
 
 #[cfg(test)]
-mod test {
-    use super::*;
-    use crate::test_utils;
-
-    #[test]
-    fn test_contract_item() {
-        let module = test_utils::mock::factory_module_definition();
-
-        let item = FactoryHasEventsImplItem::try_from(&module).expect("Failed to create ContractItem");
-        let expected = quote::quote!(
-            impl odra::contract_def::HasEvents for CounterPack {
-                fn events() -> odra::prelude::vec::Vec<odra::contract_def::Event> {
-                    odra::prelude::vec![
-                        <CounterPackContractDeployed as odra::contract_def::IntoEvent>::into_event()
-                    ]
-                }
-
-                fn event_schemas() -> odra::prelude::BTreeMap<odra::prelude::string::String, odra::casper_event_standard::Schema> {
-                    let mut __odra_result = odra::prelude::BTreeMap::new();
-                    __odra_result.insert(
-                        <CounterPackContractDeployed as odra::casper_event_standard::EventInstance>::name(),
-                        <CounterPackContractDeployed as odra::casper_event_standard::EventInstance>::schema()
-                    );
-                    __odra_result
-                }
-            }
-        );
-        test_utils::assert_eq(item, expected);
-    }
-}
+mod tests;

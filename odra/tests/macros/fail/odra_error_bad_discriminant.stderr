@@ -1,0 +1,17 @@
+error: a discriminant is an integer literal from 0 to 65535, as an error code is a `u16`
+ --> tests/macros/fail/odra_error_bad_discriminant.rs:4:14
+  |
+4 |     TooBig = 70000,
+  |              ^^^^^
+
+error: a discriminant is an integer literal from 0 to 65535, as an error code is a `u16`
+ --> tests/macros/fail/odra_error_bad_discriminant.rs:5:16
+  |
+5 |     Negative = -1,
+  |                ^^
+
+error: a discriminant is an integer literal from 0 to 65535, as an error code is a `u16`
+ --> tests/macros/fail/odra_error_bad_discriminant.rs:6:16
+  |
+6 |     Computed = 1 + 1,
+  |                ^^^^^

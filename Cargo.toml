@@ -72,7 +72,6 @@ chrono = { version = "0.4"}
 clap = { version = "4.5"}
 convert_case = "0.6"
 cucumber = "0.21"
-derive-try-from-ref = "0.1"
 derive_more = { version = "2.1.0", features = ["full"] }
 dotenvy = "0.15"
 futures = "0.3"
@@ -102,7 +101,6 @@ serde_json = { version = "1.0", default-features = false }
 sha3 = { version = "0.10", default-features = false }
 shlex = "1"
 syn = "2.0"
-syn_derive = "0.2"
 thiserror = "1.0"
 tokio = "1.48"
 toml = "0.9"

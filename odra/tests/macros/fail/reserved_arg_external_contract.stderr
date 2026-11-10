@@ -1,4 +1,4 @@
-error: Argument name `gas` is reserved
+error: `gas` is a reserved argument name; rename the argument
  --> tests/macros/fail/reserved_arg_external_contract.rs:3:41
   |
 3 |     fn transfer(&mut self, amount: u64, gas: u64);

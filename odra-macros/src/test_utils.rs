@@ -177,7 +177,7 @@ pub mod mock {
         ModuleImplIR::try_from((&attr, &module)).unwrap()
     }
 
-    pub fn module_invalid_delegation() -> ModuleImplIR {
+    pub fn module_invalid_delegation() -> syn::Result<ModuleImplIR> {
         let module = quote! {
             impl Erc20 {
                 /// Returns the total supply of the token.
@@ -197,7 +197,7 @@ pub mod mock {
         };
 
         let attr = quote!();
-        ModuleImplIR::try_from((&attr, &module)).unwrap()
+        ModuleImplIR::try_from((&attr, &module))
     }
 
     pub fn module_definition() -> ModuleStructIR {
@@ -231,7 +231,7 @@ pub mod mock {
         ModuleStructIR::try_from((&attr, &module)).unwrap()
     }
 
-    pub fn invalid_module_definition() -> ModuleStructIR {
+    pub fn invalid_module_definition() -> syn::Result<ModuleStructIR> {
         let fields = (0..256).map(|i| {
             let field_name =
                 syn::Ident::new(&format!("field{}", i), proc_macro2::Span::call_site());
@@ -243,7 +243,7 @@ pub mod mock {
             }
         );
         let attr = quote!();
-        ModuleStructIR::try_from((&attr, &module)).unwrap()
+        ModuleStructIR::try_from((&attr, &module))
     }
 
     pub fn empty_module_definition() -> ModuleStructIR {
@@ -305,14 +305,14 @@ pub mod mock {
         TypeIR::try_from(&ty).unwrap()
     }
 
-    pub fn custom_union() -> TypeIR {
+    pub fn custom_union() -> syn::Result<TypeIR> {
         let ty = quote!(
             union MyUnion {
                 f1: u32,
                 f2: f32,
             }
         );
-        TypeIR::try_from(&ty).unwrap()
+        TypeIR::try_from(&ty)
     }
 
     pub fn ext_contract() -> ModuleImplIR {

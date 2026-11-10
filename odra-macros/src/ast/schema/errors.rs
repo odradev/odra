@@ -1,10 +1,11 @@
 use crate::{
-    ast::utils::Named,
-    ir::{EnumeratedTypedField, ModuleStructIR, TypeIR},
+    ir::{EnumeratedTypedField, ModuleStructIR, VariantIR},
     utils
 };
 use quote::ToTokens;
 
+/// Emits `impl odra::schema::SchemaErrors for Xxx` for a module: the errors of
+/// `#[odra::module(errors = ..)]` and of every field type, each once.
 pub struct SchemaErrorsItem {
     module_ident: syn::Ident,
     errors: Option<syn::Type>,
@@ -48,27 +49,32 @@ impl TryFrom<&ModuleStructIR> for SchemaErrorsItem {
         Ok(Self {
             module_ident: ir.module_ident(),
             errors: ir.errors(),
-            fields: ir.typed_fields()?
+            fields: ir.typed_fields().to_vec()
         })
     }
 }
 
+/// Emits `impl odra::schema::SchemaErrors for Xxx` for an `#[odra::odra_error]` enum: one
+/// `odra::schema::error(name, description, code)` per variant.
 pub struct SchemaErrorItem {
     ty_ident: syn::Ident,
-    errors: Vec<syn::Variant>
+    /// Name, description and code of each error.
+    errors: Vec<(String, String, u16)>
 }
 
 impl ToTokens for SchemaErrorItem {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let ident = &self.ty_ident;
-        let errors = enum_variants(&self.errors);
+        let errors = self.errors.iter().map(|(name, description, code)| {
+            quote::quote!(odra::schema::error(#name, #description, #code),)
+        });
 
         let item = quote::quote! {
             #[automatically_derived]
             #[cfg(not(target_arch = "wasm32"))]
             impl odra::schema::SchemaErrors for #ident {
                 fn schema_errors() -> odra::prelude::Vec<odra::schema::casper_contract_schema::UserError> {
-                    #errors
+                    odra::prelude::vec![#(#errors)*]
                 }
             }
         };
@@ -76,29 +82,26 @@ impl ToTokens for SchemaErrorItem {
     }
 }
 
-impl TryFrom<&TypeIR> for SchemaErrorItem {
-    type Error = syn::Error;
-
-    fn try_from(ir: &TypeIR) -> Result<Self, Self::Error> {
-        if let syn::Item::Enum(e) = ir.self_code() {
-            let variants = utils::syn::extract_unit_variants(e)?;
-            Ok(Self {
-                ty_ident: ir.name()?,
-                errors: variants
-            })
-        } else {
-            Err(syn::Error::new_spanned(ir.self_code(), "An enum expected."))
+impl SchemaErrorItem {
+    /// `variants` are the enum's, see [crate::ir::TypeIR::error_variants].
+    pub fn new(ty_ident: syn::Ident, variants: &[VariantIR]) -> Self {
+        Self {
+            ty_ident,
+            errors: variants
+                .iter()
+                .map(|v| {
+                    (
+                        v.ident.to_string(),
+                        utils::syn::docs_description(&v.docs),
+                        v.code
+                    )
+                })
+                .collect()
         }
     }
 }
 
-fn enum_variants(variants: &[syn::Variant]) -> proc_macro2::TokenStream {
-    utils::syn::transform_variants(variants, |name, _, discriminant, docs| {
-        let description = utils::syn::docs_description(&docs);
-        quote::quote!(odra::schema::error(#name, #description, #discriminant),)
-    })
-}
-
+/// Emits an empty `impl odra::schema::SchemaErrors` for a factory, which has no errors of its own.
 pub struct FactorySchemaErrorsItem {
     module_ident: syn::Ident,
 }
@@ -131,74 +134,4 @@ impl ToTokens for FactorySchemaErrorsItem {
 }
 
 #[cfg(test)]
-mod test {
-    use super::*;
-    use crate::test_utils;
-
-    #[test]
-    fn custom_types_works() {
-        let ir = test_utils::mock::module_definition();
-        let item = SchemaErrorsItem::try_from(&ir).unwrap();
-        let expected = quote::quote!(
-            #[automatically_derived]
-            #[cfg(not(target_arch = "wasm32"))]
-            impl odra::schema::SchemaErrors for CounterPack {
-                fn schema_errors(
-                ) -> odra::prelude::Vec<odra::schema::casper_contract_schema::UserError>
-                {
-                    odra::prelude::BTreeSet::<odra::schema::casper_contract_schema::UserError>::new()
-                        .into_iter()
-                        .chain(<Erc20Errors as odra::schema::SchemaErrors>::schema_errors())
-                        .chain(<SubModule<Counter> as odra::schema::SchemaErrors>::schema_errors())
-                        .chain(<SubModule<Counter> as odra::schema::SchemaErrors>::schema_errors())
-                        .chain(<SubModule<Counter> as odra::schema::SchemaErrors>::schema_errors())
-                        .chain(<Var<u32> as odra::schema::SchemaErrors>::schema_errors())
-                        .chain(<Mapping<u8, Counter> as odra::schema::SchemaErrors>::schema_errors())
-                        .collect::<odra::prelude::BTreeSet<odra::schema::casper_contract_schema::UserError>>()
-                        .into_iter()
-                        .collect::<odra::prelude::Vec<_>>()
-                }
-            }
-        );
-
-        test_utils::assert_eq(item, expected);
-    }
-
-    #[test]
-    fn test_odra_error_item() {
-        let ty = test_utils::mock::custom_enum();
-        let item = SchemaErrorItem::try_from(&ty).unwrap();
-        let expected = quote::quote! {
-            #[automatically_derived]
-            #[cfg(not(target_arch = "wasm32"))]
-            impl odra::schema::SchemaErrors for MyType {
-                fn schema_errors() -> odra::prelude::Vec<odra::schema::casper_contract_schema::UserError> {
-                    odra::prelude::vec![
-                        odra::schema::error("A", "Description of A", 10u16),
-                        odra::schema::error("B", "Description of B", 11u16),
-                    ]
-                }
-            }
-        };
-        test_utils::assert_eq(item, expected);
-    }
-
-    #[test]
-    fn test_odra_error_item_with_multiline_docs() {
-        let ty = test_utils::mock::custom_enum_with_multiline_docs();
-        let item = SchemaErrorItem::try_from(&ty).unwrap();
-        let expected = quote::quote! {
-            #[automatically_derived]
-            #[cfg(not(target_arch = "wasm32"))]
-            impl odra::schema::SchemaErrors for MyType {
-                fn schema_errors() -> odra::prelude::Vec<odra::schema::casper_contract_schema::UserError> {
-                    odra::prelude::vec![
-                        odra::schema::error("A", "Description of A. More details about A.", 10u16),
-                        odra::schema::error("B", "Description of B", 11u16),
-                    ]
-                }
-            }
-        };
-        test_utils::assert_eq(item, expected);
-    }
-}
+mod tests;

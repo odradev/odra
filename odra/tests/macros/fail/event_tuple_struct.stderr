@@ -1,0 +1,5 @@
+error: an event's fields are named, as the name is part of its schema; write `struct Transfer { from: Address, to: Address }`
+ --> tests/macros/fail/event_tuple_struct.rs:3:20
+  |
+3 | pub struct Transfer(Address, Address);
+  |                    ^^^^^^^^^^^^^^^^^^

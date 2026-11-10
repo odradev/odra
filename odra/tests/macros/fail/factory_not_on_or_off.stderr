@@ -1,0 +1,5 @@
+error: `yes` is not a `factory` value; write `factory = on` or `factory = off`
+ --> tests/macros/fail/factory_not_on_or_off.rs:1:26
+  |
+1 | #[odra::module(factory = yes)]
+  |                          ^^^

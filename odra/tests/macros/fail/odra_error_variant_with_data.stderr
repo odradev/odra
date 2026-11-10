@@ -1,0 +1,11 @@
+error: `Overflow` carries data; an error variant is a bare name, as an error is only its code
+ --> tests/macros/fail/odra_error_variant_with_data.rs:4:5
+  |
+4 |     Overflow(u32),
+  |     ^^^^^^^^^^^^^
+
+error: `Underflow` carries data; an error variant is a bare name, as an error is only its code
+ --> tests/macros/fail/odra_error_variant_with_data.rs:5:5
+  |
+5 |     Underflow { by: u32 },
+  |     ^^^^^^^^^^^^^^^^^^^^^

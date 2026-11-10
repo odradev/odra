@@ -1,0 +1,5 @@
+error: an Odra type's fields are named, as the name is part of its schema; write `struct Point { x: u32, y: u32 }`
+ --> tests/macros/fail/odra_type_tuple_struct.rs:3:17
+  |
+3 | pub struct Point(u32, u32);
+  |                 ^^^^^^^^^^

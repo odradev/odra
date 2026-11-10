@@ -1,48 +1,40 @@
-use quote::ToTokens;
+use proc_macro2::{Ident, TokenStream};
+use quote::{quote, ToTokens};
 use std::collections::HashSet;
-use syn::{punctuated::Punctuated, token::Comma};
 
+use crate::ir::errors;
+
+/// Emits everything `#[odra::event]` adds to an event struct: the derives, the
+/// `casper_event_standard` impls (serialization and schema), a `new` constructor, and the
+/// schema impls naming the event's custom type and those of its fields.
 pub struct OdraEventItem {
-    item_struct: syn::ItemStruct
+    item_struct: syn::ItemStruct,
+    /// The fields, named: an event is a struct with named fields.
+    fields: Vec<(Ident, syn::Type)>
 }
 
 impl ToTokens for OdraEventItem {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
         let item = &self.item_struct;
         let ident = &item.ident;
         let name = ident.to_string();
-        let fields = item
-            .fields
-            .iter()
-            .map(|f| {
-                let ident = f.ident.as_ref().unwrap();
-                let ty = &f.ty;
-                quote::quote!(#ident: #ty)
-            })
-            .collect::<Punctuated<_, Comma>>();
-        let field_names = item
-            .fields
-            .iter()
-            .map(|f| f.ident.as_ref().unwrap())
-            .collect::<Punctuated<_, Comma>>();
+        let field_idents = self.fields.iter().map(|(ident, _)| ident).collect::<Vec<_>>();
+        let field_tys = self.fields.iter().map(|(_, ty)| ty).collect::<Vec<_>>();
         let comment = format!("Creates a new instance of the {} event.", ident);
-        let doc_attr = quote::quote!(#[doc = #comment]);
+        let doc_attr = quote!(#[doc = #comment]);
 
-        let mut tmp = HashSet::<String>::new();
-        let mut chain = vec![];
+        // The custom types of each field type, each type once.
+        let mut seen = HashSet::<String>::new();
+        let chain = field_tys
+            .iter()
+            .map(|ty| quote!(.chain(<#ty as odra::schema::SchemaEvents>::custom_types())))
+            .filter(|chained| seen.insert(chained.to_string()))
+            .collect::<Vec<_>>();
 
-        item.fields.iter().for_each(|f| {
-            let ty = &f.ty;
-            let v = quote::quote!(.chain(<#ty as odra::schema::SchemaEvents>::custom_types()));
-            if tmp.insert(v.to_string()) {
-                chain.push(v);
-            }
-        });
+        let self_item = custom_struct(&name, &self.fields);
+        let event_impls = event_impls(ident, &self.fields);
 
-        let self_item = custom_struct(&name, &item.fields);
-        let event_impls = event_impls(ident, &item.fields);
-
-        let item = quote::quote! {
+        let item = quote! {
             #[derive(PartialEq, Eq, Debug)]
             #item
 
@@ -50,9 +42,9 @@ impl ToTokens for OdraEventItem {
 
             impl #ident {
                 #doc_attr
-                pub fn new(#fields) -> Self {
+                pub fn new(#(#field_idents: #field_tys),*) -> Self {
                     Self {
-                        #field_names
+                        #(#field_idents),*
                     }
                 }
             }
@@ -80,36 +72,43 @@ impl ToTokens for OdraEventItem {
     }
 }
 
-impl TryFrom<&proc_macro2::TokenStream> for OdraEventItem {
+impl TryFrom<&TokenStream> for OdraEventItem {
     type Error = syn::Error;
 
-    fn try_from(code: &proc_macro2::TokenStream) -> Result<Self, Self::Error> {
-        Ok(Self {
-            item_struct: syn::parse2::<syn::ItemStruct>(code.clone())?
-        })
+    fn try_from(code: &TokenStream) -> Result<Self, Self::Error> {
+        let item = syn::parse2::<syn::Item>(code.clone())?;
+        let syn::Item::Struct(item_struct) = item else {
+            return Err(errors::event_on_other_item(&item));
+        };
+        let syn::Fields::Named(named) = &item_struct.fields else {
+            return Err(errors::event_fields_unnamed(&item_struct.fields));
+        };
+        let fields = named
+            .named
+            .iter()
+            .filter_map(|f| Some((f.ident.clone()?, f.ty.clone())))
+            .collect();
+        Ok(Self { item_struct, fields })
     }
 }
 
 /// The impls `#[derive(odra::Event)]` (`casper_event_standard::Event`) generates, with the same
 /// serialization and schema, but with prefixed locals: the derive binds each field to a local
 /// named like it next to its own `bytes`, so a field named `bytes` did not compile.
-fn event_impls(ident: &syn::Ident, fields: &syn::Fields) -> proc_macro2::TokenStream {
+fn event_impls(ident: &Ident, fields: &[(Ident, syn::Type)]) -> TokenStream {
     // Paths as in the derive: `casper_event_standard` must be in scope (`odra::prelude` has it).
-    let ces = quote::quote!(casper_event_standard);
-    let types = quote::quote!(#ces::casper_types);
+    let ces = quote!(casper_event_standard);
+    let types = quote!(#ces::casper_types);
     let event_name = format!("event_{}", ident);
     let name = ident.to_string();
-    let field_idents = fields
-        .iter()
-        .map(|f| f.ident.as_ref().unwrap())
-        .collect::<Vec<_>>();
-    let field_tys = fields.iter().map(|f| &f.ty).collect::<Vec<_>>();
+    let field_idents = fields.iter().map(|(ident, _)| ident).collect::<Vec<_>>();
+    let field_tys = fields.iter().map(|(_, ty)| ty).collect::<Vec<_>>();
     let field_names = field_idents
         .iter()
         .map(|i| i.to_string())
         .collect::<Vec<_>>();
 
-    quote::quote! {
+    quote! {
         impl #types::CLTyped for #ident {
             fn cl_type() -> #types::CLType {
                 #types::CLType::Any
@@ -163,122 +162,16 @@ fn event_impls(ident: &syn::Ident, fields: &syn::Fields) -> proc_macro2::TokenSt
     }
 }
 
-fn custom_struct(name: &str, fields: &syn::Fields) -> proc_macro2::TokenStream {
-    let members = fields.iter().map(|f| {
-        let name = f.ident.as_ref().unwrap().to_string();
-        let ty = &f.ty;
-        quote::quote! {
+fn custom_struct(name: &str, fields: &[(Ident, syn::Type)]) -> TokenStream {
+    let members = fields.iter().map(|(ident, ty)| {
+        let name = ident.to_string();
+        quote! {
             odra::schema::struct_member::<#ty>(#name),
         }
     });
 
-    quote::quote!(odra::schema::custom_struct(#name, odra::prelude::vec![#(#members)*]))
+    quote!(odra::schema::custom_struct(#name, odra::prelude::vec![#(#members)*]))
 }
 
 #[cfg(test)]
-mod tests {
-    use super::OdraEventItem;
-    use crate::test_utils;
-    use quote::quote;
-
-    #[test]
-    fn event() {
-        let item = OdraEventItem::try_from(&quote!(
-            pub struct Transfer {
-                pub bytes: U256,
-                pub to: Address
-            }
-        ))
-        .unwrap();
-        let expected = quote! {
-            #[derive(PartialEq, Eq, Debug)]
-            pub struct Transfer {
-                pub bytes: U256,
-                pub to: Address
-            }
-
-            impl casper_event_standard::casper_types::CLTyped for Transfer {
-                fn cl_type() -> casper_event_standard::casper_types::CLType {
-                    casper_event_standard::casper_types::CLType::Any
-                }
-            }
-
-            impl casper_event_standard::casper_types::bytesrepr::ToBytes for Transfer {
-                fn to_bytes(&self) -> Result<casper_event_standard::alloc::vec::Vec<u8>, casper_event_standard::casper_types::bytesrepr::Error> {
-                    use casper_event_standard::casper_types::bytesrepr::ToBytes as _;
-                    let mut __odra_vec = casper_event_standard::alloc::vec::Vec::with_capacity(self.serialized_length());
-                    __odra_vec.append(&mut "event_Transfer".to_bytes()?);
-                    casper_event_standard::validate_type(&self.bytes)?;
-                    __odra_vec.extend(self.bytes.to_bytes()?);
-                    casper_event_standard::validate_type(&self.to)?;
-                    __odra_vec.extend(self.to.to_bytes()?);
-                    Ok(__odra_vec)
-                }
-
-                fn serialized_length(&self) -> usize {
-                    use casper_event_standard::casper_types::bytesrepr::ToBytes as _;
-                    let mut __odra_size = 0;
-                    __odra_size += "event_Transfer".serialized_length();
-                    __odra_size += self.bytes.serialized_length();
-                    __odra_size += self.to.serialized_length();
-                    __odra_size
-                }
-            }
-
-            impl casper_event_standard::casper_types::bytesrepr::FromBytes for Transfer {
-                fn from_bytes(__odra_bytes: &[u8]) -> Result<(Self, &[u8]), casper_event_standard::casper_types::bytesrepr::Error> {
-                    let (_, __odra_bytes): (casper_event_standard::alloc::string::String, &[u8]) =
-                        casper_event_standard::casper_types::bytesrepr::FromBytes::from_bytes(__odra_bytes)?;
-                    let (bytes, __odra_bytes) =
-                        casper_event_standard::casper_types::bytesrepr::FromBytes::from_bytes(__odra_bytes)?;
-                    let (to, __odra_bytes) =
-                        casper_event_standard::casper_types::bytesrepr::FromBytes::from_bytes(__odra_bytes)?;
-                    Ok((Transfer { bytes, to, }, __odra_bytes))
-                }
-            }
-
-            impl casper_event_standard::EventInstance for Transfer {
-                fn name() -> casper_event_standard::alloc::string::String {
-                    casper_event_standard::alloc::string::String::from("Transfer")
-                }
-
-                fn schema() -> casper_event_standard::Schema {
-                    let mut __odra_schema = casper_event_standard::Schema::new();
-                    __odra_schema.with_elem("bytes", <U256 as casper_event_standard::casper_types::CLTyped>::cl_type());
-                    __odra_schema.with_elem("to", <Address as casper_event_standard::casper_types::CLTyped>::cl_type());
-                    __odra_schema
-                }
-            }
-
-            impl Transfer {
-                #[doc = "Creates a new instance of the Transfer event."]
-                pub fn new(bytes: U256, to: Address) -> Self {
-                    Self { bytes, to }
-                }
-            }
-
-            #[cfg(not(target_arch = "wasm32"))]
-            impl odra::schema::NamedCLTyped for Transfer {
-                fn ty() -> odra::schema::casper_contract_schema::NamedCLType {
-                    odra::schema::casper_contract_schema::NamedCLType::Custom(odra::prelude::String::from("Transfer"))
-                }
-            }
-
-            #[cfg(not(target_arch = "wasm32"))]
-            impl odra::schema::SchemaCustomTypes for Transfer {
-                fn schema_types() -> odra::prelude::vec::Vec<Option<odra::schema::casper_contract_schema::CustomType>> {
-                    odra::prelude::BTreeSet::<Option<odra::schema::casper_contract_schema::CustomType>>::new()
-                        .into_iter()
-                        .chain(odra::prelude::vec![Some(odra::schema::custom_struct("Transfer", odra::prelude::vec![
-                            odra::schema::struct_member::<U256>("bytes"),
-                            odra::schema::struct_member::<Address>("to"),
-                        ]))])
-                        .chain(<U256 as odra::schema::SchemaEvents>::custom_types())
-                        .chain(<Address as odra::schema::SchemaEvents>::custom_types())
-                        .collect()
-                }
-            }
-        };
-        test_utils::assert_eq(item, expected);
-    }
-}
+mod tests;
