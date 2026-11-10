@@ -166,6 +166,7 @@ fn main() {
     assert_eq!(result.err(), Some(Refused.into()));
 
     factory_child_by_address(&env);
+    dapp_registry_lists_are_stored_from_the_start(&env);
 }
 
 /// The gas consumed by every deploy and call this environment sent is reported, like on CasperVM.
@@ -216,6 +217,59 @@ fn factory_child_by_address(env: &HostEnv) {
     env.set_gas(10_000_000_000u64);
     counter.increment();
     assert_eq!(counter.value(), 11);
+}
+
+/// A dapp registry stores its `__dapp->contracts` and `__dapp->registrars` lists, empty, at its
+/// install, so the chain tells it from a member contract before anything is added; the contracts a
+/// registrar adds show up in the lists.
+fn dapp_registry_lists_are_stored_from_the_start(env: &HostEnv) {
+    use odra::casper_types::bytesrepr::FromBytes;
+    use odra_examples::factory::dapp::{
+        DappCounterFactory, DappCounterSpawner, DappCounterSpawnerInitArgs
+    };
+    use odra_modules::dapp::storage::{CONTRACTS_KEY, DAPP_KEY, REGISTRARS_KEY, REGISTRY_KEY};
+    use odra_modules::dapp::OwnedDappRegistry;
+
+    let dapp_item = |contract: &Address, key: &str| -> Option<Vec<u8>> {
+        env.get_dictionary_value(contract, DAPP_KEY, key.as_bytes())
+            .map(|bytes| bytes.to_vec())
+    };
+    let lists = |registry: &Address| -> (Vec<Address>, Vec<Address>) {
+        let list = |key: &str| {
+            let bytes = dapp_item(registry, key)
+                .unwrap_or_else(|| panic!("{DAPP_KEY}->{key} should be stored"));
+            Vec::<Address>::from_bytes(&bytes).unwrap().0
+        };
+        (list(CONTRACTS_KEY), list(REGISTRARS_KEY))
+    };
+
+    env.set_gas(400_000_000_000u64);
+    let mut registry = OwnedDappRegistry::deploy(env, NoArgs);
+    assert_eq!(lists(&registry.address()), (vec![], vec![]));
+
+    env.set_gas(480_000_000_000u64);
+    let factory = DappCounterFactory::deploy(env, NoArgs);
+    env.set_gas(400_000_000_000u64);
+    let mut spawner = DappCounterSpawner::deploy(
+        env,
+        DappCounterSpawnerInitArgs {
+            registry: registry.address(),
+            factory: factory.address()
+        }
+    );
+    env.set_gas(10_000_000_000u64);
+    registry.add_dapp_contract(&spawner.address(), true);
+    env.set_gas(400_000_000_000u64);
+    let counter = spawner.spawn();
+
+    assert_eq!(
+        lists(&registry.address()),
+        (vec![spawner.address(), counter], vec![spawner.address()])
+    );
+    // The counter points to the registry, which is what the registry verified when adding it.
+    let registry_of_counter =
+        dapp_item(&counter, REGISTRY_KEY).map(|bytes| Address::from_bytes(&bytes).unwrap().0);
+    assert_eq!(registry_of_counter, Some(registry.address()));
 }
 
 fn deploy_new(env: &HostEnv) -> (LivenetContractHostRef, Erc20HostRef) {
