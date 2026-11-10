@@ -1,0 +1,5 @@
+error: `#[odra::event]` goes on a struct with named fields, one per event field; this is an enum
+ --> tests/macros/fail/event_on_enum.rs:2:10
+  |
+2 | pub enum Transfer {
+  |          ^^^^^^^^

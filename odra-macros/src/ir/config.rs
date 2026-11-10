@@ -1,267 +1,92 @@
-use std::ops::Deref;
-
+use proc_macro2::Span;
 use syn::{
-    parse::{Parse, ParseBuffer},
+    parse::{Parse, ParseStream},
     punctuated::Punctuated,
     Token
 };
 
-pub enum ConfigItem {
-    Module(Box<ModuleConfiguration>),
-    Empty
+use super::errors;
+
+/// The arguments of `#[odra::module(..)]`, each given at most once, in any order.
+///
+/// ```ignore
+/// #[odra::module(
+///     name = "MyToken",                // the contract's name, the struct's by default
+///     version = "1.0.0",               // the contract's version, the crate's by default
+///     events = [Transfer, Approval],   // the events the module emits itself
+///     errors = TokenError,             // the error enum the module reverts with
+///     factory = on,                    // also generate the factory of the module
+///     layout = named_key::<u8>("x")    // the storage layout, derived from the fields by default
+/// )]
+/// ```
+#[derive(Default)]
+pub struct ModuleConfig {
+    pub name: Option<String>,
+    pub version: Option<String>,
+    pub events: Vec<syn::Type>,
+    pub errors: Option<syn::Type>,
+    pub factory: bool,
+    pub layout: Option<syn::Expr>,
+    /// Names and spans of the arguments that were written, in source order.
+    given: Vec<(&'static str, Span)>
 }
 
-impl Parse for ConfigItem {
-    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        if input.is_empty() {
-            return Ok(Self::Empty);
-        }
-        let module = input.parse::<ModuleConfiguration>()?;
-        Ok(Self::Module(Box::new(module)))
-    }
-}
+impl ModuleConfig {
+    /// The arguments `#[odra::module(..)]` takes, for error messages.
+    const ARGS: [&'static str; 6] = ["name", "version", "events", "errors", "factory", "layout"];
 
-mod kw {
-    syn::custom_keyword!(name);
-    syn::custom_keyword!(version);
-    syn::custom_keyword!(events);
-    syn::custom_keyword!(errors);
-    syn::custom_keyword!(factory);
-    syn::custom_keyword!(layout);
-}
-
-#[derive(Default, Clone)]
-pub struct ModuleConfiguration {
-    pub events: ModuleEvents,
-    pub errors: ModuleErrors,
-    pub name: ModuleName,
-    pub version: ModuleVersion,
-    pub factory: Factory,
-    pub layout: ModuleLayout,
-    /// Names and spans of the arguments that were actually written, in source order.
-    given: Vec<(&'static str, proc_macro2::Span)>
-}
-
-impl ModuleConfiguration {
-    /// Arguments that only make sense on the module struct, not on an `impl` or `trait` block.
-    pub fn struct_only_args(&self) -> impl Iterator<Item = &(&'static str, proc_macro2::Span)> {
+    /// The written arguments that only make sense on the module struct, not on its impl block.
+    pub fn struct_only_args(&self) -> impl Iterator<Item = &(&'static str, Span)> {
         self.given.iter().filter(|(name, _)| *name != "factory")
     }
 
-    /// All arguments that were written.
-    pub fn args(&self) -> impl Iterator<Item = &(&'static str, proc_macro2::Span)> {
+    /// All the arguments that were written.
+    pub fn args(&self) -> impl Iterator<Item = &(&'static str, Span)> {
         self.given.iter()
     }
 }
 
-impl Parse for ModuleConfiguration {
-    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        let mut name = None;
-        let mut version = None;
-        let mut events = None;
-        let mut errors = None;
-        let mut factory = None;
-        let mut layout = None;
-        let mut given = Vec::new();
+impl Parse for ModuleConfig {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let mut config = Self::default();
         while !input.is_empty() {
             let span = input.span();
-            if events.is_none() && input.peek(kw::events) {
-                given.push(("events", span));
-                events = Some(input.parse::<ModuleEvents>()?);
-                let _ = input.parse::<Token![,]>(); // optional comma
-                continue;
+            let ident = input.fork().parse::<syn::Ident>().ok();
+            let arg = ident
+                .and_then(|ident| Self::ARGS.into_iter().find(|arg| ident == arg))
+                .ok_or_else(|| errors::unknown_module_arg(input, &Self::ARGS))?;
+            if config.given.iter().any(|(given, _)| *given == arg) {
+                return Err(errors::module_arg_twice(arg, span));
             }
-
-            if errors.is_none() && input.peek(kw::errors) {
-                given.push(("errors", span));
-                errors = Some(input.parse::<ModuleErrors>()?);
-                let _ = input.parse::<Token![,]>(); // optional comma
-                continue;
+            config.given.push((arg, span));
+            input.parse::<syn::Ident>()?;
+            input.parse::<Token![=]>()?;
+            match arg {
+                "name" => config.name = Some(input.parse::<syn::LitStr>()?.value()),
+                "version" => config.version = Some(input.parse::<syn::LitStr>()?.value()),
+                "events" => {
+                    let content;
+                    syn::bracketed!(content in input);
+                    let events = Punctuated::<syn::Type, Token![,]>::parse_terminated(&content)?;
+                    config.events = events.into_iter().collect();
+                }
+                "errors" => config.errors = Some(input.parse()?),
+                "factory" => config.factory = parse_on_off(input)?,
+                "layout" => config.layout = Some(input.parse()?),
+                _ => unreachable!("`{arg}` comes from `ARGS`")
             }
-
-            if name.is_none() && input.peek(kw::name) {
-                given.push(("name", span));
-                name = Some(input.parse::<ModuleName>()?);
-                let _ = input.parse::<Token![,]>(); // optional comma
-                continue;
-            }
-
-            if version.is_none() && input.peek(kw::version) {
-                given.push(("version", span));
-                version = Some(input.parse::<ModuleVersion>()?);
-                let _ = input.parse::<Token![,]>(); // optional comma
-                continue;
-            }
-
-            if factory.is_none() && input.peek(kw::factory) {
-                given.push(("factory", span));
-                factory = Some(input.parse::<Factory>()?);
-                let _ = input.parse::<Token![,]>(); // optional comma
-                continue;
-            }
-
-            if layout.is_none() && input.peek(kw::layout) {
-                given.push(("layout", span));
-                layout = Some(input.parse::<ModuleLayout>()?);
-                let _ = input.parse::<Token![,]>(); // optional comma
-                continue;
-            }
-
-            return Err(input.error("Unexpected token"));
+            let _ = input.parse::<Token![,]>(); // optional comma
         }
-
-        Ok(Self {
-            name: name.unwrap_or_default(),
-            version: version.unwrap_or_default(),
-            events: events.unwrap_or_default(),
-            errors: errors.unwrap_or_default(),
-            factory: factory.unwrap_or_default(),
-            layout: layout.unwrap_or_default(),
-            given
-        })
+        Ok(config)
     }
 }
 
-/// An explicit storage layout of the module, overriding the one derived from its fields.
-///
-/// Used by modules that store data outside of the Odra storage layout, e.g. under named keys:
-/// `#[odra::module(layout = odra::schema::named_key::<u8>("decimals"))]`.
-#[derive(Default, Clone, Debug)]
-pub struct ModuleLayout(Option<syn::Expr>);
-
-impl Deref for ModuleLayout {
-    type Target = Option<syn::Expr>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
+/// `on` or `off`.
+fn parse_on_off(input: ParseStream) -> syn::Result<bool> {
+    let value = input.parse::<syn::Ident>()?;
+    match value.to_string().as_str() {
+        "on" => Ok(true),
+        "off" => Ok(false),
+        _ => Err(errors::factory_not_on_or_off(&value))
     }
-}
-
-impl Parse for ModuleLayout {
-    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        input.parse::<kw::layout>()?;
-        input.parse::<Token![=]>()?;
-        let layout = input.parse::<syn::Expr>()?;
-        Ok(Self(Some(layout)))
-    }
-}
-
-#[derive(Default, Clone, Debug)]
-pub struct ModuleName(String);
-
-impl Deref for ModuleName {
-    type Target = String;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl Parse for ModuleName {
-    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        input.parse::<kw::name>()?;
-        input.parse::<Token![=]>()?;
-        let name = input.parse::<syn::LitStr>()?.value();
-        Ok(Self(name))
-    }
-}
-
-#[derive(Default, Clone, Debug)]
-pub struct ModuleVersion(String);
-
-impl Deref for ModuleVersion {
-    type Target = String;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl Parse for ModuleVersion {
-    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        input.parse::<kw::version>()?;
-        input.parse::<Token![=]>()?;
-        let version = input.parse::<syn::LitStr>()?.value();
-        Ok(Self(version))
-    }
-}
-
-#[derive(Default, Clone, Debug)]
-pub struct ModuleEvents(Punctuated<ModuleEvent, Token![,]>);
-
-pub type ModuleEvent = syn::Type;
-
-impl ModuleEvents {
-    pub fn iter(&self) -> impl Iterator<Item = &ModuleEvent> {
-        self.0.iter()
-    }
-}
-
-impl Parse for ModuleEvents {
-    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        // a sample input: events = [Event1, Event2, Event3]
-        parse_list::<kw::events>(input).map(Self)
-    }
-}
-
-#[derive(Default, Clone, Debug)]
-pub struct ModuleErrors(Option<syn::Type>);
-
-impl Deref for ModuleErrors {
-    type Target = Option<syn::Type>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl Parse for ModuleErrors {
-    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        if input.is_empty() {
-            return Ok(ModuleErrors::default());
-        }
-        input.parse::<kw::errors>()?;
-        input.parse::<Token![=]>()?;
-
-        Ok(ModuleErrors(Some(input.parse::<syn::Type>()?)))
-    }
-}
-
-#[derive(Default, Clone, Debug)]
-pub struct Factory(bool);
-
-impl Deref for Factory {
-    type Target = bool;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl Parse for Factory {
-    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        if input.is_empty() {
-            return Ok(Factory(false));
-        }
-        input.parse::<kw::factory>()?;
-        input.parse::<Token![=]>()?;
-        // if 'on' then true, if 'off' then false
-        let value = input.parse::<syn::Ident>()?;
-        let value = matches!(value.to_string().as_str(), "on");
-        Ok(Factory(value))
-    }
-}
-
-fn parse_list<T: Parse>(
-    input: syn::parse::ParseStream
-) -> syn::Result<Punctuated<syn::Type, Token![,]>> {
-    if input.is_empty() {
-        return Ok(Punctuated::default());
-    }
-    input.parse::<T>()?;
-    input.parse::<Token![=]>()?;
-
-    let content: ParseBuffer;
-    let _brace_token = syn::bracketed!(content in input);
-    Punctuated::parse_terminated(&content)
 }

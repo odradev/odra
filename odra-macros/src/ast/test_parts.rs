@@ -1,653 +1,103 @@
-use derive_try_from_ref::TryFromRef;
-use syn::parse_quote;
+use proc_macro2::{Ident, TokenStream};
+use quote::{quote, ToTokens};
 
-use super::{
-    deployer_item::DeployerItem,
-    host_ref_item::{HasIdentTraitImplItem, HostRefItem},
-    parts_utils::{UsePreludeItem, UseSuperItem}
+use crate::{
+    ast::{
+        deployer_item::DeployerItem,
+        host_ref_item::{HasIdentTraitImplItem, HostRefItem},
+        parts_utils::{UsePreludeItem, UseSuperItem},
+        Target
+    },
+    ir::ModuleImplIR
 };
-use crate::{ir::ModuleImplIR, utils};
 
-#[derive(syn_derive::ToTokens)]
+/// Emits `pub use __xxx_test_parts::*;` outside wasm, so the host ref and the deployer are in
+/// scope next to the module.
 pub struct TestPartsReexportItem {
-    not_wasm_attr: syn::Attribute,
-    reexport_stmt: syn::Stmt
+    mod_ident: Ident
 }
 
-impl TryFrom<&'_ ModuleImplIR> for TestPartsReexportItem {
+impl TryFrom<&ModuleImplIR> for TestPartsReexportItem {
     type Error = syn::Error;
 
-    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
-        let test_parts_ident = module.test_parts_mod_ident()?;
+    fn try_from(module: &ModuleImplIR) -> Result<Self, Self::Error> {
         Ok(Self {
-            not_wasm_attr: utils::attr::not_wasm32(),
-            reexport_stmt: parse_quote!(pub use #test_parts_ident::*;)
+            mod_ident: module.test_parts_mod_ident()
         })
     }
 }
 
-#[derive(syn_derive::ToTokens)]
-pub struct PartsModuleItem {
-    attr: syn::Attribute,
-    mod_token: syn::token::Mod,
-    ident: syn::Ident
-}
-
-impl TryFrom<&'_ ModuleImplIR> for PartsModuleItem {
-    type Error = syn::Error;
-
-    fn try_from(module: &'_ ModuleImplIR) -> Result<Self, Self::Error> {
-        Ok(Self {
-            attr: utils::attr::not_wasm32(),
-            mod_token: Default::default(),
-            ident: module.test_parts_mod_ident()?
-        })
+impl ToTokens for TestPartsReexportItem {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let mod_ident = &self.mod_ident;
+        tokens.extend(quote! {
+            #[cfg(not(target_arch = "wasm32"))]
+            pub use #mod_ident::*;
+        });
     }
 }
 
-#[derive(syn_derive::ToTokens, TryFromRef)]
-#[source(ModuleImplIR)]
-#[err(syn::Error)]
+/// Emits `mod __xxx_test_parts`, compiled outside wasm only: the host ref, its `HasIdent` impl
+/// and the deployer, the pieces a test uses to deploy and call the contract.
 pub struct TestPartsItem {
-    parts_module: PartsModuleItem,
-    #[syn(braced)]
-    #[default]
-    brace_token: syn::token::Brace,
-    #[syn(in = brace_token)]
-    #[expr(UseSuperItem)]
-    use_super: UseSuperItem,
-    #[syn(in = brace_token)]
-    #[expr(UsePreludeItem)]
-    use_prelude: UsePreludeItem,
-    #[syn(in = brace_token)]
+    mod_ident: Ident,
     host_ref: HostRefItem,
-    #[syn(in = brace_token)]
-    trait_has_ident_impl_item: HasIdentTraitImplItem,
-    #[syn(in = brace_token)]
+    has_ident_impl: HasIdentTraitImplItem,
     deployer: DeployerItem
 }
 
-#[cfg(test)]
-mod test {
-    use super::*;
-    use crate::test_utils::{self, mock};
-
-    #[test]
-    fn test_parts() {
-        let module = mock::module_impl();
-        let actual = TestPartsItem::try_from(&module).unwrap();
-
-        let expected = quote::quote! {
-            #[cfg(not(target_arch = "wasm32"))]
-            mod __erc20_test_parts {
-                use super::*;
-                use odra::prelude::*;
-
-                /// [Erc20] Host Ref.
-                pub struct Erc20HostRef {
-                    address: odra::prelude::Address,
-                    env: odra::host::HostEnv,
-                    attached_value: odra::casper_types::U512
-                }
-
-                impl odra::host::HostRef for Erc20HostRef {
-                    fn new(address: odra::prelude::Address, env: odra::host::HostEnv) -> Self {
-                        env.register_contract_ref(
-                            address,
-                            <Self as odra::contract_def::HasIdent>::ident(),
-                            <Self as odra::host::EntryPointsCallerProvider>::entry_points_caller
-                        );
-                        Self {
-                            address,
-                            env,
-                            attached_value: Default::default()
-                        }
-                    }
-
-                    fn with_tokens(&self, tokens: odra::casper_types::U512) -> Self {
-                        Self {
-                            address: self.address,
-                            env: self.env.clone(),
-                            attached_value: tokens
-                        }
-                    }
-
-                    fn contract_address(&self) -> odra::prelude::Address {
-                        self.address
-                    }
-
-                    fn env(&self) -> &odra::host::HostEnv {
-                        &self.env
-                    }
-
-                    fn get_event<T>(&self, index: i32) -> Result<T, odra::EventError>
-                    where
-                        T: odra::casper_types::bytesrepr::FromBytes + odra::casper_event_standard::EventInstance,
-                    {
-                        self.env.get_event(self, index)
-                    }
-
-                    fn last_call(&self) -> odra::ContractCallResult {
-                        self.env.last_call_result(self.address)
-                    }
-                }
-
-                impl Erc20HostRef {
-                    /// Initializes the contract with the given parameters.
-                    pub fn init(&mut self, total_supply: Option<U256>) {
-                        self.try_init(total_supply).unwrap()
-                    }
-
-                    /// Upgrades the contract with the given parameters.
-                    pub fn upgrade(&mut self, total_supply: Option<U256>) {
-                        self.try_upgrade(total_supply).unwrap()
-                    }
-
-                    /// Returns the total supply of the token.
-                    pub fn total_supply(&self) -> U256 {
-                        self.try_total_supply().unwrap()
-                    }
-
-                    /// Pay to mint.
-                    pub fn pay_to_mint(&mut self) {
-                        self.try_pay_to_mint().unwrap()
-                    }
-
-                    /// Approve.
-                    pub fn approve(&mut self, to: &Address, amount: &U256, msg: Maybe<String>) {
-                        self.try_approve(to, amount, msg).unwrap()
-                    }
-
-                    /// Airdrops the given amount to the given addresses.
-                    pub fn airdrop(&self, to: &[Address], amount: &U256) {
-                        self.try_airdrop(to, amount).unwrap()
-                    }
-
-                    /// Swaps the given amount to the given addresses.
-                    pub fn swap(&mut self, to: Address, amount: U256) -> U256 {
-                        self.try_swap(to, amount).unwrap()
-                    }
-                }
-
-                impl Erc20HostRef {
-                    /// Initializes the contract with the given parameters.
-                    /// Does not fail in case of error, returns `odra::OdraResult` instead.
-                    pub fn try_init(&mut self, total_supply: Option<U256>) -> OdraResult<()> {
-                        self.env
-                            .call_contract(
-                                self.address,
-                                odra::CallDef::new(
-                                    odra::prelude::string::String::from("init"),
-                                    true,
-                                    {
-                                        let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
-                                        if self.attached_value > odra::casper_types::U512::zero() {
-                                            let _ = __odra_named_args.insert("amount", self.attached_value);
-                                        }
-                                        odra::args::EntrypointArgument::insert_runtime_arg(total_supply, "total_supply", &mut __odra_named_args);
-                                        __odra_named_args
-                                    },
-                                )
-                                .with_amount(self.attached_value),
-                            )
-                    }
-                    /// Upgrades the contract with the given parameters.
-                    /// Does not fail in case of error, returns `odra::OdraResult` instead.
-                    pub fn try_upgrade(&mut self, total_supply: Option<U256>) -> OdraResult<()> {
-                        self.env
-                            .call_contract(
-                                self.address,
-                                odra::CallDef::new(
-                                    odra::prelude::string::String::from("upgrade"),
-                                    true,
-                                    {
-                                        let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
-                                        if self.attached_value > odra::casper_types::U512::zero() {
-                                            let _ = __odra_named_args.insert("amount", self.attached_value);
-                                        }
-                                        odra::args::EntrypointArgument::insert_runtime_arg(total_supply, "total_supply", &mut __odra_named_args);
-                                        __odra_named_args
-                                    },
-                                )
-                                .with_amount(self.attached_value),
-                            )
-                    }
-
-
-                    /// Returns the total supply of the token.
-                    /// Does not fail in case of error, returns `odra::OdraResult` instead.
-                    pub fn try_total_supply(&self) -> OdraResult<U256> {
-                        self.env.call_contract(
-                            self.address,
-                            odra::CallDef::new(
-                                odra::prelude::string::String::from("total_supply"),
-                                false,
-                                {
-                                    let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
-                                    if self.attached_value > odra::casper_types::U512::zero() {
-                                        let _ = __odra_named_args.insert("amount", self.attached_value);
-                                    }
-                                    __odra_named_args
-                                }
-                            ).with_amount(self.attached_value),
-                        )
-                    }
-                    /// Pay to mint.
-                    /// Does not fail in case of error, returns `odra::OdraResult` instead.
-                    pub fn try_pay_to_mint(&mut self) -> OdraResult<()> {
-                        self.env
-                            .call_contract(
-                                self.address,
-                                odra::CallDef::new(
-                                        odra::prelude::string::String::from("pay_to_mint"),
-                                        true,
-                                        {
-                                            let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
-                                            if self.attached_value > odra::casper_types::U512::zero() {
-                                                let _ = __odra_named_args.insert("amount", self.attached_value);
-                                            }
-                                            __odra_named_args
-                                        },
-                                    )
-                                    .with_amount(self.attached_value),
-                            )
-                    }
-                    /// Approve.
-                    /// Does not fail in case of error, returns `odra::OdraResult` instead.
-                    pub fn try_approve(
-                        &mut self,
-                        to: &Address,
-                        amount: &U256,
-                        msg: Maybe<String>,
-                    ) -> OdraResult<()> {
-                        self.env
-                            .call_contract(
-                                self.address,
-                                odra::CallDef::new(
-                                        odra::prelude::string::String::from("approve"),
-                                        true,
-                                        {
-                                            let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
-                                            if self.attached_value > odra::casper_types::U512::zero() {
-                                                let _ = __odra_named_args.insert("amount", self.attached_value);
-                                            }
-                                            odra::args::EntrypointArgument::insert_runtime_arg(to, "to", &mut __odra_named_args);
-                                            odra::args::EntrypointArgument::insert_runtime_arg(amount, "amount", &mut __odra_named_args);
-                                            odra::args::EntrypointArgument::insert_runtime_arg(msg, "msg", &mut __odra_named_args);
-                                            __odra_named_args
-                                        },
-                                    )
-                                    .with_amount(self.attached_value),
-                            )
-                    }
-                    /// Airdrops the given amount to the given addresses.
-                    /// Does not fail in case of error, returns `odra::OdraResult` instead.
-                    pub fn try_airdrop(&self, to: &[Address], amount: &U256) -> OdraResult<()> {
-                        self.env.call_contract(
-                            self.address,
-                            odra::CallDef::new(
-                                odra::prelude::string::String::from("airdrop"),
-                                false,
-                                {
-                                    let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
-                                    if self.attached_value > odra::casper_types::U512::zero() {
-                                        let _ = __odra_named_args.insert("amount", self.attached_value);
-                                    }
-                                    odra::args::EntrypointArgument::insert_runtime_arg(to, "to", &mut __odra_named_args);
-                                    odra::args::EntrypointArgument::insert_runtime_arg(amount, "amount", &mut __odra_named_args);
-                                    __odra_named_args
-                                }
-                            ).with_amount(self.attached_value),
-                        )
-                    }
-
-                    /// Swaps the given amount to the given addresses.
-                    /// Does not fail in case of error, returns `odra::OdraResult` instead.
-                    pub fn try_swap(&mut self, to: Address, amount: U256) -> OdraResult<U256> {
-                        self.env.call_contract(
-                            self.address,
-                            odra::CallDef::new(
-                                odra::prelude::string::String::from("swap"),
-                                true,
-                                {
-                                    let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
-                                    if self.attached_value > odra::casper_types::U512::zero() {
-                                        let _ = __odra_named_args.insert("amount", self.attached_value);
-                                    }
-                                    odra::args::EntrypointArgument::insert_runtime_arg(to, "to", &mut __odra_named_args);
-                                    odra::args::EntrypointArgument::insert_runtime_arg(amount, "amount", &mut __odra_named_args);
-                                    __odra_named_args
-                                }
-                            ).with_amount(self.attached_value),
-                        )
-                    }
-                }
-
-                impl Erc20HostRef {
-                    /// Swaps the given amount to the given addresses.
-                    /// Ignores the result of the call.
-                    pub fn swap_no_ret(&mut self, to: Address, amount: U256) {
-                        self.try_swap_no_ret(to, amount).unwrap()
-                    }
-                    /// Swaps the given amount to the given addresses.
-                    /// Ignores the result of the call.
-                    pub fn try_swap_no_ret(&mut self, to: Address, amount: U256) -> OdraResult<()> {
-                        self.env.call_contract(
-                            self.address,
-                            odra::CallDef::new(
-                                odra::prelude::string::String::from("swap"),
-                                true,
-                                {
-                                    let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
-                                    if self.attached_value > odra::casper_types::U512::zero() {
-                                        let _ = __odra_named_args.insert("amount", self.attached_value);
-                                    }
-                                    odra::args::EntrypointArgument::insert_runtime_arg(to, "to", &mut __odra_named_args);
-                                    odra::args::EntrypointArgument::insert_runtime_arg(amount, "amount", &mut __odra_named_args);
-                                    __odra_named_args
-                                }
-                            ).with_amount(self.attached_value),
-                        )
-                    }
-                }
-
-                impl odra::contract_def::HasIdent for Erc20HostRef {
-                    fn ident() -> odra::prelude::string::String {
-                        Erc20::ident()
-                    }
-                    fn contract_name() -> odra::prelude::string::String {
-                        <Erc20 as odra::contract_def::HasIdent>::contract_name()
-                    }
-                }
-
-                #[allow(missing_docs)]
-                /// [Erc20] contract constructor arguments.
-                #[derive(odra::IntoRuntimeArgs)]
-                pub struct Erc20InitArgs {
-                    pub total_supply: Option<U256>,
-                }
-
-                impl odra::host::InitArgs for Erc20InitArgs {
-                }
-
-                #[allow(missing_docs)]
-                /// [Erc20] contract upgrade arguments.
-                #[derive(odra::IntoRuntimeArgs)]
-                pub struct Erc20UpgradeArgs {
-                    pub total_supply: Option<U256>,
-                }
-
-                impl odra::host::UpgradeArgs for Erc20UpgradeArgs {
-                }
-
-                impl odra::host::EntryPointsCallerProvider for Erc20HostRef {
-                    fn entry_points_caller() -> odra::entry_point_callback::EntryPointsCaller {
-                        let entry_points = odra::prelude::vec![
-                            odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("init"), odra::prelude::vec![
-                                odra::entry_point_callback::Argument::new::<Option<U256> >(odra::prelude::string::String::from("total_supply"))
-                            ]),
-                            odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("upgrade"), odra::prelude::vec![
-                                odra::entry_point_callback::Argument::new::<Option<U256> >(odra::prelude::string::String::from("total_supply"))
-                            ]),
-                            odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("total_supply"), odra::prelude::vec![]),
-                            odra::entry_point_callback::EntryPoint::new_payable(odra::prelude::string::String::from("pay_to_mint"), odra::prelude::vec![]),
-                            odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("approve"), odra::prelude::vec![
-                                odra::entry_point_callback::Argument::new::<Address>(odra::prelude::string::String::from("to")),
-                                odra::entry_point_callback::Argument::new::<U256>(odra::prelude::string::String::from("amount")),
-                                odra::entry_point_callback::Argument::new::<Maybe<String> >(odra::prelude::string::String::from("msg"))
-                            ]),
-                            odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("airdrop"), odra::prelude::vec![
-                                odra::entry_point_callback::Argument::new::<odra::prelude::vec::Vec<Address> >(odra::prelude::string::String::from("to")),
-                                odra::entry_point_callback::Argument::new::<U256>(odra::prelude::string::String::from("amount"))
-                            ]),
-                            odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("swap"), odra::prelude::vec![
-                                odra::entry_point_callback::Argument::new::<Address>(odra::prelude::string::String::from("to")),
-                                odra::entry_point_callback::Argument::new::<U256>(odra::prelude::string::String::from("amount"))
-                            ])
-                        ];
-                        odra::entry_point_callback::EntryPointsCaller::new(entry_points, |__odra_contract_env, __odra_call_def| {
-                            match __odra_call_def.entry_point() {
-                                "init" => {
-                                    let __odra_result = __erc20_exec_parts::execute_init(__odra_contract_env);
-                                    odra::utils::try_serialize(&__odra_result)
-                                }
-                                "upgrade" => {
-                                    let __odra_result = __erc20_exec_parts::execute_upgrade(__odra_contract_env);
-                                    odra::utils::try_serialize(&__odra_result)
-                                }
-                                "total_supply" => {
-                                    let __odra_result = __erc20_exec_parts::execute_total_supply(__odra_contract_env);
-                                    odra::utils::try_serialize(&__odra_result)
-                                }
-                                "pay_to_mint" => {
-                                    let __odra_result = __erc20_exec_parts::execute_pay_to_mint(__odra_contract_env);
-                                    odra::utils::try_serialize(&__odra_result)
-                                }
-                                "approve" => {
-                                    let __odra_result = __erc20_exec_parts::execute_approve(__odra_contract_env);
-                                    odra::utils::try_serialize(&__odra_result)
-                                }
-                                "airdrop" => {
-                                    let __odra_result = __erc20_exec_parts::execute_airdrop(__odra_contract_env);
-                                    odra::utils::try_serialize(&__odra_result)
-                                }
-                                "swap" => {
-                                    let __odra_result = __erc20_exec_parts::execute_swap(__odra_contract_env);
-                                    odra::utils::try_serialize(&__odra_result)
-                                }
-                                name => Err(OdraError::VmError(
-                                    odra::VmError::NoSuchMethod(odra::prelude::String::from(name))
-                                ))
-                            }
-                        })
-                    }
-                }
-            }
-        };
-
-        test_utils::assert_eq(actual, expected);
-    }
-
-    #[test]
-    fn test_trait_impl_parts() {
-        let module = mock::module_trait_impl();
-        let actual = TestPartsItem::try_from(&module).unwrap();
-
-        let expected = quote::quote! {
-            #[cfg(not(target_arch = "wasm32"))]
-            mod __erc20_test_parts {
-                use super::*;
-                use odra::prelude::*;
-
-                /// [Erc20] Host Ref.
-                pub struct Erc20HostRef {
-                    address: odra::prelude::Address,
-                    env: odra::host::HostEnv,
-                    attached_value: odra::casper_types::U512
-                }
-
-                impl odra::host::HostRef for Erc20HostRef {
-                    fn new(address: odra::prelude::Address, env: odra::host::HostEnv) -> Self {
-                        env.register_contract_ref(
-                            address,
-                            <Self as odra::contract_def::HasIdent>::ident(),
-                            <Self as odra::host::EntryPointsCallerProvider>::entry_points_caller
-                        );
-                        Self {
-                            address,
-                            env,
-                            attached_value: Default::default()
-                        }
-                    }
-
-                    fn with_tokens(&self, tokens: odra::casper_types::U512) -> Self {
-                        Self {
-                            address: self.address,
-                            env: self.env.clone(),
-                            attached_value: tokens
-                        }
-                    }
-
-                    fn contract_address(&self) -> odra::prelude::Address {
-                        self.address
-                    }
-
-                    fn env(&self) -> &odra::host::HostEnv {
-                        &self.env
-                    }
-
-                    fn get_event<T>(&self, index: i32) -> Result<T, odra::EventError>
-                    where
-                        T: odra::casper_types::bytesrepr::FromBytes + odra::casper_event_standard::EventInstance,
-                    {
-                        self.env.get_event(self, index)
-                    }
-
-                    fn last_call(&self) -> odra::ContractCallResult {
-                        self.env.last_call_result(self.address)
-                    }
-                }
-
-
-                impl IErc20 for Erc20HostRef {
-                    fn total_supply(&self) -> U256 {
-                        self.try_total_supply().unwrap()
-                    }
-
-                    fn set_total_supply(&mut self) -> U256 {
-                        self.try_set_total_supply().unwrap()
-                    }
-
-                    fn pay_to_mint(&mut self) {
-                        self.try_pay_to_mint().unwrap()
-                    }
-                }
-
-                impl Erc20HostRef {
-                    /// Does not fail in case of error, returns `odra::OdraResult` instead.
-                    pub fn try_total_supply(&self) -> OdraResult<U256> {
-                        self.env.call_contract(
-                            self.address,
-                            odra::CallDef::new(
-                                odra::prelude::string::String::from("total_supply"),
-                                false,
-                                {
-                                    let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
-                                    if self.attached_value > odra::casper_types::U512::zero() {
-                                        let _ = __odra_named_args.insert("amount", self.attached_value);
-                                    }
-                                    __odra_named_args
-                                }
-                            ).with_amount(self.attached_value),
-                        )
-                    }
-
-                    /// Does not fail in case of error, returns `odra::OdraResult` instead.
-                    pub fn try_set_total_supply(&mut self) -> OdraResult<U256> {
-                        self.env
-                            .call_contract(
-                                self.address,
-                                odra::CallDef::new(
-                                    odra::prelude::string::String::from("set_total_supply"),
-                                    true,
-                                    {
-                                        let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
-                                        if self.attached_value > odra::casper_types::U512::zero() {
-                                            let _ = __odra_named_args.insert("amount", self.attached_value);
-                                        }
-                                        __odra_named_args
-                                    }
-                                ).with_amount(self.attached_value),
-                            )
-                    }
-
-                    /// Does not fail in case of error, returns `odra::OdraResult` instead.
-                    pub fn try_pay_to_mint(&mut self) -> OdraResult<()> {
-                        self.env
-                            .call_contract(
-                                self.address,
-                                odra::CallDef::new(
-                                    odra::prelude::string::String::from("pay_to_mint"),
-                                    true,
-                                    {
-                                        let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
-                                        if self.attached_value > odra::casper_types::U512::zero() {
-                                            let _ = __odra_named_args.insert("amount", self.attached_value);
-                                        }
-                                        __odra_named_args
-                                    },
-                                )
-                                .with_amount(self.attached_value),
-                            )
-                    }
-                }
-
-                impl Erc20HostRef {
-                    /// Ignores the result of the call.
-                    pub fn set_total_supply_no_ret(&mut self) {
-                        self.try_set_total_supply_no_ret().unwrap()
-                    }
-
-                    /// Ignores the result of the call.
-                    pub fn try_set_total_supply_no_ret(&mut self) -> OdraResult<()> {
-                        self.env
-                            .call_contract(
-                                self.address,
-                                odra::CallDef::new(
-                                    odra::prelude::string::String::from("set_total_supply"),
-                                    true,
-                                    {
-                                        let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
-                                        if self.attached_value > odra::casper_types::U512::zero() {
-                                            let _ = __odra_named_args.insert("amount", self.attached_value);
-                                        }
-                                        __odra_named_args
-                                    }
-                                ).with_amount(self.attached_value),
-                            )
-                    }
-                }
-
-                impl odra::contract_def::HasIdent for Erc20HostRef {
-                    fn ident() -> odra::prelude::string::String {
-                        Erc20::ident()
-                    }
-                    fn contract_name() -> odra::prelude::string::String {
-                        <Erc20 as odra::contract_def::HasIdent>::contract_name()
-                    }
-                }
-
-                impl odra::host::EntryPointsCallerProvider for Erc20HostRef {
-                    fn entry_points_caller() -> odra::entry_point_callback::EntryPointsCaller {
-                        let entry_points = odra::prelude::vec![
-                            odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("total_supply"), odra::prelude::vec![]),
-                            odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("set_total_supply"), odra::prelude::vec![]),
-                            odra::entry_point_callback::EntryPoint::new_payable(odra::prelude::string::String::from("pay_to_mint"), odra::prelude::vec![])
-                        ];
-                        odra::entry_point_callback::EntryPointsCaller::new(entry_points, |__odra_contract_env, __odra_call_def| {
-                            match __odra_call_def.entry_point() {
-                                "total_supply" => {
-                                    let __odra_result = __erc20_exec_parts::execute_total_supply(__odra_contract_env);
-                                    odra::utils::try_serialize(&__odra_result)
-                                }
-                                "set_total_supply" => {
-                                    let __odra_result = __erc20_exec_parts::execute_set_total_supply(__odra_contract_env);
-                                    odra::utils::try_serialize(&__odra_result)
-                                }
-                                "pay_to_mint" => {
-                                    let __odra_result = __erc20_exec_parts::execute_pay_to_mint(__odra_contract_env);
-                                    odra::utils::try_serialize(&__odra_result)
-                                }
-                                name => Err(OdraError::VmError(
-                                    odra::VmError::NoSuchMethod(odra::prelude::String::from(name)),
-                                ))
-                            }
-                        })
-                    }
-                }
-            }
-        };
-
-        test_utils::assert_eq(actual, expected);
+impl TestPartsItem {
+    pub(crate) fn try_new(module: &ModuleImplIR, target: Target) -> syn::Result<Self> {
+        Ok(Self {
+            mod_ident: module.test_parts_mod_ident(),
+            host_ref: HostRefItem::try_new(module, target)?,
+            has_ident_impl: HasIdentTraitImplItem::try_from(module)?,
+            deployer: DeployerItem::try_new(module, target)?
+        })
     }
 }
+
+impl TryFrom<&ModuleImplIR> for TestPartsItem {
+    type Error = syn::Error;
+
+    fn try_from(module: &ModuleImplIR) -> Result<Self, Self::Error> {
+        Self::try_new(module, Target::Module)
+    }
+}
+
+impl ToTokens for TestPartsItem {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let Self {
+            mod_ident,
+            host_ref,
+            has_ident_impl,
+            deployer
+        } = self;
+        tokens.extend(not_wasm32_mod(
+            mod_ident,
+            quote! {
+                #host_ref
+                #has_ident_impl
+                #deployer
+            }
+        ));
+    }
+}
+
+/// `#[cfg(not(target_arch = "wasm32"))] mod #ident { use super::*; use odra::prelude::*; #body }`,
+/// the shape of every test parts module.
+pub(super) fn not_wasm32_mod(ident: &Ident, body: TokenStream) -> TokenStream {
+    let use_super = UseSuperItem;
+    let use_prelude = UsePreludeItem;
+    quote! {
+        #[cfg(not(target_arch = "wasm32"))]
+        mod #ident {
+            #use_super
+            #use_prelude
+            #body
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests;

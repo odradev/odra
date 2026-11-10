@@ -24,15 +24,18 @@ jobs:
         with:
           toolchain: nightly-2026-01-01
           target: wasm32-unknown-unknown
-      - name: Cache target
-        uses: actions/cache@v4
+      # The same build as benchmark.yml, so this restores the cache that workflow saves from the
+      # release branches. A cache saved from a PR branch would be visible to that branch only.
+      - uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target/debug/.fingerprint
-            target/debug/build
-          key: odra-cache
+          shared-key: benchmark
+          save-if: false
+      # rust-cache prunes ~/.cargo/registry/src before saving, and cargo re-extracts the crates from
+      # their archives on restore. casper-engine-test-support generates resources/chainspec.toml
+      # into its own source dir from build.rs, and that build script is cached as fresh, so the
+      # generated file would be missing at test run time. Cleaning the crate forces the rerun.
+      - name: Regenerate the casper-engine-test-support chainspec
+        run: cargo clean -p casper-engine-test-support
       - name: Prepare test environment
         run: just prepare-test-env
       - name: Set base benchmark filename

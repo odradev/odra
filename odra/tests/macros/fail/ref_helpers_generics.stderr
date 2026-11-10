@@ -1,0 +1,23 @@
+error: `#[odra::ref_helpers]` does not support generics on the impl block
+  --> tests/macros/fail/ref_helpers_generics.rs:16:5
+   |
+16 | impl<T> Token {
+   |     ^^^
+
+error: `#[odra::ref_helpers]` does not support generic arguments on the module name
+  --> tests/macros/fail/ref_helpers_generics.rs:23:11
+   |
+23 | impl Token<u32> {
+   |           ^^^^^
+
+error: `#[odra::ref_helpers]` expects the name of a module or of an external contract here
+  --> tests/macros/fail/ref_helpers_generics.rs:30:6
+   |
+30 | impl (Token, Token) {
+   |      ^^^^^^^^^^^^^^
+
+error: `#[odra::ref_helpers]` goes on an inherent impl block named after a module or an external contract; this is not an impl block
+  --> tests/macros/fail/ref_helpers_generics.rs:37:4
+   |
+37 | fn not_an_impl() {}
+   |    ^^^^^^^^^^^
