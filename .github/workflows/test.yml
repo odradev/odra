@@ -85,7 +85,7 @@ jobs:
       fail-fast: false
       matrix:
         suite: [modules, examples]
-    # Contracts build in parallel (cargo-odra 0.2.1); on the 4 CPUs of a runner four jobs finish
+    # Contracts build in parallel (cargo-odra release/0.2.1); on the 4 CPUs of a runner four jobs finish
     # in a third of the time of one. Each job past the first keeps its dependencies in a target
     # directory of its own under target/cargo-odra, about 250 MB each in the cache.
     env:
