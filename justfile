@@ -1,5 +1,5 @@
 CARGO_ODRA_GIT_REPO := "https://github.com/odradev/cargo-odra"
-CARGO_ODRA_BRANCH := "release/0.2.0"
+CARGO_ODRA_BRANCH := "release/0.2.1"
 BINARYEN_VERSION := "version_125"
 BINARYEN_CHECKSUM := "7c3bc16599c8274a04d34a504fe4be2047884f900e0e2da2f6fb9cd667183be4"
 set dotenv-load := true
@@ -94,7 +94,9 @@ test-modules-on-casper:
 
 test-modules: test-modules-on-odravm test-modules-on-casper
 
-test: test-odra test-modules test-examples
+# `test-odra` runs the OdraVM tests of every workspace member, modules and examples included, so
+# only the CasperVM runs are added; `test-modules` and `test-examples` stay for running one suite.
+test: test-odra test-modules-on-casper test-examples-on-casper
 
 # `cargo odra generate-client` only works in workspace projects, see cargo-odra issue #104.
 test-template name:

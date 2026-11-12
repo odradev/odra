@@ -76,9 +76,20 @@ jobs:
         with:
           files: target/coverage/*.lcov
 
+  # One job per suite, so the two run on separate runners: the examples suite alone is three
+  # times the modules suite.
   casper-vm:
-    name: CasperVM tests
+    name: CasperVM tests (${{ matrix.suite }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [modules, examples]
+    # Contracts build in parallel (cargo-odra release/0.2.1); on the 4 CPUs of a runner four jobs finish
+    # in a third of the time of one. Each job past the first keeps its dependencies in a target
+    # directory of its own under target/cargo-odra, about 250 MB each in the cache.
+    env:
+      CARGO_ODRA_JOBS: 4
     steps:
       - uses: extractions/setup-just@v1
       - uses: actions/checkout@v4
@@ -89,7 +100,7 @@ jobs:
           components: rust-src
       - uses: Swatinem/rust-cache@v2
         with:
-          shared-key: casper-vm
+          shared-key: casper-vm-${{ matrix.suite }}
           save-if: ${{ github.event_name == 'push' }}
       # rust-cache prunes ~/.cargo/registry/src before saving, and cargo re-extracts the crates from
       # their archives on restore. casper-engine-test-support generates resources/chainspec.toml
@@ -102,11 +113,13 @@ jobs:
       - name: Prepare test environment
         run: just prepare-test-env
       - name: Run CasperVM tests
-        run: just test-modules-on-casper test-examples-on-casper
+        run: just test-${{ matrix.suite }}-on-casper
 
   livenet:
     name: Livenet tests (NCTL)
     runs-on: ubuntu-latest
+    env:
+      CARGO_ODRA_JOBS: 4
     services:
       casper-nctl:
         image: makesoftware/casper-nctl:v203
