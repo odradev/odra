@@ -2,6 +2,16 @@
 
 Changelog for `odra`.
 
+## [2.11.0]
+### Changed
+- `cargo odra build`, `schema` and `test -b casper` no longer rebuild the crates that do not define the
+  contract being built, such as `odra-modules` in a project that depends on it (#685): about 2 s less per
+  contract in the examples (7.3 s to 5.1 s). Needs `cargo-odra` 0.2.1, which names the module in a variable of
+  the crate that defines it (`ODRA_MODULE__my_token=Token`) and sets `ODRA_BUILD_PROTOCOL=2`; `odra_build::build()`
+  then watches that variable instead of `ODRA_MODULE`. In the other crates the `odra_module` cfg is `"_"`, the
+  same for every contract. A build with `ODRA_MODULE` alone (an older `cargo-odra`, a manual build) works as
+  before, and so do the `bin/build_schema.rs` and `bin/build_contract.rs` of existing projects.
+
 ## [2.10.0]
 ### Added
 - OdraCLI `upgrade` command: `upgrade <Contract> --gas <amount> [--<upgrade args>]` upgrades a contract from the
