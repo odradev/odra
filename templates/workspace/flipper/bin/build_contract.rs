@@ -2,9 +2,11 @@
 #![no_std]
 #![cfg_attr(target_arch = "wasm32", no_main)]
 #![allow(unused_imports, clippy::single_component_path_imports)]
-// Contracts from a dependency crate (`fqn = "other_crate::module::Contract"` in Odra.toml) link their
-// entry points only if this crate is referenced here: add `use other_crate;` next to the line below.
 use flipper;
+
+// Links the dependency crates that Odra.toml lists contracts of
+// (`fqn = "other_crate::module::Contract"`), so their entry points end up in the wasm.
+odra::link_contract_crates!();
 
 #[cfg(not(target_arch = "wasm32"))]
 fn main() {}

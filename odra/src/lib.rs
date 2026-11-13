@@ -56,6 +56,30 @@ pub use odra_core::{
 };
 
 pub use odra_macros::*;
+
+/// Links the dependency crates that define contracts listed in `Odra.toml` into a binary.
+///
+/// Rust links a dependency only into a crate that refers to it, so a `bin/build_contract.rs` that
+/// builds `odra_modules::erc20::Erc20` without mentioning `odra_modules` would make a wasm
+/// without entry points. The macro expands to an `extern crate` item per such dependency, from
+/// the file `odra_build::build()` writes in the build script, so the binaries of a project follow
+/// its `Odra.toml` without being edited:
+///
+/// ```ignore
+/// // bin/build_contract.rs and bin/build_schema.rs
+/// use my_project;
+///
+/// odra::link_contract_crates!();
+/// ```
+///
+/// The crate needs the `odra_build::build()` build script, as every crate with those binaries has.
+/// Optional and target-specific dependencies are not covered; name those with a `use`.
+#[macro_export]
+macro_rules! link_contract_crates {
+    () => {
+        include!(concat!(env!("OUT_DIR"), "/odra_contract_crates.rs"));
+    };
+}
 #[cfg(not(target_arch = "wasm32"))]
 pub use odra_schema as schema;
 
