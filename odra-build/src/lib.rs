@@ -8,10 +8,135 @@ pub fn build() {
     println!("cargo::rustc-check-cfg=cfg(odra_contract_schema)");
     println!("cargo::rustc-check-cfg=cfg(odra_backend, values(any()))");
     // Load flags.
-    flags().iter().for_each(|flag| println!("{}", flag));
-    contract_schema_flags()
+    let selection = ModuleSelection::from_env();
+    flags(&selection, std::env::var("ODRA_BACKEND").ok())
         .iter()
         .for_each(|flag| println!("{}", flag));
+    contract_schema_flags(selection.own_module())
+        .iter()
+        .for_each(|flag| println!("{}", flag));
+}
+
+/// Tells `odra-build` that the module to build is passed per crate; set by `cargo odra`.
+const BUILD_PROTOCOL_ENV: &str = "ODRA_BUILD_PROTOCOL";
+/// The first [`BUILD_PROTOCOL_ENV`] value with a per-crate module variable.
+const PER_CRATE_PROTOCOL: u32 = 2;
+/// The `odra_module` of a crate that does not define the contract being built.
+///
+/// It is not a struct name, so it selects no module, and it is not empty, so the crate's
+/// `bin/build_schema.rs` (`#[cfg(not(odra_module = ""))]`) still knows a contract is being built.
+/// It is the same for every contract, which is the point: the crate is not rebuilt between them.
+const OTHER_CRATE_MODULE: &str = "_";
+
+/// Name of the variable that names the module of `crate_name` to build:
+/// `ODRA_MODULE__odra_modules=Erc20`.
+fn crate_module_env(crate_name: &str) -> String {
+    format!("ODRA_MODULE__{}", crate_name.replace('-', "_"))
+}
+
+/// The module the crate is built for, and the environment variables that decide it.
+///
+/// Cargo rebuilds a crate whenever a variable its build script watches changes, even when the
+/// script prints the same flags again. Watching the one `ODRA_MODULE` therefore rebuilds every
+/// crate with this build script for every contract, also the crates that do not define it
+/// (`odra-modules` in a project that uses it, say). So `cargo odra` also names the module in a
+/// variable of the crate that defines it, and announces that with `ODRA_BUILD_PROTOCOL=2`; a
+/// crate then watches its own variable only, and stays built while the contracts of other crates
+/// are.
+///
+/// Without `ODRA_BUILD_PROTOCOL` (an older `cargo odra`, a manual build) `ODRA_MODULE` is used
+/// as before.
+#[derive(Debug, PartialEq, Eq)]
+struct ModuleSelection {
+    /// Value of the `odra_module` cfg.
+    cfg: String,
+    /// Variables to rebuild the crate on.
+    watched: Vec<String>,
+    /// Whether the crate may define the module: always under the plain `ODRA_MODULE`, which
+    /// every crate sees, and only in the crate named by a per-crate variable.
+    own: bool
+}
+
+impl ModuleSelection {
+    fn from_env() -> Self {
+        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap_or_default();
+        let package = std::env::var("CARGO_PKG_NAME").unwrap_or_default();
+        let lib = lib_name(Path::new(&manifest_dir).join("Cargo.toml").as_path());
+        Self::new(&package, lib.as_deref(), |name| std::env::var(name).ok())
+    }
+
+    /// `package` is the crate's package name and `lib` the name of its library, if the manifest
+    /// gives it one. The macros gate a module on the library name (`CARGO_CRATE_NAME`), so that
+    /// is the name the cfg value is built with, and the variable is read under both names.
+    fn new(package: &str, lib: Option<&str>, env: impl Fn(&str) -> Option<String>) -> Self {
+        let mut watched = vec![BUILD_PROTOCOL_ENV.to_string()];
+        let per_crate = env(BUILD_PROTOCOL_ENV)
+            .and_then(|protocol| protocol.trim().parse::<u32>().ok())
+            .is_some_and(|protocol| protocol >= PER_CRATE_PROTOCOL);
+        if !per_crate {
+            watched.push("ODRA_MODULE".to_string());
+            return Self {
+                cfg: env("ODRA_MODULE").unwrap_or_default(),
+                watched,
+                own: true
+            };
+        }
+
+        let crate_name = lib.unwrap_or(package).replace('-', "_");
+        let mut variables = vec![crate_module_env(&crate_name)];
+        let package_variable = crate_module_env(package);
+        if !variables.contains(&package_variable) {
+            variables.push(package_variable);
+        }
+        let module = variables
+            .iter()
+            .filter_map(|variable| env(variable))
+            .find(|module| !module.is_empty());
+        watched.extend(variables);
+        match module {
+            Some(module) => Self {
+                cfg: format!("{}::{}", crate_name, module_file_name(&module)),
+                watched,
+                own: true
+            },
+            None => Self {
+                cfg: OTHER_CRATE_MODULE.to_string(),
+                watched,
+                own: false
+            }
+        }
+    }
+
+    /// The module to build, if this crate may be the one defining it.
+    fn own_module(&self) -> Option<&str> {
+        (self.own && !self.cfg.is_empty()).then_some(self.cfg.as_str())
+    }
+}
+
+/// The `name` of the `[lib]` section of the manifest at `manifest`, if it sets one.
+///
+/// A build script is told the package name but not the library name, and the two differ in a
+/// crate with `[lib] name = ".."`. A line scan is enough for that one key and keeps a toml parser
+/// out of every contract build.
+fn lib_name(manifest: &Path) -> Option<String> {
+    let content = std::fs::read_to_string(manifest).ok()?;
+    lib_name_in(&content)
+}
+
+fn lib_name_in(manifest: &str) -> Option<String> {
+    manifest
+        .lines()
+        .map(str::trim)
+        .skip_while(|line| *line != "[lib]")
+        .skip(1)
+        .take_while(|line| !line.starts_with('['))
+        .filter_map(|line| line.strip_prefix("name"))
+        .filter_map(|rest| rest.trim_start().strip_prefix('='))
+        .map(|name| {
+            let name = name.split('#').next().unwrap_or(name).trim();
+            name.trim_matches(|c| c == '"' || c == '\'').to_string()
+        })
+        .find(|name| !name.is_empty())
 }
 
 const CONTRACT_SCHEMAS_DIR: &str = "resources/casper_contract_schemas";
@@ -109,19 +234,18 @@ fn to_snake_case(s: &str) -> String {
 ///
 /// The file in `resources` stays pretty-printed for people and diffs; the embedded copy is
 /// written to `OUT_DIR` without whitespace, so the wasm does not carry the indentation.
-fn contract_schema_flags() -> Vec<String> {
+fn contract_schema_flags(module: Option<&str>) -> Vec<String> {
     let mut flags = vec![];
     if std::env::var("CARGO_CFG_TARGET_ARCH").as_deref() != Ok("wasm32") {
         return flags;
     }
-    let module = match std::env::var("ODRA_MODULE") {
-        Ok(module) if !module.is_empty() => module,
-        _ => return flags
+    let Some(module) = module else {
+        return flags;
     };
     let Ok(manifest_dir) = std::env::var("CARGO_MANIFEST_DIR") else {
         return flags;
     };
-    match find_contract_schema(Path::new(&manifest_dir), &module) {
+    match find_contract_schema(Path::new(&manifest_dir), module) {
         Ok(path) => {
             flags.push(format!("cargo:rerun-if-changed={}", path.display()));
             flags.push("cargo:rustc-cfg=odra_contract_schema".to_string());
@@ -145,9 +269,9 @@ fn contract_schema_flags() -> Vec<String> {
         Err(path) => {
             // Rerun once the schema gets generated.
             flags.push(format!("cargo:rerun-if-changed={}", path.display()));
-            // Dependencies are built with the same `ODRA_MODULE`, so warn only in the crate that
-            // defines the contract.
-            let contract = module_file_name(&module);
+            // Under the plain `ODRA_MODULE` dependencies are built with the same value, so warn
+            // only in the crate that defines the contract.
+            let contract = module_file_name(module);
             if !odra_toml_lists_contract(Path::new(&manifest_dir), contract) {
                 return flags;
             }
@@ -219,17 +343,19 @@ fn odra_toml_lists_contract(dir: &Path, contract_name: &str) -> bool {
         .any(|fqn| fqn.rsplit("::").next() == Some(contract_name))
 }
 
-fn flags() -> Vec<String> {
-    let mut flags = vec![];
-    flags.push("cargo:rerun-if-env-changed=ODRA_MODULE".to_string());
-    let module = std::env::var("ODRA_MODULE").unwrap_or_else(|_| "".to_string());
-    let msg = format!("cargo:rustc-cfg=odra_module=\"{}\"", module);
-    flags.push(msg);
+fn flags(selection: &ModuleSelection, backend: Option<String>) -> Vec<String> {
+    let mut flags: Vec<String> = selection
+        .watched
+        .iter()
+        .map(|variable| format!("cargo:rerun-if-env-changed={}", variable))
+        .collect();
+    flags.push(format!("cargo:rustc-cfg=odra_module=\"{}\"", selection.cfg));
 
     flags.push("cargo:rerun-if-env-changed=ODRA_BACKEND".to_string());
-    let backend_env = std::env::var("ODRA_BACKEND").unwrap_or_else(|_| "".to_string());
-    let msg = format!("cargo:rustc-cfg=odra_backend=\"{}\"", backend_env);
-    flags.push(msg);
+    flags.push(format!(
+        "cargo:rustc-cfg=odra_backend=\"{}\"",
+        backend.unwrap_or_default()
+    ));
 
     flags
 }
@@ -290,25 +416,135 @@ mod test {
         std::fs::remove_dir_all(&root).unwrap();
     }
 
+    fn selection(package: &str, lib: Option<&str>, env: &[(&str, &str)]) -> super::ModuleSelection {
+        super::ModuleSelection::new(package, lib, |name| {
+            env.iter()
+                .find(|(key, _)| *key == name)
+                .map(|(_, value)| value.to_string())
+        })
+    }
+
     #[test]
     fn test_flags() {
-        std::env::remove_var("ODRA_MODULE");
-        std::env::remove_var("ODRA_BACKEND");
-        let flags = super::flags();
-        assert_eq!(flags.len(), 4);
-        assert_eq!(flags[0], "cargo:rerun-if-env-changed=ODRA_MODULE");
-        assert_eq!(flags[1], "cargo:rustc-cfg=odra_module=\"\"");
-        assert_eq!(flags[2], "cargo:rerun-if-env-changed=ODRA_BACKEND");
-        assert_eq!(flags[3], "cargo:rustc-cfg=odra_backend=\"\"");
+        let flags = super::flags(&selection("my-token", None, &[]), None);
+        assert_eq!(
+            flags,
+            vec![
+                "cargo:rerun-if-env-changed=ODRA_BUILD_PROTOCOL",
+                "cargo:rerun-if-env-changed=ODRA_MODULE",
+                "cargo:rustc-cfg=odra_module=\"\"",
+                "cargo:rerun-if-env-changed=ODRA_BACKEND",
+                "cargo:rustc-cfg=odra_backend=\"\""
+            ]
+        );
 
-        std::env::set_var("ODRA_MODULE", "test");
-        std::env::set_var("ODRA_BACKEND", "backend_test");
-        let flags = super::flags();
-        assert_eq!(flags.len(), 4);
-        assert_eq!(flags[0], "cargo:rerun-if-env-changed=ODRA_MODULE");
-        assert_eq!(flags[1], "cargo:rustc-cfg=odra_module=\"test\"");
-        assert_eq!(flags[2], "cargo:rerun-if-env-changed=ODRA_BACKEND");
-        assert_eq!(flags[3], "cargo:rustc-cfg=odra_backend=\"backend_test\"");
+        let flags = super::flags(
+            &selection("my-token", None, &[("ODRA_MODULE", "test")]),
+            Some("backend_test".to_string())
+        );
+        assert_eq!(flags[2], "cargo:rustc-cfg=odra_module=\"test\"");
+        assert_eq!(flags[4], "cargo:rustc-cfg=odra_backend=\"backend_test\"");
+    }
+
+    /// Without `ODRA_BUILD_PROTOCOL` (or with a value older than the per-crate one) the crate
+    /// is built for `ODRA_MODULE`, whatever crate it names.
+    #[test]
+    fn test_module_selection_plain() {
+        for protocol in [None, Some("1"), Some(""), Some("two")] {
+            let mut env = vec![
+                ("ODRA_MODULE", "odra_modules::Erc20"),
+                ("ODRA_MODULE__my_token", "Token"),
+            ];
+            if let Some(protocol) = protocol {
+                env.push(("ODRA_BUILD_PROTOCOL", protocol));
+            }
+            let selection = selection("my-token", None, &env);
+            assert_eq!(selection.cfg, "odra_modules::Erc20");
+            assert_eq!(selection.watched, ["ODRA_BUILD_PROTOCOL", "ODRA_MODULE"]);
+            assert_eq!(selection.own_module(), Some("odra_modules::Erc20"));
+        }
+        assert_eq!(selection("my-token", None, &[]).own_module(), None);
+    }
+
+    /// With `ODRA_BUILD_PROTOCOL=2` a crate watches its own variable instead of `ODRA_MODULE`,
+    /// and one that does not define the contract gets the same placeholder for every contract.
+    #[test]
+    fn test_module_selection_per_crate() {
+        let env = [
+            ("ODRA_BUILD_PROTOCOL", "2"),
+            ("ODRA_MODULE", "my_token::Token"),
+            ("ODRA_MODULE__my_token", "Token")
+        ];
+        let defining = selection("my-token", None, &env);
+        assert_eq!(defining.cfg, "my_token::Token");
+        assert_eq!(
+            defining.watched,
+            ["ODRA_BUILD_PROTOCOL", "ODRA_MODULE__my_token"]
+        );
+        assert_eq!(defining.own_module(), Some("my_token::Token"));
+
+        let other = selection("odra-modules", None, &env);
+        assert_eq!(other.cfg, "_");
+        assert_eq!(
+            other.watched,
+            ["ODRA_BUILD_PROTOCOL", "ODRA_MODULE__odra_modules"]
+        );
+        assert_eq!(other.own_module(), None);
+
+        // A crate-qualified value names the same module.
+        let qualified = [
+            ("ODRA_BUILD_PROTOCOL", "3"),
+            ("ODRA_MODULE__my_token", "my_token::Token")
+        ];
+        assert_eq!(
+            selection("my-token", None, &qualified).cfg,
+            "my_token::Token"
+        );
+        // An empty variable selects nothing.
+        let empty = [("ODRA_BUILD_PROTOCOL", "2"), ("ODRA_MODULE__my_token", "")];
+        assert_eq!(selection("my-token", None, &empty).cfg, "_");
+    }
+
+    /// The macros gate a module on the library name, so the cfg value is built with it; the
+    /// variable may be named after the library or the package.
+    #[test]
+    fn test_module_selection_with_lib_name() {
+        for variable in ["ODRA_MODULE__token_lib", "ODRA_MODULE__my_token"] {
+            let env = [("ODRA_BUILD_PROTOCOL", "2"), (variable, "Token")];
+            let selection = selection("my-token", Some("token_lib"), &env);
+            assert_eq!(selection.cfg, "token_lib::Token");
+            assert_eq!(
+                selection.watched,
+                [
+                    "ODRA_BUILD_PROTOCOL",
+                    "ODRA_MODULE__token_lib",
+                    "ODRA_MODULE__my_token"
+                ]
+            );
+        }
+    }
+
+    #[test]
+    fn test_lib_name_in() {
+        let name = super::lib_name_in;
+        assert_eq!(name("[package]\nname = \"my-token\"\n"), None);
+        assert_eq!(
+            name("[package]\nname = \"my-token\"\n\n[lib]\ncrate-type = [\"cdylib\"]\n"),
+            None
+        );
+        assert_eq!(
+            name("[package]\nname = \"my-token\"\n[lib]\npath = \"src/lib.rs\"\nname = \"token_lib\" # the lib\n"),
+            Some("token_lib".to_string())
+        );
+        assert_eq!(
+            name("[lib]\nname=\'token_lib\'\n[[bin]]\nname = \"my_token_build_contract\"\n"),
+            Some("token_lib".to_string())
+        );
+        // Only the `[lib]` section counts.
+        assert_eq!(
+            name("[lib]\ntest = false\n[[bin]]\nname = \"my_token_build_contract\"\n"),
+            None
+        );
     }
 
     #[test]
