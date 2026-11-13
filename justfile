@@ -98,7 +98,7 @@ test-modules: test-modules-on-odravm test-modules-on-casper
 # only the CasperVM runs are added; `test-modules` and `test-examples` stay for running one suite.
 test: test-odra test-modules-on-casper test-examples-on-casper
 
-# `cargo odra generate-client` only works in workspace projects, see cargo-odra issue #104.
+# `generate-client` needs cargo-odra 0.2.1 in a single crate project (cargo-odra issue #104).
 test-template name:
     cd tests && cargo odra new -n {{name}} --template {{name}} -s ../ \
         && cd {{name}} \
@@ -106,7 +106,7 @@ test-template name:
         && cargo odra test -b casper \
         && cargo odra schema \
         && cargo build --bin {{name}}_cli \
-        && if [ "{{name}}" = "workspace" ]; then cargo odra generate-client; fi
+        && cargo odra generate-client
 
 test-templates:
     rm -rf tests
