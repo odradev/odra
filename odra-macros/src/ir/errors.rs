@@ -290,6 +290,23 @@ pub fn odra_attr_on_special_fn(attr: &syn::Attribute, arg: &str, fn_name: &str) 
     )
 }
 
+/// An `#[odra(..)]` attribute on a function that is not an entry point, where it does nothing.
+pub fn odra_attr_on_private_fn(attr: &syn::Attribute, arg: &str, fn_name: &str) -> syn::Error {
+    let reason = match arg {
+        "payable" => "only an entry point can receive attached tokens",
+        "non_reentrant" => "only entry points are guarded against reentrancy",
+        "offchain" => "an offchain function is called from the host, as an entry point is",
+        _ => "it applies to entry points only"
+    };
+    syn::Error::new_spanned(
+        attr,
+        format!(
+            "`#[odra({arg})]` has no effect on `{fn_name}`, which is not an entry point: \
+             {reason}; make the function `pub` or remove the attribute"
+        )
+    )
+}
+
 /// Why `#[odra(offchain)]` does not fit the function it is on.
 pub enum OffchainMisuse {
     InTraitImpl,
