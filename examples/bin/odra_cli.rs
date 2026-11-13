@@ -68,7 +68,8 @@ impl DeployScript for DeployScriptForExamples {
                 initial_supply: U256::from(10_000)
             },
             container,
-            cspr!(300)
+            // 287.6 CSPR measured on nctl.
+            cspr!(400)
         )?;
         // `all_balances` and `balances_of` of the book are `#[odra(offchain)]`: the CLI lists them
         // next to the entry points and runs them on the host.
@@ -285,12 +286,17 @@ impl Scenario for TimeLockWalletScenario {
         let mut wallet = container.contract_ref::<TimeLockWallet>(env)?;
         let caller = env.caller();
 
-        env.set_gas(cspr!(4));
+        // A payable call goes through the proxy caller, and the first one an account ever makes
+        // also creates the purse the proxy keeps for it: 6.53 CSPR measured on nctl, 3.69 CSPR
+        // for the calls after it.
+        env.set_gas(cspr!(10));
         wallet.with_tokens(U512::from(cspr!(100))).try_deposit()?;
         odra_cli::log(format!(
             "Balance after deposit: {}",
             wallet.try_get_balance(&caller)?
         ));
+        // 2.84 CSPR measured.
+        env.set_gas(cspr!(4));
         wallet.try_withdraw(&U512::from(cspr!(99)))?;
         odra_cli::log(format!(
             "Balance after withdrawal: {}",
