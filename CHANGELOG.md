@@ -3,6 +3,13 @@
 Changelog for `odra`.
 
 ## [2.11.0]
+### Added
+- `odra::link_contract_crates!()` links the dependency crates that `Odra.toml` lists contracts of
+  (`fqn = "odra_modules::erc20::Erc20"`) into `bin/build_contract.rs` and `bin/build_schema.rs`, so listing such a
+  contract no longer needs a hand-written `use odra_modules;` in both (cargo-odra #110). `odra_build::build()`
+  writes the `extern crate` items it expands to. The templates call it; add the line to the binaries of an
+  existing project to use it. Optional and target-specific dependencies still need the `use`.
+
 ### Changed
 - `cargo odra build`, `schema` and `test -b casper` no longer rebuild the crates that do not define the
   contract being built, such as `odra-modules` in a project that depends on it (#685): about 2 s less per
