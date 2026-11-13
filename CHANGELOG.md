@@ -11,6 +11,13 @@ Changelog for `odra`.
   existing project to use it. Optional and target-specific dependencies still need the `use`.
 
 ### Changed
+- **Can break a build:** `#[odra(payable)]`, `#[odra(non_reentrant)]` and `#[odra(offchain)]` on a function that
+  is not an entry point (not `pub` in a module impl) are compile errors (#686). They were accepted and did
+  nothing: a `non_reentrant` helper was not guarded. Make the function `pub` or remove the attribute.
+- **Can break a build:** generating the schema of a contract (`cargo odra schema`, `cargo odra build`) fails when
+  two errors of its modules share a code, naming the code and both errors (#684). A failed call reports only the
+  code, so such errors cannot be told apart. An error enum reached through several modules counts once. Give
+  each error of a contract its own discriminant.
 - `cargo odra build`, `schema` and `test -b casper` no longer rebuild the crates that do not define the
   contract being built, such as `odra-modules` in a project that depends on it (#685): about 2 s less per
   contract in the examples (7.3 s to 5.1 s). Needs `cargo-odra` 0.2.1, which names the module in a variable of
