@@ -19,6 +19,12 @@ Changelog for `odra`.
   same for every contract. A build with `ODRA_MODULE` alone (an older `cargo-odra`, a manual build) works as
   before, and so do the `bin/build_schema.rs` and `bin/build_contract.rs` of existing projects.
 
+### Fixed
+- The `tlw` scenario of the examples' `odra_cli` ran out of gas unless the account had made a payable call
+  before (#687): the first call an account makes through the proxy caller also creates its purse there and costs
+  6.53 CSPR, more than the 4 CSPR limit; the calls after it cost 3.69 CSPR. The deposit gets 10 CSPR. The `Cep18`
+  deploy of the same binary used 287.6 of its 300 CSPR and gets 400.
+
 ## [2.10.0]
 ### Added
 - OdraCLI `upgrade` command: `upgrade <Contract> --gas <amount> [--<upgrade args>]` upgrades a contract from the
