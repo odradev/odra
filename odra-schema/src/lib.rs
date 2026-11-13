@@ -202,6 +202,60 @@ pub fn error(name: &str, description: &str, discriminant: u16) -> UserError {
     }
 }
 
+/// Checks that no two errors of a contract share a code. The error names the code and the errors
+/// that use it.
+///
+/// A contract reverts with a bare number (`User error: 1`), and the errors of all the modules it
+/// is composed of share one range of codes. When two of them use the same code, neither a test
+/// nor the livenet error decoding can tell which module reverted.
+///
+/// `errors` are the contract's, as [SchemaErrors::schema_errors] returns them: an error enum
+/// reached through several modules is listed once there, so it does not collide with itself.
+pub fn validate_error_codes(errors: &[UserError]) -> Result<(), String> {
+    let mut by_code: std::collections::BTreeMap<u16, Vec<&UserError>> = Default::default();
+    for error in errors {
+        let same_code = by_code.entry(error.discriminant).or_default();
+        if !same_code.contains(&error) {
+            same_code.push(error);
+        }
+    }
+    let collisions = by_code
+        .into_iter()
+        .filter(|(_, errors)| errors.len() > 1)
+        .map(|(code, errors)| {
+            let same_names = errors.iter().all(|error| error.name == errors[0].name);
+            let names = errors
+                .iter()
+                .map(|error| match (&error.description, same_names) {
+                    // Two enums may name a variant alike; the description tells them apart.
+                    (Some(description), true) => format!("`{}` ({})", error.name, description),
+                    _ => format!("`{}`", error.name)
+                })
+                .collect::<Vec<_>>();
+            format!("error code {} is shared by {}", code, names.join(" and "))
+        })
+        .collect::<Vec<_>>();
+    if collisions.is_empty() {
+        return Ok(());
+    }
+    Err(format!(
+        "{}; a failed call reports only the code, so these errors cannot be told apart. The \
+         errors of all the modules of a contract share one range of codes: give each error its \
+         own discriminant",
+        collisions.join("; ")
+    ))
+}
+
+/// Panics if two errors of contract `contract` share a code, see [validate_error_codes].
+///
+/// Called when the schema of a contract is generated, so `cargo odra schema` and
+/// `cargo odra build` stop on it before the contract is built.
+pub fn assert_error_codes_are_unique(contract: &str, errors: &[UserError]) {
+    if let Err(error) = validate_error_codes(errors) {
+        panic!("Contract `{}`: {}", contract, error);
+    }
+}
+
 /// Creates an instance of [ContractSchema].
 ///
 /// A contract schema is a representation of a smart contract's schema. It includes information about
@@ -223,6 +277,7 @@ where
     let entry_points = T::schema_entrypoints();
     let events = T::schema_events();
     let errors = T::schema_errors();
+    assert_error_codes_are_unique(contract_name, &errors);
     let types = T::schema_types()
         .into_iter()
         .chain(<T as SchemaStorageLayout>::custom_types())
@@ -468,6 +523,81 @@ mod test {
         assert_eq!(error.name, "error1");
         assert_eq!(error.description, Some("description".to_string()));
         assert_eq!(error.discriminant, 1);
+    }
+
+    #[test]
+    fn error_codes_of_a_contract_must_differ() {
+        use super::{error, validate_error_codes};
+
+        let not_an_owner = || error("NotAnOwner", "The caller is not the owner", 1);
+        let paused = || error("Paused", "The contract is paused", 2);
+        assert_eq!(validate_error_codes(&[]), Ok(()));
+        assert_eq!(validate_error_codes(&[not_an_owner(), paused()]), Ok(()));
+        // The same error listed twice is one error.
+        assert_eq!(
+            validate_error_codes(&[not_an_owner(), not_an_owner()]),
+            Ok(())
+        );
+
+        let message = validate_error_codes(&[
+            not_an_owner(),
+            paused(),
+            error("InsufficientBalance", "Not enough tokens", 1),
+            error("Expired", "Too late", 2),
+            error("Fine", "Its own code", 3)
+        ])
+        .unwrap_err();
+        assert!(
+            message.starts_with(
+                "error code 1 is shared by `NotAnOwner` and `InsufficientBalance`; \
+                 error code 2 is shared by `Paused` and `Expired`; a failed call"
+            ),
+            "{message}"
+        );
+
+        // Variants of the same name in two enums are told apart by their descriptions.
+        let message = validate_error_codes(&[
+            not_an_owner(),
+            error("NotAnOwner", "Only the owner may pause", 1)
+        ])
+        .unwrap_err();
+        assert!(
+            message.starts_with(
+                "error code 1 is shared by `NotAnOwner` (The caller is not the owner) and \
+                 `NotAnOwner` (Only the owner may pause);"
+            ),
+            "{message}"
+        );
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "Contract `contract_name`: error code 7 is shared by `First` and `Second`"
+    )]
+    fn schema_of_a_contract_with_a_shared_error_code_is_refused() {
+        struct Colliding;
+        impl SchemaEntrypoints for Colliding {
+            fn schema_entrypoints() -> Vec<Entrypoint> {
+                vec![]
+            }
+        }
+        impl SchemaEvents for Colliding {}
+        impl SchemaCustomTypes for Colliding {}
+        impl SchemaErrors for Colliding {
+            fn schema_errors() -> Vec<UserError> {
+                vec![super::error("First", "", 7), super::error("Second", "", 7)]
+            }
+        }
+        impl SchemaStorageLayout for Colliding {
+            fn storage_kind() -> StorageKind {
+                StorageKind::module(vec![])
+            }
+
+            fn custom_types() -> Vec<Option<CustomType>> {
+                vec![]
+            }
+        }
+        super::schema::<Colliding>("module", "contract_name", "1", vec![], "", "");
     }
 
     #[test]

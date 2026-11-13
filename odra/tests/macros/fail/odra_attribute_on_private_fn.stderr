@@ -1,0 +1,17 @@
+error: `#[odra(non_reentrant)]` has no effect on `helper`, which is not an entry point: only entry points are guarded against reentrancy; make the function `pub` or remove the attribute
+  --> tests/macros/fail/odra_attribute_on_private_fn.rs:16:5
+   |
+16 |     #[odra(non_reentrant)]
+   |     ^^^^^^^^^^^^^^^^^^^^^^
+
+error: `#[odra(payable)]` has no effect on `deposit`, which is not an entry point: only an entry point can receive attached tokens; make the function `pub` or remove the attribute
+  --> tests/macros/fail/odra_attribute_on_private_fn.rs:29:5
+   |
+29 |     #[odra(payable)]
+   |     ^^^^^^^^^^^^^^^^
+
+error: `#[odra(offchain)]` has no effect on `total`, which is not an entry point: an offchain function is called from the host, as an entry point is; make the function `pub` or remove the attribute
+  --> tests/macros/fail/odra_attribute_on_private_fn.rs:32:5
+   |
+32 |     #[odra(offchain)]
+   |     ^^^^^^^^^^^^^^^^^

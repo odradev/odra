@@ -323,6 +323,19 @@ impl ModuleIR {
         is_trait_impl || matches!(func.vis, syn::Visibility::Public(_))
     }
 
+    /// A function that is not an entry point takes no `#[odra(..)]` attribute: the flags are
+    /// applied by the generated entry point, so on a private function `non_reentrant` would
+    /// guard nothing and `payable` accept nothing, without a word.
+    fn validate_private_function(func: &syn::ImplItemFn) -> syn::Result<()> {
+        let attrs = OdraAttrs::parse(&func.attrs)?;
+        let fn_name = func.sig.ident.to_string();
+        errors::check_all(
+            attrs
+                .each_attribute()
+                .map(|(attr, flag)| Err(errors::odra_attr_on_private_fn(attr, flag, &fn_name)))
+        )
+    }
+
     fn parse_functions(code: &syn::ItemImpl, ctx: ImplContext) -> syn::Result<Vec<FnIR>> {
         let own_functions = code
             .items
@@ -337,7 +350,7 @@ impl ModuleIR {
                 if Self::is_entry_point(func, ctx.is_trait_impl) {
                     Some(FnIR::try_new_impl(func.clone(), ctx))
                 } else {
-                    OdraAttrs::parse(&func.attrs).err().map(Err)
+                    Self::validate_private_function(func).err().map(Err)
                 }
             });
         let delegated_functions = Self::delegated_functions(code)?
