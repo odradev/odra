@@ -15,12 +15,12 @@ use casper_client::{
 use casper_types::{
     bytesrepr::{Bytes, FromBytes, ToBytes},
     execution::{Effects, TransformKindV2},
-    runtime_args, CLValue, Deploy, Digest, ExecutableDeployItem, Key, PricingMode, RuntimeArgs,
-    SecretKey, StoredValue, TimeDiff, Timestamp, Transaction, TransactionRuntimeParams,
-    TransferTarget, URef, U512
+    runtime_args, Deploy, Digest, ExecutableDeployItem, Key, PricingMode, RuntimeArgs, SecretKey,
+    StoredValue, TimeDiff, Timestamp, Transaction, TransactionRuntimeParams, TransferTarget, URef,
+    U512
 };
 use js_sys::Date;
-use odra_core::prelude::Address;
+use odra_core::{consts::RESULT_KEY, prelude::Address};
 use thiserror::Error;
 use wasm_bindgen::prelude::*;
 
@@ -277,8 +277,8 @@ impl OdraWasmClient {
             )));
         }
 
-        let cl_value = find_result(&result.effects)?;
-        let (result, _) = T::from_bytes(&cl_value.inner_bytes()[4..])?;
+        let bytes = find_result(&result.effects)?;
+        let (result, _) = T::from_bytes(&bytes)?;
         Ok(result.to_wasm_value())
     }
 
@@ -519,17 +519,37 @@ impl OdraWasmClient {
     }
 }
 
-fn find_result(effects: &Effects) -> Result<CLValue, JsError> {
-    let values = effects.clone().value();
-    values
+/// Finds the value a proxy call returned.
+///
+/// The proxy caller stores the result of the call in a new URef and puts that URef under the
+/// [RESULT_KEY] named key of the calling account. A call may write other values before that - a
+/// getter that reads a dictionary for the first time creates it - so the result is the value
+/// written under that URef, not the first value written.
+fn find_result(effects: &Effects) -> Result<Bytes, ClientError> {
+    let transforms = effects.transforms();
+    let result_uref = transforms
         .iter()
-        .find_map(|effect| {
-            if let TransformKindV2::Write(StoredValue::CLValue(cl_value)) = effect.kind() {
-                return Some(cl_value.clone());
+        .find_map(|transform| match transform.kind() {
+            TransformKindV2::AddKeys(named_keys) => {
+                named_keys.get(RESULT_KEY).and_then(|key| key.as_uref())
             }
-            None
+            _ => None
         })
-        .ok_or_else(|| JsError::new("Couldn't find CLValue in the execution result"))
+        .ok_or(ClientError::ResultNotFound)?;
+    transforms
+        .iter()
+        .rev()
+        .find_map(|transform| match (transform.key(), transform.kind()) {
+            (Key::URef(uref), TransformKindV2::Write(StoredValue::CLValue(cl_value)))
+                if uref.addr() == result_uref.addr() =>
+            {
+                Some(cl_value.clone())
+            }
+            _ => None
+        })
+        .ok_or(ClientError::ResultNotFound)?
+        .into_t::<Bytes>()
+        .map_err(ClientError::CLValue)
 }
 
 fn now() -> Result<Timestamp, JsError> {
@@ -552,6 +572,8 @@ pub enum ClientError {
     CLValue(casper_types::CLValueError),
     #[error("Read global state error: {0}")]
     ReadGlobalStateError(String),
+    #[error("The call returned no result")]
+    ResultNotFound,
     #[error("WASM_CLIENT_SK was empty at build time")]
     MissingSecretKey,
     #[error("Invalid secret key: {0}")]
@@ -564,4 +586,81 @@ fn secret_key() -> Result<SecretKey, ClientError> {
         return Err(ClientError::MissingSecretKey);
     }
     SecretKey::from_pem(SECRET_KEY_PEM).map_err(|e| ClientError::InvalidSecretKey(e.to_string()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use casper_types::{contracts::NamedKeys, execution::TransformV2, AccessRights, CLValue, URef};
+
+    const RESULT_UREF: URef = URef::new([7; 32], AccessRights::READ_ADD_WRITE);
+
+    fn write(uref: URef, value: CLValue) -> TransformV2 {
+        TransformV2::new(
+            Key::URef(uref.remove_access_rights()),
+            TransformKindV2::Write(StoredValue::CLValue(value))
+        )
+    }
+
+    fn add_key(name: &str, uref: URef) -> TransformV2 {
+        let mut named_keys = NamedKeys::new();
+        named_keys.insert(name.to_string(), Key::URef(uref));
+        TransformV2::new(Key::Hash([1; 32]), TransformKindV2::AddKeys(named_keys))
+    }
+
+    fn result_value(bytes: Vec<u8>) -> CLValue {
+        CLValue::from_t(Bytes::from(bytes)).unwrap()
+    }
+
+    fn effects(transforms: Vec<TransformV2>) -> Effects {
+        let mut effects = Effects::new();
+        for transform in transforms {
+            effects.push(transform);
+        }
+        effects
+    }
+
+    /// `build.rs` passes the key of `WASM_CLIENT_SK` on one line.
+    #[test]
+    fn a_pem_on_one_line_is_a_valid_key() {
+        let pem = SecretKey::generate_ed25519().unwrap().to_pem().unwrap();
+        assert!(pem.trim().contains('\n'));
+        assert!(SecretKey::from_pem(pem.replace(['\r', '\n'], "")).is_ok());
+    }
+
+    #[test]
+    fn finds_the_result() {
+        let effects = effects(vec![
+            write(RESULT_UREF, result_value(vec![1, 2, 3])),
+            add_key(RESULT_KEY, RESULT_UREF),
+        ]);
+        assert_eq!(find_result(&effects).unwrap(), Bytes::from(vec![1, 2, 3]));
+    }
+
+    /// A getter that reads a dictionary nobody has written to creates it: a unit value written
+    /// under a new URef, before the result.
+    #[test]
+    fn skips_values_written_before_the_result() {
+        let dictionary = URef::new([3; 32], AccessRights::READ_ADD_WRITE);
+        let effects = effects(vec![
+            write(dictionary, CLValue::unit()),
+            add_key("owners", dictionary),
+            write(RESULT_UREF, result_value(vec![0])),
+            add_key(RESULT_KEY, RESULT_UREF),
+        ]);
+        assert_eq!(find_result(&effects).unwrap(), Bytes::from(vec![0]));
+    }
+
+    #[test]
+    fn reports_a_missing_result() {
+        let dictionary = URef::new([3; 32], AccessRights::READ_ADD_WRITE);
+        let effects = effects(vec![
+            write(dictionary, CLValue::unit()),
+            add_key("owners", dictionary),
+        ]);
+        assert!(matches!(
+            find_result(&effects),
+            Err(ClientError::ResultNotFound)
+        ));
+    }
 }
