@@ -2,6 +2,8 @@ CARGO_ODRA_GIT_REPO := "https://github.com/odradev/cargo-odra"
 CARGO_ODRA_BRANCH := "release/0.2.1"
 BINARYEN_VERSION := "version_125"
 BINARYEN_CHECKSUM := "7c3bc16599c8274a04d34a504fe4be2047884f900e0e2da2f6fb9cd667183be4"
+# The copies of resources/proxy_caller*.wasm that crates embed with include_bytes!.
+PROXY_CALLER_COPIES := "odra-wasm-client/resources/proxy_caller.wasm odra-wasm-client/resources/proxy_caller_with_return.wasm odra-casper/rpc-client/resources/proxy_caller_with_return.wasm odra-casper/test-vm/resources/proxy_caller_with_return.wasm"
 set dotenv-load := true
 default:
     just --list
@@ -18,7 +20,7 @@ lint: clippy
     cargo fmt
     cd odra-casper/proxy-caller && cargo fmt
 
-check-lint: clippy
+check-lint: check-proxy-callers clippy
     cargo fmt -- --check
     cargo check --all-targets
     cd odra-casper/proxy-caller && cargo fmt -- --check
@@ -56,14 +58,23 @@ build-proxy-callers:
     wasm-strip target/wasm32-unknown-unknown/release/proxy_caller_with_return.wasm
     wasm-opt -O3 --enable-bulk-memory --signext-lowering --llvm-memory-copy-fill-lowering target/wasm32-unknown-unknown/release/proxy_caller.wasm -o target/wasm32-unknown-unknown/release/proxy_caller.wasm
     wasm-opt -O3 --enable-bulk-memory --signext-lowering --llvm-memory-copy-fill-lowering target/wasm32-unknown-unknown/release/proxy_caller_with_return.wasm -o target/wasm32-unknown-unknown/release/proxy_caller_with_return.wasm
-    cp target/wasm32-unknown-unknown/release/proxy_caller.wasm \
-        resources/proxy_caller.wasm
-    cp target/wasm32-unknown-unknown/release/proxy_caller_with_return.wasm \
-        resources/proxy_caller_with_return.wasm
-    cp target/wasm32-unknown-unknown/release/proxy_caller.wasm \
-        odra-wasm-client/resources/proxy_caller.wasm
-    cp target/wasm32-unknown-unknown/release/proxy_caller_with_return.wasm \
-        odra-wasm-client/resources/proxy_caller_with_return.wasm
+    cp target/wasm32-unknown-unknown/release/proxy_caller.wasm resources/proxy_caller.wasm
+    cp target/wasm32-unknown-unknown/release/proxy_caller_with_return.wasm resources/proxy_caller_with_return.wasm
+    for copy in {{PROXY_CALLER_COPIES}}; do cp "resources/$(basename "$copy")" "$copy"; done
+
+# Fails when a crate's copy of a proxy caller differs from the one in resources/. A crate can
+# only package files of its own directory, so each crate that embeds a proxy caller has a copy.
+check-proxy-callers:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    status=0
+    for copy in {{PROXY_CALLER_COPIES}}; do
+        if ! cmp -s "resources/$(basename "$copy")" "$copy"; then
+            echo "$copy differs from resources/$(basename "$copy"); run 'just build-proxy-callers'"
+            status=1
+        fi
+    done
+    exit $status
 
 # Builds the storage reader wasm with wasm-pack (`just -f odra-storage-reader/justfile prepare` installs it).
 build-storage-reader-wasm:
