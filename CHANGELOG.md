@@ -31,6 +31,9 @@ Changelog for `odra`.
   before (#687): the first call an account makes through the proxy caller also creates its purse there and costs
   6.53 CSPR, more than the 4 CSPR limit; the calls after it cost 3.69 CSPR. The deposit gets 10 CSPR. The `Cep18`
   deploy of the same binary used 287.6 of its 300 CSPR and gets 400.
+- `odra-casper-rpc-client` and `odra-casper-test-vm` embed the 41 KB proxy caller of #648 (#714). They still
+  carried the 184 KB one, so a payable call sent to a live network was too large for any wasm lane but the
+  largest. `just build-proxy-callers` now writes every copy and `just check-lint` fails when one differs.
 
 ## [2.10.0]
 ### Added
