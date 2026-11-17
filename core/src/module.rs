@@ -26,6 +26,12 @@ pub trait Module {
     fn env(&self) -> Rc<ContractEnv>;
 }
 
+/// Implemented for every module by `#[odra::module]` on its impl block, so an impl block whose
+/// struct has no `#[odra::module]` is reported first as "not an Odra module", before the errors
+/// the rest of the generated code adds.
+#[doc(hidden)]
+pub trait IsModule: Module {}
+
 /// Represents a component that can be a part of a module.
 #[diagnostic::on_unimplemented(
     message = "`{Self}` cannot be a field of a module",

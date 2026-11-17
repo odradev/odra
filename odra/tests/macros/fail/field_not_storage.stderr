@@ -1,27 +1,3 @@
-error[E0277]: the trait bound `NotAModule: HasEvents` is not satisfied
-  --> tests/macros/fail/field_not_storage.rs:24:6
-   |
-24 | impl NotAModule {
-   |      ^^^^^^^^^^ unsatisfied trait bound
-   |
-help: the trait `ModulePrimitive` is not implemented for `NotAModule`
-  --> tests/macros/fail/field_not_storage.rs:19:1
-   |
-19 | pub struct NotAModule {
-   | ^^^^^^^^^^^^^^^^^^^^^
-   = help: the following other types implement trait `ModulePrimitive`:
-             External<T>
-             odra::prelude::List<T>
-             odra::prelude::Mapping<K, V>
-             odra::prelude::Sequence<T>
-             odra::prelude::Var<T>
-   = note: required for `NotAModule` to implement `HasEvents`
-note: required by a bound in `OdraContract`
-  --> $WORKSPACE/core/src/contract.rs
-   |
-   | pub trait OdraContract: crate::contract_def::HasEvents {
-   |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `OdraContract`
-
 error[E0277]: `u32` cannot be a field of a module
  --> tests/macros/fail/field_not_storage.rs:7:12
   |
@@ -32,11 +8,11 @@ error[E0277]: `u32` cannot be a field of a module
   = note: a module's field is a `Var<T>`, a `Mapping<K, V>`, a `List<T>` or a `SubModule<M>`: the module stores values, it does not hold them
   = help: the following other types implement trait `ModuleComponent`:
             External<T>
+            Var<T>
             odra::module::SubModule<T>
             odra::prelude::List<T>
             odra::prelude::Mapping<K, V>
             odra::prelude::Sequence<T>
-            odra::prelude::Var<T>
 
 error[E0277]: `std::string::String` cannot be a field of a module
  --> tests/macros/fail/field_not_storage.rs:8:11
@@ -48,11 +24,11 @@ error[E0277]: `std::string::String` cannot be a field of a module
   = note: a module's field is a `Var<T>`, a `Mapping<K, V>`, a `List<T>` or a `SubModule<M>`: the module stores values, it does not hold them
   = help: the following other types implement trait `ModuleComponent`:
             External<T>
+            Var<T>
             odra::module::SubModule<T>
             odra::prelude::List<T>
             odra::prelude::Mapping<K, V>
             odra::prelude::Sequence<T>
-            odra::prelude::Var<T>
 
 error[E0277]: `u32` is not an Odra module
  --> tests/macros/fail/field_not_storage.rs:9:12
@@ -69,84 +45,3 @@ help: the trait `odra::module::Module` is implemented for `Contract`
   | ^^^^^^^^^^^^^^^
   = note: required for `odra::module::SubModule<u32>` to implement `ModuleComponent`
   = note: this error originates in the attribute macro `odra::module` (in Nightly builds, run with -Z macro-backtrace for more info)
-
-error[E0599]: no function or associated item named `ident` found for struct `NotAModule` in the current scope
-  --> tests/macros/fail/field_not_storage.rs:23:1
-   |
-19 | pub struct NotAModule {
-   | --------------------- function or associated item `ident` not found for this struct
-...
-23 | #[odra::module]
-   | ^^^^^^^^^^^^^^^ function or associated item not found in `NotAModule`
-   |
-   = help: items from traits can only be used if the trait is implemented and in scope
-   = note: the following trait defines an item `ident`, perhaps you need to implement it:
-           candidate #1: `HasIdent`
-   = note: this error originates in the attribute macro `odra::module` (in Nightly builds, run with -Z macro-backtrace for more info)
-
-error[E0277]: the trait bound `NotAModule: HasIdent` is not satisfied
-  --> tests/macros/fail/field_not_storage.rs:24:6
-   |
-24 | impl NotAModule {
-   |      ^^^^^^^^^^ unsatisfied trait bound
-   |
-help: the trait `HasIdent` is not implemented for `NotAModule`
-  --> tests/macros/fail/field_not_storage.rs:19:1
-   |
-19 | pub struct NotAModule {
-   | ^^^^^^^^^^^^^^^^^^^^^
-help: the following other types implement trait `HasIdent`
-  --> tests/macros/fail/field_not_storage.rs:5:1
-   |
- 5 | #[odra::module]
-   | ^^^^^^^^^^^^^^^ `Contract`
-...
-12 | #[odra::module]
-   | ^^^^^^^^^^^^^^^ `__contract_test_parts::ContractHostRef`
-...
-23 | #[odra::module]
-   | ^^^^^^^^^^^^^^^ `__not_a_module_test_parts::NotAModuleHostRef`
-   = note: this error originates in the attribute macro `odra::module` (in Nightly builds, run with -Z macro-backtrace for more info)
-
-error[E0277]: `NotAModule` is not an Odra module
-  --> tests/macros/fail/field_not_storage.rs:24:6
-   |
-24 | impl NotAModule {
-   |      ^^^^^^^^^^ not a module
-   |
-help: the trait `odra::module::Module` is not implemented for `NotAModule`
-  --> tests/macros/fail/field_not_storage.rs:19:1
-   |
-19 | pub struct NotAModule {
-   | ^^^^^^^^^^^^^^^^^^^^^
-   = note: a module is a struct with `#[odra::module]` on it and on its impl block
-help: the trait `odra::module::Module` is implemented for `Contract`
-  --> tests/macros/fail/field_not_storage.rs:5:1
-   |
- 5 | #[odra::module]
-   | ^^^^^^^^^^^^^^^
-   = note: this error originates in the attribute macro `odra::module` (in Nightly builds, run with -Z macro-backtrace for more info)
-
-error[E0277]: the trait bound `NotAModule: SchemaEvents` is not satisfied
-  --> tests/macros/fail/field_not_storage.rs:23:1
-   |
-23 | #[odra::module]
-   | ^^^^^^^^^^^^^^^ unsatisfied trait bound
-   |
-help: the trait `SchemaCustomElement` is not implemented for `NotAModule`
-  --> tests/macros/fail/field_not_storage.rs:19:1
-   |
-19 | pub struct NotAModule {
-   | ^^^^^^^^^^^^^^^^^^^^^
-   = help: the following other types implement trait `SchemaEvents`:
-             ()
-             (T1, T2)
-             (T1, T2, T3)
-             (T1,)
-             BTreeMap<T, E>
-             Contract
-             ContractContractRef
-             External<M>
-           and $N others
-   = note: required for `NotAModule` to implement `SchemaEvents`
-   = note: this error originates in the attribute macro `odra::module` (in Nightly builds, run with -Z macro-backtrace for more info)

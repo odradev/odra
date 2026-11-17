@@ -288,7 +288,7 @@ fn test_factory_item() {
 
             impl odra::contract_def::HasIdent for Erc20FactoryHostRef {
                 fn ident() -> odra::prelude::string::String {
-                    Erc20Factory::ident()
+                    <Erc20Factory as odra::contract_def::HasIdent>::ident()
                 }
                 fn contract_name() -> odra::prelude::string::String {
                     <Erc20Factory as odra::contract_def::HasIdent>::contract_name()

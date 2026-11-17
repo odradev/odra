@@ -282,7 +282,7 @@ fn test_parts() {
 
             impl odra::contract_def::HasIdent for Erc20HostRef {
                 fn ident() -> odra::prelude::string::String {
-                    Erc20::ident()
+                    <Erc20 as odra::contract_def::HasIdent>::ident()
                 }
                 fn contract_name() -> odra::prelude::string::String {
                     <Erc20 as odra::contract_def::HasIdent>::contract_name()
@@ -539,7 +539,7 @@ fn test_trait_impl_parts() {
 
             impl odra::contract_def::HasIdent for Erc20HostRef {
                 fn ident() -> odra::prelude::string::String {
-                    Erc20::ident()
+                    <Erc20 as odra::contract_def::HasIdent>::ident()
                 }
                 fn contract_name() -> odra::prelude::string::String {
                     <Erc20 as odra::contract_def::HasIdent>::contract_name()
@@ -738,7 +738,7 @@ mod factory {
 
                 impl odra::contract_def::HasIdent for Erc20FactoryHostRef {
                     fn ident() -> odra::prelude::string::String {
-                        Erc20Factory::ident()
+                        <Erc20Factory as odra::contract_def::HasIdent>::ident()
                     }
                     fn contract_name() -> odra::prelude::string::String {
                         <Erc20Factory as odra::contract_def::HasIdent>::contract_name()
