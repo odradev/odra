@@ -43,6 +43,10 @@ Changelog for `odra`.
   before, and so do the `bin/build_schema.rs` and `bin/build_contract.rs` of existing projects.
 
 ### Fixed
+- `odra-cli` writes the `last_updated` timestamp of the contracts file with `jiff` instead of `chrono`, which
+  is unmaintained (RUSTSEC-2026-0543); the value stays RFC 3339 in whole seconds. `humantime` is flagged by the
+  same announcement (RUSTSEC-2026-0542) but comes with the casper stack, so `deny.toml` accepts it until that
+  stack drops it.
 - The `tlw` scenario of the examples' `odra_cli` ran out of gas unless the account had made a payable call
   before (#687): the first call an account makes through the proxy caller also creates its purse there and costs
   6.53 CSPR, more than the 4 CSPR limit; the calls after it cost 3.69 CSPR. The deposit gets 10 CSPR. The `Cep18`
