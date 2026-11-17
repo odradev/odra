@@ -26,6 +26,12 @@ ignore = [
     # proc-macro-error2 2.0.1, pulled in by syn_derive. Same story: build-time
     # only. The advisory itself notes no safe upgrade exists.
     "RUSTSEC-2026-0173",
+    # humantime 2.4.0 (unmaintained, as it wraps chrono), pulled in by the
+    # casper stack: casper-types, casper-client, casper-execution-engine and
+    # casper-engine-test-support. Not reachable from Odra's own code and not
+    # ours to bump; the advisory names no replacement. Odra itself dropped
+    # chrono (RUSTSEC-2026-0543) for jiff.
+    "RUSTSEC-2026-0542",
     # crypto-bigint 0.5.5 (timing side-channel), pulled in by
     # casper-types -> k256 -> elliptic-curve 0.13.8, which pins crypto-bigint
     # to ^0.5. The fix needs >=0.7.6; no elliptic-curve/k256 release using a

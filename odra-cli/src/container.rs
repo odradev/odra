@@ -1,6 +1,5 @@
 use std::{fs::File, io::Write, path::PathBuf, str::FromStr};
 
-use chrono::{SecondsFormat, Utc};
 use odra::{
     contract_def::HasIdent,
     host::{HostEnv, HostRef, HostRefLoader},
@@ -319,10 +318,17 @@ pub(crate) struct ContractsData {
     contracts: Vec<DeployedContract>
 }
 
+/// The current UTC time as RFC 3339 with whole seconds, e.g. `2026-11-17T15:34:25Z`.
+fn now_rfc3339() -> String {
+    jiff::Timestamp::now()
+        .strftime("%Y-%m-%dT%H:%M:%SZ")
+        .to_string()
+}
+
 impl Default for ContractsData {
     fn default() -> Self {
         Self {
-            last_updated: Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true),
+            last_updated: now_rfc3339(),
             contracts: Vec::new()
         }
     }
@@ -346,7 +352,7 @@ impl ContractsData {
         }
 
         self.contracts.push(contract);
-        self.last_updated = Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true);
+        self.last_updated = now_rfc3339();
         Ok(())
     }
 
