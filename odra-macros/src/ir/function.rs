@@ -1,6 +1,6 @@
 use proc_macro2::Ident;
+use quote::format_ident;
 use quote::ToTokens;
-use quote::{format_ident, quote_spanned};
 use syn::{parse_quote, spanned::Spanned};
 
 use super::attr::OdraAttrs;
@@ -371,16 +371,15 @@ impl FnIR {
         self.sig().output.clone()
     }
 
-    /// `-> OdraResult<Ret>`, with `Ret` `()` when the function returns nothing. Spanned as the
-    /// written return type, so a bound rustc reports on it points at that type.
+    /// `-> OdraResult<Ret>`, with `Ret` `()` when the function returns nothing. The wrapper is
+    /// spanned as the macro, not as `Ret`: clippy lints a type at the user's span as the user's,
+    /// and `OdraResult<Ret>` is one level deeper than the `Ret` they wrote.
     pub fn try_return_type(&self) -> syn::ReturnType {
         let ty: syn::Type = match self.return_type() {
             syn::ReturnType::Default => parse_quote!(()),
             syn::ReturnType::Type(_, ty) => *ty
         };
-        let span = ty.span();
-        syn::parse2(quote_spanned!(span=> -> OdraResult<#ty>))
-            .unwrap_or_else(|_| unreachable!("a return type wrapped in `OdraResult`"))
+        parse_quote!(-> OdraResult<#ty>)
     }
 
     pub fn generics(&self) -> &syn::Generics {
