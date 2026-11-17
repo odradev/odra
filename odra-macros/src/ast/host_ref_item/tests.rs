@@ -97,7 +97,7 @@ fn host_ref() {
             /// Does not fail in case of error, returns `odra::OdraResult` instead.
             pub fn try_init(&mut self, total_supply: Option<U256>) -> OdraResult<()> {
                 self.env
-                    .call_contract(
+                    .call_contract::<()>(
                         self.address,
                         odra::CallDef::new(
                             odra::prelude::string::String::from("init"),
@@ -119,7 +119,7 @@ fn host_ref() {
             /// Does not fail in case of error, returns `odra::OdraResult` instead.
             pub fn try_upgrade(&mut self, total_supply: Option<U256>) -> OdraResult<()> {
                 self.env
-                    .call_contract(
+                    .call_contract::<()>(
                         self.address,
                         odra::CallDef::new(
                             odra::prelude::string::String::from("upgrade"),
@@ -140,7 +140,7 @@ fn host_ref() {
             /// Returns the total supply of the token.
             /// Does not fail in case of error, returns `odra::OdraResult` instead.
             pub fn try_total_supply(&self) -> OdraResult<U256> {
-                self.env.call_contract(
+                self.env.call_contract::<U256>(
                     self.address,
                     odra::CallDef::new(
                         odra::prelude::string::String::from("total_supply"),
@@ -159,7 +159,7 @@ fn host_ref() {
             /// Does not fail in case of error, returns `odra::OdraResult` instead.
             pub fn try_pay_to_mint(&mut self) -> OdraResult<()> {
                 self.env
-                    .call_contract(
+                    .call_contract::<()>(
                         self.address,
                         odra::CallDef::new(
                                 odra::prelude::string::String::from("pay_to_mint"),
@@ -184,7 +184,7 @@ fn host_ref() {
                 msg: Maybe<String>,
             ) -> OdraResult<()> {
                 self.env
-                    .call_contract(
+                    .call_contract::<()>(
                         self.address,
                         odra::CallDef::new(
                                 odra::prelude::string::String::from("approve"),
@@ -206,7 +206,7 @@ fn host_ref() {
             /// Airdrops the given amount to the given addresses.
             /// Does not fail in case of error, returns `odra::OdraResult` instead.
             pub fn try_airdrop(&self, to: &[Address], amount: &U256) -> OdraResult<()> {
-                self.env.call_contract(
+                self.env.call_contract::<()>(
                     self.address,
                     odra::CallDef::new(
                         odra::prelude::string::String::from("airdrop"),
@@ -228,7 +228,7 @@ fn host_ref() {
             /// Does not fail in case of error, returns `odra::OdraResult` instead.
             pub fn try_swap(&mut self, to: Address, amount: U256) -> OdraResult<U256> {
                 self.env
-                    .call_contract(
+                    .call_contract::<U256>(
                         self.address,
                         odra::CallDef::new(
                             odra::prelude::string::String::from("swap"),
@@ -267,7 +267,7 @@ fn host_ref() {
             /// Ignores the result of the call.
             pub fn try_swap_no_ret(&mut self, to: Address, amount: U256) -> OdraResult<()> {
                 self.env
-                    .call_contract(
+                    .call_contract::<()>(
                         self.address,
                         odra::CallDef::new(
                             odra::prelude::string::String::from("swap"),
@@ -367,7 +367,7 @@ fn host_trait_impl_ref() {
         impl Erc20HostRef {
             /// Does not fail in case of error, returns `odra::OdraResult` instead.
             pub fn try_total_supply(&self) -> OdraResult<U256> {
-                self.env.call_contract(
+                self.env.call_contract::<U256>(
                     self.address,
                     odra::CallDef::new(
                         odra::prelude::string::String::from("total_supply"),
@@ -385,7 +385,7 @@ fn host_trait_impl_ref() {
 
             /// Does not fail in case of error, returns `odra::OdraResult` instead.
             pub fn try_set_total_supply(&mut self) -> OdraResult<U256> {
-                self.env.call_contract(
+                self.env.call_contract::<U256>(
                     self.address,
                     odra::CallDef::new(
                         odra::prelude::string::String::from("set_total_supply"),
@@ -404,7 +404,7 @@ fn host_trait_impl_ref() {
             /// Does not fail in case of error, returns `odra::OdraResult` instead.
             pub fn try_pay_to_mint(&mut self) -> OdraResult<()>  {
                 self.env
-                    .call_contract(
+                    .call_contract::<()>(
                         self.address,
                         odra::CallDef::new(
                                 odra::prelude::string::String::from("pay_to_mint"),
@@ -430,7 +430,7 @@ fn host_trait_impl_ref() {
 
             /// Ignores the result of the call.
             pub fn try_set_total_supply_no_ret(&mut self) -> OdraResult<()> {
-                self.env.call_contract(
+                self.env.call_contract::<()>(
                     self.address,
                     odra::CallDef::new(
                         odra::prelude::string::String::from("set_total_supply"),
@@ -535,7 +535,7 @@ fn host_ref_delegation() {
             /// Returns the total supply of the token.
             /// Does not fail in case of error, returns `odra::OdraResult` instead.
             pub fn try_total_supply(&self) -> OdraResult<U256> {
-                self.env.call_contract(
+                self.env.call_contract::<U256>(
                     self.address,
                     odra::CallDef::new(
                         odra::prelude::string::String::from("total_supply"),
@@ -555,7 +555,7 @@ fn host_ref_delegation() {
             /// Does not fail in case of error, returns `odra::OdraResult` instead.
             pub fn try_get_owner(&self) -> OdraResult<Address> {
                 self.env
-                    .call_contract(
+                    .call_contract::<Address>(
                         self.address,
                         odra::CallDef::new(
                                 odra::prelude::string::String::from("get_owner"),
@@ -576,7 +576,7 @@ fn host_ref_delegation() {
             /// Does not fail in case of error, returns `odra::OdraResult` instead.
             pub fn try_set_owner(&mut self, new_owner: Address) -> OdraResult<()> {
                 self.env
-                    .call_contract(
+                    .call_contract::<()>(
                         self.address,
                         odra::CallDef::new(
                                 odra::prelude::string::String::from("set_owner"),
@@ -598,7 +598,7 @@ fn host_ref_delegation() {
             /// Does not fail in case of error, returns `odra::OdraResult` instead.
             pub fn try_name(&self) -> OdraResult<String> {
                 self.env
-                    .call_contract(
+                    .call_contract::<String>(
                         self.address,
                         odra::CallDef::new(
                                 odra::prelude::string::String::from("name"),
@@ -619,7 +619,7 @@ fn host_ref_delegation() {
             /// Does not fail in case of error, returns `odra::OdraResult` instead.
             pub fn try_symbol(&self) -> OdraResult<String> {
                 self.env
-                    .call_contract(
+                    .call_contract::<String>(
                         self.address,
                         odra::CallDef::new(
                                 odra::prelude::string::String::from("symbol"),

@@ -1,5 +1,7 @@
+use super::errors;
 use crate::utils;
 use quote::ToTokens;
+use syn::Token;
 
 mod kw {
     syn::custom_keyword!(to);
@@ -25,13 +27,27 @@ impl syn::parse::Parse for Delegate {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let mut functions = Vec::new();
         while !input.is_empty() {
+            if !input.peek(kw::to) {
+                return Err(errors::delegate_expected_to(input));
+            }
             input.parse::<kw::to>()?;
-            let delegate_to = input.parse::<syn::ExprField>()?;
+            let delegate_to = parse_self_field(input)?;
             let content;
             let _brace_token = syn::braced!(content in input);
             while !content.is_empty() {
+                let vis = content.parse::<syn::Visibility>()?;
+                if !matches!(vis, syn::Visibility::Inherited) {
+                    return Err(errors::delegate_fn_with_visibility(&vis));
+                }
                 let fn_item = content.parse::<syn::TraitItemFn>()?;
                 let fn_ident = fn_item.sig.ident.clone();
+                if let Some(block) = &fn_item.default {
+                    return Err(errors::delegate_fn_with_body(
+                        block,
+                        &delegate_to.member,
+                        &fn_ident.to_string()
+                    ));
+                }
                 let args = utils::syn::function_typed_args(&fn_item.sig);
                 let args = args
                     .iter()
@@ -71,4 +87,20 @@ impl syn::parse::Parse for Delegate {
         }
         Ok(Self { functions })
     }
+}
+
+/// `self.<field>`, followed by the block: the only target a call is forwarded to.
+fn parse_self_field(input: syn::parse::ParseStream) -> syn::Result<syn::ExprField> {
+    let is_self_field =
+        input.peek(Token![self]) && input.peek2(Token![.]) && input.peek3(syn::Ident);
+    if !is_self_field {
+        return Err(errors::delegate_target_not_self_field(input));
+    }
+    let self_token = input.parse::<Token![self]>()?;
+    input.parse::<Token![.]>()?;
+    let member = input.parse::<syn::Ident>()?;
+    if !input.peek(syn::token::Brace) {
+        return Err(errors::delegate_target_not_self_field(input));
+    }
+    Ok(syn::parse_quote!(#self_token.#member))
 }

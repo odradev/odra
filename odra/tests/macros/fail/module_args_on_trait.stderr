@@ -1,11 +1,13 @@
-error: `events` is not allowed on a trait; `#[odra::module]` on a trait takes no arguments
- --> tests/macros/fail/module_args_on_trait.rs:1:16
+error: `#[odra::module]` goes on the module struct and on its impl blocks, not on a trait; implement the trait with `#[odra::module] impl Trait for Module { .. }`, or describe a contract without source with `#[odra::external_contract]`
+ --> tests/macros/fail/module_args_on_trait.rs:6:11
   |
-1 | #[odra::module(events = [u32])]
-  |                ^^^^^^
+6 | pub trait Token {
+  |           ^^^^^
 
-error: `factory` is not allowed on a trait; `#[odra::module]` on a trait takes no arguments
- --> tests/macros/fail/module_args_on_trait.rs:6:16
+warning: unused import: `odra::prelude::*`
+ --> tests/macros/fail/module_args_on_trait.rs:3:5
   |
-6 | #[odra::module(factory = on)]
-  |                ^^^^^^^
+3 | use odra::prelude::*;
+  |     ^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default

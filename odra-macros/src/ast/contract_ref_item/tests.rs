@@ -38,7 +38,7 @@ fn contract_ref() {
         impl Erc20ContractRef {
             /// Initializes the contract with the given parameters.
             pub fn init(&mut self, total_supply: Option<U256>) {
-                self.env.call_contract(
+                self.env.call_contract::<()>(
                     self.address,
                     odra::CallDef::new(
                         odra::prelude::string::String::from("init"),
@@ -58,7 +58,7 @@ fn contract_ref() {
 
             /// Upgrades the contract with the given parameters.
             pub fn upgrade(&mut self, total_supply: Option<U256>) {
-                self.env.call_contract(
+                self.env.call_contract::<()>(
                     self.address,
                     odra::CallDef::new(
                         odra::prelude::string::String::from("upgrade"),
@@ -78,7 +78,7 @@ fn contract_ref() {
 
             /// Returns the total supply of the token.
             pub fn total_supply(&self) -> U256 {
-                self.env.call_contract(
+                self.env.call_contract::<U256>(
                     self.address,
                     odra::CallDef::new(
                         odra::prelude::string::String::from("total_supply"),
@@ -98,7 +98,7 @@ fn contract_ref() {
             /// Pay to mint.
             pub fn pay_to_mint(&mut self) {
                 self.env
-                    .call_contract(
+                    .call_contract::<()>(
                         self.address,
                         odra::CallDef::new(
                             odra::prelude::string::String::from("pay_to_mint"),
@@ -118,7 +118,7 @@ fn contract_ref() {
             /// Approve.
             pub fn approve(&mut self, to: &Address, amount: &U256, msg: Maybe<String>) {
                 self.env
-                    .call_contract(
+                    .call_contract::<()>(
                         self.address,
                         odra::CallDef::new(
                             odra::prelude::string::String::from("approve"),
@@ -141,7 +141,7 @@ fn contract_ref() {
             /// Airdrops the given amount to the given addresses.
             pub fn airdrop(&self, to: &[Address], amount: &U256) {
                 self.env
-                    .call_contract(
+                    .call_contract::<()>(
                         self.address,
                         odra::CallDef::new(
                             odra::prelude::string::String::from("airdrop"),
@@ -163,7 +163,7 @@ fn contract_ref() {
             /// Swaps the given amount to the given addresses.
             pub fn swap(&mut self, to: Address, amount: U256) -> U256 {
                 self.env
-                    .call_contract(
+                    .call_contract::<U256>(
                         self.address,
                         odra::CallDef::new(
                             odra::prelude::string::String::from("swap"),
@@ -230,7 +230,7 @@ fn contract_trait_impl_ref() {
 
         impl IErc20 for Erc20ContractRef {
             fn total_supply(&self) -> U256 {
-                self.env.call_contract(
+                self.env.call_contract::<U256>(
                     self.address,
                     odra::CallDef::new(
                         odra::prelude::string::String::from("total_supply"),
@@ -249,7 +249,7 @@ fn contract_trait_impl_ref() {
 
             fn set_total_supply(&mut self) -> U256 {
                 self.env
-                    .call_contract(
+                    .call_contract::<U256>(
                         self.address,
                         odra::CallDef::new(
                             odra::prelude::string::String::from("set_total_supply"),
@@ -268,7 +268,7 @@ fn contract_trait_impl_ref() {
 
             fn pay_to_mint(&mut self) {
                 self.env
-                    .call_contract(
+                    .call_contract::<()>(
                         self.address,
                         odra::CallDef::new(
                             odra::prelude::string::String::from("pay_to_mint"),
@@ -334,7 +334,7 @@ fn contract_ref_delegate() {
         impl Erc20ContractRef {
             /// Returns the total supply of the token.
             pub fn total_supply(&self) -> U256 {
-                self.env.call_contract(
+                self.env.call_contract::<U256>(
                     self.address,
                     odra::CallDef::new(
                         odra::prelude::string::String::from("total_supply"),
@@ -354,7 +354,7 @@ fn contract_ref_delegate() {
             /// Returns the owner of the contract.
             pub fn get_owner(&self) -> Address {
                 self.env
-                    .call_contract(
+                    .call_contract::<Address>(
                         self.address,
                         odra::CallDef::new(
                             odra::prelude::string::String::from("get_owner"),
@@ -374,7 +374,7 @@ fn contract_ref_delegate() {
             /// Sets the owner of the contract.
             pub fn set_owner(&mut self, new_owner: Address) {
                 self.env
-                    .call_contract(
+                    .call_contract::<()>(
                         self.address,
                         odra::CallDef::new(
                             odra::prelude::string::String::from("set_owner"),
@@ -395,7 +395,7 @@ fn contract_ref_delegate() {
             /// Returns the name of the token.
             pub fn name(&self) -> String {
                 self.env
-                    .call_contract(
+                    .call_contract::<String>(
                         self.address,
                         odra::CallDef::new(
                             odra::prelude::string::String::from("name"),
@@ -415,7 +415,7 @@ fn contract_ref_delegate() {
             /// Delegated. See `self.metadata.symbol()` for details.
             pub fn symbol(&self) -> String {
                 self.env
-                    .call_contract(
+                    .call_contract::<String>(
                         self.address,
                         odra::CallDef::new(
                             odra::prelude::string::String::from("symbol"),
@@ -492,7 +492,7 @@ mod factory {
 
             impl Erc20FactoryContractRef {
                 pub fn new_contract(&mut self, contract_name: odra::prelude::string::String, value: u32) -> (odra::prelude::Address, odra::casper_types::URef) {
-                    self.env.call_contract(
+                    self.env.call_contract::<(odra::prelude::Address, odra::casper_types::URef)>(
                         self.address,
                         odra::CallDef::new(
                             odra::prelude::string::String::from("new_contract"),
@@ -516,7 +516,7 @@ mod factory {
                     contract_name: odra::prelude::string::String,
                 ) {
                     self.env
-                        .call_contract(
+                        .call_contract::<()>(
                             self.address,
                             odra::CallDef::new(
                                     odra::prelude::string::String::from("upgrade_child_contract"),
@@ -540,7 +540,7 @@ mod factory {
                     args: odra::prelude::BTreeMap<odra::prelude::string::String, T>
                 ) {
                     self.env
-                        .call_contract(
+                        .call_contract::<()>(
                             self.address,
                             odra::CallDef::new(
                                     odra::prelude::string::String::from(

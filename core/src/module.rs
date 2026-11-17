@@ -13,6 +13,11 @@ use crate::contract_env::ContractEnv;
 use core::ops::{Deref, DerefMut};
 
 /// Represents a module in the Odra system.
+#[diagnostic::on_unimplemented(
+    message = "`{Self}` is not an Odra module",
+    label = "not a module",
+    note = "a module is a struct with `#[odra::module]` on it and on its impl block"
+)]
 pub trait Module {
     /// Creates a new instance of the module with the given contract environment.
     fn new(env: Rc<ContractEnv>) -> Self;
@@ -22,6 +27,11 @@ pub trait Module {
 }
 
 /// Represents a component that can be a part of a module.
+#[diagnostic::on_unimplemented(
+    message = "`{Self}` cannot be a field of a module",
+    label = "not a storage component",
+    note = "a module's field is a `Var<T>`, a `Mapping<K, V>`, a `List<T>` or a `SubModule<M>`: the module stores values, it does not hold them"
+)]
 pub trait ModuleComponent {
     /// Creates a new instance of the module component.
     fn instance(env: Rc<ContractEnv>, index: u8) -> Self;

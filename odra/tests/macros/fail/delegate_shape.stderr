@@ -1,0 +1,32 @@
+error: expected `to`; a `delegate!` block is `to self.<field> { fn name(&self, ..) -> Ret; .. }`
+  --> tests/macros/fail/delegate_shape.rs:24:9
+   |
+24 |         self.owned {
+   |         ^^^^
+
+error: a `delegate!` block forwards to a field of the module; write `to self.<field>`
+  --> tests/macros/fail/delegate_shape.rs:38:12
+   |
+38 |         to owned {
+   |            ^^^^^
+
+error: a `delegate!` block forwards to a field of the module; write `to self.<field>`
+  --> tests/macros/fail/delegate_shape.rs:52:22
+   |
+52 |         to self.owned.owner {
+   |                      ^
+
+error: a delegated function has no body: the generated one calls `self.owned.get_owner(..)`; end the signature with `;`
+  --> tests/macros/fail/delegate_shape.rs:67:44
+   |
+67 |               fn get_owner(&self) -> Address {
+   |  ____________________________________________^
+68 | |                 self.owned.get_owner()
+69 | |             }
+   | |_____________^
+
+error: `forward!` is not allowed in a module impl; only `delegate!` is
+  --> tests/macros/fail/delegate_shape.rs:81:5
+   |
+81 |     forward! {
+   |     ^^^^^^^

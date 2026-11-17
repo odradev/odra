@@ -33,6 +33,7 @@ impl ModuleStructIR {
     /// The IR of the struct, with `attr` the arguments of the macro.
     pub fn try_new(attr: &proc_macro2::TokenStream, code: syn::ItemStruct) -> syn::Result<Self> {
         let config = syn::parse2::<ModuleConfig>(attr.clone())?;
+        Self::validate_shape(&code)?;
         if code.fields.len() > MAX_FIELDS {
             return Err(errors::module_too_many_fields(&code.fields, MAX_FIELDS));
         }
@@ -56,6 +57,37 @@ impl ModuleStructIR {
             config,
             fields
         })
+    }
+
+    /// The struct is one concrete type, and `#[odra(..)]` is not an attribute of it nor of its
+    /// fields.
+    fn validate_shape(code: &syn::ItemStruct) -> syn::Result<()> {
+        let generics = (!code.generics.params.is_empty())
+            .then(|| errors::generics_not_supported(&code.generics, "a module"));
+        let where_clause = code
+            .generics
+            .where_clause
+            .as_ref()
+            .map(|w| errors::where_clause_not_supported(w, "a module"));
+        let on_struct = code
+            .attrs
+            .iter()
+            .filter(|attr| attr.path().is_ident("odra"))
+            .map(|attr| errors::odra_attr_misplaced(attr, "the module struct"));
+        let on_fields = code
+            .fields
+            .iter()
+            .flat_map(|field| field.attrs.iter())
+            .filter(|attr| attr.path().is_ident("odra"))
+            .map(|attr| errors::odra_attr_misplaced(attr, "a field"));
+        errors::check_all(
+            generics
+                .into_iter()
+                .chain(where_clause)
+                .chain(on_struct)
+                .chain(on_fields)
+                .map(Err)
+        )
     }
 
     pub fn self_code(&self) -> &syn::ItemStruct {

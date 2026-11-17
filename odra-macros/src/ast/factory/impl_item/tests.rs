@@ -83,7 +83,7 @@ fn test_factory_item() {
 
         impl Erc20FactoryContractRef {
             pub fn new_contract(&mut self, contract_name: odra::prelude::string::String, value: u32) -> (odra::prelude::Address, odra::casper_types::URef) {
-                self.env.call_contract(
+                self.env.call_contract::<(odra::prelude::Address, odra::casper_types::URef)>(
                     self.address,
                     odra::CallDef::new(
                         odra::prelude::string::String::from("new_contract"),
@@ -103,7 +103,7 @@ fn test_factory_item() {
             }
 
             pub fn upgrade_child_contract(&mut self, contract_name: odra::prelude::string::String) {
-                self.env.call_contract(
+                self.env.call_contract::<()>(
                     self.address,
                     odra::CallDef::new(
                         odra::prelude::string::String::from("upgrade_child_contract"),
@@ -123,7 +123,7 @@ fn test_factory_item() {
             pub fn batch_upgrade_child_contract<
                 T: Into<odra::casper_types::RuntimeArgs>,
             >(&mut self, args: odra::prelude::BTreeMap<odra::prelude::string::String, T>) {
-                self.env.call_contract(
+                self.env.call_contract::<()>(
                     self.address,
                     odra::CallDef::new(
                         odra::prelude::string::String::from("batch_upgrade_child_contract"),
@@ -223,7 +223,7 @@ fn test_factory_item() {
                 /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_new_contract(&mut self, contract_name: odra::prelude::string::String, value: u32) -> OdraResult<(odra::prelude::Address, odra::casper_types::URef)> {
                     self.env
-                        .call_contract(
+                        .call_contract::<(odra::prelude::Address, odra::casper_types::URef)>(
                             self.address,
                             odra::CallDef::new(
                                 odra::prelude::string::String::from("new_contract"),
@@ -245,7 +245,7 @@ fn test_factory_item() {
                 /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_upgrade_child_contract(&mut self, contract_name: odra::prelude::string::String) -> OdraResult<()> {
                     self.env
-                        .call_contract(
+                        .call_contract::<()>(
                             self.address,
                             odra::CallDef::new(
                                 odra::prelude::string::String::from("upgrade_child_contract"),
@@ -268,7 +268,7 @@ fn test_factory_item() {
                     args: odra::prelude::BTreeMap<odra::prelude::string::String, T>
                 ) -> OdraResult<()> {
                     self.env
-                        .call_contract(
+                        .call_contract::<()>(
                             self.address,
                             odra::CallDef::new(
                                 odra::prelude::string::String::from("batch_upgrade_child_contract"),

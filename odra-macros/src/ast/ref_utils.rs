@@ -25,7 +25,7 @@ fn try_function_item(fun: &FnIR, call_def_expr: syn::Expr) -> syn::ItemFn {
     let mut attrs = function_filtered_attrs(fun);
     attrs.push(parse_quote!(#[doc = " Does not fail in case of error, returns `odra::OdraResult` instead."]));
 
-    env_call(signature, call_def_expr, attrs, visibility_pub())
+    env_call(signature, result_type(fun), call_def_expr, attrs, visibility_pub())
 }
 
 pub fn host_function_item(fun: &FnIR, is_trait_impl: bool) -> syn::ItemFn {
@@ -74,7 +74,7 @@ pub fn host_mut_try_no_ret_function_item(fun: &FnIR) -> syn::ItemFn {
         ..signature
     };
     let call_def_expr = call_def_with_amount(fun);
-    env_call(signature, call_def_expr, attrs, visibility_pub())
+    env_call(signature, parse_quote!(()), call_def_expr, attrs, visibility_pub())
 }
 
 pub fn contract_function_item(fun: &FnIR, is_trait_impl: bool) -> syn::ItemFn {
@@ -95,20 +95,30 @@ fn contract_function(fun: &FnIR, is_trait_impl: bool, call_def_expr: syn::Expr) 
     let signature = function_signature(fun);
     let attrs = function_filtered_attrs(fun);
 
-    env_call(signature, call_def_expr, attrs, vis)
+    env_call(signature, result_type(fun), call_def_expr, attrs, vis)
 }
 
+/// What the entry point returns, `()` when nothing: what the call reads back.
+fn result_type(fun: &FnIR) -> syn::Type {
+    match fun.return_type() {
+        syn::ReturnType::Default => parse_quote!(()),
+        syn::ReturnType::Type(_, ty) => *ty
+    }
+}
+
+/// The call names its result type (`result_ty`), so a return type that cannot be read back is
+/// reported on that type rather than on the macro.
 fn env_call(
     sig: syn::Signature,
+    result_ty: syn::Type,
     call_def_expr: syn::Expr,
     docs: Vec<Attribute>,
     vis: Visibility
 ) -> syn::ItemFn {
-
     syn::parse_quote!(
         #(#docs)*
         #vis #sig {
-            self.env.call_contract(
+            self.env.call_contract::<#result_ty>(
                 self.address,
                 #call_def_expr
             )
