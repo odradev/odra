@@ -31,12 +31,14 @@ impl VirtualBalances {
     }
 
     pub fn get(&self, address: &Address) -> CSPRAmount {
-        let current = self.current.get(address).unwrap();
+        let (Some(current), Some(initial)) = (self.current.get(address), self.initial.get(address))
+        else {
+            panic!("No CSPR balance was set for {address:?}: set it before reading it");
+        };
         let balance = current.amount() + self.env.balance_of(address);
-
-        let result = balance
-            .checked_sub(self.initial.get(address).unwrap().amount())
-            .unwrap();
+        let result = balance.checked_sub(initial.amount()).unwrap_or_else(|| {
+            panic!("{address:?} spent more CSPR than the balance that was set for it")
+        });
         CSPRAmount::new(result, 9)
     }
 

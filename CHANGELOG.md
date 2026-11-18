@@ -43,6 +43,13 @@ Changelog for `odra`.
   before, and so do the `bin/build_schema.rs` and `bin/build_contract.rs` of existing projects.
 
 ### Fixed
+- **Can fail a build that passed:** `odra_bdd::run` fails the test run when a step fails or has no definition;
+  it reported them and exited with success. It runs one scenario at a time and takes the arguments of
+  `cargo test`: `cargo test --test bdd -- "highest bidder"` runs the scenarios whose name, or whose feature's
+  name, contains the text, and `-- --nocapture` no longer ends in `unexpected argument`.
+- `odra-bdd`: a step can have a parameter after a fractional `{cspr_amount}`, `{usdc}` or `{wcspr}`
+  (`Alice sends 2.5 CSPR to Bob`): the next parameter received `.5`. Reading a CSPR balance that was never set
+  names the account instead of failing on `unwrap`; `Account` is `Debug`, `Clone` and `Copy`.
 - `odra-wasm-client`: a getter that reads a mapping nobody has written to yet (`balance_of` before the first
   transfer, `owner_of` before the first mint) crashed the client with `RuntimeError: unreachable` and its promise
   never settled. The first read creates the dictionary, and the client took that write for the result of the
