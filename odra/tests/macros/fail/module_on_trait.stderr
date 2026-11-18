@@ -1,0 +1,19 @@
+error: `#[odra::module]` goes on the module struct and on its impl blocks, not on a trait; implement the trait with `#[odra::module] impl Trait for Module { .. }`, or describe a contract without source with `#[odra::external_contract]`
+ --> tests/macros/fail/module_on_trait.rs:5:11
+  |
+5 | pub trait Token {
+  |           ^^^^^
+
+error: `#[odra::factory]` goes on the factory struct and on its impl block; this is a trait
+  --> tests/macros/fail/module_on_trait.rs:10:11
+   |
+10 | pub trait TokenFactory {
+   |           ^^^^^^^^^^^^
+
+warning: unused import: `odra::prelude::*`
+ --> tests/macros/fail/module_on_trait.rs:2:5
+  |
+2 | use odra::prelude::*;
+  |     ^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default

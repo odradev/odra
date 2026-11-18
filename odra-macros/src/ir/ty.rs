@@ -26,6 +26,14 @@ impl TypeIR {
     pub fn try_new(code: syn::Item) -> syn::Result<Self> {
         let (ident, kind) = match &code {
             syn::Item::Enum(e) => {
+                validate_shape(
+                    &e.generics,
+                    e.variants.iter().flat_map(|v| {
+                        v.attrs
+                            .iter()
+                            .chain(v.fields.iter().flat_map(|f| f.attrs.iter()))
+                    })
+                )?;
                 let variants = VariantIR::try_all(&e.variants)?;
                 let is_unit = variants.iter().all(|v| v.fields.is_empty());
                 let kind = match is_unit {
@@ -34,7 +42,13 @@ impl TypeIR {
                 };
                 (e.ident.clone(), kind)
             }
-            syn::Item::Struct(syn::ItemStruct { ident, fields, .. }) => {
+            syn::Item::Struct(syn::ItemStruct {
+                ident,
+                fields,
+                generics,
+                ..
+            }) => {
+                validate_shape(generics, fields.iter().flat_map(|f| f.attrs.iter()))?;
                 let fields = fields
                     .iter()
                     .map(|f| {
@@ -75,6 +89,30 @@ impl TypeIR {
         }))?;
         Ok(variants)
     }
+}
+
+/// The type is one concrete type, and `#[odra(..)]` is not an attribute of its fields or
+/// variants.
+fn validate_shape<'a>(
+    generics: &syn::Generics,
+    inner_attrs: impl Iterator<Item = &'a syn::Attribute>
+) -> syn::Result<()> {
+    let generics_error = (!generics.params.is_empty())
+        .then(|| errors::generics_not_supported(generics, "an Odra type"));
+    let where_clause = generics
+        .where_clause
+        .as_ref()
+        .map(|w| errors::where_clause_not_supported(w, "an Odra type"));
+    let misplaced = inner_attrs
+        .filter(|attr| attr.path().is_ident("odra"))
+        .map(|attr| errors::odra_attr_misplaced(attr, "a field or a variant"));
+    errors::check_all(
+        generics_error
+            .into_iter()
+            .chain(where_clause)
+            .chain(misplaced)
+            .map(Err)
+    )
 }
 
 /// What the type is, with the parts the emitters read.

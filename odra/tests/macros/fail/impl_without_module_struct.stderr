@@ -1,0 +1,96 @@
+error[E0277]: `NotAModule` is not an Odra module
+  --> tests/macros/fail/impl_without_module_struct.rs:10:6
+   |
+10 | impl NotAModule {
+   |      ^^^^^^^^^^ not a module
+   |
+help: the trait `odra::module::Module` is not implemented for `NotAModule`
+  --> tests/macros/fail/impl_without_module_struct.rs:5:1
+   |
+ 5 | pub struct NotAModule {
+   | ^^^^^^^^^^^^^^^^^^^^^
+   = note: a module is a struct with `#[odra::module]` on it and on its impl block
+note: required by a bound in `IsModule`
+  --> $WORKSPACE/core/src/module.rs
+   |
+   | pub trait IsModule: Module {}
+   |                     ^^^^^^ required by this bound in `IsModule`
+
+error[E0277]: the trait bound `NotAModule: HasEvents` is not satisfied
+  --> tests/macros/fail/impl_without_module_struct.rs:10:6
+   |
+10 | impl NotAModule {
+   |      ^^^^^^^^^^ unsatisfied trait bound
+   |
+help: the trait `ModulePrimitive` is not implemented for `NotAModule`
+  --> tests/macros/fail/impl_without_module_struct.rs:5:1
+   |
+ 5 | pub struct NotAModule {
+   | ^^^^^^^^^^^^^^^^^^^^^
+   = help: the following other types implement trait `ModulePrimitive`:
+             External<T>
+             odra::prelude::List<T>
+             odra::prelude::Mapping<K, V>
+             odra::prelude::Sequence<T>
+             odra::prelude::Var<T>
+   = note: required for `NotAModule` to implement `HasEvents`
+note: required by a bound in `OdraContract`
+  --> $WORKSPACE/core/src/contract.rs
+   |
+   | pub trait OdraContract: crate::contract_def::HasEvents {
+   |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `OdraContract`
+
+error[E0277]: the trait bound `NotAModule: HasIdent` is not satisfied
+  --> tests/macros/fail/impl_without_module_struct.rs:10:6
+   |
+10 | impl NotAModule {
+   |      ^^^^^^^^^^ unsatisfied trait bound
+   |
+help: the trait `HasIdent` is not implemented for `NotAModule`
+  --> tests/macros/fail/impl_without_module_struct.rs:5:1
+   |
+ 5 | pub struct NotAModule {
+   | ^^^^^^^^^^^^^^^^^^^^^
+help: the trait `HasIdent` is implemented for `__not_a_module_test_parts::NotAModuleHostRef`
+  --> tests/macros/fail/impl_without_module_struct.rs:9:1
+   |
+ 9 | #[odra::module]
+   | ^^^^^^^^^^^^^^^
+   = note: this error originates in the attribute macro `odra::module` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0277]: `NotAModule` is not an Odra module
+  --> tests/macros/fail/impl_without_module_struct.rs:10:6
+   |
+10 | impl NotAModule {
+   |      ^^^^^^^^^^ not a module
+   |
+help: the trait `odra::module::Module` is not implemented for `NotAModule`
+  --> tests/macros/fail/impl_without_module_struct.rs:5:1
+   |
+ 5 | pub struct NotAModule {
+   | ^^^^^^^^^^^^^^^^^^^^^
+   = note: a module is a struct with `#[odra::module]` on it and on its impl block
+
+error[E0277]: the trait bound `NotAModule: SchemaEvents` is not satisfied
+ --> tests/macros/fail/impl_without_module_struct.rs:9:1
+  |
+9 | #[odra::module]
+  | ^^^^^^^^^^^^^^^ unsatisfied trait bound
+  |
+help: the trait `SchemaCustomElement` is not implemented for `NotAModule`
+ --> tests/macros/fail/impl_without_module_struct.rs:5:1
+  |
+5 | pub struct NotAModule {
+  | ^^^^^^^^^^^^^^^^^^^^^
+  = help: the following other types implement trait `SchemaEvents`:
+            ()
+            (T1, T2)
+            (T1, T2, T3)
+            (T1,)
+            BTreeMap<T, E>
+            External<M>
+            Maybe<T>
+            NotAModuleContractRef
+          and $N others
+  = note: required for `NotAModule` to implement `SchemaEvents`
+  = note: this error originates in the attribute macro `odra::module` (in Nightly builds, run with -Z macro-backtrace for more info)

@@ -1,0 +1,11 @@
+error: `&str` is not an argument type; take `String`
+  --> tests/macros/fail/arg_reference_types.rs:12:38
+   |
+12 |     pub fn set_name(&mut self, name: &str) {
+   |                                      ^^^^
+
+error: `&mut` is not an argument type; an entry point reads its arguments from the call: take `u32` or `&u32`
+  --> tests/macros/fail/arg_reference_types.rs:16:40
+   |
+16 |     pub fn set_value(&mut self, value: &mut u32) {
+   |                                        ^^^^^^^^

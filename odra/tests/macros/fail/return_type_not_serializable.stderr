@@ -1,0 +1,188 @@
+error[E0277]: the trait bound `NotRet: CLTyped` is not satisfied
+  --> tests/macros/fail/return_type_not_serializable.rs:14:26
+   |
+14 |     pub fn get(&self) -> NotRet {
+   |                          ^^^^^^ unsatisfied trait bound
+   |
+help: the trait `CLTyped` is not implemented for `NotRet`
+  --> tests/macros/fail/return_type_not_serializable.rs:5:1
+   |
+ 5 | pub struct NotRet;
+   | ^^^^^^^^^^^^^^^^^
+   = help: the following other types implement trait `CLTyped`:
+             &T
+             &str
+             ()
+             (T1, T2)
+             (T1, T2, T3)
+             (T1,)
+             AddressableEntityHash
+             BTreeMap<K, V>
+           and $N others
+
+error[E0277]: the trait bound `NotRet: FromBytes` is not satisfied
+  --> tests/macros/fail/return_type_not_serializable.rs:14:26
+   |
+12 | #[odra::module]
+   | --------------- required by a bound introduced by this call
+13 | impl Contract {
+14 |     pub fn get(&self) -> NotRet {
+   |                          ^^^^^^ unsatisfied trait bound
+   |
+help: the trait `FromBytes` is not implemented for `NotRet`
+  --> tests/macros/fail/return_type_not_serializable.rs:5:1
+   |
+ 5 | pub struct NotRet;
+   | ^^^^^^^^^^^^^^^^^
+   = help: the following other types implement trait `FromBytes`:
+             ()
+             (T1, T2)
+             (T1, T2, T3)
+             (T1, T2, T3, T4)
+             (T1, T2, T3, T4, T5)
+             (T1, T2, T3, T4, T5, T6)
+             (T1, T2, T3, T4, T5, T6, T7)
+             (T1, T2, T3, T4, T5, T6, T7, T8)
+           and $N others
+note: required by a bound in `ContractEnv::call_contract`
+  --> $WORKSPACE/core/src/contract_env.rs
+   |
+   |     pub fn call_contract<T: FromBytes>(&self, address: Address, call: CallDef) -> T {
+   |                             ^^^^^^^^^ required by this bound in `ContractEnv::call_contract`
+
+error[E0277]: the trait bound `NotRet: FromBytes` is not satisfied
+  --> tests/macros/fail/return_type_not_serializable.rs:14:26
+   |
+12 | #[odra::module]
+   | --------------- required by a bound introduced by this call
+13 | impl Contract {
+14 |     pub fn get(&self) -> NotRet {
+   |                          ^^^^^^ unsatisfied trait bound
+   |
+help: the trait `FromBytes` is not implemented for `NotRet`
+  --> tests/macros/fail/return_type_not_serializable.rs:5:1
+   |
+ 5 | pub struct NotRet;
+   | ^^^^^^^^^^^^^^^^^
+   = help: the following other types implement trait `FromBytes`:
+             ()
+             (T1, T2)
+             (T1, T2, T3)
+             (T1, T2, T3, T4)
+             (T1, T2, T3, T4, T5)
+             (T1, T2, T3, T4, T5, T6)
+             (T1, T2, T3, T4, T5, T6, T7)
+             (T1, T2, T3, T4, T5, T6, T7, T8)
+           and $N others
+note: required by a bound in `HostEnv::call_contract`
+  --> $WORKSPACE/core/src/host.rs
+   |
+   |     pub fn call_contract<T: FromBytes + CLTyped>(
+   |                             ^^^^^^^^^ required by this bound in `HostEnv::call_contract`
+
+error[E0277]: the trait bound `NotRet: CLTyped` is not satisfied
+  --> tests/macros/fail/return_type_not_serializable.rs:14:26
+   |
+12 | #[odra::module]
+   | --------------- required by a bound introduced by this call
+13 | impl Contract {
+14 |     pub fn get(&self) -> NotRet {
+   |                          ^^^^^^ unsatisfied trait bound
+   |
+help: the trait `CLTyped` is not implemented for `NotRet`
+  --> tests/macros/fail/return_type_not_serializable.rs:5:1
+   |
+ 5 | pub struct NotRet;
+   | ^^^^^^^^^^^^^^^^^
+   = help: the following other types implement trait `CLTyped`:
+             &T
+             &str
+             ()
+             (T1, T2)
+             (T1, T2, T3)
+             (T1,)
+             AddressableEntityHash
+             BTreeMap<K, V>
+           and $N others
+note: required by a bound in `HostEnv::call_contract`
+  --> $WORKSPACE/core/src/host.rs
+   |
+   |     pub fn call_contract<T: FromBytes + CLTyped>(
+   |                                         ^^^^^^^ required by this bound in `HostEnv::call_contract`
+
+error[E0277]: the trait bound `NotRet: odra::casper_types::bytesrepr::ToBytes` is not satisfied
+  --> tests/macros/fail/return_type_not_serializable.rs:12:1
+   |
+12 | #[odra::module]
+   | ^^^^^^^^^^^^^^^ unsatisfied trait bound
+   |
+help: the trait `odra::casper_types::bytesrepr::ToBytes` is not implemented for `NotRet`
+  --> tests/macros/fail/return_type_not_serializable.rs:5:1
+   |
+ 5 | pub struct NotRet;
+   | ^^^^^^^^^^^^^^^^^
+   = help: the following other types implement trait `odra::casper_types::bytesrepr::ToBytes`:
+             &T
+             &str
+             ()
+             (T1, T2)
+             (T1, T2, T3)
+             (T1, T2, T3, T4)
+             (T1, T2, T3, T4, T5)
+             (T1, T2, T3, T4, T5, T6)
+           and $N others
+note: required by a bound in `try_serialize`
+  --> $WORKSPACE/core/src/utils.rs
+   |
+   | pub fn try_serialize<T: ToBytes>(value: &T) -> OdraResult<Bytes> {
+   |                         ^^^^^^^ required by this bound in `try_serialize`
+   = note: this error originates in the attribute macro `odra::module` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0277]: the trait bound `NotRet: NamedCLTyped` is not satisfied
+  --> tests/macros/fail/return_type_not_serializable.rs:14:26
+   |
+14 |     pub fn get(&self) -> NotRet {
+   |                          ^^^^^^ unsatisfied trait bound
+   |
+help: the trait `NamedCLTyped` is not implemented for `NotRet`
+  --> tests/macros/fail/return_type_not_serializable.rs:5:1
+   |
+ 5 | pub struct NotRet;
+   | ^^^^^^^^^^^^^^^^^
+   = help: the following other types implement trait `NamedCLTyped`:
+             &str
+             ()
+             (T1, T2)
+             (T1, T2, T3)
+             (T1,)
+             BTreeMap<K, V>
+             ContractHash
+             Maybe<T>
+           and $N others
+note: required by a bound in `entry_point`
+  --> $WORKSPACE/odra-schema/src/lib.rs
+   |
+   | pub fn entry_point<T: NamedCLTyped>(
+   |                       ^^^^^^^^^^^^ required by this bound in `entry_point`
+
+error[E0277]: the trait bound `NotRet: SchemaCustomTypes` is not satisfied
+  --> tests/macros/fail/return_type_not_serializable.rs:14:26
+   |
+14 |     pub fn get(&self) -> NotRet {
+   |                          ^^^^^^ unsatisfied trait bound
+   |
+help: the trait `SchemaCustomTypes` is not implemented for `NotRet`
+  --> tests/macros/fail/return_type_not_serializable.rs:5:1
+   |
+ 5 | pub struct NotRet;
+   | ^^^^^^^^^^^^^^^^^
+   = help: the following other types implement trait `SchemaCustomTypes`:
+             ()
+             (T1, T2)
+             (T1, T2, T3)
+             (T1,)
+             BTreeMap<T, E>
+             Contract
+             ContractHash
+             Maybe<T>
+           and $N others

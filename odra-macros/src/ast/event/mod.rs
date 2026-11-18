@@ -83,6 +83,26 @@ impl TryFrom<&TokenStream> for OdraEventItem {
         let syn::Fields::Named(named) = &item_struct.fields else {
             return Err(errors::event_fields_unnamed(&item_struct.fields));
         };
+        let generics = (!item_struct.generics.params.is_empty())
+            .then(|| errors::generics_not_supported(&item_struct.generics, "an event"));
+        let where_clause = item_struct
+            .generics
+            .where_clause
+            .as_ref()
+            .map(|w| errors::where_clause_not_supported(w, "an event"));
+        let misplaced = named
+            .named
+            .iter()
+            .flat_map(|f| f.attrs.iter())
+            .filter(|attr| attr.path().is_ident("odra"))
+            .map(|attr| errors::odra_attr_misplaced(attr, "a field"));
+        errors::check_all(
+            generics
+                .into_iter()
+                .chain(where_clause)
+                .chain(misplaced)
+                .map(Err)
+        )?;
         let fields = named
             .named
             .iter()

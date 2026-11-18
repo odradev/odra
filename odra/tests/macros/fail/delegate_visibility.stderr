@@ -1,4 +1,4 @@
-error: expected `fn`
+error: a delegated function is written without `pub`, like a trait method; the generated entry point is public
   --> tests/macros/fail/delegate_visibility.rs:25:13
    |
 25 |             pub fn get_owner(&self) -> Address;

@@ -19,7 +19,7 @@ pub struct LivenetContract {
 #[odra::module]
 impl LivenetContract {
     /// Initializes the contract.
-    pub fn init(mut self, erc20_address: Address) {
+    pub fn init(&mut self, erc20_address: Address) {
         let caller = self.env().caller();
         self.creator.set(caller);
         self.ownable.init(caller);

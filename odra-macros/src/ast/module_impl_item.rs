@@ -10,11 +10,16 @@ use crate::ast::test_parts::{TestPartsItem, TestPartsReexportItem};
 use crate::ast::wasm_parts::ModuleWasmPartsItem;
 use crate::ir::ModuleImplIR;
 use proc_macro2::TokenStream;
-use quote::{quote, ToTokens};
+use quote::{quote, quote_spanned, ToTokens};
 
-/// Emits everything `#[odra::module]` adds to a module impl or trait block, in this order.
+/// Emits everything `#[odra::module]` adds to a module impl block, in this order.
 pub struct ModuleImplItem {
     self_code: TokenStream,
+    /// `impl odra::module::IsModule for Module {}`, spanned as the module name: the first error
+    /// of an impl whose struct has no `#[odra::module]` says the struct is not a module, before
+    /// the errors the rest of the generated code adds. A bound on an impl is checked before the
+    /// bodies are, so it comes first.
+    module_check: TokenStream,
     has_entrypoints_item: HasEntrypointsImplItem,
     ref_item: RefItem,
     test_parts: TestPartsItem,
@@ -32,8 +37,13 @@ impl TryFrom<&ModuleImplIR> for ModuleImplItem {
     type Error = syn::Error;
 
     fn try_from(ir: &ModuleImplIR) -> Result<Self, Self::Error> {
+        let module_ident = ir.module_ident();
+        let module_check = quote_spanned! {module_ident.span()=>
+            impl odra::module::IsModule for #module_ident {}
+        };
         Ok(Self {
             self_code: ir.self_code(),
+            module_check,
             has_entrypoints_item: HasEntrypointsImplItem::try_from(ir)?,
             ref_item: RefItem::try_from(ir)?,
             test_parts: TestPartsItem::try_from(ir)?,
@@ -53,6 +63,7 @@ impl ToTokens for ModuleImplItem {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let Self {
             self_code,
+            module_check,
             has_entrypoints_item,
             ref_item,
             test_parts,
@@ -67,6 +78,7 @@ impl ToTokens for ModuleImplItem {
         } = self;
         tokens.extend(quote! {
             #self_code
+            #module_check
             #has_entrypoints_item
             #ref_item
             #test_parts

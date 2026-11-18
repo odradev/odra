@@ -139,7 +139,7 @@ impl ToTokens for HasIdentTraitImplItem {
         tokens.extend(quote! {
             impl odra::contract_def::HasIdent for #ref_ident {
                 fn ident() -> odra::prelude::string::String {
-                    #module_ident::ident()
+                    <#module_ident as odra::contract_def::HasIdent>::ident()
                 }
                 fn contract_name() -> odra::prelude::string::String {
                     <#module_ident as odra::contract_def::HasIdent>::contract_name()

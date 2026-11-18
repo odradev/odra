@@ -8,9 +8,10 @@ use super::delegate::{Delegate, DelegatedFn};
 use super::errors;
 use super::function::{FnArgIR, FnIR, ImplContext};
 use super::{generated_mod_ident, CONSTRUCTOR_NAME, UPGRADER_NAME};
+use std::collections::HashSet;
 
-/// The impl block or the trait `#[odra::module]` (or `#[odra::external_contract]`) is applied
-/// to. Built with every function validated, see [FnIR].
+/// The impl block `#[odra::module]` is applied to, or the trait `#[odra::external_contract]`
+/// is. Built with every function validated, see [FnIR].
 pub enum ModuleImplIR {
     Impl(ModuleIR),
     Trait(ModuleTraitIR)
@@ -28,24 +29,14 @@ impl ModuleImplIR {
         ModuleIR::try_new(code, config).map(Self::Impl)
     }
 
-    /// The IR of a trait, with `attr` the arguments of the macro.
+    /// The IR of an external contract trait, with `attr` the arguments of the macro, which takes
+    /// none.
     pub fn try_new_trait(
         attr: &proc_macro2::TokenStream,
         code: syn::ItemTrait
     ) -> syn::Result<Self> {
-        let config = syn::parse2::<ModuleConfig>(attr.clone())?;
-        errors::check_all(
-            config
-                .args()
-                .map(|(name, span)| Err(errors::module_arg_on_trait(name, *span)))
-        )?;
-        // A trait function with a visibility (`pub fn`) is a `Verbatim` item to syn. Parsing it
-        // as a function reports the `pub` here, instead of skipping the function and leaving the
-        // error to rustc on the emitted trait.
-        for item in code.items.iter() {
-            if let syn::TraitItem::Verbatim(func) = item {
-                syn::parse2::<syn::TraitItemFn>(func.clone())?;
-            }
+        if !attr.is_empty() {
+            return Err(errors::external_contract_with_args(attr));
         }
         ModuleTraitIR::try_new(code).map(Self::Trait)
     }
@@ -270,8 +261,10 @@ impl ModuleIR {
     fn try_new(code: syn::ItemImpl, config: ModuleConfig) -> syn::Result<Self> {
         let ctx = ImplContext {
             is_trait_impl: code.trait_.is_some(),
-            is_factory: config.factory
+            is_factory: config.factory,
+            is_external_contract: false
         };
+        Self::validate_shape(&code)?;
         let (ident, functions) = errors::both(
             Self::module_ident(&code.self_ty),
             Self::parse_functions(&code, ctx)
@@ -282,6 +275,36 @@ impl ModuleIR {
             config: Box::new(config),
             functions
         })
+    }
+
+    /// The impl block is for one concrete type, and `#[odra(..)]` sits on its functions only.
+    fn validate_shape(code: &syn::ItemImpl) -> syn::Result<()> {
+        let generics = (!code.generics.params.is_empty())
+            .then(|| errors::generics_not_supported(&code.generics, "a module impl"));
+        let where_clause = code
+            .generics
+            .where_clause
+            .as_ref()
+            .map(|w| errors::where_clause_not_supported(w, "a module impl"));
+        let on_impl =
+            odra_attrs(&code.attrs).map(|attr| errors::odra_attr_misplaced(attr, "the impl block"));
+        let on_items = code.items.iter().flat_map(|item| {
+            let (attrs, on) = match item {
+                syn::ImplItem::Const(i) => (i.attrs.as_slice(), "an associated const"),
+                syn::ImplItem::Type(i) => (i.attrs.as_slice(), "an associated type"),
+                syn::ImplItem::Macro(i) => (i.attrs.as_slice(), "a macro call"),
+                _ => (&[][..], "")
+            };
+            odra_attrs(attrs).map(move |attr| errors::odra_attr_misplaced(attr, on))
+        });
+        errors::check_all(
+            generics
+                .into_iter()
+                .chain(where_clause)
+                .chain(on_impl)
+                .chain(on_items)
+                .map(Err)
+        )
     }
 
     fn module_ident(self_ty: &syn::Type) -> syn::Result<Ident> {
@@ -359,19 +382,30 @@ impl ModuleIR {
                 FnIR::try_new_impl(delegated.function, ctx)
                     .map(|fn_ir| fn_ir.delegated_to(delegated.target, delegated.has_own_docs))
             });
-        errors::collect_all(own_functions.chain(delegated_functions))
+        let functions = errors::collect_all(own_functions.chain(delegated_functions))?;
+        // Two functions of one name, one of them delegated: the generated entry point would be
+        // defined twice, which rustc reports on the macro rather than on the function.
+        let mut names = HashSet::new();
+        errors::check_all(functions.iter().map(|f| match names.insert(f.name_str()) {
+            true => Ok(()),
+            false => Err(errors::fn_defined_twice(&f.name()))
+        }))?;
+        Ok(functions)
     }
 
     fn delegated_functions(code: &syn::ItemImpl) -> syn::Result<Vec<DelegatedFn>> {
-        let delegate_items = code
-            .items
-            .iter()
-            .filter_map(|item| match item {
-                ImplItem::Macro(m) => Some(m),
-                _ => None
-            })
-            .map(|m| syn::parse2::<Delegate>(m.mac.tokens.clone()))
-            .collect::<Result<Vec<_>, _>>()?;
+        let delegate_items = errors::collect_all(
+            code.items
+                .iter()
+                .filter_map(|item| match item {
+                    ImplItem::Macro(m) => Some(m),
+                    _ => None
+                })
+                .map(|m| match m.mac.path.is_ident("delegate") {
+                    true => syn::parse2::<Delegate>(m.mac.tokens.clone()),
+                    false => Err(errors::macro_in_impl(&m.mac))
+                })
+        )?;
 
         Ok(delegate_items
             .into_iter()
@@ -389,11 +423,49 @@ pub struct ModuleTraitIR {
 
 impl ModuleTraitIR {
     fn try_new(code: syn::ItemTrait) -> syn::Result<Self> {
+        Self::validate_shape(&code)?;
         let functions = errors::collect_all(code.items.iter().filter_map(|item| match item {
             syn::TraitItem::Fn(func) => Some(FnIR::try_from(func.clone())),
             _ => None
         }))?;
         Ok(Self { code, functions })
+    }
+
+    /// The trait lists the entry points of one contract: no generics, no supertraits, no
+    /// associated items, and every function is a signature.
+    fn validate_shape(code: &syn::ItemTrait) -> syn::Result<()> {
+        let generics = (!code.generics.params.is_empty())
+            .then(|| errors::generics_not_supported(&code.generics, "an external contract"));
+        let where_clause = code
+            .generics
+            .where_clause
+            .as_ref()
+            .map(|w| errors::where_clause_not_supported(w, "an external contract"));
+        let supertraits = code
+            .supertraits
+            .iter()
+            .map(errors::external_contract_supertrait);
+        let items = code.items.iter().filter_map(|item| match item {
+            syn::TraitItem::Const(_) => Some(errors::external_contract_assoc_item(item, "const")),
+            syn::TraitItem::Type(_) => Some(errors::external_contract_assoc_item(item, "type")),
+            syn::TraitItem::Fn(func) => func.default.as_ref().map(|block| {
+                errors::external_contract_fn_with_body(block, &func.sig.ident.to_string())
+            }),
+            // A trait function with a visibility (`pub fn`) is a `Verbatim` item to syn: the
+            // `pub` is reported here, instead of rustc reporting it on the emitted trait.
+            syn::TraitItem::Verbatim(tokens) => leading_visibility(tokens)
+                .filter(|vis| !matches!(vis, syn::Visibility::Inherited))
+                .map(|vis| errors::trait_fn_with_visibility(&vis)),
+            _ => None
+        });
+        errors::check_all(
+            generics
+                .into_iter()
+                .chain(where_clause)
+                .chain(supertraits)
+                .chain(items)
+                .map(Err)
+        )
     }
 
     pub fn self_code(&self) -> syn::ItemTrait {
@@ -405,4 +477,19 @@ impl ModuleTraitIR {
         });
         code
     }
+}
+
+/// The `#[odra(..)]` attributes among `attrs`.
+fn odra_attrs(attrs: &[syn::Attribute]) -> impl Iterator<Item = &syn::Attribute> {
+    attrs.iter().filter(|attr| attr.path().is_ident("odra"))
+}
+
+/// The visibility `tokens` start with, whatever follows it.
+fn leading_visibility(tokens: &proc_macro2::TokenStream) -> Option<syn::Visibility> {
+    let parser = |input: syn::parse::ParseStream| {
+        let vis = input.parse::<syn::Visibility>()?;
+        input.parse::<proc_macro2::TokenStream>()?;
+        Ok(vis)
+    };
+    syn::parse::Parser::parse2(parser, tokens.clone()).ok()
 }

@@ -1,0 +1,17 @@
+error: `async` is not allowed on `asynchronous`: an entry point is a plain `fn`, called by the host
+  --> tests/macros/fail/entrypoint_qualifiers.rs:11:9
+   |
+11 |     pub async fn asynchronous(&self) -> u32 {
+   |         ^^^^^
+
+error: `unsafe` is not allowed on `unchecked`: an entry point is a plain `fn`, called by the host
+  --> tests/macros/fail/entrypoint_qualifiers.rs:15:9
+   |
+15 |     pub unsafe fn unchecked(&self) -> u32 {
+   |         ^^^^^^
+
+error: `extern` is not allowed on `external`: an entry point is a plain `fn`, called by the host
+  --> tests/macros/fail/entrypoint_qualifiers.rs:19:9
+   |
+19 |     pub extern "C" fn external(&self) -> u32 {
+   |         ^^^^^^^^^^

@@ -1,0 +1,70 @@
+error: `#[odra::external_contract]` takes no arguments
+ --> tests/macros/fail/external_contract_shape.rs:4:27
+  |
+4 | #[odra::external_contract(name = "Token")]
+  |                           ^^^^^^^^^^^^^^
+
+error: an external contract has no generic parameters: the generated code is for one concrete type
+  --> tests/macros/fail/external_contract_shape.rs:10:18
+   |
+10 | pub trait Generic<T> {
+   |                  ^^^
+
+error: `get` has a body; a function of an external contract is a signature, as the call is forwarded to the contract: end it with `;`
+  --> tests/macros/fail/external_contract_shape.rs:16:26
+   |
+16 |       fn get(&self) -> u32 {
+   |  __________________________^
+17 | |         0
+18 | |     }
+   | |_____^
+
+error: an associated type is not allowed in an external contract trait, which lists the contract's entry points; remove it
+  --> tests/macros/fail/external_contract_shape.rs:23:5
+   |
+23 |     type Out;
+   |     ^^^^^^^^^
+
+error: an associated const is not allowed in an external contract trait, which lists the contract's entry points; remove it
+  --> tests/macros/fail/external_contract_shape.rs:24:5
+   |
+24 |     const LIMIT: u32;
+   |     ^^^^^^^^^^^^^^^^^
+
+error: an external contract trait has no supertraits: the generated refs implement this trait only; drop the bound
+  --> tests/macros/fail/external_contract_shape.rs:29:27
+   |
+29 | pub trait WithSupertrait: Clone {
+   |                           ^^^^^
+
+error: `get` takes no `self`; an entry point is called on the contract: take `&self` or `&mut self`
+  --> tests/macros/fail/external_contract_shape.rs:35:8
+   |
+35 |     fn get() -> u32;
+   |        ^^^
+
+error: `get` has generic parameters; an entry point has none, as each argument is read from the call as one concrete type
+  --> tests/macros/fail/external_contract_shape.rs:40:11
+   |
+40 |     fn get<T>(&self) -> u32;
+   |           ^^^
+
+error: `#[odra(offchain)]` on `get`: an external contract has no offchain functions: there is no module to run them on
+  --> tests/macros/fail/external_contract_shape.rs:45:5
+   |
+45 |     #[odra(offchain)]
+   |     ^^^^^^^^^^^^^^^^^
+
+error: a trait function is written without `pub`: it is as public as the trait
+  --> tests/macros/fail/external_contract_shape.rs:51:5
+   |
+51 |     pub fn get(&self) -> u32;
+   |     ^^^
+
+warning: unused import: `odra::prelude::*`
+ --> tests/macros/fail/external_contract_shape.rs:2:5
+  |
+2 | use odra::prelude::*;
+  |     ^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default

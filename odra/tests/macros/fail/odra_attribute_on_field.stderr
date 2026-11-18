@@ -1,15 +1,43 @@
-error: cannot find attribute `odra` in this scope
-  --> tests/macros/fail/odra_attribute_on_field.rs:12:7
-   |
-12 |     #[odra(payable)]
-   |       ^^^^
-   |
-   = note: `odra` is in scope, but it is a crate, not an attribute
-
-error: cannot find attribute `odra` in this scope
- --> tests/macros/fail/odra_attribute_on_field.rs:6:7
+error: `#[odra(..)]` goes on an entry point function of the module impl, not on a field
+ --> tests/macros/fail/odra_attribute_on_field.rs:6:5
   |
 6 |     #[odra(using = "shared")]
-  |       ^^^^
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: `#[odra(..)]` goes on an entry point function of the module impl, not on the impl block
+  --> tests/macros/fail/odra_attribute_on_field.rs:11:1
+   |
+11 | #[odra(non_reentrant)]
+   | ^^^^^^^^^^^^^^^^^^^^^^
+
+error: `#[odra(..)]` goes on an entry point function of the module impl, not on an associated const
+  --> tests/macros/fail/odra_attribute_on_field.rs:17:5
+   |
+17 |     #[odra(payable)]
+   |     ^^^^^^^^^^^^^^^^
+
+error: `#[odra(..)]` goes on an entry point function of the module impl, not on a field or a variant
+  --> tests/macros/fail/odra_attribute_on_field.rs:23:5
+   |
+23 |     #[odra(payable)]
+   |     ^^^^^^^^^^^^^^^^
+
+error: `#[odra(..)]` goes on an entry point function of the module impl, not on a field or a variant
+  --> tests/macros/fail/odra_attribute_on_field.rs:29:5
+   |
+29 |     #[odra(payable)]
+   |     ^^^^^^^^^^^^^^^^
+
+error: `#[odra(..)]` goes on an entry point function of the module impl, not on a field
+  --> tests/macros/fail/odra_attribute_on_field.rs:35:5
+   |
+35 |     #[odra(payable)]
+   |     ^^^^^^^^^^^^^^^^
+
+warning: unused import: `odra::prelude::*`
+ --> tests/macros/fail/odra_attribute_on_field.rs:2:5
   |
-  = note: `odra` is in scope, but it is a crate, not an attribute
+2 | use odra::prelude::*;
+  |     ^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default

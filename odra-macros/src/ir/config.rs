@@ -39,11 +39,6 @@ impl ModuleConfig {
     pub fn struct_only_args(&self) -> impl Iterator<Item = &(&'static str, Span)> {
         self.given.iter().filter(|(name, _)| *name != "factory")
     }
-
-    /// All the arguments that were written.
-    pub fn args(&self) -> impl Iterator<Item = &(&'static str, Span)> {
-        self.given.iter()
-    }
 }
 
 impl Parse for ModuleConfig {
@@ -60,19 +55,23 @@ impl Parse for ModuleConfig {
             }
             config.given.push((arg, span));
             input.parse::<syn::Ident>()?;
-            input.parse::<Token![=]>()?;
+            input
+                .parse::<Token![=]>()
+                .map_err(|_| errors::module_arg_bad_value(arg, span))?;
+            // A value of the wrong shape is reported in the argument's terms, where syn would
+            // say what token it expected.
+            let bad_value = |e: syn::Error| errors::module_arg_bad_value(arg, e.span());
             match arg {
-                "name" => config.name = Some(input.parse::<syn::LitStr>()?.value()),
-                "version" => config.version = Some(input.parse::<syn::LitStr>()?.value()),
-                "events" => {
-                    let content;
-                    syn::bracketed!(content in input);
-                    let events = Punctuated::<syn::Type, Token![,]>::parse_terminated(&content)?;
-                    config.events = events.into_iter().collect();
+                "name" => {
+                    config.name = Some(input.parse::<syn::LitStr>().map_err(bad_value)?.value())
                 }
-                "errors" => config.errors = Some(input.parse()?),
+                "version" => {
+                    config.version = Some(input.parse::<syn::LitStr>().map_err(bad_value)?.value())
+                }
+                "events" => config.events = parse_events(input).map_err(bad_value)?,
+                "errors" => config.errors = Some(input.parse().map_err(bad_value)?),
                 "factory" => config.factory = parse_on_off(input)?,
-                "layout" => config.layout = Some(input.parse()?),
+                "layout" => config.layout = Some(input.parse().map_err(bad_value)?),
                 _ => unreachable!("`{arg}` comes from `ARGS`")
             }
             let _ = input.parse::<Token![,]>(); // optional comma
@@ -81,9 +80,19 @@ impl Parse for ModuleConfig {
     }
 }
 
+/// `[Type, Type, ..]`.
+fn parse_events(input: ParseStream) -> syn::Result<Vec<syn::Type>> {
+    let content;
+    syn::bracketed!(content in input);
+    let events = Punctuated::<syn::Type, Token![,]>::parse_terminated(&content)?;
+    Ok(events.into_iter().collect())
+}
+
 /// `on` or `off`.
 fn parse_on_off(input: ParseStream) -> syn::Result<bool> {
-    let value = input.parse::<syn::Ident>()?;
+    let value = input
+        .parse::<syn::Ident>()
+        .map_err(|e| errors::module_arg_bad_value("factory", e.span()))?;
     match value.to_string().as_str() {
         "on" => Ok(true),
         "off" => Ok(false),

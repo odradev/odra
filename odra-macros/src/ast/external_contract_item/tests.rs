@@ -43,7 +43,7 @@ fn external_contract_impl() {
 
         impl TokenContractRef {
             pub fn balance_of(&self, owner: Address) -> U256 {
-                self.env.call_contract(
+                self.env.call_contract::<U256>(
                     self.address,
                     odra::CallDef::new(
                         odra::prelude::string::String::from("balance_of"),
@@ -72,7 +72,7 @@ fn external_contract_impl() {
 
         impl Token for TokenContractRef {
             fn balance_of(&self, owner: Address) -> U256 {
-                self.env.call_contract(
+                self.env.call_contract::<U256>(
                     self.address,
                     odra::CallDef::new(
                         odra::prelude::string::String::from("balance_of"),
@@ -149,7 +149,7 @@ fn external_contract_impl() {
             impl TokenHostRef {
                 /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_balance_of(&self, owner: Address) -> OdraResult<U256> {
-                    self.env.call_contract(
+                    self.env.call_contract::<U256>(
                         self.address,
                         odra::CallDef::new(
                             odra::prelude::string::String::from("balance_of"),

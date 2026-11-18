@@ -1,0 +1,47 @@
+error[E0277]: `u32` cannot be a field of a module
+ --> tests/macros/fail/field_not_storage.rs:7:12
+  |
+7 |     count: u32,
+  |            ^^^ not a storage component
+  |
+  = help: the trait `ModuleComponent` is not implemented for `u32`
+  = note: a module's field is a `Var<T>`, a `Mapping<K, V>`, a `List<T>` or a `SubModule<M>`: the module stores values, it does not hold them
+  = help: the following other types implement trait `ModuleComponent`:
+            External<T>
+            Var<T>
+            odra::module::SubModule<T>
+            odra::prelude::List<T>
+            odra::prelude::Mapping<K, V>
+            odra::prelude::Sequence<T>
+
+error[E0277]: `std::string::String` cannot be a field of a module
+ --> tests/macros/fail/field_not_storage.rs:8:11
+  |
+8 |     name: String,
+  |           ^^^^^^ not a storage component
+  |
+  = help: the trait `ModuleComponent` is not implemented for `std::string::String`
+  = note: a module's field is a `Var<T>`, a `Mapping<K, V>`, a `List<T>` or a `SubModule<M>`: the module stores values, it does not hold them
+  = help: the following other types implement trait `ModuleComponent`:
+            External<T>
+            Var<T>
+            odra::module::SubModule<T>
+            odra::prelude::List<T>
+            odra::prelude::Mapping<K, V>
+            odra::prelude::Sequence<T>
+
+error[E0277]: `u32` is not an Odra module
+ --> tests/macros/fail/field_not_storage.rs:9:12
+  |
+9 |     inner: SubModule<u32>
+  |            ^^^^^^^^^^^^^^ not a module
+  |
+  = help: the trait `odra::module::Module` is not implemented for `u32`
+  = note: a module is a struct with `#[odra::module]` on it and on its impl block
+help: the trait `odra::module::Module` is implemented for `Contract`
+ --> tests/macros/fail/field_not_storage.rs:5:1
+  |
+5 | #[odra::module]
+  | ^^^^^^^^^^^^^^^
+  = note: required for `odra::module::SubModule<u32>` to implement `ModuleComponent`
+  = note: this error originates in the attribute macro `odra::module` (in Nightly builds, run with -Z macro-backtrace for more info)

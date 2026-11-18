@@ -68,7 +68,6 @@ base16 = { version = "0.2", default-features = false }
 base64 = { version = "0.22", default-features = false, features = ["alloc"] }
 blake2 = "0.10"
 bytes = "1.11"
-chrono = { version = "0.4"}
 clap = { version = "4.5"}
 convert_case = "0.6"
 cucumber = "0.21"
@@ -79,6 +78,7 @@ futures-util = "0.3"
 gloo-utils = { version = "0.2"}
 hex = "0.4"
 itertools = "0.14"
+jiff = { version = "0.2", default-features = false, features = ["std"] }
 js-sys = "0.3"
 log = "0.4"
 mockall = { version = "0.14" }
