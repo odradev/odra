@@ -32,7 +32,10 @@ const ARG_AMOUNT: &str = "amount";
 
 const DEFAULT_GAS: u64 = 2_500_000_000;
 const DEFAULT_TTL: u32 = 5 * 60;
-const DEFAULT_GAS_TOLERANCE: u8 = 5;
+/// The highest gas price a transaction accepts. Casper mainnet and testnet fix the price at 1
+/// (`min_gas_price = max_gas_price = 1`), and a node of 2.2.4 rejects a transaction that tolerates
+/// more than the network's maximum as having an invalid pricing mode.
+const DEFAULT_GAS_TOLERANCE: u8 = 1;
 const CHAIN_TESTNET: &str = "casper-test";
 const SECRET_KEY_PEM: &str = env!("WASM_CLIENT_SK");
 

@@ -32,6 +32,9 @@ Changelog for `odra`.
   never settled. The first read creates the dictionary, and the client took that write for the result of the
   call. It now reads the value stored under the proxy caller's `__result` key, and a call without a result is an
   error instead of a panic.
+- `odra-wasm-client`: every transaction sent from a page was rejected by a Casper 2.2.4 node (testnet) with
+  `Invalid transaction` (-32016, "invalid pricing mode"). The client set a gas price tolerance of 5 where the
+  network's maximum gas price is 1. It sets 1, as the livenet client does.
 - `odra-wasm-client`: `WASM_CLIENT_SK`, the key the client signs its read calls with, may be a PEM as it is in
   the key file. Only its first line reached the build (a cargo directive ends at a line break), so every read
   failed with `Invalid secret key` unless the PEM was put on one line by hand.
