@@ -35,8 +35,8 @@ pub fn factory(attr: TokenStream, item: TokenStream) -> TokenStream {
     )
 }
 
-/// Expands a module-like macro: the struct is emitted by `S`, the impl block or the trait by
-/// `I`, and anything else is reported with `on_other_item`.
+/// Expands a module-like macro: the struct is emitted by `S`, the impl block by `I`, and
+/// anything else is reported with `on_other_item`.
 fn expand_module<S, I>(
     attr: TokenStream,
     item: TokenStream,
@@ -56,9 +56,6 @@ where
             .and_then(|ir| S::try_from(&ir))
             .into_code(),
         syn::Item::Impl(code) => ModuleImplIR::try_new_impl(&attr, code)
-            .and_then(|ir| I::try_from(&ir))
-            .into_code(),
-        syn::Item::Trait(code) => ModuleImplIR::try_new_trait(&attr, code)
             .and_then(|ir| I::try_from(&ir))
             .into_code(),
         other => on_other_item(&other).to_compile_error().into()

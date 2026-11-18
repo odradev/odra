@@ -1,0 +1,47 @@
+error: `events` takes a list of event types; write `events = [Transfer, Approval]`
+  --> tests/macros/fail/module_arg_values.rs:14:25
+   |
+14 | #[odra::module(events = Transfer)]
+   |                         ^^^^^^^^
+
+error: `events` takes a list of event types; write `events = [Transfer, Approval]`
+  --> tests/macros/fail/module_arg_values.rs:19:16
+   |
+19 | #[odra::module(events(Transfer))]
+   |                ^^^^^^
+
+error: `name` takes a string; write `name = "MyToken"`
+  --> tests/macros/fail/module_arg_values.rs:24:23
+   |
+24 | #[odra::module(name = Token)]
+   |                       ^^^^^
+
+error: `version` takes a string; write `version = "1.0.0"`
+  --> tests/macros/fail/module_arg_values.rs:29:26
+   |
+29 | #[odra::module(version = 1)]
+   |                          ^
+
+error: `errors` takes the error enum; write `errors = TokenError`
+  --> tests/macros/fail/module_arg_values.rs:34:25
+   |
+34 | #[odra::module(errors = "Error")]
+   |                         ^^^^^^^
+
+error: `name` takes a string; write `name = "MyToken"`
+  --> tests/macros/fail/module_arg_values.rs:39:16
+   |
+39 | #[odra::module(name)]
+   |                ^^^^
+
+error: `events` takes a list of event types; write `events = [Transfer, Approval]`
+  --> tests/macros/fail/module_arg_values.rs:44:35
+   |
+44 | #[odra::module(events = [Transfer,, ])]
+   |                                   ^
+
+error: `factory` takes `on` or `off`; write `factory = on`
+  --> tests/macros/fail/module_arg_values.rs:49:26
+   |
+49 | #[odra::module(factory = "on")]
+   |                          ^^^^

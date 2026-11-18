@@ -47,7 +47,7 @@ pub mod mock {
                 }
 
                 /// Airdrops the given amount to the given addresses.
-                pub fn airdrop(to: &[Address], amount: &U256) {
+                pub fn airdrop(&self, to: &[Address], amount: &U256) {
                 }
 
                 fn private_function() {

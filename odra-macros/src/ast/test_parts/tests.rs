@@ -103,7 +103,7 @@ fn test_parts() {
                 /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_init(&mut self, total_supply: Option<U256>) -> OdraResult<()> {
                     self.env
-                        .call_contract(
+                        .call_contract::<()>(
                             self.address,
                             odra::CallDef::new(
                                 odra::prelude::string::String::from("init"),
@@ -124,7 +124,7 @@ fn test_parts() {
                 /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_upgrade(&mut self, total_supply: Option<U256>) -> OdraResult<()> {
                     self.env
-                        .call_contract(
+                        .call_contract::<()>(
                             self.address,
                             odra::CallDef::new(
                                 odra::prelude::string::String::from("upgrade"),
@@ -146,7 +146,7 @@ fn test_parts() {
                 /// Returns the total supply of the token.
                 /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_total_supply(&self) -> OdraResult<U256> {
-                    self.env.call_contract(
+                    self.env.call_contract::<U256>(
                         self.address,
                         odra::CallDef::new(
                             odra::prelude::string::String::from("total_supply"),
@@ -165,7 +165,7 @@ fn test_parts() {
                 /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_pay_to_mint(&mut self) -> OdraResult<()> {
                     self.env
-                        .call_contract(
+                        .call_contract::<()>(
                             self.address,
                             odra::CallDef::new(
                                     odra::prelude::string::String::from("pay_to_mint"),
@@ -190,7 +190,7 @@ fn test_parts() {
                     msg: Maybe<String>,
                 ) -> OdraResult<()> {
                     self.env
-                        .call_contract(
+                        .call_contract::<()>(
                             self.address,
                             odra::CallDef::new(
                                     odra::prelude::string::String::from("approve"),
@@ -212,7 +212,7 @@ fn test_parts() {
                 /// Airdrops the given amount to the given addresses.
                 /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_airdrop(&self, to: &[Address], amount: &U256) -> OdraResult<()> {
-                    self.env.call_contract(
+                    self.env.call_contract::<()>(
                         self.address,
                         odra::CallDef::new(
                             odra::prelude::string::String::from("airdrop"),
@@ -233,7 +233,7 @@ fn test_parts() {
                 /// Swaps the given amount to the given addresses.
                 /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_swap(&mut self, to: Address, amount: U256) -> OdraResult<U256> {
-                    self.env.call_contract(
+                    self.env.call_contract::<U256>(
                         self.address,
                         odra::CallDef::new(
                             odra::prelude::string::String::from("swap"),
@@ -261,7 +261,7 @@ fn test_parts() {
                 /// Swaps the given amount to the given addresses.
                 /// Ignores the result of the call.
                 pub fn try_swap_no_ret(&mut self, to: Address, amount: U256) -> OdraResult<()> {
-                    self.env.call_contract(
+                    self.env.call_contract::<()>(
                         self.address,
                         odra::CallDef::new(
                             odra::prelude::string::String::from("swap"),
@@ -282,7 +282,7 @@ fn test_parts() {
 
             impl odra::contract_def::HasIdent for Erc20HostRef {
                 fn ident() -> odra::prelude::string::String {
-                    Erc20::ident()
+                    <Erc20 as odra::contract_def::HasIdent>::ident()
                 }
                 fn contract_name() -> odra::prelude::string::String {
                     <Erc20 as odra::contract_def::HasIdent>::contract_name()
@@ -455,7 +455,7 @@ fn test_trait_impl_parts() {
             impl Erc20HostRef {
                 /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_total_supply(&self) -> OdraResult<U256> {
-                    self.env.call_contract(
+                    self.env.call_contract::<U256>(
                         self.address,
                         odra::CallDef::new(
                             odra::prelude::string::String::from("total_supply"),
@@ -474,7 +474,7 @@ fn test_trait_impl_parts() {
                 /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_set_total_supply(&mut self) -> OdraResult<U256> {
                     self.env
-                        .call_contract(
+                        .call_contract::<U256>(
                             self.address,
                             odra::CallDef::new(
                                 odra::prelude::string::String::from("set_total_supply"),
@@ -493,7 +493,7 @@ fn test_trait_impl_parts() {
                 /// Does not fail in case of error, returns `odra::OdraResult` instead.
                 pub fn try_pay_to_mint(&mut self) -> OdraResult<()> {
                     self.env
-                        .call_contract(
+                        .call_contract::<()>(
                             self.address,
                             odra::CallDef::new(
                                 odra::prelude::string::String::from("pay_to_mint"),
@@ -520,7 +520,7 @@ fn test_trait_impl_parts() {
                 /// Ignores the result of the call.
                 pub fn try_set_total_supply_no_ret(&mut self) -> OdraResult<()> {
                     self.env
-                        .call_contract(
+                        .call_contract::<()>(
                             self.address,
                             odra::CallDef::new(
                                 odra::prelude::string::String::from("set_total_supply"),
@@ -539,7 +539,7 @@ fn test_trait_impl_parts() {
 
             impl odra::contract_def::HasIdent for Erc20HostRef {
                 fn ident() -> odra::prelude::string::String {
-                    Erc20::ident()
+                    <Erc20 as odra::contract_def::HasIdent>::ident()
                 }
                 fn contract_name() -> odra::prelude::string::String {
                     <Erc20 as odra::contract_def::HasIdent>::contract_name()
@@ -667,7 +667,7 @@ mod factory {
                     /// Does not fail in case of error, returns `odra::OdraResult` instead.
                     pub fn try_new_contract(&mut self, contract_name: odra::prelude::string::String, value: u32) -> OdraResult<(odra::prelude::Address, odra::casper_types::URef)> {
                         self.env
-                            .call_contract(
+                            .call_contract::<(odra::prelude::Address, odra::casper_types::URef)>(
                                 self.address,
                                 odra::CallDef::new(
                                     odra::prelude::string::String::from("new_contract"),
@@ -692,7 +692,7 @@ mod factory {
                         contract_name: odra::prelude::string::String,
                     ) -> OdraResult<()> {
                         self.env
-                            .call_contract(
+                            .call_contract::<()>(
                                 self.address,
                                 odra::CallDef::new(
                                     odra::prelude::string::String::from("upgrade_child_contract"),
@@ -716,7 +716,7 @@ mod factory {
                         args: odra::prelude::BTreeMap<odra::prelude::string::String, T>
                     ) -> OdraResult<()> {
                         self.env
-                            .call_contract(
+                            .call_contract::<()>(
                                 self.address,
                                 odra::CallDef::new(
                                     odra::prelude::string::String::from(
@@ -738,7 +738,7 @@ mod factory {
 
                 impl odra::contract_def::HasIdent for Erc20FactoryHostRef {
                     fn ident() -> odra::prelude::string::String {
-                        Erc20Factory::ident()
+                        <Erc20Factory as odra::contract_def::HasIdent>::ident()
                     }
                     fn contract_name() -> odra::prelude::string::String {
                         <Erc20Factory as odra::contract_def::HasIdent>::contract_name()

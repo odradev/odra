@@ -11,6 +11,22 @@ Changelog for `odra`.
   existing project to use it. Optional and target-specific dependencies still need the `use`.
 
 ### Changed
+- The macros report a mistake in Odra's terms, on the token that is wrong, where rustc used to report what the
+  generated code could not do with it (#693): generic parameters, lifetimes or a `where` clause on a module,
+  its impl block, an entry point, an Odra type, an error enum, an event or an external contract; an entry
+  point without `self`, with `self` by value, `async`, `unsafe` or `extern`, with an `impl Trait`, `&mut T` or
+  `&str` argument; a `#[odra::module(..)]` argument without its value or with a value of the wrong shape;
+  `#[odra(..)]` on a field, a variant, the struct, the impl block or an associated item; a `delegate!` block
+  that does not read `to self.<field> { fn ..; }`, another macro in a module impl, and an entry point written
+  and delegated under one name; an external contract trait with arguments, supertraits, associated items,
+  a function body, a `pub fn` or an `#[odra(offchain)]` function; `#[odra::module]` or `#[odra::factory]`
+  on a trait, which never compiled. A field that is not a storage component, a `SubModule` of a non-module
+  and an impl block whose struct has no `#[odra::module]` say so; an entry point whose return type cannot
+  be read back is reported on that type.
+- **Can break a build:** of the above, these were accepted and silently did something else: an entry point
+  taking `self` by value or declared `extern` (called as `&self`), a `delegate!` or external contract
+  function with a body (the body was dropped), an external contract trait with supertraits (the generated refs
+  do not implement them) and `#[odra(offchain)]` in an external contract (the flag was ignored).
 - **Can break a build:** `#[odra(payable)]`, `#[odra(non_reentrant)]` and `#[odra(offchain)]` on a function that
   is not an entry point (not `pub` in a module impl) are compile errors (#686). They were accepted and did
   nothing: a `non_reentrant` helper was not guarded. Make the function `pub` or remove the attribute.

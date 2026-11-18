@@ -1,0 +1,37 @@
+error: an Odra type has no generic parameters: the generated code is for one concrete type
+ --> tests/macros/fail/type_generics.rs:5:23
+  |
+5 | pub struct GenericType<T> {
+  |                       ^^^
+
+error: an Odra type has no generic parameters: the generated code is for one concrete type
+  --> tests/macros/fail/type_generics.rs:10:21
+   |
+10 | pub enum GenericEnum<T> {
+   |                     ^^^
+
+error: an Odra type has no generic parameters: the generated code is for one concrete type
+  --> tests/macros/fail/type_generics.rs:15:22
+   |
+15 | pub enum GenericError<'a> {
+   |                      ^^^^
+
+error: an event has no generic parameters: the generated code is for one concrete type
+  --> tests/macros/fail/type_generics.rs:20:24
+   |
+20 | pub struct GenericEvent<T> {
+   |                        ^^^
+
+error: an event has no generic parameters: the generated code is for one concrete type
+  --> tests/macros/fail/type_generics.rs:25:25
+   |
+25 | pub struct BorrowedEvent<'a> {
+   |                         ^^^^
+
+warning: unused import: `odra::prelude::*`
+ --> tests/macros/fail/type_generics.rs:2:5
+  |
+2 | use odra::prelude::*;
+  |     ^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default

@@ -1,0 +1,5 @@
+error: `get` is defined twice in this impl; an entry point is defined once
+  --> tests/macros/fail/duplicate_entry_point.rs:30:16
+   |
+30 |             fn get(&self) -> u32;
+   |                ^^^

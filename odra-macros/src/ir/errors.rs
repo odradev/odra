@@ -58,18 +58,26 @@ pub fn both<A, B>(a: syn::Result<A>, b: syn::Result<B>) -> syn::Result<(A, B)> {
 
 // --- What the attribute macro is applied to -------------------------------------------------
 
-/// `#[odra::module]` on something that is neither a struct nor an impl or trait block.
+/// `#[odra::module]` on something that is neither a struct nor an impl block.
 pub fn module_on_other_item(item: &syn::Item) -> syn::Error {
+    if let syn::Item::Trait(item) = item {
+        return syn::Error::new(
+            item.ident.span(),
+            "`#[odra::module]` goes on the module struct and on its impl blocks, not on a trait; \
+             implement the trait with `#[odra::module] impl Trait for Module { .. }`, or describe \
+             a contract without source with `#[odra::external_contract]`"
+        );
+    }
     syn::Error::new(
         item_ident_span(item),
         format!(
-            "`#[odra::module]` goes on the module struct and on its impl or trait block; this is {}",
+            "`#[odra::module]` goes on the module struct and on its impl blocks; this is {}",
             item_kind(item)
         )
     )
 }
 
-/// `#[odra::factory]` on something that is neither a struct nor an impl or trait block.
+/// `#[odra::factory]` on something that is neither a struct nor an impl block.
 pub fn factory_on_other_item(item: &syn::Item) -> syn::Error {
     syn::Error::new(
         item_ident_span(item),
@@ -77,6 +85,31 @@ pub fn factory_on_other_item(item: &syn::Item) -> syn::Error {
             "`#[odra::factory]` goes on the factory struct and on its impl block; this is {}",
             item_kind(item)
         )
+    )
+}
+
+/// Generic parameters on an item the macros generate one concrete type for.
+pub fn generics_not_supported(generics: &syn::Generics, what: &str) -> syn::Error {
+    syn::Error::new_spanned(
+        generics,
+        format!("{what} has no generic parameters: the generated code is for one concrete type")
+    )
+}
+
+/// A `where` clause on an item the macros generate one concrete type for.
+pub fn where_clause_not_supported(where_clause: &syn::WhereClause, what: &str) -> syn::Error {
+    syn::Error::new_spanned(
+        where_clause,
+        format!("{what} has no `where` clause: the generated code is for one concrete type")
+    )
+}
+
+/// `#[odra(..)]` on something that is not a function of a module impl: a field, the struct, the
+/// impl block, an associated item.
+pub fn odra_attr_misplaced(attr: &syn::Attribute, on: &str) -> syn::Error {
+    syn::Error::new_spanned(
+        attr,
+        format!("`#[odra(..)]` goes on an entry point function of the module impl, not on {on}")
     )
 }
 
@@ -149,6 +182,50 @@ pub fn runtime_args_on_unnamed_fields(fields: &syn::Fields) -> syn::Error {
     )
 }
 
+/// `#[odra::external_contract(..)]` with arguments.
+pub fn external_contract_with_args(attr: &TokenStream) -> syn::Error {
+    syn::Error::new_spanned(attr, "`#[odra::external_contract]` takes no arguments")
+}
+
+/// A supertrait on an external contract trait: `trait Token: Clone`.
+pub fn external_contract_supertrait(bound: &syn::TypeParamBound) -> syn::Error {
+    syn::Error::new_spanned(
+        bound,
+        "an external contract trait has no supertraits: the generated refs implement this trait \
+         only; drop the bound"
+    )
+}
+
+/// An associated type or const in an external contract trait.
+pub fn external_contract_assoc_item(item: &syn::TraitItem, kind: &str) -> syn::Error {
+    syn::Error::new_spanned(
+        item,
+        format!(
+            "an associated {kind} is not allowed in an external contract trait, which lists the \
+             contract's entry points; remove it"
+        )
+    )
+}
+
+/// `pub fn` in an external contract trait.
+pub fn trait_fn_with_visibility(vis: &syn::Visibility) -> syn::Error {
+    syn::Error::new_spanned(
+        vis,
+        "a trait function is written without `pub`: it is as public as the trait"
+    )
+}
+
+/// A function with a body in an external contract trait.
+pub fn external_contract_fn_with_body(block: &syn::Block, fn_name: &str) -> syn::Error {
+    syn::Error::new_spanned(
+        block,
+        format!(
+            "`{fn_name}` has a body; a function of an external contract is a signature, as the \
+             call is forwarded to the contract: end it with `;`"
+        )
+    )
+}
+
 // --- #[odra::ref_helpers] ----------------------------------------------------------------------
 
 pub fn ref_helpers_with_args(attr: &TokenStream) -> syn::Error {
@@ -204,14 +281,18 @@ pub fn module_arg_on_impl(name: &str, span: Span) -> syn::Error {
     )
 }
 
-/// Any `#[odra::module(..)]` argument given on a trait.
-pub fn module_arg_on_trait(name: &str, span: Span) -> syn::Error {
-    syn::Error::new(
-        span,
-        format!(
-            "`{name}` is not allowed on a trait; `#[odra::module]` on a trait takes no arguments"
-        )
-    )
+/// A `#[odra::module(..)]` argument without its `= value`, or with a value of the wrong shape.
+pub fn module_arg_bad_value(name: &str, span: Span) -> syn::Error {
+    let (what, example) = match name {
+        "name" => ("a string", "name = \"MyToken\""),
+        "version" => ("a string", "version = \"1.0.0\""),
+        "events" => ("a list of event types", "events = [Transfer, Approval]"),
+        "errors" => ("the error enum", "errors = TokenError"),
+        "factory" => ("`on` or `off`", "factory = on"),
+        "layout" => ("a layout expression", "layout = named_key::<u8>(\"value\")"),
+        _ => ("a value", "name = value")
+    };
+    syn::Error::new(span, format!("`{name}` takes {what}; write `{example}`"))
 }
 
 /// `factory = <value>` with a value other than `on` or `off`.
@@ -311,6 +392,7 @@ pub fn odra_attr_on_private_fn(attr: &syn::Attribute, arg: &str, fn_name: &str) 
 pub enum OffchainMisuse {
     InTraitImpl,
     InFactory,
+    InExternalContract,
     MutReceiver,
     PayableOrNonReentrant,
     NoReceiver
@@ -325,6 +407,9 @@ pub fn offchain_misuse<T: ToTokens>(spanned: T, fn_name: &str, why: OffchainMisu
              block of the module"
         }
         OffchainMisuse::InFactory => "offchain functions are not supported in a factory module",
+        OffchainMisuse::InExternalContract => {
+            "an external contract has no offchain functions: there is no module to run them on"
+        }
         OffchainMisuse::MutReceiver => {
             "an offchain function runs on the host and cannot change the state: take `&self`"
         }
@@ -374,6 +459,119 @@ pub fn arg_without_name(arg: &syn::FnArg) -> syn::Error {
         spanned,
         format!(
             "`{found}` is not an argument name; an entry point argument is written `name: Type`"
+        )
+    )
+}
+
+/// An entry point with generic parameters: `fn set<T: Into<u32>>(&mut self, value: T)`.
+pub fn fn_with_generics(generics: &syn::Generics, fn_name: &str) -> syn::Error {
+    syn::Error::new_spanned(
+        generics,
+        format!(
+            "`{fn_name}` has generic parameters; an entry point has none, as each argument is \
+             read from the call as one concrete type"
+        )
+    )
+}
+
+/// An entry point with a qualifier: `async fn`, `unsafe fn`, `extern "C" fn`.
+pub fn fn_with_qualifier<T: ToTokens>(qualifier: T, name: &str, fn_name: &str) -> syn::Error {
+    syn::Error::new_spanned(
+        qualifier,
+        format!("`{name}` is not allowed on `{fn_name}`: an entry point is a plain `fn`, called by the host")
+    )
+}
+
+/// An entry point without `self`: `pub fn total() -> u32`.
+pub fn fn_without_receiver(name: &syn::Ident) -> syn::Error {
+    syn::Error::new_spanned(
+        name,
+        format!("`{name}` takes no `self`; an entry point is called on the contract: take `&self` or `&mut self`")
+    )
+}
+
+/// An entry point taking `self` by value, or `self: Box<Self>`.
+pub fn receiver_not_a_reference(receiver: &syn::Receiver) -> syn::Error {
+    syn::Error::new_spanned(
+        receiver,
+        "`self` is taken by value; an entry point takes `&self` or `&mut self`"
+    )
+}
+
+/// An `impl Trait` argument: `value: impl Into<u32>`.
+pub fn arg_impl_trait(ty: &syn::Type) -> syn::Error {
+    syn::Error::new_spanned(
+        ty,
+        "`impl Trait` is not an argument type; an entry point argument is one concrete type"
+    )
+}
+
+/// A `&mut T` argument.
+pub fn arg_mut_ref(ty: &syn::TypeReference) -> syn::Error {
+    let inner = ty.elem.to_token_stream();
+    syn::Error::new_spanned(
+        ty,
+        format!(
+            "`&mut` is not an argument type; an entry point reads its arguments from the call: \
+             take `{inner}` or `&{inner}`"
+        )
+    )
+}
+
+/// A `&str` argument.
+pub fn arg_str_ref(ty: &syn::TypeReference) -> syn::Error {
+    syn::Error::new_spanned(ty, "`&str` is not an argument type; take `String`")
+}
+
+/// Two functions of one impl with the same name: one written and one delegated, or two
+/// delegated ones.
+pub fn fn_defined_twice(name: &syn::Ident) -> syn::Error {
+    syn::Error::new_spanned(
+        name,
+        format!("`{name}` is defined twice in this impl; an entry point is defined once")
+    )
+}
+
+/// A macro other than `delegate!` in a module impl.
+pub fn macro_in_impl(mac: &syn::Macro) -> syn::Error {
+    let name = mac.path.to_token_stream().to_string().replace(' ', "");
+    syn::Error::new_spanned(
+        &mac.path,
+        format!("`{name}!` is not allowed in a module impl; only `delegate!` is")
+    )
+}
+
+// --- delegate! -----------------------------------------------------------------------------------
+
+/// Something other than `to` where a `to self.<field> { .. }` block starts.
+pub fn delegate_expected_to(input: syn::parse::ParseStream) -> syn::Error {
+    input.error(
+        "expected `to`; a `delegate!` block is `to self.<field> { fn name(&self, ..) -> Ret; .. }`"
+    )
+}
+
+/// A target that is not `self.<field>`: `to owned { .. }`, `to self.a.b { .. }`.
+pub fn delegate_target_not_self_field(input: syn::parse::ParseStream) -> syn::Error {
+    input.error("a `delegate!` block forwards to a field of the module; write `to self.<field>`")
+}
+
+/// `pub fn` in a `delegate!` block.
+pub fn delegate_fn_with_visibility(vis: &syn::Visibility) -> syn::Error {
+    syn::Error::new_spanned(
+        vis,
+        "a delegated function is written without `pub`, like a trait method; the generated \
+         entry point is public"
+    )
+}
+
+/// A delegated function with a body.
+pub fn delegate_fn_with_body(block: &syn::Block, field: &syn::Member, fn_name: &str) -> syn::Error {
+    let field = field.to_token_stream();
+    syn::Error::new_spanned(
+        block,
+        format!(
+            "a delegated function has no body: the generated one calls `self.{field}.{fn_name}(..)`; \
+             end the signature with `;`"
         )
     )
 }

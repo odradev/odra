@@ -1,0 +1,50 @@
+error: a module has no generic parameters: the generated code is for one concrete type
+ --> tests/macros/fail/module_generics.rs:5:19
+  |
+5 | pub struct Generic<T> {
+  |                   ^^^
+
+error: a module impl has no generic parameters: the generated code is for one concrete type
+  --> tests/macros/fail/module_generics.rs:10:5
+   |
+10 | impl<T> Generic<T> {
+   |     ^^^
+
+error: a module has no `where` clause: the generated code is for one concrete type
+  --> tests/macros/fail/module_generics.rs:18:1
+   |
+18 | / where
+19 | |     u32: Copy
+   | |_____________^
+
+error: a module impl has no `where` clause: the generated code is for one concrete type
+  --> tests/macros/fail/module_generics.rs:26:1
+   |
+26 | / where
+27 | |     u32: Copy
+   | |_____________^
+
+error: `set` has generic parameters; an entry point has none, as each argument is read from the call as one concrete type
+  --> tests/macros/fail/module_generics.rs:41:15
+   |
+41 |     pub fn set<T: Into<u32>>(&mut self, value: T) {
+   |               ^^^^^^^^^^^^^^
+
+error: `impl Trait` is not an argument type; an entry point argument is one concrete type
+  --> tests/macros/fail/module_generics.rs:45:39
+   |
+45 |     pub fn set_impl(&mut self, value: impl Into<u32>) {
+   |                                       ^^^^^^^^^^^^^^
+
+error: `get` has generic parameters; an entry point has none, as each argument is read from the call as one concrete type
+  --> tests/macros/fail/module_generics.rs:49:15
+   |
+49 |     pub fn get<'a>(&'a self) -> u32 {
+   |               ^^^^
+
+error: an entry point has no `where` clause: the generated code is for one concrete type
+  --> tests/macros/fail/module_generics.rs:54:5
+   |
+54 | /     where
+55 | |         u32: Copy
+   | |_________________^

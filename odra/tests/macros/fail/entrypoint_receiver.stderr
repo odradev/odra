@@ -1,0 +1,23 @@
+error: `self` is taken by value; an entry point takes `&self` or `&mut self`
+  --> tests/macros/fail/entrypoint_receiver.rs:11:20
+   |
+11 |     pub fn consume(self) -> u32 {
+   |                    ^^^^
+
+error: `self` is taken by value; an entry point takes `&self` or `&mut self`
+  --> tests/macros/fail/entrypoint_receiver.rs:15:24
+   |
+15 |     pub fn consume_mut(mut self) -> u32 {
+   |                        ^^^^^^^^
+
+error: `self` is taken by value; an entry point takes `&self` or `&mut self`
+  --> tests/macros/fail/entrypoint_receiver.rs:19:18
+   |
+19 |     pub fn boxed(self: Box<Self>) -> u32 {
+   |                  ^^^^^^^^^^^^^^^
+
+error: `associated` takes no `self`; an entry point is called on the contract: take `&self` or `&mut self`
+  --> tests/macros/fail/entrypoint_receiver.rs:23:12
+   |
+23 |     pub fn associated() -> u32 {
+   |            ^^^^^^^^^^
