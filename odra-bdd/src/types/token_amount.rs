@@ -157,7 +157,7 @@ impl<const DECIMALS: usize> From<&U256> for TokenAmount<DECIMALS> {
 }
 
 #[derive(Debug, Clone, Copy, Parameter, PartialEq, PartialOrd)]
-#[param(regex = r"(?:roughly\s+)?\d+(\.\d+)?", name = "usdc")]
+#[param(regex = r"(?:roughly\s+)?\d+(?:\.\d+)?", name = "usdc")]
 pub struct USDCAmount(TokenAmount<6>);
 
 impl Deref for USDCAmount {
@@ -189,7 +189,7 @@ impl From<&U256> for USDCAmount {
 }
 
 #[derive(Debug, Clone, Copy, Parameter, PartialEq, PartialOrd)]
-#[param(regex = r"(?:roughly\s+)?\d+(\.\d+)?", name = "wcspr")]
+#[param(regex = r"(?:roughly\s+)?\d+(?:\.\d+)?", name = "wcspr")]
 pub struct WrappedCSPRAmount(TokenAmount<9>);
 
 impl Deref for WrappedCSPRAmount {
