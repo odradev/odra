@@ -43,6 +43,21 @@ Changelog for `odra`.
   before, and so do the `bin/build_schema.rs` and `bin/build_contract.rs` of existing projects.
 
 ### Fixed
+- `odra-wasm-client`: a getter that reads a mapping nobody has written to yet (`balance_of` before the first
+  transfer, `owner_of` before the first mint) crashed the client with `RuntimeError: unreachable` and its promise
+  never settled. The first read creates the dictionary, and the client took that write for the result of the
+  call. It now reads the value stored under the proxy caller's `__result` key, and a call without a result is an
+  error instead of a panic.
+- `odra-wasm-client`: every transaction sent from a page was rejected by a Casper 2.2.4 node (testnet) with
+  `Invalid transaction` (-32016, "invalid pricing mode"). The client set a gas price tolerance of 5 where the
+  network's maximum gas price is 1. It sets 1, as the livenet client does.
+- `odra-wasm-client`: `WASM_CLIENT_SK`, the key the client signs its read calls with, may be a PEM as it is in
+  the key file. Only its first line reached the build (a cargo directive ends at a line break), so every read
+  failed with `Invalid secret key` unless the PEM was put on one line by hand.
+- The `cep95` template guards its entry points: only the owner of the contract (the deployer) mints and only the
+  owner of a token burns it. `mint` and `burn` called `raw_mint`/`raw_burn` directly, so anyone could mint and
+  burn any token of a project generated from the template; the comments said otherwise. The `mint_and_burn`
+  scenario mints to the caller and sets enough gas for a livenet.
 - `odra-cli` writes the `last_updated` timestamp of the contracts file with `jiff` instead of `chrono`, which
   is unmaintained (RUSTSEC-2026-0543); the value stays RFC 3339 in whole seconds. `humantime` is flagged by the
   same announcement (RUSTSEC-2026-0542) but comes with the casper stack, so `deny.toml` accepts it until that

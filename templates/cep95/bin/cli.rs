@@ -1,7 +1,6 @@
 //! This example demonstrates how to use the `odra-cli` tool to deploy and interact with a smart contract.
 
 use {{project-name}}::token::{MyToken, MyTokenInitArgs};
-use odra::prelude::Address;
 use odra::schema::casper_contract_schema::NamedCLType;
 use odra::{casper_types::U256, host::HostEnv};
 use odra_cli::{
@@ -34,13 +33,12 @@ impl DeployScript for MyTokenDeployScript {
     }
 }
 
-/// Scenario that flips the state of the deployed `MyToken` contract a specified number of times.
+/// Scenario that mints a token to the caller and burns it.
 pub struct MintAndBurn;
 
 impl Scenario for MintAndBurn {
     fn args(&self) -> Vec<CommandArg> {
         vec![
-            CommandArg::new("to", "Token recipient", NamedCLType::Key).required(),
             CommandArg::new("token_id", "Token id", NamedCLType::U256).required(),
         ]
     }
@@ -52,17 +50,19 @@ impl Scenario for MintAndBurn {
         args: Args,
     ) -> Result<(), Error> {
         let mut contract = container.contract_ref::<MyToken>(env)?;
-        let to = args.get_single::<Address>("to")?;
+        // Only the owner of the contract mints, and only the owner of a token burns it:
+        // the caller is both.
+        let to = env.caller();
         let token_id = args.get_single::<U256>("token_id")?;
 
-        env.set_gas(50_000_000);
+        env.set_gas(5_000_000_000);
         contract.mint(to, token_id, vec![]);
         contract.burn(token_id);
 
         assert_eq!(
             contract.balance_of(to),
             U256::zero(),
-            "Balance of recipient should be zero after minting and burning"
+            "Balance of the caller should be zero after minting and burning"
         );
 
         Ok(())
@@ -72,7 +72,7 @@ impl Scenario for MintAndBurn {
 impl ScenarioMetadata for MintAndBurn {
     const NAME: &'static str = "mint_and_burn";
     const DESCRIPTION: &'static str =
-        "This scenario mints a token to a specified address and then burns it.";
+        "This scenario mints a token to the caller and then burns it.";
 }
 
 /// Main function to run the CLI tool.
