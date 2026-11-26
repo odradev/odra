@@ -9,6 +9,10 @@ Changelog for `odra`.
   contract no longer needs a hand-written `use odra_modules;` in both (cargo-odra #110). `odra_build::build()`
   writes the `extern crate` items it expands to. The templates call it; add the line to the binaries of an
   existing project to use it. Optional and target-specific dependencies still need the `use`.
+- `odra_bdd::token_amount!(pub Tokens, "tokens", 18)` defines a step parameter for an amount of a token with
+  the given number of decimals: `{tokens}` reads `2.5` and `roughly 2.5` as 2.5 × 10¹⁸, without floats. It
+  replaces a hand-written newtype over `TokenAmount<DECIMALS>` with its `Parameter`, `FromStr`, `Deref` and
+  `From<U256>`.
 
 ### Changed
 - The macros report a mistake in Odra's terms, on the token that is wrong, where rustc used to report what the
@@ -27,6 +31,10 @@ Changelog for `odra`.
   taking `self` by value or declared `extern` (called as `&self`), a `delegate!` or external contract
   function with a body (the body was dropped), an external contract trait with supertraits (the generated refs
   do not implement them) and `#[odra(offchain)]` in an external contract (the flag was ignored).
+- **Can break a build:** `odra-bdd` no longer has `USDCAmount` and `WrappedCSPRAmount` (`{usdc}`, `{wcspr}`), two
+  particular tokens in a library for any contract. `odra_bdd::token_amount!(pub USDCAmount, "usdc", 6);` and
+  `odra_bdd::token_amount!(pub WrappedCSPRAmount, "wcspr", 9);` in the project's tests define them again, with
+  the same names, so the steps that use them stay as they are.
 - **Can break a build:** `#[odra(payable)]`, `#[odra(non_reentrant)]` and `#[odra(offchain)]` on a function that
   is not an entry point (not `pub` in a module impl) are compile errors (#686). They were accepted and did
   nothing: a `non_reentrant` helper was not guarded. Make the function `pub` or remove the attribute.
@@ -43,6 +51,13 @@ Changelog for `odra`.
   before, and so do the `bin/build_schema.rs` and `bin/build_contract.rs` of existing projects.
 
 ### Fixed
+- **Can fail a build that passed:** `odra_bdd::run` fails the test run when a step fails or has no definition;
+  it reported them and exited with success. It runs one scenario at a time and takes the arguments of
+  `cargo test`: `cargo test --test bdd -- "highest bidder"` runs the scenarios whose name, or whose feature's
+  name, contains the text, and `-- --nocapture` no longer ends in `unexpected argument`.
+- `odra-bdd`: a step can have a parameter after a fractional `{cspr_amount}` or token amount
+  (`Alice sends 2.5 CSPR to Bob`): the next parameter received `.5`. Reading a CSPR balance that was never set
+  names the account instead of failing on `unwrap`; `Account` is `Debug`, `Clone` and `Copy`.
 - `odra-wasm-client`: a getter that reads a mapping nobody has written to yet (`balance_of` before the first
   transfer, `owner_of` before the first mint) crashed the client with `RuntimeError: unreachable` and its promise
   never settled. The first read creates the dictionary, and the client took that write for the result of the
