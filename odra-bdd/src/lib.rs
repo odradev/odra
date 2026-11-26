@@ -49,25 +49,15 @@ fn name_filter(mut args: impl Iterator<Item = String>) -> Option<String> {
 }
 
 #[cfg(test)]
-#[allow(deprecated)]
 mod tests {
     use super::name_filter;
-    use crate::types::{
-        account::Account,
-        cspr::CSPRAmount,
-        token_amount::{USDCAmount, WrappedCSPRAmount}
-    };
+    use crate::types::{account::Account, cspr::CSPRAmount, token_amount::TOKEN_AMOUNT_REGEX};
     use cucumber::{codegen::Regex, Parameter};
 
     /// A capturing group inside a parameter shifts every parameter that follows it in a step.
     #[test]
     fn parameters_have_no_capturing_groups() {
-        for regex in [
-            Account::REGEX,
-            CSPRAmount::REGEX,
-            USDCAmount::REGEX,
-            WrappedCSPRAmount::REGEX
-        ] {
+        for regex in [Account::REGEX, CSPRAmount::REGEX, TOKEN_AMOUNT_REGEX] {
             assert_eq!(Regex::new(regex).unwrap().captures_len(), 1, "{regex}");
         }
     }

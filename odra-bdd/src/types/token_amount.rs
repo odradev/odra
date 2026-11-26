@@ -180,13 +180,11 @@ macro_rules! token_amount {
         #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
         $vis struct $name($crate::types::token_amount::TokenAmount<$decimals>);
 
-        #[allow(deprecated)]
         impl $crate::__private::cucumber::Parameter for $name {
             const REGEX: &'static str = $crate::types::token_amount::TOKEN_AMOUNT_REGEX;
             const NAME: &'static str = $param;
         }
 
-        #[allow(deprecated)]
         impl ::core::ops::Deref for $name {
             type Target = $crate::types::token_amount::TokenAmount<$decimals>;
 
@@ -195,7 +193,6 @@ macro_rules! token_amount {
             }
         }
 
-        #[allow(deprecated)]
         impl ::core::str::FromStr for $name {
             type Err = ::std::string::String;
 
@@ -204,14 +201,12 @@ macro_rules! token_amount {
             }
         }
 
-        #[allow(deprecated)]
         impl ::core::convert::From<$crate::__private::U256> for $name {
             fn from(amount: $crate::__private::U256) -> Self {
                 $name(amount.into())
             }
         }
 
-        #[allow(deprecated)]
         impl ::core::convert::From<&$crate::__private::U256> for $name {
             fn from(amount: &$crate::__private::U256) -> Self {
                 $name(amount.into())
@@ -220,30 +215,12 @@ macro_rules! token_amount {
     };
 }
 
-crate::token_amount!(
-    /// An amount of USDC, 6 decimals: the `{usdc}` step parameter.
-    #[deprecated(
-        since = "2.11.0",
-        note = "define the token of your project with `odra_bdd::token_amount!(pub Usdc, \"usdc\", 6);`"
-    )]
-    pub USDCAmount, "usdc", 6
-);
-
-crate::token_amount!(
-    /// An amount of wrapped CSPR, 9 decimals: the `{wcspr}` step parameter.
-    #[deprecated(
-        since = "2.11.0",
-        note = "define the token of your project with `odra_bdd::token_amount!(pub Wcspr, \"wcspr\", 9);`"
-    )]
-    pub WrappedCSPRAmount, "wcspr", 9
-);
-
 #[cfg(test)]
-#[allow(deprecated)]
 mod tests {
     use super::*;
 
     crate::token_amount!(Tokens, "tokens", 18);
+    crate::token_amount!(USDCAmount, "usdc", 6);
 
     #[test]
     fn token_amount_macro_defines_a_parameter() {
@@ -257,8 +234,6 @@ mod tests {
             Tokens::from(expected + 1)
         );
         assert_ne!(Tokens::from_str("2.5").unwrap(), Tokens::from(expected + 1));
-        assert_eq!(USDCAmount::NAME, "usdc");
-        assert_eq!(WrappedCSPRAmount::NAME, "wcspr");
     }
 
     #[test]
