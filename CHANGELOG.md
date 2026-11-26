@@ -4,6 +4,15 @@ Changelog for `odra`.
 
 ## [2.11.0]
 ### Added
+- `odra-casper-account-manager`: session code that changes a Casper account's multisig configuration, its
+  associated keys, their weights and the `deployment` and `key_management` thresholds, in one transaction
+  (`ACCOUNT_MANAGER_WASM`, built from `odra-casper/account-manager-wasm` by `just build-proxy-callers`). It
+  finds an order of the engine calls that never trips the thresholds on the way, so a single key can set up a
+  2-of-2 account, or a 2-of-2 account go back to one key, at once. `plan` checks a change against the
+  account's current configuration before it is sent: it returns the configuration after it with warnings (an
+  own key removed, own keys below a threshold, no spare key-management weight, more signatures needed), or the
+  error the node would reject it with (a threshold above the total weight, `deployment` above
+  `key_management`, too many keys, ...). Every failure of the wasm reverts with its own `Error` code (#723).
 - `odra::link_contract_crates!()` links the dependency crates that `Odra.toml` lists contracts of
   (`fqn = "odra_modules::erc20::Erc20"`) into `bin/build_contract.rs` and `bin/build_schema.rs`, so listing such a
   contract no longer needs a hand-written `use odra_modules;` in both (cargo-odra #110). `odra_build::build()`

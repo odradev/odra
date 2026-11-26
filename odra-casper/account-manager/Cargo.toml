@@ -1,0 +1,29 @@
+[package]
+name = "odra-casper-account-manager"
+description = "Session code and checks for changing a Casper account's associated keys and action thresholds."
+
+authors = { workspace = true }
+edition = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+readme = "README.md"
+repository = { workspace = true }
+version = { workspace = true }
+
+[dependencies]
+# Kept to casper-types alone, without std, so tools like cargo-odra can use the checks without
+# pulling in a network stack, and the account_manager wasm (built from odra-casper/account-manager-wasm)
+# can share the argument names and error codes.
+casper-types = { version = "6.1", default-features = false }
+
+[features]
+default = ["wasm"]
+# Embeds resources/account_manager.wasm (ACCOUNT_MANAGER_WASM).
+wasm = []
+
+[dev-dependencies]
+casper-engine-test-support = { workspace = true }
+casper-execution-engine = { workspace = true }
+
+[lints.rust]
+missing_docs = "warn"
