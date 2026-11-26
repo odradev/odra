@@ -70,6 +70,13 @@ Changelog for `odra`.
   carried the 184 KB one, so a payable call sent to a live network was too large for any wasm lane but the
   largest. `just build-proxy-callers` now writes every copy and `just check-lint` fails when one differs.
 
+## [2.10.1]
+### Fixed
+- `DappRegistryBase::init` stores `__dapp->contracts` and `__dapp->registrars` as empty lists. Until the
+  first `add_dapp_contract` the dictionary held no item, so a freshly installed or upgraded registry
+  could not be told from a member contract by reading the chain. A registry that already has the lists
+  keeps them.
+
 ## [2.10.0]
 ### Added
 - OdraCLI `upgrade` command: `upgrade <Contract> --gas <amount> [--<upgrade args>]` upgrades a contract from the

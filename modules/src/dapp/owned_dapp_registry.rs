@@ -113,10 +113,15 @@ mod tests {
 
     #[test]
     fn init() {
+        use crate::dapp::storage::{CONTRACTS_KEY, REGISTRARS_KEY};
+
         let (env, registry) = setup();
         let address = registry.address();
         assert_eq!(registry.get_owner(), env.get_account(0));
         assert_eq!(registry.get_dapp_contracts(), vec![address]);
+        // The lists are stored, empty, from the start.
+        assert!(dapp_item::<Vec<Address>>(&env, &address, CONTRACTS_KEY).is_empty());
+        assert!(dapp_item::<Vec<Address>>(&env, &address, REGISTRARS_KEY).is_empty());
         assert!(registry.is_dapp_contract(&address));
         assert_eq!(registry.get_dapp_registry(), address);
         assert_eq!(registry.get_dapp_metadata(), DappMetadata::default());
