@@ -1,4 +1,3 @@
-use cucumber::Parameter;
 use odra::casper_types::U256;
 use std::fmt::Display;
 use std::marker::PhantomData;
@@ -156,73 +155,111 @@ impl<const DECIMALS: usize> From<&U256> for TokenAmount<DECIMALS> {
     }
 }
 
-#[derive(Debug, Clone, Copy, Parameter, PartialEq, PartialOrd)]
-#[param(regex = r"(?:roughly\s+)?\d+(?:\.\d+)?", name = "usdc")]
-pub struct USDCAmount(TokenAmount<6>);
+/// The regex of a token amount parameter: `2`, `2.5`, `roughly 2.5`. It has no capturing group, so
+/// the parameters after it in a step get their own text.
+#[doc(hidden)]
+pub const TOKEN_AMOUNT_REGEX: &str = r"(?:roughly\s+)?\d+(?:\.\d+)?";
 
-impl Deref for USDCAmount {
-    type Target = TokenAmount<6>;
+/// Defines a step parameter for an amount of a token with the given number of decimals.
+///
+/// ```
+/// odra_bdd::token_amount!(
+///     /// An amount of the project's token, 18 decimals.
+///     pub Tokens, "tokens", 18
+/// );
+/// ```
+///
+/// A step then reads the amount as `{tokens}`: `#[when("{account} sends {tokens} to {account}")]`
+/// matches `Alice sends 2.5 to Bob` and passes 2.5 × 10¹⁸, a `U256` through `Deref`. `roughly 2.5`
+/// compares equal to every amount that rounds to 2.5. `Tokens::from(U256)` turns a balance read
+/// from a contract into a value to compare with the one from the step.
+#[macro_export]
+macro_rules! token_amount {
+    ($(#[$meta:meta])* $vis:vis $name:ident, $param:literal, $decimals:literal) => {
+        $(#[$meta])*
+        #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+        $vis struct $name($crate::types::token_amount::TokenAmount<$decimals>);
 
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
+        #[allow(deprecated)]
+        impl $crate::__private::cucumber::Parameter for $name {
+            const REGEX: &'static str = $crate::types::token_amount::TOKEN_AMOUNT_REGEX;
+            const NAME: &'static str = $param;
+        }
+
+        #[allow(deprecated)]
+        impl ::core::ops::Deref for $name {
+            type Target = $crate::types::token_amount::TokenAmount<$decimals>;
+
+            fn deref(&self) -> &Self::Target {
+                &self.0
+            }
+        }
+
+        #[allow(deprecated)]
+        impl ::core::str::FromStr for $name {
+            type Err = ::std::string::String;
+
+            fn from_str(s: &str) -> ::core::result::Result<Self, Self::Err> {
+                ::core::str::FromStr::from_str(s).map($name)
+            }
+        }
+
+        #[allow(deprecated)]
+        impl ::core::convert::From<$crate::__private::U256> for $name {
+            fn from(amount: $crate::__private::U256) -> Self {
+                $name(amount.into())
+            }
+        }
+
+        #[allow(deprecated)]
+        impl ::core::convert::From<&$crate::__private::U256> for $name {
+            fn from(amount: &$crate::__private::U256) -> Self {
+                $name(amount.into())
+            }
+        }
+    };
 }
 
-impl FromStr for USDCAmount {
-    type Err = String;
+crate::token_amount!(
+    /// An amount of USDC, 6 decimals: the `{usdc}` step parameter.
+    #[deprecated(
+        since = "2.11.0",
+        note = "define the token of your project with `odra_bdd::token_amount!(pub Usdc, \"usdc\", 6);`"
+    )]
+    pub USDCAmount, "usdc", 6
+);
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        TokenAmount::<6>::from_str(s).map(USDCAmount)
-    }
-}
-
-impl From<U256> for USDCAmount {
-    fn from(amount: U256) -> Self {
-        USDCAmount(TokenAmount::<6>::from(amount))
-    }
-}
-
-impl From<&U256> for USDCAmount {
-    fn from(amount: &U256) -> Self {
-        USDCAmount(TokenAmount::<6>::from(amount))
-    }
-}
-
-#[derive(Debug, Clone, Copy, Parameter, PartialEq, PartialOrd)]
-#[param(regex = r"(?:roughly\s+)?\d+(?:\.\d+)?", name = "wcspr")]
-pub struct WrappedCSPRAmount(TokenAmount<9>);
-
-impl Deref for WrappedCSPRAmount {
-    type Target = TokenAmount<9>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl FromStr for WrappedCSPRAmount {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        TokenAmount::<9>::from_str(s).map(WrappedCSPRAmount)
-    }
-}
-
-impl From<U256> for WrappedCSPRAmount {
-    fn from(amount: U256) -> Self {
-        WrappedCSPRAmount(TokenAmount::<9>::from(amount))
-    }
-}
-
-impl From<&U256> for WrappedCSPRAmount {
-    fn from(amount: &U256) -> Self {
-        WrappedCSPRAmount(TokenAmount::<9>::from(amount))
-    }
-}
+crate::token_amount!(
+    /// An amount of wrapped CSPR, 9 decimals: the `{wcspr}` step parameter.
+    #[deprecated(
+        since = "2.11.0",
+        note = "define the token of your project with `odra_bdd::token_amount!(pub Wcspr, \"wcspr\", 9);`"
+    )]
+    pub WrappedCSPRAmount, "wcspr", 9
+);
 
 #[cfg(test)]
+#[allow(deprecated)]
 mod tests {
     use super::*;
+
+    crate::token_amount!(Tokens, "tokens", 18);
+
+    #[test]
+    fn token_amount_macro_defines_a_parameter() {
+        use cucumber::Parameter;
+        assert_eq!(Tokens::NAME, "tokens");
+        assert_eq!(Tokens::REGEX, TOKEN_AMOUNT_REGEX);
+        let expected = U256::from(25u64) * U256::from(10u64).pow(U256::from(17u64));
+        assert_eq!(Tokens::from_str("2.5").unwrap().amount(), expected);
+        assert_eq!(
+            Tokens::from_str("roughly 2.5").unwrap(),
+            Tokens::from(expected + 1)
+        );
+        assert_ne!(Tokens::from_str("2.5").unwrap(), Tokens::from(expected + 1));
+        assert_eq!(USDCAmount::NAME, "usdc");
+        assert_eq!(WrappedCSPRAmount::NAME, "wcspr");
+    }
 
     #[test]
     fn test_precision_parsing() {

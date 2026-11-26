@@ -9,6 +9,15 @@ Changelog for `odra`.
   contract no longer needs a hand-written `use odra_modules;` in both (cargo-odra #110). `odra_build::build()`
   writes the `extern crate` items it expands to. The templates call it; add the line to the binaries of an
   existing project to use it. Optional and target-specific dependencies still need the `use`.
+- `odra_bdd::token_amount!(pub Tokens, "tokens", 18)` defines a step parameter for an amount of a token with
+  the given number of decimals: `{tokens}` reads `2.5` and `roughly 2.5` as 2.5 × 10¹⁸, without floats. It
+  replaces a hand-written newtype over `TokenAmount<DECIMALS>` with its `Parameter`, `FromStr`, `Deref` and
+  `From<U256>`.
+
+### Deprecated
+- `odra_bdd::types::token_amount::USDCAmount` and `WrappedCSPRAmount` (`{usdc}`, `{wcspr}`): two particular
+  tokens in a library for any contract. Define the token of your project with `odra_bdd::token_amount!`; the
+  same line with `"usdc", 6` or `"wcspr", 9` keeps the steps that use them. They go in 3.0.
 
 ### Changed
 - The macros report a mistake in Odra's terms, on the token that is wrong, where rustc used to report what the

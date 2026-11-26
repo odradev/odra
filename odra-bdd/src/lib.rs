@@ -4,6 +4,13 @@ pub mod types;
 pub mod utils;
 mod virtual_balances;
 
+/// What the macros of this crate refer to, so that a project using them needs no other import.
+#[doc(hidden)]
+pub mod __private {
+    pub use cucumber;
+    pub use odra::casper_types::U256;
+}
+
 use cucumber::{cli, codegen::WorldInventory, World};
 use std::fmt::Debug;
 
@@ -42,6 +49,7 @@ fn name_filter(mut args: impl Iterator<Item = String>) -> Option<String> {
 }
 
 #[cfg(test)]
+#[allow(deprecated)]
 mod tests {
     use super::name_filter;
     use crate::types::{
