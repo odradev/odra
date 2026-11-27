@@ -7,6 +7,7 @@
 //! Detection stays where the input is inspected; only the wording lives here, so the messages are
 //! reviewed together and the module and factory paths report the same mistake the same way.
 
+use super::function::{FnIR, HostRefVersion};
 use proc_macro2::{Span, TokenStream};
 use quote::ToTokens;
 use syn::spanned::Spanned;
@@ -529,6 +530,51 @@ pub fn fn_defined_twice(name: &syn::Ident) -> syn::Error {
     syn::Error::new_spanned(
         name,
         format!("`{name}` is defined twice in this impl; an entry point is defined once")
+    )
+}
+
+/// An entry point named like a host ref function generated for another one: `try_transfer`
+/// next to `transfer`. Reported on the function whose name is taken.
+pub fn fn_name_taken_by_host_ref(
+    taken: &FnIR,
+    generated_for: &FnIR,
+    version: HostRefVersion
+) -> syn::Error {
+    let name = taken.name();
+    let other = generated_for.name();
+    let why = match version {
+        HostRefVersion::NoRet | HostRefVersion::TryNoRet => {
+            format!(" (`{other}` takes `&mut self` and returns a value)")
+        }
+        _ => String::new()
+    };
+    syn::Error::new_spanned(
+        &name,
+        format!(
+            "`{name}` is the name of {} of `{other}` the host ref generates{why}; rename one of the functions",
+            version.describe()
+        )
+    )
+}
+
+/// Two entry points whose generated host ref functions have the same name: `try_swap` and
+/// `swap_no_ret` both get `try_swap_no_ret`. Reported on the later of the two.
+pub fn host_ref_names_clash(
+    name: &syn::Ident,
+    first: (&FnIR, HostRefVersion),
+    second: (&FnIR, HostRefVersion)
+) -> syn::Error {
+    let (first, first_version) = first;
+    let (second, second_version) = second;
+    syn::Error::new_spanned(
+        second.name(),
+        format!(
+            "the host ref generates `{name}` twice: as {} of `{}` and as {} of `{}`; rename one of the functions",
+            first_version.describe(),
+            first.name(),
+            second_version.describe(),
+            second.name()
+        )
     )
 }
 
