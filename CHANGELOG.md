@@ -2,6 +2,17 @@
 
 Changelog for `odra`.
 
+## [2.12.0]
+### Fixed
+- **Can break a build:** the schema of an `#[odra::odra_type]` enum with data gives each variant the tag
+  its value is serialized with, its position. It gave the Rust discriminant, so `Circle(u32) = 5` under
+  `#[repr(u8)]` was listed as `5` and written as `1`. The bytes do not change; the schema of such an enum
+  with explicit discriminants does, so a committed schema or a client generated from it is out of date (#733).
+- **Can break a build:** the schema of an `#[odra::odra_type]` enum with data lists the custom types its
+  variants' fields use, as the schema of a struct lists those of its fields; a contract schema had
+  `Paint::Solid(Color)` without `Color`. A type in a variant field now has to implement `SchemaCustomTypes`,
+  as a struct field's type does: Odra types and the built-in types do (#734).
+
 ## [2.11.0]
 ### Added
 - `odra-casper-account-manager`: session code that changes a Casper account's multisig configuration, its

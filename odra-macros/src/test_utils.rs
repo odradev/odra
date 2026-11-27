@@ -305,6 +305,18 @@ pub mod mock {
         TypeIR::try_from(&ty).unwrap()
     }
 
+    pub fn custom_complex_enum_with_discriminants() -> TypeIR {
+        let ty = quote!(
+            #[repr(u8)]
+            enum MyType {
+                A = 3,
+                B(Point) = 5,
+                C
+            }
+        );
+        TypeIR::try_from(&ty).unwrap()
+    }
+
     pub fn custom_union() -> syn::Result<TypeIR> {
         let ty = quote!(
             union MyUnion {

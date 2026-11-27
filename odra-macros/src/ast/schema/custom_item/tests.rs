@@ -131,6 +131,59 @@ fn test_complex_enum() {
                         odra::prelude::vec![]
                     ))
                 ])
+                .chain(<String as odra::schema::SchemaCustomTypes>::schema_types())
+                .chain(<u32 as odra::schema::SchemaCustomTypes>::schema_types())
+                .chain(<u32 as odra::schema::SchemaCustomTypes>::schema_types())
+                .chain(<String as odra::schema::SchemaCustomTypes>::schema_types())
+                .collect::<odra::prelude::Vec<_>>()
+            }
+        }
+
+        #[automatically_derived]
+        #[cfg(not(target_arch = "wasm32"))]
+        impl odra::schema::NamedCLTyped for MyType {
+            fn ty() -> odra::schema::casper_contract_schema::NamedCLType {
+                odra::schema::casper_contract_schema::NamedCLType::Custom(
+                    odra::prelude::String::from("MyType")
+                )
+            }
+        }
+
+        #[automatically_derived]
+        #[cfg(not(target_arch = "wasm32"))]
+        impl odra::schema::SchemaCustomElement for MyType {}
+    );
+
+    test_utils::assert_eq(item, expected);
+}
+
+/// The bytes of an enum with data start with the variant's position, not with its Rust
+/// discriminant, so the schema gives the position (#733).
+#[test]
+fn test_complex_enum_discriminants_are_positions() {
+    let ir = test_utils::mock::custom_complex_enum_with_discriminants();
+    let item = SchemaCustomTypeItem::try_from(&ir).unwrap();
+    let expected = quote!(
+        #[automatically_derived]
+        #[cfg(not(target_arch = "wasm32"))]
+        impl odra::schema::SchemaCustomTypes for MyType {
+            fn schema_types(
+            ) -> odra::prelude::vec::Vec<Option<odra::schema::casper_contract_schema::CustomType>>
+            {
+                odra::prelude::BTreeSet::<
+                    Option<odra::schema::casper_contract_schema::CustomType>
+                >::new()
+                .into_iter()
+                .chain(odra::prelude::vec![Some(odra::schema::custom_enum(
+                    "MyType",
+                    odra::prelude::vec![
+                        odra::schema::enum_variant("A", 0u16),
+                        odra::schema::enum_typed_variant::<Point>("B", 1u16),
+                        odra::schema::enum_variant("C", 2u16),
+                    ]
+                ))])
+                .chain(odra::prelude::vec![])
+                .chain(<Point as odra::schema::SchemaCustomTypes>::schema_types())
                 .collect::<odra::prelude::Vec<_>>()
             }
         }
