@@ -635,6 +635,18 @@ pub fn discriminant_not_u16(discriminant: &syn::Expr) -> syn::Error {
     )
 }
 
+/// A variant of an `#[odra::odra_type]` unit enum whose code does not fit the byte the enum is
+/// serialized to: `A = 300`, or `B` after `A = 255`.
+pub fn unit_enum_code_not_u8(variant: &syn::Ident, code: u16, span: Span) -> syn::Error {
+    syn::Error::new(
+        span,
+        format!(
+            "an Odra unit enum is serialized as one byte, so its discriminants are from 0 to 255; \
+             `{variant}` is {code}"
+        )
+    )
+}
+
 /// An `impl` whose self type is not a plain path, such as `impl (A, B)` or `impl &X`.
 pub fn impl_self_type_not_a_path(self_ty: &syn::Type) -> syn::Error {
     syn::Error::new_spanned(

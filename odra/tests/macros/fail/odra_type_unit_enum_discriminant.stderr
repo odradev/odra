@@ -1,0 +1,11 @@
+error: an Odra unit enum is serialized as one byte, so its discriminants are from 0 to 255; `A` is 300
+ --> tests/macros/fail/odra_type_unit_enum_discriminant.rs:5:5
+  |
+5 |     A = 300,
+  |     ^^^^^^^
+
+error: an Odra unit enum is serialized as one byte, so its discriminants are from 0 to 255; `B` is 256
+  --> tests/macros/fail/odra_type_unit_enum_discriminant.rs:12:5
+   |
+12 |     B
+   |     ^

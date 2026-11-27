@@ -70,6 +70,23 @@ mod rejected_items {
     fn a_union_is_not_an_odra_type() {
         assert!(mock::custom_union().is_err());
     }
+
+    #[test]
+    fn a_unit_enum_code_over_255_is_not_an_odra_type() {
+        // `odra_error` does not run this check (an error code is a `u16`), and an enum with
+        // fields does not serialize the code.
+        let cases = [
+            ("enum E { A = 255, B = 0 }", true),
+            ("enum E { A = 300, B = 44 }", false),
+            ("enum E { A = 255, B }", false),
+            ("enum E { A(u32), B = 300 }", true)
+        ];
+        for (item, accepted) in cases {
+            let item: proc_macro2::TokenStream = item.parse().unwrap();
+            let ir = crate::ir::TypeIR::try_from(&item).unwrap();
+            assert_eq!(ir.check_unit_enum_codes().is_ok(), accepted, "{item}");
+        }
+    }
 }
 
 mod offchain {
