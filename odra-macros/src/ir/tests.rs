@@ -344,6 +344,382 @@ mod rejected_input {
         );
     }
 
+    fn module(
+        attr: proc_macro2::TokenStream,
+        item: proc_macro2::TokenStream
+    ) -> syn::Result<ModuleImplIR> {
+        ModuleImplIR::try_from((&attr, &item))
+    }
+
+    #[test]
+    fn a_signature_that_is_not_a_plain_method() {
+        assert_rejected(
+            function(quote!(
+                pub async fn run(&self) {}
+            )),
+            "`async` is not allowed on `run`"
+        );
+        assert_rejected(
+            function(quote!(
+                pub fn run<T>(&self, value: T) {}
+            )),
+            "`run` has generic parameters"
+        );
+        assert_rejected(
+            function(quote!(
+                pub fn run(self) {}
+            )),
+            "`self` is taken by value"
+        );
+    }
+
+    #[test]
+    fn a_typed_self_reference_is_accepted() {
+        assert!(function(quote!(
+            pub fn run(self: &Self) {}
+        ))
+        .is_ok());
+    }
+
+    #[test]
+    fn argument_types_an_entry_point_cannot_read() {
+        assert_rejected(
+            function(quote!(
+                pub fn greet(&self, name: &str) {}
+            )),
+            "`&str` is not an argument type"
+        );
+        assert_rejected(
+            function(quote!(
+                pub fn greet(&self, name: impl Into<String>) {}
+            )),
+            "`impl Trait` is not an argument type"
+        );
+        assert_rejected(
+            function(quote!(
+                pub fn greet(&self, (a, b): (u8, u8)) {}
+            )),
+            "is not an argument name"
+        );
+    }
+
+    #[test]
+    fn offchain_where_it_does_not_fit() {
+        let offchain = "`#[odra(offchain)]` on `balances`";
+        assert_rejected(
+            function(quote!(
+                #[odra(offchain)]
+                pub fn balances() {}
+            )),
+            "an offchain function reads the contract's state"
+        );
+        assert_rejected(
+            function(quote!(
+                #[odra(offchain, payable)]
+                pub fn balances(&self) {}
+            )),
+            "`payable` and `non_reentrant` do not apply to it"
+        );
+        assert_rejected(
+            function(quote!(
+                #[odra(offchain, non_reentrant)]
+                pub fn balances(&self) {}
+            )),
+            "`payable` and `non_reentrant` do not apply to it"
+        );
+        let item = quote!(
+            impl Token {
+                #[odra(offchain)]
+                pub fn balances(&self) {}
+            }
+        );
+        assert_rejected(
+            module(quote!(factory = on), item),
+            "offchain functions are not supported in a factory module"
+        );
+        let item = quote!(
+            impl IToken for Token {
+                #[odra(offchain)]
+                fn balances(&self) {}
+            }
+        );
+        assert_rejected(
+            module(quote!(), item),
+            "a trait impl cannot have offchain functions"
+        );
+        let item = quote!(
+            pub trait Token {
+                #[odra(offchain)]
+                fn balances(&self);
+            }
+        );
+        assert_rejected(module(quote!(), item), offchain);
+    }
+
+    #[test]
+    fn malformed_odra_attributes() {
+        assert_rejected(
+            function(quote!(
+                #[odra]
+                pub fn pay(&mut self) {}
+            )),
+            "malformed odra attribute"
+        );
+        assert_rejected(
+            function(quote!(
+                #[odra(payable = true)]
+                pub fn pay(&mut self) {}
+            )),
+            "odra attribute `payable` takes no value"
+        );
+    }
+
+    #[test]
+    fn odra_types_that_cannot_be_serialized() {
+        assert_rejected(
+            TypeIR::try_from(&quote!(
+                struct Point(u32, u32);
+            )),
+            "an Odra type's fields are named"
+        );
+        assert_rejected(
+            TypeIR::try_from(&quote!(
+                enum Code {
+                    Big = 70000
+                }
+            )),
+            "a discriminant is an integer literal from 0 to 65535"
+        );
+        assert_rejected(
+            TypeIR::try_from(&quote!(
+                struct Wrapper<T> {
+                    value: T
+                }
+            )),
+            "an Odra type has no generic parameters"
+        );
+    }
+
+    #[test]
+    fn a_factory_value_other_than_on_or_off() {
+        let module = quote!(
+            pub struct Token;
+        );
+        assert_rejected(
+            ModuleStructIR::try_from((&quote!(factory = yes), &module)),
+            "`yes` is not a `factory` value"
+        );
+    }
+
+    #[test]
+    fn delegate_blocks_that_do_not_forward_a_signature() {
+        let impl_with = |delegate: proc_macro2::TokenStream| {
+            module(
+                quote!(),
+                quote!(
+                    impl Token {
+                        delegate! { #delegate }
+                    }
+                )
+            )
+        };
+        assert_rejected(
+            impl_with(quote!(to self.ownable { pub fn owner(&self) -> Address; })),
+            "a delegated function is written without `pub`"
+        );
+        assert_rejected(
+            impl_with(quote!(to self.ownable { fn owner(&self) -> Address { todo!() } })),
+            "a delegated function has no body"
+        );
+        assert_rejected(
+            impl_with(quote!(self.ownable { fn owner(&self) -> Address; })),
+            "expected `to`; a `delegate!` block is `to self.<field> {"
+        );
+        assert_rejected(
+            impl_with(quote!(to self.ownable.inner { fn owner(&self) -> Address; })),
+            "a `delegate!` block forwards to a field of the module"
+        );
+    }
+
+    #[test]
+    fn delegated_arguments_are_forwarded() {
+        let ir = module(
+            quote!(),
+            quote!(
+                impl Token {
+                    delegate! {
+                        to self.ownable {
+                            fn transfer_ownership(&mut self, new_owner: Address);
+                        }
+                    }
+                }
+            )
+        )
+        .unwrap();
+        let code = ir.self_code().to_string();
+        let call = quote!({ self.ownable.transfer_ownership(new_owner) }).to_string();
+        assert!(code.contains(&call), "{code}");
+    }
+
+    #[test]
+    fn impl_blocks_with_something_else_than_entry_points() {
+        assert_rejected(
+            module(
+                quote!(),
+                quote!(
+                    impl Token {
+                        println!("x");
+                    }
+                )
+            ),
+            "`println!` is not allowed in a module impl"
+        );
+        assert_rejected(
+            module(
+                quote!(name = "Token"),
+                quote!(
+                    impl Token {}
+                )
+            ),
+            "`name` is not allowed on an impl block"
+        );
+        assert_rejected(
+            module(
+                quote!(),
+                quote!(
+                    #[odra(payable)]
+                    impl Token {}
+                )
+            ),
+            "not on the impl block"
+        );
+    }
+
+    #[test]
+    fn external_contracts_with_more_than_signatures() {
+        let item = quote!(
+            pub trait Token {
+                fn total(&self) -> U256;
+            }
+        );
+        assert_rejected(
+            ModuleImplIR::try_new_trait(&quote!(name = "X"), syn::parse2(item).unwrap()),
+            "`#[odra::external_contract]` takes no arguments"
+        );
+        assert_rejected(
+            module(
+                quote!(),
+                quote!(
+                    pub trait Token: Clone {
+                        fn total(&self) -> U256;
+                    }
+                )
+            ),
+            "an external contract trait has no supertraits"
+        );
+    }
+
+    #[test]
+    fn module_structs_that_cannot_be_stored() {
+        assert_rejected(
+            ModuleStructIR::try_from((
+                &quote!(),
+                &quote!(
+                    pub struct Token(Var<u32>);
+                )
+            )),
+            "a module's fields are named"
+        );
+        assert_rejected(
+            ModuleStructIR::try_from((
+                &quote!(),
+                &quote!(
+                    pub struct Token {
+                        #[odra(payable)]
+                        value: Var<u32>
+                    }
+                )
+            )),
+            "not on a field"
+        );
+    }
+
+    #[test]
+    fn an_unknown_flag_is_named_without_spaces() {
+        assert_rejected(
+            function(quote!(
+                #[odra(odra::payable)]
+                pub fn pay(&mut self) {}
+            )),
+            "unknown odra attribute `odra::payable`"
+        );
+    }
+
+    #[test]
+    fn events_that_cannot_be_emitted() {
+        use crate::ast::OdraEventItem;
+        let event = |code: proc_macro2::TokenStream| OdraEventItem::try_from(&code);
+        assert_rejected(
+            event(quote!(
+                pub struct Transfer(Address);
+            )),
+            "an event's fields are named"
+        );
+        assert_rejected(
+            event(quote!(
+                pub struct Transfer<T> {
+                    to: T
+                }
+            )),
+            "an event has no generic parameters"
+        );
+        assert_rejected(
+            event(quote!(
+                pub struct Transfer {
+                    #[odra(payable)]
+                    to: Address
+                }
+            )),
+            "not on a field"
+        );
+    }
+
+    /// Every error of the input is reported at once, in source order, so one build shows all
+    /// the mistakes.
+    #[test]
+    fn all_errors_are_reported_together_in_order() {
+        let messages = |result: syn::Result<ModuleImplIR>| match result {
+            Ok(_) => panic!("accepted"),
+            Err(error) => error.into_iter().map(|e| e.to_string()).collect::<Vec<_>>()
+        };
+        let reserved = messages(module(
+            quote!(),
+            quote!(
+                impl Token {
+                    pub fn env(&self) {}
+                    pub async unsafe fn address(&self) {}
+                }
+            )
+        ));
+        assert_eq!(reserved.len(), 4, "{reserved:?}");
+        assert!(reserved[0].contains("`env` is a reserved entry point name"));
+        assert!(reserved[1].contains("`address` is a reserved entry point name"));
+        assert!(reserved[2].contains("`async` is not allowed on `address`"));
+        assert!(reserved[3].contains("`unsafe` is not allowed on `address`"));
+
+        let both = messages(module(
+            quote!(),
+            quote!(
+                impl (u32, u32) {
+                    pub fn env(&self) {}
+                }
+            )
+        ));
+        assert_eq!(both.len(), 2, "{both:?}");
+        assert!(both[0].contains("an Odra impl block is for a named module"));
+        assert!(both[1].contains("`env` is a reserved entry point name"));
+    }
+
     #[test]
     fn an_impl_is_read() {
         // The context the function checks above run in: a plain module impl.

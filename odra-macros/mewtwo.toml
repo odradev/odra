@@ -826,3 +826,318 @@ name = "lib_runtime_args_name_not_stringified"
 file = "src/lib.rs"
 pattern = "insert_runtime_arg(self.#name, stringify!(#name), &mut #args_ident);"
 change = 'insert_runtime_arg(self.#name, "", &mut #args_ident);'
+
+[[mutations]]
+name = "errors_collect_all_keeps_first_only"
+file = "src/ir/errors.rs"
+pattern = "                Some(error) => error.combine(e),"
+change = "                Some(_) => {}"
+
+[[mutations]]
+name = "errors_both_keeps_first_only"
+file = "src/ir/errors.rs"
+pattern = """
+        (Err(mut error), Err(other)) => {
+            error.combine(other);
+            Err(error)
+        }"""
+change = """
+        (Err(error), Err(other)) => {
+            let _ = other;
+            Err(error)
+        }"""
+
+[[mutations]]
+name = "errors_both_reports_second_first"
+file = "src/ir/errors.rs"
+pattern = """
+        (Err(mut error), Err(other)) => {
+            error.combine(other);
+            Err(error)
+        }"""
+change = """
+        (Err(error), Err(mut other)) => {
+            other.combine(error);
+            Err(other)
+        }"""
+
+[[mutations]]
+name = "fn_signature_checks_stop_at_first"
+file = "src/ir/function.rs"
+pattern = """
+    errors::check_all(
+        generics
+            .into_iter()
+            .chain(where_clause)
+            .chain(qualifiers.into_iter().flatten())
+            .chain(receiver)
+            .map(Err)
+    )"""
+change = """
+    generics
+        .into_iter()
+        .chain(where_clause)
+        .chain(qualifiers.into_iter().flatten())
+        .chain(receiver)
+        .map(Err)
+        .collect::<syn::Result<Vec<()>>>()
+        .map(|_| ())"""
+
+[[mutations]]
+name = "fn_async_allowed"
+file = "src/ir/function.rs"
+pattern = """
+        sig.asyncness
+            .map(|t| errors::fn_with_qualifier(t, "async", &fn_name)),"""
+change = "        None,"
+
+[[mutations]]
+name = "fn_generics_allowed"
+file = "src/ir/function.rs"
+pattern = "    let generics = (!sig.generics.params.is_empty())"
+change = "    let generics = false"
+
+[[mutations]]
+name = "fn_self_by_value_allowed"
+file = "src/ir/function.rs"
+pattern = "        Some(receiver) => Some(errors::receiver_not_a_reference(&receiver))"
+change = "        Some(_) => None"
+
+[[mutations]]
+name = "fn_typed_self_ref_rejected"
+file = "src/ir/function.rs"
+pattern = "    receiver.reference.is_some() || matches!(receiver.ty.as_ref(), syn::Type::Reference(_))"
+change = "    receiver.reference.is_some()"
+
+[[mutations]]
+name = "fn_str_ref_allowed"
+file = "src/ir/function.rs"
+pattern = "        syn::Type::Reference(reference) if is_str(&reference.elem) => {"
+change = "        syn::Type::Reference(reference) if false => {"
+
+[[mutations]]
+name = "fn_impl_trait_arg_allowed"
+file = "src/ir/function.rs"
+pattern = "        syn::Type::ImplTrait(_) => Err(errors::arg_impl_trait(ty)),"
+change = "        syn::Type::ImplTrait(_) => Ok(()),"
+
+[[mutations]]
+name = "fn_pattern_arg_allowed"
+file = "src/ir/function.rs"
+pattern = "            _ => return Err(errors::arg_without_name(arg))"
+change = "            _ => return Ok(())"
+
+[[mutations]]
+name = "fn_offchain_without_receiver_allowed"
+file = "src/ir/function.rs"
+pattern = "    } else if receiver.is_none() {"
+change = "    } else if false {"
+
+[[mutations]]
+name = "fn_offchain_in_factory_allowed"
+file = "src/ir/function.rs"
+pattern = "    } else if ctx.is_factory {"
+change = "    } else if false {"
+
+[[mutations]]
+name = "fn_offchain_in_trait_impl_allowed"
+file = "src/ir/function.rs"
+pattern = "    } else if ctx.is_trait_impl {"
+change = "    } else if false {"
+
+[[mutations]]
+name = "fn_offchain_payable_allowed"
+file = "src/ir/function.rs"
+pattern = "    } else if attrs.is_payable() || attrs.is_non_reentrant() {"
+change = "    } else if attrs.is_non_reentrant() {"
+
+[[mutations]]
+name = "fn_offchain_non_reentrant_allowed"
+file = "src/ir/function.rs"
+pattern = "    } else if attrs.is_payable() || attrs.is_non_reentrant() {"
+change = "    } else if attrs.is_payable() {"
+
+[[mutations]]
+name = "fn_type_upgrader_regular"
+file = "src/ir/function.rs"
+pattern = "            UPGRADER_NAME => FnType::Upgrader,"
+change = "            UPGRADER_NAME => FnType::Regular,"
+
+[[mutations]]
+name = "attr_unknown_flag_with_value_message"
+file = "src/ir/attr.rs"
+pattern = "                Some(flag) => errors::odra_attr_with_value(meta, flag.name()),"
+change = "                Some(_) => errors::odra_attr_unknown(meta, &path_str(path), &Self::expected()),"
+
+[[mutations]]
+name = "attr_malformed_accepted"
+file = "src/ir/attr.rs"
+pattern = "            _ => return Err(errors::odra_attr_malformed(attr, &OdraFlag::expected()))"
+change = "            _ => return Ok(vec![])"
+
+[[mutations]]
+name = "type_unnamed_struct_fields_allowed"
+file = "src/ir/ty.rs"
+pattern = "                            .ok_or_else(|| errors::type_fields_unnamed(fields))"
+change = """
+                            .or_else(|| Some((quote::format_ident!("f"), f.ty.clone())))
+                            .ok_or_else(|| errors::type_fields_unnamed(fields))"""
+
+[[mutations]]
+name = "type_discriminant_not_u16_allowed"
+file = "src/ir/ty.rs"
+pattern = "        }) => int.base10_parse::<u16>().ok(),"
+change = "        }) => int.base10_parse::<u16>().ok().or(Some(0)),"
+
+[[mutations]]
+name = "type_generics_allowed"
+file = "src/ir/ty.rs"
+pattern = "    let generics_error = (!generics.params.is_empty())"
+change = "    let generics_error = false"
+
+[[mutations]]
+name = "config_unknown_arg_allowed_value"
+file = "src/ir/config.rs"
+pattern = '        "on" => Ok(true),'
+change = '        "on" | "yes" => Ok(true),'
+
+[[mutations]]
+name = "delegate_own_docs_ignored"
+file = "src/ir/delegate.rs"
+pattern = "                let has_own_docs = !utils::syn::docs_attrs(&attrs).is_empty();"
+change = "                let has_own_docs = false;"
+
+[[mutations]]
+name = "delegate_generated_doc_always"
+file = "src/ir/delegate.rs"
+pattern = "                if !has_own_docs {"
+change = "                if true {"
+
+[[mutations]]
+name = "delegate_fn_pub_allowed"
+file = "src/ir/delegate.rs"
+pattern = "                if !matches!(vis, syn::Visibility::Inherited) {"
+change = "                if false {"
+
+[[mutations]]
+name = "delegate_fn_body_allowed"
+file = "src/ir/delegate.rs"
+pattern = "                if let Some(block) = &fn_item.default {"
+change = "                if let Some(block) = fn_item.default.as_ref().filter(|_| false) {"
+
+[[mutations]]
+name = "delegate_args_forwarded_none"
+file = "src/ir/delegate.rs"
+pattern = "                        syn::Pat::Ident(pat) => Some(pat.ident.clone()),"
+change = "                        syn::Pat::Ident(pat) if false => Some(pat.ident.clone()),"
+
+[[mutations]]
+name = "delegate_missing_to_allowed"
+file = "src/ir/delegate.rs"
+pattern = """
+            if !input.peek(kw::to) {
+                return Err(errors::delegate_expected_to(input));
+            }"""
+change = ""
+
+[[mutations]]
+name = "delegate_target_brace_check_dropped"
+file = "src/ir/delegate.rs"
+pattern = """
+    if !input.peek(syn::token::Brace) {
+        return Err(errors::delegate_target_not_self_field(input));
+    }"""
+change = ""
+
+[[mutations]]
+name = "module_impl_other_macro_allowed"
+file = "src/ir/module_impl.rs"
+pattern = "                    false => Err(errors::macro_in_impl(&m.mac))"
+change = "                    false => Ok(Delegate { functions: vec![] })"
+
+[[mutations]]
+name = "module_impl_struct_only_args_allowed"
+file = "src/ir/module_impl.rs"
+pattern = "                .map(|(name, span)| Err(errors::module_arg_on_impl(name, *span)))"
+change = "                .map(|_| Ok(()))"
+
+[[mutations]]
+name = "module_impl_external_contract_args_allowed"
+file = "src/ir/module_impl.rs"
+pattern = """
+        if !attr.is_empty() {
+            return Err(errors::external_contract_with_args(attr));
+        }"""
+change = ""
+
+[[mutations]]
+name = "module_impl_odra_attr_on_impl_allowed"
+file = "src/ir/module_impl.rs"
+pattern = '            odra_attrs(&code.attrs).map(|attr| errors::odra_attr_misplaced(attr, "the impl block"));'
+change = '            odra_attrs(&[]).map(|attr| errors::odra_attr_misplaced(attr, "the impl block"));'
+
+[[mutations]]
+name = "module_impl_supertrait_allowed"
+file = "src/ir/module_impl.rs"
+pattern = "            .map(errors::external_contract_supertrait);"
+change = """
+            .map(errors::external_contract_supertrait)
+            .filter(|_| false);"""
+
+[[mutations]]
+name = "module_struct_odra_attr_on_field_allowed"
+file = "src/ir/module_struct.rs"
+pattern = '            .map(|attr| errors::odra_attr_misplaced(attr, "a field"));'
+change = """
+            .filter(|_| false)
+            .map(|attr| errors::odra_attr_misplaced(attr, "a field"));"""
+
+[[mutations]]
+name = "module_struct_unnamed_fields_allowed"
+file = "src/ir/module_struct.rs"
+pattern = "            fields => return Err(errors::module_fields_unnamed(fields))"
+change = "            _ => Vec::new()"
+
+[[mutations]]
+name = "schema_errors_module_errors_dropped"
+file = "src/ast/schema/errors.rs"
+pattern = """
+            .errors
+            .iter()
+            .chain(self.fields.iter().map(|f| &f.ty))"""
+change = """
+            .fields
+            .iter()
+            .map(|f| &f.ty)"""
+
+[[mutations]]
+name = "attr_unknown_path_spaces_kept"
+file = "src/ir/attr.rs"
+pattern = """let path_str = |path: &Path| path.to_token_stream().to_string().replace(' ', "");"""
+change = "let path_str = |path: &Path| path.to_token_stream().to_string();"
+
+[[mutations]]
+name = "event_odra_attr_on_field_allowed"
+file = "src/ast/event/mod.rs"
+pattern = '            .map(|attr| errors::odra_attr_misplaced(attr, "a field"));'
+change = """
+            .filter(|_| false)
+            .map(|attr| errors::odra_attr_misplaced(attr, "a field"));"""
+
+[[mutations]]
+name = "event_generics_allowed"
+file = "src/ast/event/mod.rs"
+pattern = "        let generics = (!item_struct.generics.params.is_empty())"
+change = "        let generics = false"
+
+[[mutations]]
+name = "event_unnamed_fields_allowed"
+file = "src/ast/event/mod.rs"
+pattern = """
+        let syn::Fields::Named(named) = &item_struct.fields else {
+            return Err(errors::event_fields_unnamed(&item_struct.fields));
+        };"""
+change = """
+        let syn::Fields::Named(named) = &item_struct.fields else {
+            return Ok(Self { item_struct: item_struct.clone(), fields: vec![] });
+        };"""
