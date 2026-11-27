@@ -6,9 +6,9 @@ use super::attr::{self, OdraAttrs};
 use super::config::ModuleConfig;
 use super::delegate::{Delegate, DelegatedFn};
 use super::errors;
-use super::function::{FnArgIR, FnIR, ImplContext};
+use super::function::{FnArgIR, FnIR, HostRefVersion, ImplContext};
 use super::{generated_mod_ident, CONSTRUCTOR_NAME, UPGRADER_NAME};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 /// The impl block `#[odra::module]` is applied to, or the trait `#[odra::external_contract]`
 /// is. Built with every function validated, see [FnIR].
@@ -179,7 +179,7 @@ impl ModuleImplIR {
     pub fn host_mut_ret_functions(&self) -> Vec<&FnIR> {
         self.functions()
             .iter()
-            .filter(|f| f.is_mut() && f.return_type() != syn::ReturnType::Default)
+            .filter(|f| f.has_no_ret_versions())
             .collect()
     }
 
@@ -390,6 +390,7 @@ impl ModuleIR {
             true => Ok(()),
             false => Err(errors::fn_defined_twice(&f.name()))
         }))?;
+        validate_host_ref_names(&functions)?;
         Ok(functions)
     }
 
@@ -428,6 +429,7 @@ impl ModuleTraitIR {
             syn::TraitItem::Fn(func) => Some(FnIR::try_from(func.clone())),
             _ => None
         }))?;
+        validate_host_ref_names(&functions)?;
         Ok(Self { code, functions })
     }
 
@@ -477,6 +479,49 @@ impl ModuleTraitIR {
         });
         code
     }
+}
+
+/// No two functions get a host ref function of the same name: `transfer` gets `try_transfer`,
+/// so an entry point `try_transfer` next to it would make the host ref define `try_transfer`
+/// twice, an error rustc reports on the macro call rather than on the function. A function
+/// whose own name is taken is reported; when only generated names meet (`try_swap` and
+/// `swap_no_ret` both get `try_swap_no_ret`), the later of the two functions is. The names of
+/// the functions are unique already.
+fn validate_host_ref_names(functions: &[FnIR]) -> syn::Result<()> {
+    let own_names: HashMap<String, &FnIR> = functions.iter().map(|f| (f.name_str(), f)).collect();
+    let mut generated: HashMap<String, (&FnIR, HostRefVersion)> = HashMap::new();
+    // One error per pair of functions: `transfer` and `try_transfer`, both mutating and
+    // returning a value, also meet at `try_transfer_no_ret`.
+    let mut reported: HashSet<(String, String)> = HashSet::new();
+    let mut is_new_pair = |a: &FnIR, b: &FnIR| {
+        let (a, b) = (a.name_str(), b.name_str());
+        reported.insert(if a < b { (a, b) } else { (b, a) })
+    };
+    let mut errors = vec![];
+    for f in functions {
+        for (name, version) in f.host_ref_names() {
+            if version == HostRefVersion::Own {
+                continue;
+            }
+            let key = name.to_string();
+            if let Some(taken) = own_names.get(&key) {
+                if is_new_pair(taken, f) {
+                    errors.push(errors::fn_name_taken_by_host_ref(taken, f, version));
+                }
+            } else if let Some((other, other_version)) = generated.get(&key) {
+                if is_new_pair(other, f) {
+                    errors.push(errors::host_ref_names_clash(
+                        &name,
+                        (other, *other_version),
+                        (f, version)
+                    ));
+                }
+            } else {
+                generated.insert(key, (f, version));
+            }
+        }
+    }
+    errors::check_all(errors.into_iter().map(Err))
 }
 
 /// The `#[odra(..)]` attributes among `attrs`.

@@ -2,6 +2,14 @@
 
 Changelog for `odra`.
 
+## [2.12.0]
+### Fixed
+- An entry point named like a function the host ref generates for another one (`try_transfer` next to
+  `transfer`, `swap_no_ret` or `try_swap_no_ret` next to a `swap` that takes `&mut self` and returns a value,
+  or two generated names that meet, like `try_swap_no_ret` of `try_swap` and of `swap_no_ret`) is reported by
+  the macro on that function's name. It never compiled: rustc reported a duplicate definition on the macro
+  attribute and pointed at the other function (#735).
+
 ## [2.11.0]
 ### Added
 - `odra-casper-account-manager`: session code that changes a Casper account's multisig configuration, its

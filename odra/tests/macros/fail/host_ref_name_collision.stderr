@@ -1,0 +1,23 @@
+error: `try_transfer` is the name of the `try_` version of `transfer` the host ref generates; rename one of the functions
+  --> tests/macros/fail/host_ref_name_collision.rs:17:12
+   |
+17 |     pub fn try_transfer(&mut self, amount: u32) {
+   |            ^^^^^^^^^^^^
+
+error: `swap_no_ret` is the name of the `_no_ret` version of `swap` the host ref generates (`swap` takes `&mut self` and returns a value); rename one of the functions
+  --> tests/macros/fail/host_ref_name_collision.rs:25:12
+   |
+25 |     pub fn swap_no_ret(&mut self, amount: u32) {
+   |            ^^^^^^^^^^^
+
+error: the host ref generates `try_burn_no_ret` twice: as the `_no_ret` version of `try_burn` and as the `try_` version of `burn_no_ret`; rename one of the functions
+  --> tests/macros/fail/host_ref_name_collision.rs:35:12
+   |
+35 |     pub fn burn_no_ret(&self) {}
+   |            ^^^^^^^^^^^
+
+error: `try_approve` is the name of the `try_` version of `approve` the host ref generates; rename one of the functions
+  --> tests/macros/fail/host_ref_name_collision.rs:40:8
+   |
+40 |     fn try_approve(&mut self, amount: u32);
+   |        ^^^^^^^^^^^

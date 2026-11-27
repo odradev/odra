@@ -8,7 +8,6 @@ use crate::{
     ir::{FnArgIR, FnIR},
     utils::{self, syn::visibility_pub}
 };
-use quote::format_ident;
 use syn::{parse_quote, Attribute, Visibility};
 
 pub fn host_try_function_item(fun: &FnIR) -> syn::ItemFn {
@@ -50,7 +49,7 @@ pub fn host_mut_no_ret_function_item(fun: &FnIR) -> syn::ItemFn {
     attrs.push(parse_quote!(#[doc = " Ignores the result of the call."]));
     let signature = function_signature(fun);
     let signature = syn::Signature {
-        ident: format_ident!("{}_no_ret", fun.name()),
+        ident: fun.no_ret_name(),
         output: syn::ReturnType::Default,
         ..signature
     };
