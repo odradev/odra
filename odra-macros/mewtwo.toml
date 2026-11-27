@@ -1676,3 +1676,49 @@ name = "module_struct_too_many_fields_max_lost"
 file = "src/ir/module_struct.rs"
 pattern = "            return Err(errors::module_too_many_fields(&code.fields, MAX_FIELDS));"
 change = "            return Err(errors::module_too_many_fields(&code.fields, 0));"
+
+[[mutations]]
+name = "ir_onchain_includes_offchain"
+file = "src/ir/module_impl.rs"
+pattern = "            .filter(|f| !f.is_offchain())"
+change = "            .filter(|_| true)"
+
+[[mutations]]
+name = "ir_offchain_list_empty"
+file = "src/ir/module_impl.rs"
+pattern = "            .filter(|f| f.is_offchain())"
+change = "            .filter(|_| false)"
+
+[[mutations]]
+name = "exec_name_prefix_changed"
+file = "src/ir/function.rs"
+pattern = '        format_ident!("execute_{}", self.name())'
+change = '        format_ident!("exec_{}", self.name())'
+
+[[mutations]]
+name = "try_name_prefix_changed"
+file = "src/ir/function.rs"
+pattern = '        format_ident!("try_{}", self.name())'
+change = '        format_ident!("attempt_{}", self.name())'
+
+[[mutations]]
+name = "try_no_ret_name_changed"
+file = "src/ir/function.rs"
+pattern = '        format_ident!("try_{}_no_ret", self.name())'
+change = '        format_ident!("try_{}_noret", self.name())'
+
+[[mutations]]
+name = "factory_child_ident_strip_only_suffix"
+file = "src/ir/module_impl.rs"
+pattern = 'let child = module_str.strip_suffix("Factory").unwrap_or(&module_str);'
+change = 'let child = module_str.trim_end_matches("Factory");'
+
+[[mutations]]
+name = "host_mut_ret_includes_unit_returns"
+file = "src/ir/module_impl.rs"
+pattern = ".filter(|f| f.is_mut() && f.return_type() != syn::ReturnType::Default)"
+change = ".filter(|f| f.is_mut() || f.return_type() != syn::ReturnType::Default)"
+
+[[multi-mutations]]
+name = "offchain_treated_as_onchain"
+mutations = ["ir_onchain_includes_offchain", "ir_offchain_list_empty"]

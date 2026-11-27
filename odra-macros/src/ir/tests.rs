@@ -881,3 +881,16 @@ mod expected_values {
             .contains("a module has at most 255 fields, this one has 256"));
     }
 }
+
+/// The factory of a module whose own name ends with `Factory`: only the one suffix the macro
+/// added is stripped to find the child.
+#[test]
+fn the_child_of_a_factory_of_a_factory() {
+    let item = quote::quote!(
+        impl TokenFactoryFactory {
+            pub fn init(&mut self) {}
+        }
+    );
+    let ir = crate::ir::ModuleImplIR::try_from((&quote::quote!(), &item)).unwrap();
+    assert_eq!(ir.child_module_ident().to_string(), "TokenFactory");
+}
