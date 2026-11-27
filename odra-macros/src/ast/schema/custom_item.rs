@@ -6,7 +6,7 @@ use syn::Fields;
 
 /// Emits the schema impls of an `#[odra::odra_type]`: `SchemaCustomTypes` (the type itself as a
 /// custom struct or enum, the structs of its named-field variants, and the custom types of its
-/// fields), `NamedCLTyped` (its name) and the `SchemaCustomElement` marker.
+/// fields, or of its variants' fields), `NamedCLTyped` (its name) and the `SchemaCustomElement` marker.
 pub struct SchemaCustomTypeItem {
     ty_ident: syn::Ident,
     kind: TypeKind
@@ -23,15 +23,19 @@ impl ToTokens for SchemaCustomTypeItem {
             TypeKind::Struct { fields } => custom_struct(name, fields)
         };
 
-        let sub_types = match &self.kind {
-            TypeKind::Struct { fields } => fields
+        // The custom types the fields use, of the struct or of every variant of the enum.
+        let field_types = match &self.kind {
+            TypeKind::Struct { fields } => fields.iter().map(|(_, ty)| ty).collect::<Vec<_>>(),
+            TypeKind::Enum { variants } => variants
                 .iter()
-                .map(|(_, ty)| {
-                    quote::quote!(.chain(<#ty as odra::schema::SchemaCustomTypes>::schema_types()))
-                })
+                .flat_map(|v| v.fields.iter().map(|f| &f.ty))
                 .collect::<Vec<_>>(),
-            _ => Vec::new(),
+            TypeKind::UnitEnum { .. } => Vec::new()
         };
+        let sub_types = field_types
+            .iter()
+            .map(|ty| quote::quote!(.chain(<#ty as odra::schema::SchemaCustomTypes>::schema_types())))
+            .collect::<Vec<_>>();
 
         let enum_sub_types = match &self.kind {
             TypeKind::Enum { variants } => variants.iter().filter_map(|v| {
@@ -93,10 +97,12 @@ fn custom_enum(name: &str, variants: &[VariantIR]) -> proc_macro2::TokenStream {
     quote::quote!(odra::schema::custom_enum(#name, odra::prelude::vec![#(#variants)*]))
 }
 
+/// An enum with data is serialized with the variant's position as its tag (`OdraTypeItem`), so
+/// the position is the discriminant in the schema, whatever discriminant Rust gives the variant.
 fn custom_complex_enum(enum_name: &str, variants: &[VariantIR]) -> proc_macro2::TokenStream {
-    let variants = variants.iter().map(|v| {
+    let variants = variants.iter().enumerate().map(|(index, v)| {
         let name = v.ident.to_string();
-        let code = v.code;
+        let code = index as u16;
         match &v.fields {
             Fields::Named(_) => match v.fields.len() {
                 0 => quote::quote!(odra::schema::enum_variant(#name, #code),),
