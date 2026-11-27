@@ -2,8 +2,9 @@ CARGO_ODRA_GIT_REPO := "https://github.com/odradev/cargo-odra"
 CARGO_ODRA_BRANCH := "release/0.2.1"
 BINARYEN_VERSION := "version_125"
 BINARYEN_CHECKSUM := "7c3bc16599c8274a04d34a504fe4be2047884f900e0e2da2f6fb9cd667183be4"
-# The copies of resources/proxy_caller*.wasm that crates embed with include_bytes!.
-PROXY_CALLER_COPIES := "odra-wasm-client/resources/proxy_caller.wasm odra-wasm-client/resources/proxy_caller_with_return.wasm odra-casper/rpc-client/resources/proxy_caller_with_return.wasm odra-casper/test-vm/resources/proxy_caller_with_return.wasm"
+# The copies of resources/proxy_caller*.wasm and resources/account_manager.wasm that crates embed
+# with include_bytes!.
+PROXY_CALLER_COPIES := "odra-casper/account-manager/resources/account_manager.wasm odra-wasm-client/resources/proxy_caller.wasm odra-wasm-client/resources/proxy_caller_with_return.wasm odra-casper/rpc-client/resources/proxy_caller_with_return.wasm odra-casper/test-vm/resources/proxy_caller_with_return.wasm"
 set dotenv-load := true
 default:
     just --list
@@ -15,15 +16,18 @@ clippy:
     cd modules && cargo clippy --all-targets -- -D warnings
     cd benchmark && cargo clippy --all-targets -- -D warnings
     cd odra-casper/proxy-caller && cargo clippy --target=wasm32-unknown-unknown -- -D warnings
+    cd odra-casper/account-manager-wasm && cargo clippy --target=wasm32-unknown-unknown -- -D warnings
 
 lint: clippy
     cargo fmt
     cd odra-casper/proxy-caller && cargo fmt
+    cd odra-casper/account-manager-wasm && cargo fmt
 
 check-lint: check-proxy-callers clippy
     cargo fmt -- --check
     cargo check --all-targets
     cd odra-casper/proxy-caller && cargo fmt -- --check
+    cd odra-casper/account-manager-wasm && cargo fmt -- --check
 
 # Audit dependencies for advisories, licenses, banned crates and sources.
 # Install with `cargo install cargo-deny --locked`.
@@ -54,12 +58,16 @@ start-casper-node:
 
 build-proxy-callers:
     cd odra-casper/proxy-caller && cargo build --release --target wasm32-unknown-unknown --target-dir ../../target
+    cd odra-casper/account-manager-wasm && cargo build --release --target wasm32-unknown-unknown --target-dir ../../target
     wasm-strip target/wasm32-unknown-unknown/release/proxy_caller.wasm
     wasm-strip target/wasm32-unknown-unknown/release/proxy_caller_with_return.wasm
     wasm-opt -O3 --enable-bulk-memory --signext-lowering --llvm-memory-copy-fill-lowering target/wasm32-unknown-unknown/release/proxy_caller.wasm -o target/wasm32-unknown-unknown/release/proxy_caller.wasm
     wasm-opt -O3 --enable-bulk-memory --signext-lowering --llvm-memory-copy-fill-lowering target/wasm32-unknown-unknown/release/proxy_caller_with_return.wasm -o target/wasm32-unknown-unknown/release/proxy_caller_with_return.wasm
+    wasm-strip target/wasm32-unknown-unknown/release/account_manager.wasm
+    wasm-opt -O3 --enable-bulk-memory --signext-lowering --llvm-memory-copy-fill-lowering target/wasm32-unknown-unknown/release/account_manager.wasm -o target/wasm32-unknown-unknown/release/account_manager.wasm
     cp target/wasm32-unknown-unknown/release/proxy_caller.wasm resources/proxy_caller.wasm
     cp target/wasm32-unknown-unknown/release/proxy_caller_with_return.wasm resources/proxy_caller_with_return.wasm
+    cp target/wasm32-unknown-unknown/release/account_manager.wasm resources/account_manager.wasm
     for copy in {{PROXY_CALLER_COPIES}}; do cp "resources/$(basename "$copy")" "$copy"; done
 
 # Fails when a crate's copy of a proxy caller differs from the one in resources/. A crate can

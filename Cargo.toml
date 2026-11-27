@@ -1,5 +1,6 @@
 [workspace]
 exclude = [
+  "odra-casper/account-manager-wasm",
   "odra-casper/proxy-caller",
   "templates/blank",
   "templates/full",
@@ -15,6 +16,7 @@ members = [
   "odra",
   "odra-bdd",
   "odra-build",
+  "odra-casper/account-manager",
   "odra-casper/livenet-env",
   "odra-casper/rpc-client",
   "odra-casper/test-vm",
@@ -44,6 +46,7 @@ repository = "https://github.com/odradev/odra"
 version = "2.10.0"
 
 [workspace.dependencies]
+odra-casper-account-manager = { path = "odra-casper/account-manager", version = "2.10.0" }
 odra-casper-rpc-client = { path = "odra-casper/rpc-client", version = "2.10.0" }
 odra-casper-test-vm = { path = "odra-casper/test-vm", version = "2.10.0" }
 odra-casper-wasm-env = { path = "odra-casper/wasm-env", version = "2.10.0" }
