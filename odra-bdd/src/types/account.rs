@@ -1,7 +1,7 @@
 use cucumber::Parameter;
 use std::{fmt::Display, str::FromStr};
 
-#[derive(Parameter, PartialEq)]
+#[derive(Parameter, Debug, Clone, Copy, PartialEq, Eq)]
 #[param(regex = r"[A-Za-z]+", name = "account")]
 pub struct Account {
     account_id: usize

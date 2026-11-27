@@ -1,0 +1,46 @@
+[package]
+name = "odra-casper-account-manager-wasm"
+description = "Builds account_manager.wasm, the session code of odra-casper-account-manager."
+publish = false
+
+authors = [
+  "Jakub Płaskonka <kuba@odra.dev>",
+  "Krzysztof Pobiarżyn <krzysztof@odra.dev>",
+  "Maciej Zieliński <maciej@odra.dev>",
+]
+edition = "2021"
+homepage = "https://odra.dev/docs"
+license = "MIT"
+repository = "https://github.com/odradev/odra"
+version = "2.11.0"
+
+# Its own crate, outside the workspace and outside odra-casper/proxy-caller, so that a change
+# here never changes the bytes of the proxy callers. `just build-proxy-callers` builds it.
+
+[dependencies]
+casper-types = { version = "6.1", default-features = false }
+odra-casper-account-manager = { path = "../account-manager", default-features = false }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+casper-contract = { version = "5.1", default-features = false }
+ink_allocator = { version = "5.0.0", default-features = false }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+casper-contract = { version = "5.1", default-features = false, features = ["test-support"] }
+
+[[bin]]
+bench = false
+doctest = false
+name = "account_manager"
+path = "src/main.rs"
+test = false
+
+[lints.rust]
+missing_docs = "warn"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+panic = "abort"
+strip = true

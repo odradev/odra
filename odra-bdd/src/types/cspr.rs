@@ -10,7 +10,10 @@ use std::str::FromStr;
 pub const CSPR_DECIMALS: usize = 9;
 
 #[derive(Parameter, Debug, Clone, Copy)]
-#[param(regex = r"(?:roughly\s+)?\d+(\.\d+)?( Motes)?", name = "cspr_amount")]
+#[param(
+    regex = r"(?:roughly\s+)?\d+(?:\.\d+)?(?: Motes)?",
+    name = "cspr_amount"
+)]
 pub struct CSPRAmount {
     amount: U512,
     precision: usize
