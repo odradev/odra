@@ -283,6 +283,68 @@ mod rejected_input {
     }
 
     #[test]
+    fn an_odra_attribute_on_a_private_function() {
+        let item = quote!(
+            impl Token {
+                #[odra(payable)]
+                fn helper(&self) {}
+            }
+        );
+        assert_rejected(
+            ModuleImplIR::try_from((&quote!(), &item)),
+            "only an entry point can receive attached tokens"
+        );
+    }
+
+    #[test]
+    fn a_function_both_written_and_delegated() {
+        let item = quote!(
+            impl Token {
+                pub fn owner(&self) -> Address {
+                    self.ownable.owner()
+                }
+                delegate! {
+                    to self.ownable {
+                        fn owner(&self) -> Address;
+                    }
+                }
+            }
+        );
+        assert_rejected(
+            ModuleImplIR::try_from((&quote!(), &item)),
+            "`owner` is defined twice in this impl"
+        );
+    }
+
+    #[test]
+    fn an_external_contract_function_with_a_body() {
+        let item = quote!(
+            pub trait Token {
+                fn total(&self) -> U256 {
+                    U256::zero()
+                }
+            }
+        );
+        assert_rejected(
+            ModuleImplIR::try_from((&quote!(), &item)),
+            "`total` has a body"
+        );
+    }
+
+    #[test]
+    fn an_external_contract_function_with_pub() {
+        let item = quote!(
+            pub trait Token {
+                pub fn total(&self) -> U256;
+            }
+        );
+        assert_rejected(
+            ModuleImplIR::try_from((&quote!(), &item)),
+            "a trait function is written without `pub`"
+        );
+    }
+
+    #[test]
     fn an_impl_is_read() {
         // The context the function checks above run in: a plain module impl.
         let item = quote!(
@@ -291,5 +353,66 @@ mod rejected_input {
             }
         );
         assert!(ModuleImplIR::try_from((&quote!(), &item)).is_ok());
+    }
+}
+
+/// What is emitted in place of the user's impl block or trait.
+mod self_code {
+    use crate::ir::ModuleImplIR;
+    use quote::{quote, ToTokens};
+
+    fn self_code(attr: proc_macro2::TokenStream, item: proc_macro2::TokenStream) -> String {
+        let ir = ModuleImplIR::try_from((&attr, &item)).unwrap();
+        ir.self_code().into_token_stream().to_string()
+    }
+
+    #[test]
+    fn delegated_functions_are_written_out_and_odra_attributes_dropped() {
+        let actual = self_code(
+            quote!(),
+            quote!(
+                impl Token {
+                    #[odra(payable)]
+                    pub fn deposit(&mut self) {}
+                    delegate! {
+                        to self.ownable {
+                            fn owner(&self) -> Address;
+                        }
+                    }
+                }
+            )
+        );
+        let expected = quote!(
+            impl Token {
+                pub fn deposit(&mut self) {}
+                #[doc = " Delegated. See `self.ownable.owner()` for details."]
+                pub fn owner(&self) -> Address {
+                    self.ownable.owner()
+                }
+            }
+        );
+        assert_eq!(actual, expected.to_string());
+    }
+
+    #[test]
+    fn odra_attributes_are_dropped_from_a_trait() {
+        let actual = self_code(
+            quote!(),
+            quote!(
+                pub trait Token {
+                    #[odra(payable)]
+                    fn deposit(&mut self);
+                }
+            )
+        );
+        assert_eq!(
+            actual,
+            quote!(
+                pub trait Token {
+                    fn deposit(&mut self);
+                }
+            )
+            .to_string()
+        );
     }
 }

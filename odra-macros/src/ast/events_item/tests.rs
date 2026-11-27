@@ -36,3 +36,18 @@ fn counter_pack() {
     let actual = HasEventsImplItem::try_from(&module).unwrap();
     test_utils::assert_eq(actual, expected);
 }
+
+/// A module without events and fields has an empty map of event schemas, built directly.
+#[test]
+fn module_without_events_or_fields() {
+    let module = test_utils::mock::empty_module_definition();
+    let item = HasEventsImplItem::try_from(&module).unwrap();
+    test_utils::assert_contains(
+        item,
+        quote!(
+            fn event_schemas() -> odra::prelude::BTreeMap<odra::prelude::string::String, odra::casper_event_standard::Schema> {
+                odra::prelude::BTreeMap::new()
+            }
+        )
+    );
+}

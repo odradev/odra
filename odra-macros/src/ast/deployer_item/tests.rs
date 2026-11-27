@@ -243,3 +243,35 @@ fn test_deployer_offchain_entry_point() {
     let actual = DeployerItem::try_from(&module).unwrap();
     test_utils::assert_eq(actual, expected);
 }
+
+/// An args struct is emitted for `init` and for `upgrade` only when the function takes
+/// arguments.
+#[test]
+fn deployer_args_structs_only_for_functions_with_args() {
+    let deployer = |module| {
+        let module = crate::ir::ModuleImplIR::try_from((&quote!(), &module)).unwrap();
+        DeployerItem::try_from(&module).unwrap()
+    };
+    let count = |item: &DeployerItem, ident: &str| {
+        let ident = quote::format_ident!("{ident}");
+        test_utils::count_fragment(item, quote!(pub struct #ident))
+    };
+
+    let item = deployer(quote! {
+        impl Erc20 {
+            pub fn init(&mut self) {}
+            pub fn upgrade(&mut self, admin: Address) {}
+        }
+    });
+    assert_eq!(count(&item, "Erc20InitArgs"), 0);
+    assert_eq!(count(&item, "Erc20UpgradeArgs"), 1);
+
+    let item = deployer(quote! {
+        impl Erc20 {
+            pub fn init(&mut self, cap: u32) {}
+            pub fn upgrade(&mut self) {}
+        }
+    });
+    assert_eq!(count(&item, "Erc20InitArgs"), 1);
+    assert_eq!(count(&item, "Erc20UpgradeArgs"), 0);
+}

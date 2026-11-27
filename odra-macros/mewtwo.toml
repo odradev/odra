@@ -1,5 +1,7 @@
 [mewtwo]
-build-command = "cargo test -p odra-macros --no-run"
+# The library only: the tests compile the macros' output, so a mutant whose expansion does
+# not compile fails the test command and counts as killed, not unviable.
+build-command = "cargo build -p odra-macros"
 test-all-command = "cargo test -p odra-macros"
 test-one-command = "cargo test -p odra-macros -- --exact TEST_NAME"
 
@@ -587,3 +589,240 @@ name = "config_arg_twice_allowed"
 file = "src/ir/config.rs"
 pattern = "            if config.given.iter().any(|(given, _)| *given == arg) {"
 change = "            if false {"
+
+[[mutations]]
+name = "events_module_empty_schemas_not_special"
+file = "src/ast/events_item.rs"
+pattern = "                let event_schemas_body = if schema_stmts.is_empty() {"
+change = "                let event_schemas_body = if false {"
+
+[[mutations]]
+name = "events_module_declared_dropped"
+file = "src/ast/events_item.rs"
+pattern = """
+                            .chain(events)
+"""
+change = ""
+
+[[mutations]]
+name = "events_module_field_schemas_dropped"
+file = "src/ast/events_item.rs"
+pattern = "                let schema_stmts = inserts.chain(extends).collect::<Vec<_>>();"
+change = "                let schema_stmts = { let _ = extends.count(); inserts.collect::<Vec<_>>() };"
+
+[[mutations]]
+name = "module_struct_field_types_not_unique"
+file = "src/ir/module_struct.rs"
+pattern = """
+            .map(|f| (f.ty.to_token_stream().to_string(), f.ty.clone()))
+            .collect::<BTreeMap<_, _>>()
+            .into_values()
+            .collect()"""
+change = """
+            .map(|f| f.ty.clone())
+            .collect()"""
+
+[[mutations]]
+name = "storage_layout_types_chain_dropped"
+file = "src/ast/schema/storage_layout.rs"
+pattern = "            quote::quote!(.chain(<#ty as odra::schema::SchemaStorageLayout>::custom_types()))"
+change = "            { let _ = ty; quote::quote!() }"
+
+[[mutations]]
+name = "contract_item_init_args_without_args"
+file = "src/ast/contract_item.rs"
+pattern = "let has_args = |f: Option<&crate::ir::FnIR>| f.is_some_and(|f| f.has_args());"
+change = "let has_args = |f: Option<&crate::ir::FnIR>| f.is_some();"
+
+[[mutations]]
+name = "contract_item_upgrade_args_from_init"
+file = "src/ast/contract_item.rs"
+pattern = "            upgrade_args: match has_args(module.upgrader()) {"
+change = "            upgrade_args: match has_args(module.constructor()) {"
+
+[[mutations]]
+name = "deployer_init_args_struct_without_args"
+file = "src/ast/deployer_item.rs"
+pattern = """
+                init_args: match module.constructor() {
+                    Some(f) if f.has_args() => Some(ArgsStructItem {"""
+change = """
+                init_args: match module.constructor() {
+                    Some(f) => Some(ArgsStructItem {"""
+
+[[mutations]]
+name = "deployer_upgrade_args_struct_without_args"
+file = "src/ast/deployer_item.rs"
+pattern = """
+                upgrade_args: match module.upgrader() {
+                    Some(f) if f.has_args() => Some(ArgsStructItem {"""
+change = """
+                upgrade_args: match module.upgrader() {
+                    Some(f) => Some(ArgsStructItem {"""
+
+[[mutations]]
+name = "ident_contract_name_always_struct_name"
+file = "src/ast/ident_item.rs"
+pattern = "        let contract_name_fn = self.contract_name.as_ref().map(|name| {"
+change = "        let contract_name_fn = Some(&module_name).map(|name| {"
+
+[[mutations]]
+name = "module_impl_private_fns_are_entry_points"
+file = "src/ir/module_impl.rs"
+pattern = "        is_trait_impl || matches!(func.vis, syn::Visibility::Public(_))"
+change = "        true"
+
+[[mutations]]
+name = "module_impl_trait_impl_private_fns_skipped"
+file = "src/ir/module_impl.rs"
+pattern = "        is_trait_impl || matches!(func.vis, syn::Visibility::Public(_))"
+change = "        matches!(func.vis, syn::Visibility::Public(_))"
+
+[[mutations]]
+name = "module_impl_private_fn_attrs_unchecked"
+file = "src/ir/module_impl.rs"
+pattern = "                    Self::validate_private_function(func).err().map(Err)"
+change = "                    None"
+
+[[mutations]]
+name = "module_impl_delegated_fns_dropped_from_self_code"
+file = "src/ir/module_impl.rs"
+pattern = """
+                .filter(|f| f.is_delegated())
+                .filter_map(FnIR::raw_impl)"""
+change = """
+                .filter(|f| f.is_delegated() && false)
+                .filter_map(FnIR::raw_impl)"""
+
+[[mutations]]
+name = "module_impl_odra_attrs_kept_in_self_code"
+file = "src/ir/module_impl.rs"
+pattern = """
+                func.attrs = attr::other_attributes(func.attrs.clone());
+            }
+        });
+        // remove inner odra macros"""
+change = """
+                func.attrs = func.attrs.clone();
+            }
+        });
+        // remove inner odra macros"""
+
+[[mutations]]
+name = "module_impl_duplicate_delegated_name_allowed"
+file = "src/ir/module_impl.rs"
+pattern = "        errors::check_all(functions.iter().map(|f| match names.insert(f.name_str()) {"
+change = "        errors::check_all(functions.iter().map(|f| match { names.insert(f.name_str()); true } {"
+
+[[mutations]]
+name = "module_impl_child_ident_suffix_kept"
+file = "src/ir/module_impl.rs"
+pattern = 'let child = module_str.strip_suffix("Factory").unwrap_or(&module_str);'
+change = "let child = module_str.as_str();"
+
+[[mutations]]
+name = "module_impl_trait_fn_attrs_kept"
+file = "src/ir/module_impl.rs"
+pattern = """
+            if let syn::TraitItem::Fn(func) = item {
+                func.attrs = attr::other_attributes(func.attrs.clone());"""
+change = """
+            if let syn::TraitItem::Fn(func) = item {
+                func.attrs = func.attrs.clone();"""
+
+[[mutations]]
+name = "module_impl_trait_fn_with_body_allowed"
+file = "src/ir/module_impl.rs"
+pattern = "            syn::TraitItem::Fn(func) => func.default.as_ref().map(|block| {"
+change = "            syn::TraitItem::Fn(func) => func.default.as_ref().filter(|_| false).map(|block| {"
+
+[[mutations]]
+name = "module_impl_trait_pub_fn_allowed"
+file = "src/ir/module_impl.rs"
+pattern = "                .filter(|vis| !matches!(vis, syn::Visibility::Inherited))"
+change = "                .filter(|_| false)"
+
+[[mutations]]
+name = "generated_mod_ident_digit_boundaries"
+file = "src/ir/mod.rs"
+pattern = "        .without_boundaries(&[Boundary::UpperDigit, Boundary::LowerDigit])"
+change = "        .without_boundaries(&[Boundary::UpperDigit])"
+
+[[mutations]]
+name = "contract_schema_name_default_lowercase"
+file = "src/ast/schema/contract_schema.rs"
+pattern = "                .unwrap_or_else(|| module_ident.to_string()),"
+change = "                .unwrap_or_else(|| module_ident.to_string().to_lowercase()),"
+
+[[mutations]]
+name = "ty_unreferenced_double_ref_kept"
+file = "src/utils/ty.rs"
+pattern = "                unreferenced_ty(elem)"
+change = "                slice_to_vec(elem)"
+
+[[mutations]]
+name = "ty_slice_not_vec"
+file = "src/utils/ty.rs"
+pattern = "            parse_quote!(odra::prelude::vec::Vec<#elem>)"
+change = "            parse_quote!([#elem])"
+
+[[mutations]]
+name = "entrypoints_upgrader_public"
+file = "src/ast/entrypoints_item.rs"
+pattern = "            is_constructor: matches!(f.fn_type(), FnType::Constructor | FnType::Upgrader),"
+change = "            is_constructor: matches!(f.fn_type(), FnType::Constructor),"
+
+[[mutations]]
+name = "entrypoints_non_reentrant_attr_dropped"
+file = "src/ast/entrypoints_item.rs"
+pattern = "            is_non_reentrant: f.is_non_reentrant()"
+change = "            is_non_reentrant: false"
+
+[[mutations]]
+name = "ref_helpers_trait_impl_allowed"
+file = "src/ast/ref_helpers_item.rs"
+pattern = "        if let Some((_, path, _)) = &item_impl.trait_ {"
+change = "        if let Some((_, path, _)) = item_impl.trait_.as_ref().filter(|_| false) {"
+
+[[mutations]]
+name = "ref_helpers_generic_params_allowed"
+file = "src/ast/ref_helpers_item.rs"
+pattern = "        if !item_impl.generics.params.is_empty() {"
+change = "        if false {"
+
+[[mutations]]
+name = "ref_helpers_generic_args_allowed"
+file = "src/ast/ref_helpers_item.rs"
+pattern = "        if !last.arguments.is_none() {"
+change = "        if false {"
+
+[[mutations]]
+name = "ref_helpers_suffix_on_first_segment"
+file = "src/ast/ref_helpers_item.rs"
+pattern = "            if let Some(last) = path.segments.last_mut() {"
+change = "            if let Some(last) = path.segments.first_mut() {"
+
+[[mutations]]
+name = "ref_helpers_host_ref_impl_cfg_dropped"
+file = "src/ast/ref_helpers_item.rs"
+pattern = '#[cfg(not(target_arch = "wasm32"))]'
+change = ""
+
+[[mutations]]
+name = "lib_ref_helpers_args_allowed"
+file = "src/lib.rs"
+pattern = "    if !attr.is_empty() {"
+change = "    if false {"
+skip = "not reachable from the unit tests: the check is in the proc_macro entry point ref_helpers, which takes proc_macro::TokenStream; covered by the compile-fail test ref_helpers_misuse of the odra crate (#[odra::ref_helpers(extra)])"
+
+[[mutations]]
+name = "lib_runtime_args_unit_struct_error"
+file = "src/lib.rs"
+pattern = "        syn::Fields::Unit => return Ok(into_runtime_args_impl(&item.ident, [].into_iter()))"
+change = "        syn::Fields::Unit => return Err(errors::runtime_args_on_non_struct(item))"
+
+[[mutations]]
+name = "lib_runtime_args_name_not_stringified"
+file = "src/lib.rs"
+pattern = "insert_runtime_arg(self.#name, stringify!(#name), &mut #args_ident);"
+change = 'insert_runtime_arg(self.#name, "", &mut #args_ident);'

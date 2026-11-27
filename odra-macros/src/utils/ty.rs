@@ -23,3 +23,6 @@ pub fn unreferenced_ty(ty: &syn::Type) -> syn::Type {
         _ => slice_to_vec(ty)
     }
 }
+
+#[cfg(test)]
+mod tests;

@@ -23,3 +23,18 @@ fn test_contract_item() {
     };
     test_utils::assert_eq(item, expected);
 }
+
+/// `init` without arguments takes no init args; `upgrade` with arguments takes its own struct.
+#[test]
+fn test_contract_item_args_follow_each_function() {
+    let module = quote::quote! {
+        impl Erc20 {
+            pub fn init(&mut self) {}
+            pub fn upgrade(&mut self, admin: Address) {}
+        }
+    };
+    let module = crate::ir::ModuleImplIR::try_from((&quote::quote!(), &module)).unwrap();
+    let item = ContractItem::try_from(&module).unwrap();
+    test_utils::assert_contains(&item, quote::quote!(type InitArgs = odra::host::NoArgs;));
+    test_utils::assert_contains(&item, quote::quote!(type UpgradeArgs = Erc20UpgradeArgs;));
+}

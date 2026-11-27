@@ -43,3 +43,14 @@ fn contract_schema_item() {
     );
     test_utils::assert_eq(item, &expected);
 }
+
+/// Without `name = ".."` the contract is named as its struct.
+#[test]
+fn contract_schema_item_without_name() {
+    let module = test_utils::mock::empty_module_definition();
+    let item = SchemaItem::try_from(&module).unwrap();
+    test_utils::assert_contains_text(
+        item,
+        r#"odra::schema::schema::<CounterPack>("CounterPack", "CounterPack", version,"#
+    );
+}
