@@ -193,3 +193,53 @@ fn deployer_delegated() {
     let deployer_item = DeployerItem::try_from(&module).unwrap();
     test_utils::assert_eq(deployer_item, &expected);
 }
+
+/// The host lists an `#[odra(offchain)]` function as an offchain entry point and dispatches it like the others.
+#[test]
+fn test_deployer_offchain_entry_point() {
+    let module = test_utils::mock::module_offchain();
+    let expected = quote! {
+            impl odra::host::EntryPointsCallerProvider for Erc20HostRef {
+                fn entry_points_caller() -> odra::entry_point_callback::EntryPointsCaller {
+                    let entry_points = odra::prelude::vec![
+                        odra::entry_point_callback::EntryPoint::new(odra::prelude::string::String::from("balance_of"),
+                        odra::prelude::vec![odra::entry_point_callback::Argument::new:: < Address
+                        > (odra::prelude::string::String::from("owner"))]),
+                        odra::entry_point_callback::EntryPoint::new_offchain(odra::prelude::string::String::from("balances"),
+                        odra::prelude::vec![odra::entry_point_callback::Argument::new:: < Vec <
+                        Address > > (odra::prelude::string::String::from("owners"))])
+                    ];
+                    odra::entry_point_callback::EntryPointsCaller::new(
+                        entry_points,
+                        |__odra_contract_env, __odra_call_def| {
+                            match __odra_call_def.entry_point() {
+                                "balance_of" => {
+                                    let __odra_result = __erc20_exec_parts::execute_balance_of(
+                                        __odra_contract_env,
+                                    );
+                                    odra::utils::try_serialize(&__odra_result)
+                                }
+                                "balances" => {
+                                    let __odra_result = __erc20_exec_parts::execute_balances(
+                                        __odra_contract_env,
+                                    );
+                                    odra::utils::try_serialize(&__odra_result)
+                                }
+                                name => {
+                                    Err(
+                                        OdraError::VmError(
+                                            odra::VmError::NoSuchMethod(
+                                                odra::prelude::String::from(name),
+                                            ),
+                                        ),
+                                    )
+                                }
+                            }
+                        },
+                    )
+                }
+            }
+    };
+    let actual = DeployerItem::try_from(&module).unwrap();
+    test_utils::assert_eq(actual, expected);
+}

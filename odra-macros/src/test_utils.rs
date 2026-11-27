@@ -177,6 +177,29 @@ pub mod mock {
         ModuleImplIR::try_from((&attr, &module)).unwrap()
     }
 
+    /// A module with an `#[odra(offchain)]` function next to an entry point: the offchain one
+    /// is callable on the host ref and listed in the schema, but is not an entry point of the
+    /// deployed contract.
+    pub fn module_offchain() -> ModuleImplIR {
+        let module = quote! {
+            impl Erc20 {
+                /// Returns the balance of the owner.
+                pub fn balance_of(&self, owner: Address) -> U256 {
+                    self.balances.get_or_default(&owner)
+                }
+
+                /// Returns the balances of the owners.
+                #[odra(offchain)]
+                pub fn balances(&self, owners: Vec<Address>) -> Vec<U256> {
+                    owners.iter().map(|owner| self.balance_of(*owner)).collect()
+                }
+            }
+        };
+
+        let attr = quote!();
+        ModuleImplIR::try_from((&attr, &module)).unwrap()
+    }
+
     pub fn module_invalid_delegation() -> syn::Result<ModuleImplIR> {
         let module = quote! {
             impl Erc20 {
@@ -324,6 +347,43 @@ pub mod mock {
         let attr = quote!();
         ModuleImplIR::try_from((&attr, &ext)).unwrap()
     }
+}
+
+/// The generated code as one string without whitespace, to look for a fragment in it.
+fn squashed<T: ToTokens>(code: T) -> String {
+    code.to_token_stream()
+        .to_string()
+        .chars()
+        .filter(|c| !c.is_whitespace())
+        .collect()
+}
+
+/// How many times `fragment` occurs in `code`, compared as tokens.
+pub fn count_fragment<A: ToTokens, B: ToTokens>(code: A, fragment: B) -> usize {
+    squashed(code).matches(&squashed(fragment)).count()
+}
+
+/// Asserts that `fragment` occurs in `code`, compared as tokens: for a test about one part of
+/// a large expansion.
+#[track_caller]
+pub fn assert_contains<A: ToTokens, B: ToTokens>(code: A, fragment: B) {
+    let (code, fragment) = (squashed(code), squashed(fragment));
+    assert!(
+        code.contains(&fragment),
+        "fragment\n  {fragment}\nnot found in\n  {code}"
+    );
+}
+
+/// [assert_contains] for a fragment that is not a token stream on its own, such as the start
+/// of a block.
+#[track_caller]
+pub fn assert_contains_text<A: ToTokens>(code: A, fragment: &str) {
+    let fragment: String = fragment.chars().filter(|c| !c.is_whitespace()).collect();
+    let code = squashed(code);
+    assert!(
+        code.contains(&fragment),
+        "fragment\n  {fragment}\nnot found in\n  {code}"
+    );
 }
 
 #[track_caller]

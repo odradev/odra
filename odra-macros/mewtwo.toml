@@ -1,0 +1,589 @@
+[mewtwo]
+build-command = "cargo test -p odra-macros --no-run"
+test-all-command = "cargo test -p odra-macros"
+test-one-command = "cargo test -p odra-macros -- --exact TEST_NAME"
+
+[[mutations]]
+name = "exec_uses_env_payable_dropped"
+file = "src/ast/exec_parts.rs"
+pattern = """
+            uses_exec_env: func.is_payable()
+                || func.is_non_reentrant()"""
+change = "            uses_exec_env: func.is_non_reentrant()"
+
+[[mutations]]
+name = "exec_uses_env_non_reentrant_dropped"
+file = "src/ast/exec_parts.rs"
+pattern = """
+                || func.is_non_reentrant()
+                || func.has_args()"""
+change = "                || func.has_args()"
+
+[[mutations]]
+name = "exec_uses_env_has_args_dropped"
+file = "src/ast/exec_parts.rs"
+pattern = """
+                || func.has_args()
+"""
+change = ""
+
+[[mutations]]
+name = "exec_uses_env_upgrader_dropped"
+file = "src/ast/exec_parts.rs"
+pattern = """
+                || func.has_args()
+                || func.is_upgrader(),"""
+change = "                || func.has_args(),"
+
+[[mutations]]
+name = "deployer_ep_offchain_branch_false"
+file = "src/ast/deployer_item.rs"
+pattern = "    if is_offchain {"
+change = "    if false {"
+
+[[mutations]]
+name = "deployer_ep_payable_branch_false"
+file = "src/ast/deployer_item.rs"
+pattern = "    } else if is_payable {"
+change = "    } else if false {"
+
+[[mutations]]
+name = "wasm_installed_ep_upgrader_branch_false"
+file = "src/ast/wasm_parts.rs"
+pattern = "    } else if func.is_upgrader() {"
+change = "    } else if false {"
+
+[[mutations]]
+name = "wasm_installed_ep_payable_false"
+file = "src/ast/wasm_parts.rs"
+pattern = """
+            func.is_payable(),
+            func.is_non_reentrant()
+        )"""
+change = """
+            false,
+            func.is_non_reentrant()
+        )"""
+
+[[mutations]]
+name = "wasm_installed_ep_non_reentrant_false"
+file = "src/ast/wasm_parts.rs"
+pattern = """
+            func.is_payable(),
+            func.is_non_reentrant()
+        )"""
+change = """
+            func.is_payable(),
+            false
+        )"""
+
+[[mutations]]
+name = "ref_host_fn_pub_on_trait_impl"
+file = "src/ast/ref_utils.rs"
+pattern = """
+    let pub_vis = match is_trait_impl {
+        true => None,"""
+change = """
+    let pub_vis = match is_trait_impl {
+        true => Some(visibility_pub()),"""
+
+[[mutations]]
+name = "ref_contract_fn_pub_on_trait_impl"
+file = "src/ast/ref_utils.rs"
+pattern = "        true => visibility_default(),"
+change = "        true => visibility_pub(),"
+
+[[mutations]]
+name = "ref_call_def_is_mut_true"
+file = "src/ast/ref_utils.rs"
+pattern = """
+    let args_block = runtime_args_with_amount_block(fun);
+    let is_mut = fun.is_mut();"""
+change = """
+    let args_block = runtime_args_with_amount_block(fun);
+    let is_mut = true;"""
+
+[[mutations]]
+name = "ref_factory_call_def_is_mut_true"
+file = "src/ast/ref_utils.rs"
+pattern = """
+    let args = utils::ident::named_args();
+    let is_mut = fun.is_mut();"""
+change = """
+    let args = utils::ident::named_args();
+    let is_mut = true;"""
+skip = "equivalent: the factory call defs are built only for the synthesized new_contract, upgrade_child_contract and batch_upgrade_child_contract, all &mut self (ModuleImplIR::factory_fn and siblings), so is_mut is always true"
+
+[[mutations]]
+name = "ref_factory_upgrade_cfg_create_group_true"
+file = "src/ast/ref_utils.rs"
+pattern = '(false, "odra_cfg_create_upgrade_group"'
+change = '(true, "odra_cfg_create_upgrade_group"'
+
+[[mutations]]
+name = "ref_factory_install_cfg_is_upgrade_true"
+file = "src/ast/ref_utils.rs"
+pattern = '(false, "odra_cfg_is_upgrade"'
+change = '(true, "odra_cfg_is_upgrade"'
+
+[[mutations]]
+name = "ref_factory_upgrader_gets_install_cfg"
+file = "src/ast/ref_utils.rs"
+pattern = "        FnType::FactoryUpgrader => quote::quote!(#(#fn_args)* #upgrade_cfg),"
+change = "        FnType::FactoryUpgrader => quote::quote!(#install_cfg #(#fn_args)*),"
+
+[[mutations]]
+name = "ref_filtered_attrs_keep_odra"
+file = "src/ast/ref_utils.rs"
+pattern = """
+        .filter(|attr| !attr.path().is_ident("odra"))
+        .cloned()"""
+change = "        .cloned()"
+
+[[mutations]]
+name = "ref_amount_gt_to_ge"
+file = "src/ast/ref_utils.rs"
+pattern = "if self.attached_value > #zero {"
+change = "if self.attached_value >= #zero {"
+
+[[mutations]]
+name = "schema_ep_payable_purse_dropped"
+file = "src/ast/schema/entry_points.rs"
+pattern = "        if f.is_payable() {"
+change = "        if false {"
+
+[[mutations]]
+name = "schema_ep_offchain_fn_always"
+file = "src/ast/schema/entry_points.rs"
+pattern = "let offchain_fn = (!offchain_entry_points.is_empty()).then"
+change = "let offchain_fn = true.then"
+
+[[mutations]]
+name = "schema_factory_ctor_payable_true"
+file = "src/ast/schema/entry_points.rs"
+pattern = """
+                is_mut: true,
+                is_payable: false,"""
+change = """
+                is_mut: true,
+                is_payable: true,"""
+
+[[mutations]]
+name = "schema_ep_description_never_delegated"
+file = "src/ast/schema/entry_points.rs"
+pattern = "        let description = match f.inherits_description_from() {"
+change = "        let description = match None::<&syn::ExprField> {"
+
+[[mutations]]
+name = "schema_rebase_field_not_recursive"
+file = "src/ast/schema/entry_points.rs"
+pattern = "            let inner = rebase_field(inner, base);"
+change = "            let inner: syn::Expr = parse_quote!(#base.#inner);"
+skip = "equivalent: ir::delegate::parse_self_field accepts only to self.FIELD, so the target is never a nested field and the recursive branch of rebase_field is never reached (dead code)"
+
+[[mutations]]
+name = "schema_version_default_dropped"
+file = "src/ast/schema/contract_schema.rs"
+pattern = '"" => env!("CARGO_PKG_VERSION"),'
+change = '"" => "",'
+
+[[mutations]]
+name = "schema_authors_empty_kept"
+file = "src/ast/schema/contract_schema.rs"
+pattern = "if s.is_empty() { None }"
+change = "if false { None }"
+
+[[mutations]]
+name = "schema_custom_types_no_dedup"
+file = "src/ast/schema/custom_types.rs"
+pattern = "            if tmp.insert(v.to_string()) {"
+change = "            if { tmp.insert(v.to_string()); true } {"
+
+[[mutations]]
+name = "schema_custom_types_return_type_dropped"
+file = "src/ast/schema/custom_types.rs"
+pattern = "                        types.push(*t);"
+change = "                        let _ = t;"
+
+[[mutations]]
+name = "schema_custom_types_events_dropped"
+file = "src/ast/schema/custom_types.rs"
+pattern = """
+                        .chain(<Self as odra::schema::SchemaEvents>::custom_types())
+"""
+change = ""
+
+[[mutations]]
+name = "entrypoints_offchain_included"
+file = "src/ast/entrypoints_item.rs"
+pattern = """
+                .onchain_functions()
+                .into_iter()"""
+change = """
+                .functions()
+                .iter()"""
+
+[[mutations]]
+name = "contract_ref_offchain_included"
+file = "src/ast/contract_ref_item.rs"
+pattern = """
+                    .onchain_functions()
+                    .into_iter()"""
+change = """
+                    .functions()
+                    .iter()"""
+
+[[mutations]]
+name = "wasm_offchain_included"
+file = "src/ast/wasm_parts.rs"
+pattern = "            Target::Module => module.onchain_functions(),"
+change = "            Target::Module => module.functions().iter().collect::<Vec<_>>(),"
+
+[[mutations]]
+name = "schema_ep_offchain_in_onchain_list"
+file = "src/ast/schema/entry_points.rs"
+pattern = """
+                .onchain_functions()
+                .into_iter()"""
+change = """
+                .functions()
+                .iter()"""
+
+[[mutations]]
+name = "schema_ep_offchain_list_from_onchain"
+file = "src/ast/schema/entry_points.rs"
+pattern = """
+                .offchain_functions()
+                .into_iter()"""
+change = """
+                .onchain_functions()
+                .into_iter()"""
+
+[[mutations]]
+name = "host_ref_register_trait_too"
+file = "src/ast/host_ref_item.rs"
+pattern = "            register: matches!(module, ModuleImplIR::Impl(_))"
+change = "            register: true"
+
+[[mutations]]
+name = "host_ref_mut_ret_fns_always"
+file = "src/ast/host_ref_item.rs"
+pattern = "(!mut_ret_functions.is_empty()).then"
+change = "true.then"
+
+[[mutations]]
+name = "host_ref_offchain_excluded"
+file = "src/ast/host_ref_item.rs"
+pattern = """
+                            .iter()
+                            .map(|f| ref_utils::host_function_item(f, is_trait_impl))"""
+change = """
+                            .iter()
+                            .filter(|f| !f.is_offchain())
+                            .map(|f| ref_utils::host_function_item(f, is_trait_impl))"""
+
+[[mutations]]
+name = "ir_mut_ret_ignores_return"
+file = "src/ir/module_impl.rs"
+pattern = ".filter(|f| f.is_mut() && f.return_type() != syn::ReturnType::Default)"
+change = ".filter(|f| f.is_mut())"
+
+[[mutations]]
+name = "ir_mut_ret_ignores_mut"
+file = "src/ir/module_impl.rs"
+pattern = ".filter(|f| f.is_mut() && f.return_type() != syn::ReturnType::Default)"
+change = ".filter(|f| f.return_type() != syn::ReturnType::Default)"
+
+[[mutations]]
+name = "ir_fn_reserved_name_check_dropped"
+file = "src/ir/function.rs"
+pattern = "    if PROTECTED_FUNCTIONS.contains(&name.to_string().as_str()) {"
+change = "    if false {"
+
+[[mutations]]
+name = "ir_fn_reserved_arg_check_dropped"
+file = "src/ir/function.rs"
+pattern = "    if PROTECTED_ARGS.contains(&name.to_string().as_str()) {"
+change = "    if false {"
+
+[[mutations]]
+name = "ir_fn_mut_ref_arg_allowed"
+file = "src/ir/function.rs"
+pattern = "        syn::Type::Reference(reference) if reference.mutability.is_some() => {"
+change = "        syn::Type::Reference(reference) if false => {"
+
+[[mutations]]
+name = "ir_fn_missing_receiver_allowed"
+file = "src/ir/function.rs"
+pattern = "        None => Some(errors::fn_without_receiver(&sig.ident)),"
+change = "        None => None,"
+
+[[mutations]]
+name = "ir_fn_attrs_on_init_allowed"
+file = "src/ir/function.rs"
+pattern = "    if !NO_ODRA_ATTRIBUTE_FUNCTIONS.contains(&fn_name) {"
+change = "    if true {"
+
+[[mutations]]
+name = "ir_offchain_mut_receiver_allowed"
+file = "src/ir/function.rs"
+pattern = "    } else if is_mut {"
+change = "    } else if false {"
+
+[[mutations]]
+name = "ir_attr_duplicate_allowed"
+file = "src/ir/attr.rs"
+pattern = "            if self.has(flag) || flags.contains(&flag) {"
+change = "            if false {"
+
+[[mutations]]
+name = "ir_attr_empty_allowed"
+file = "src/ir/attr.rs"
+pattern = "        if metas.is_empty() {"
+change = "        if false {"
+
+[[mutations]]
+name = "ty_unit_enum_any_instead_of_all"
+file = "src/ir/ty.rs"
+pattern = "let is_unit = variants.iter().all(|v| v.fields.is_empty());"
+change = "let is_unit = variants.iter().any(|v| v.fields.is_empty());"
+
+[[mutations]]
+name = "ty_code_explicit_discriminant_ignored"
+file = "src/ir/ty.rs"
+pattern = "let code = discriminant.unwrap_or(next);"
+change = "let code = next;"
+
+[[mutations]]
+name = "ty_code_next_from_previous_implicit"
+file = "src/ir/ty.rs"
+pattern = "next = code.wrapping_add(1);"
+change = "next = next.wrapping_add(1);"
+
+[[mutations]]
+name = "ty_error_variant_with_data_allowed"
+file = "src/ir/ty.rs"
+pattern = "        errors::check_all(variants.iter().map(|v| match v.fields.is_empty() {"
+change = "        errors::check_all(variants.iter().map(|v| match true {"
+
+[[mutations]]
+name = "odra_type_unit_enum_cl_type_any"
+file = "src/ast/odra_type_item.rs"
+pattern = "TypeKind::UnitEnum { .. } => quote!(odra::casper_types::CLType::U8),"
+change = "TypeKind::UnitEnum { .. } => quote!(odra::casper_types::CLType::Any),"
+
+[[mutations]]
+name = "odra_type_enum_tag_off_by_one"
+file = "src/ast/odra_type_item.rs"
+pattern = """
+                let to_bytes_arms = variants.iter().enumerate().map(|(index, v)| {
+                    let index = index as u8;"""
+change = """
+                let to_bytes_arms = variants.iter().enumerate().map(|(index, v)| {
+                    let index = (index + 1) as u8;"""
+
+[[mutations]]
+name = "odra_type_enum_length_tag_dropped"
+file = "src/ast/odra_type_item.rs"
+pattern = "quote!(#pattern => #u8_len #(+ #names.serialized_length())*)"
+change = "quote!(#pattern => 0 #(+ #names.serialized_length())*)"
+
+[[mutations]]
+name = "odra_type_tuple_field_names_swapped"
+file = "src/ast/odra_type_item.rs"
+pattern = '            None => format_ident!("f{}", index)'
+change = '            None => format_ident!("f{}", 0usize)'
+
+[[mutations]]
+name = "event_field_types_not_deduped"
+file = "src/ast/event/mod.rs"
+pattern = """
+            .filter(|chained| seen.insert(chained.to_string()))
+"""
+change = """
+            .filter(|chained| { seen.insert(chained.to_string()); true })
+"""
+
+[[mutations]]
+name = "event_name_prefix_dropped"
+file = "src/ast/event/mod.rs"
+pattern = 'let event_name = format!("event_{}", ident);'
+change = 'let event_name = format!("{}", ident);'
+
+[[mutations]]
+name = "error_item_name_not_stringified"
+file = "src/ast/error_item.rs"
+pattern = "OdraError::user(error as u16, stringify!(#variants))"
+change = "OdraError::user(error as u16, stringify!(#ident))"
+
+[[mutations]]
+name = "schema_custom_named_variant_no_subtype"
+file = "src/ast/schema/custom_item.rs"
+pattern = "                0 => quote::quote!(odra::schema::enum_variant(#name, #code),),"
+change = "                _ if true => quote::quote!(odra::schema::enum_variant(#name, #code),),"
+
+[[mutations]]
+name = "schema_custom_tuple_variant_one_as_tuple"
+file = "src/ast/schema/custom_item.rs"
+pattern = "                    [ty] => quote::quote!(odra::schema::enum_typed_variant::<#ty>(#name, #code),),"
+change = "                    [ty] => quote::quote!(odra::schema::enum_typed_variant::<(#ty,)>(#name, #code),),"
+
+[[mutations]]
+name = "schema_custom_struct_subtypes_dropped"
+file = "src/ast/schema/custom_item.rs"
+pattern = "                    quote::quote!(.chain(<#ty as odra::schema::SchemaCustomTypes>::schema_types()))"
+change = "                    { let _ = ty; quote::quote!() }"
+
+[[mutations]]
+name = "schema_custom_enum_named_subtypes_dropped"
+file = "src/ast/schema/custom_item.rs"
+pattern = "                        Some(quote::quote!(odra::schema::custom_struct(#ty_name, odra::prelude::vec![#(#fields),*])))"
+change = "                        { let _ = (ty_name, fields); None::<proc_macro2::TokenStream> }"
+
+[[mutations]]
+name = "schema_errors_code_zero"
+file = "src/ast/schema/errors.rs"
+pattern = """
+                        v.code
+"""
+change = """
+                        0u16
+"""
+
+[[mutations]]
+name = "docs_description_blank_lines_kept"
+file = "src/utils/syn.rs"
+pattern = """
+        .filter(|line| !line.is_empty())
+"""
+change = ""
+
+[[mutations]]
+name = "docs_description_not_trimmed"
+file = "src/utils/syn.rs"
+pattern = "        .map(|line| line.trim())"
+change = "        .map(|line| line.trim_end())"
+
+[[mutations]]
+name = "cast_ty_turbofish_dropped"
+file = "src/utils/syn.rs"
+pattern = "                    ps.arguments = syn::PathArguments::AngleBracketed(generic_arg);"
+change = "                    let _ = generic_arg;"
+
+[[mutations]]
+name = "wasm_call_init_upgrade_args_swapped"
+file = "src/ast/wasm_parts.rs"
+pattern = "let #named_args = if is_upgrade { #upgrade_args } else { #init_args };"
+change = "let #named_args = if is_upgrade { #init_args } else { #upgrade_args };"
+
+[[mutations]]
+name = "wasm_call_upgrade_reads_init_args"
+file = "src/ast/wasm_parts.rs"
+pattern = "                let upgrade_args = forwarded_args(&self.upgrade_args);"
+change = "                let upgrade_args = forwarded_args(&self.init_args);"
+
+[[mutations]]
+name = "wasm_override_caller_upgrader_dropped"
+file = "src/ast/wasm_parts.rs"
+pattern = "&& matches!(func.fn_type(), FnType::Constructor | FnType::Upgrader)"
+change = "&& matches!(func.fn_type(), FnType::Constructor)"
+
+[[mutations]]
+name = "wasm_override_caller_in_module_too"
+file = "src/ast/wasm_parts.rs"
+pattern = "            override_caller: kind == Target::Factory"
+change = "            override_caller: true"
+
+[[mutations]]
+name = "wasm_returns_value_ignored"
+file = "src/ast/wasm_parts.rs"
+pattern = "returns_value: !matches!(func.return_type(), syn::ReturnType::Default),"
+change = "returns_value: true,"
+
+[[mutations]]
+name = "wasm_child_entry_points_dropped"
+file = "src/ast/wasm_parts.rs"
+pattern = "                child_entry_points: Some(functions.iter().copied().map(installed_entry_point).collect())"
+change = "                child_entry_points: None"
+
+[[mutations]]
+name = "factory_struct_emitted_always"
+file = "src/ast/factory/mod.rs"
+pattern = """
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        let is_factory = self.is_factory;
+        if !is_factory {
+            return;
+        }
+
+        let factory_module_ident"""
+change = """
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        let is_factory = self.is_factory;
+        if !is_factory && false {
+            return;
+        }
+
+        let factory_module_ident"""
+
+[[mutations]]
+name = "factory_impl_emitted_always"
+file = "src/ast/factory/mod.rs"
+pattern = """
+        if !is_factory {
+            return;
+        }
+        let factory_module_ident"""
+change = """
+        if !is_factory && false {
+            return;
+        }
+        let factory_module_ident"""
+
+[[mutations]]
+name = "factory_impl_allow_unused_dropped"
+file = "src/ast/factory/mod.rs"
+pattern = "                attrs.push(parse_quote!(#[allow(unused_variables)]));"
+change = ""
+
+[[mutations]]
+name = "factory_batch_upgrade_missing_key_not_skipped"
+file = "src/ast/factory/parts/wasm_parts.rs"
+pattern = "                    if let Some(key) = contract_key {"
+change = "                    if let key = contract_key.unwrap() {"
+
+[[mutations]]
+name = "module_struct_max_fields_off_by_one"
+file = "src/ir/module_struct.rs"
+pattern = "        if code.fields.len() > MAX_FIELDS {"
+change = "        if code.fields.len() >= MAX_FIELDS {"
+
+[[mutations]]
+name = "module_struct_field_index_from_zero"
+file = "src/ir/module_struct.rs"
+pattern = "                    idx: idx as u8 + 1,"
+change = "                    idx: idx as u8,"
+
+[[mutations]]
+name = "config_factory_off_is_on"
+file = "src/ir/config.rs"
+pattern = '        "off" => Ok(false),'
+change = '        "off" => Ok(true),'
+
+[[mutations]]
+name = "config_factory_allowed_on_impl_dropped"
+file = "src/ir/config.rs"
+pattern = 'self.given.iter().filter(|(name, _)| *name != "factory")'
+change = 'self.given.iter().filter(|(name, _)| true || *name != "factory")'
+
+[[mutations]]
+name = "config_version_into_name"
+file = "src/ir/config.rs"
+pattern = "                    config.version = Some(input.parse::<syn::LitStr>().map_err(bad_value)?.value())"
+change = "                    config.name = Some(input.parse::<syn::LitStr>().map_err(bad_value)?.value())"
+
+[[mutations]]
+name = "config_arg_twice_allowed"
+file = "src/ir/config.rs"
+pattern = "            if config.given.iter().any(|(given, _)| *given == arg) {"
+change = "            if false {"

@@ -259,3 +259,31 @@ fn test() {
 
     test_utils::assert_eq(actual, expected);
 }
+
+/// A factory installs and upgrades its children itself, so its `new_contract` and the child's
+/// `init` and `upgrade` restore the real caller first; the other entry points do not.
+#[test]
+fn test_child_init_and_upgrade_override_the_caller() {
+    let module = quote::quote! {
+        impl Erc20Factory {
+            pub fn init(&mut self, value: u32) {}
+            pub fn upgrade(&mut self) {}
+            pub fn total_supply(&self) -> U256 {
+                U256::zero()
+            }
+        }
+    };
+    let attr = quote::quote!();
+    let module = crate::ir::ModuleImplIR::try_from((&attr, &module)).unwrap();
+    let actual = ModuleWasmPartsItem::try_new(&module, Target::Factory).unwrap();
+    let override_caller =
+        quote::quote!(odra::odra_casper_wasm_env::host_functions::override_factory_caller(););
+    for name in ["new_contract", "init", "upgrade"] {
+        // The function's opening brace has no closing one here, so the fragment is text.
+        test_utils::assert_contains_text(
+            &actual,
+            &format!("fn {name}() {{ {override_caller}")
+        );
+    }
+    assert_eq!(test_utils::count_fragment(&actual, override_caller), 3);
+}

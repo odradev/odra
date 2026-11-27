@@ -47,3 +47,12 @@ fn test_factory_module_impl_item_generation() {
     };
     test_utils::assert_eq(actual, expected);
 }
+
+#[test]
+fn test_non_factory_module_impl_item_generation() {
+    let ir = mock::module_impl();
+    let actual = FactoryModuleImplItem::try_from(&ir).expect("A valid FactoryModuleImplItem");
+
+    let expected = quote::quote! {};
+    test_utils::assert_eq(actual, expected);
+}

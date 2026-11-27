@@ -183,3 +183,25 @@ fn test_delegated_entrypoints() {
     let actual = HasEntrypointsImplItem::try_from(&module).unwrap();
     test_utils::assert_eq(actual, expected);
 }
+
+/// An `#[odra(offchain)]` function is not an entry point of the contract.
+#[test]
+fn test_offchain_function_is_not_an_entrypoint() {
+    let module = test_utils::mock::module_offchain();
+    let expected = quote! {
+        impl odra::contract_def::HasEntrypoints for Erc20 {
+            fn entrypoints() -> odra::prelude::vec::Vec<odra::contract_def::Entrypoint> {
+                odra::prelude::vec![
+                    odra::contract_def::Entrypoint { name :
+                    odra::prelude::string::String::from("balance_of"), args :
+                    odra::prelude::vec![odra::args::odra_argument:: < Address > ("owner")],
+                    is_mutable : false, return_ty : < U256 as odra::casper_types::CLTyped >
+                    ::cl_type(), ty : odra::contract_def::EntrypointType::Public, attributes :
+                    odra::prelude::vec![] }
+                ]
+            }
+        }
+    };
+    let actual = HasEntrypointsImplItem::try_from(&module).unwrap();
+    test_utils::assert_eq(actual, expected);
+}

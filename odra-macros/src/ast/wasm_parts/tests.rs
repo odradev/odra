@@ -412,3 +412,138 @@ fn test_delegate() {
 
     test_utils::assert_eq(actual, expected);
 }
+
+/// An `#[odra(offchain)]` function is neither installed nor exported by the wasm.
+#[test]
+fn test_offchain_function_has_no_wasm_entry_point() {
+    let module = test_utils::mock::module_offchain();
+    let expected = quote::quote! {
+            #[cfg(target_arch = "wasm32")]
+            #[cfg(any(odra_module = "Erc20", odra_module = "unknown_crate::Erc20"))]
+            mod __erc20_wasm_parts {
+                use super::*;
+                use odra::prelude::*;
+                #[inline]
+                fn entry_points() -> odra::casper_types::EntryPoints {
+                    use odra::entry_point::EntityEntryPointsExt;
+                    let mut entry_points = odra::casper_types::EntryPoints::new();
+                    entry_points
+                        .add(odra::entry_point::EntryPoint::Regular {
+                            name: "balance_of",
+                            args: vec![odra::args::parameter:: < Address > ("owner")],
+                            ret_ty: <U256 as odra::casper_types::CLTyped>::cl_type(),
+                            is_non_reentrant: false,
+                            is_payable: false,
+                        });
+                    entry_points
+                }
+                #[no_mangle]
+                fn call() {
+                    let schemas = odra::casper_event_standard::Schemas(
+                        <Erc20 as odra::contract_def::HasEvents>::event_schemas(),
+                    );
+                    let exec_env = {
+                        let env = odra::odra_casper_wasm_env::WasmContractEnv::new_env();
+                        let env_rc = Rc::new(env);
+                        odra::ExecutionEnv::new(env_rc)
+                    };
+                    let is_upgrade = exec_env.get_named_arg::<bool>("odra_cfg_is_upgrade");
+                    let __odra_named_args = if is_upgrade {
+                        Option::<odra::casper_types::RuntimeArgs>::None
+                    } else {
+                        Option::<odra::casper_types::RuntimeArgs>::None
+                    };
+                    odra::odra_casper_wasm_env::host_functions::install_or_upgrade(
+                        entry_points(),
+                        schemas,
+                        {
+                            #[cfg(odra_contract_schema)]
+                            let contract_schema = Some(
+                                include_str!(env!("ODRA_CONTRACT_SCHEMA_PATH")),
+                            );
+                            #[cfg(not(odra_contract_schema))]
+                            let contract_schema: Option<&'static str> = None;
+                            contract_schema
+                        },
+                        __odra_named_args,
+                    );
+                }
+                #[no_mangle]
+                fn balance_of() {
+                    let __odra_result = __erc20_exec_parts::execute_balance_of(
+                        odra::odra_casper_wasm_env::WasmContractEnv::new_env(),
+                    );
+                    odra::odra_casper_wasm_env::casper_contract::contract_api::runtime::ret(
+                        odra::odra_casper_wasm_env::casper_contract::unwrap_or_revert::UnwrapOrRevert::unwrap_or_revert(
+                            odra::casper_types::CLValue::from_t(__odra_result),
+                        ),
+                    );
+                }
+            }
+    };
+    let actual = ModuleWasmPartsItem::try_from(&module).unwrap();
+    test_utils::assert_eq(actual, expected);
+}
+
+/// The `CLType` of a generic return type is read through `<Ty::<Arg> as CLTyped>`.
+#[test]
+fn test_generic_return_type() {
+    let module = quote::quote! {
+        impl Erc20 {
+            pub fn cap(&self) -> Option<U256> {
+                None
+            }
+        }
+    };
+    let attr = quote::quote!();
+    let module = crate::ir::ModuleImplIR::try_from((&attr, &module)).unwrap();
+    let actual = ModuleWasmPartsItem::try_from(&module).unwrap();
+    test_utils::assert_contains(
+        actual,
+        quote::quote!(ret_ty: <Option::<U256> as odra::casper_types::CLTyped>::cl_type(),)
+    );
+}
+
+/// On install `call` forwards the arguments of `init`, on upgrade those of `upgrade`.
+#[test]
+fn test_call_forwards_init_or_upgrade_args() {
+    let module = quote::quote! {
+        impl Erc20 {
+            pub fn init(&mut self, cap: u32) {}
+            pub fn upgrade(&mut self, admin: Address) {}
+        }
+    };
+    let attr = quote::quote!();
+    let module = crate::ir::ModuleImplIR::try_from((&attr, &module)).unwrap();
+    let actual = ModuleWasmPartsItem::try_from(&module).unwrap();
+    test_utils::assert_contains(
+        actual,
+        quote::quote! {
+            let __odra_named_args = if is_upgrade {
+                {
+                    Some({
+                        let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
+                        odra::args::EntrypointArgument::insert_runtime_arg(
+                            exec_env.get_named_arg::<Address>("admin"),
+                            "admin",
+                            &mut __odra_named_args
+                        );
+                        __odra_named_args
+                    })
+                }
+            } else {
+                {
+                    Some({
+                        let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
+                        odra::args::EntrypointArgument::insert_runtime_arg(
+                            exec_env.get_named_arg::<u32>("cap"),
+                            "cap",
+                            &mut __odra_named_args
+                        );
+                        __odra_named_args
+                    })
+                }
+            };
+        }
+    );
+}

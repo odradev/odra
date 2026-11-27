@@ -102,3 +102,24 @@ fn event() {
     };
     test_utils::assert_eq(item, expected);
 }
+
+/// The custom types of a field type are chained once, however many fields have that type.
+#[test]
+fn event_field_types_are_chained_once() {
+    let item = OdraEventItem::try_from(&quote!(
+        pub struct Transfer {
+            pub from: Address,
+            pub to: Address,
+            pub amount: U256
+        }
+    ))
+    .unwrap();
+    let chained = |ty: proc_macro2::TokenStream| {
+        test_utils::count_fragment(
+            &item,
+            quote!(.chain(<#ty as odra::schema::SchemaEvents>::custom_types()))
+        )
+    };
+    assert_eq!(chained(quote!(Address)), 1);
+    assert_eq!(chained(quote!(U256)), 1);
+}
