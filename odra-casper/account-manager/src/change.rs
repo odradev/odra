@@ -102,6 +102,27 @@ impl AccountChange {
             && self.key_management_threshold.is_none()
     }
 
+    /// Reads the change back from the runtime arguments of the account manager wasm, for a
+    /// signer to see what a transaction does. `None` if an argument is missing or has another
+    /// type.
+    pub fn from_runtime_args(args: &RuntimeArgs) -> Option<Self> {
+        let set_keys: Vec<(AccountHash, u8)> = args.get(SET_KEYS_ARG)?.clone().into_t().ok()?;
+        let remove_keys: Vec<AccountHash> = args.get(REMOVE_KEYS_ARG)?.clone().into_t().ok()?;
+        let deployment_threshold: Option<u8> =
+            args.get(DEPLOYMENT_THRESHOLD_ARG)?.clone().into_t().ok()?;
+        let key_management_threshold: Option<u8> = args
+            .get(KEY_MANAGEMENT_THRESHOLD_ARG)?
+            .clone()
+            .into_t()
+            .ok()?;
+        Some(AccountChange {
+            set_keys: set_keys.into_iter().collect(),
+            remove_keys: remove_keys.into_iter().collect(),
+            deployment_threshold,
+            key_management_threshold
+        })
+    }
+
     /// The runtime arguments of the account manager wasm.
     pub fn to_runtime_args(&self) -> RuntimeArgs {
         let set_keys: Vec<(AccountHash, u8)> = self

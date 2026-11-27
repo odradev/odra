@@ -3,6 +3,7 @@ set -e
 
 cargo publish -p odra-build
 cargo publish -p odra-casper-account-manager
+cargo publish -p odra-casper-signing
 cargo publish -p odra-core
 cargo publish -p odra-macros
 cargo publish -p odra-vm
