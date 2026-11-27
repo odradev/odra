@@ -18,6 +18,8 @@ without changing the hash.
   `deployment` and `key_management` thresholds, and when it expires.
 - `decode_account_change`: the `AccountChange` an account manager transaction makes, read from the
   transaction itself, so a signer reviews what they sign instead of a description they were sent.
+- `build`: unsigned transactions (a native transfer as a `TransactionV1` or a legacy `Deploy`),
+  since casper-types has no public builder.
 - `SigningTransport`: where the transaction and its approvals are kept while they are collected.
   `FileTransport` keeps them in a directory (the offline flow); the CSPR.cloud awaiting deploy
   transport is planned (odradev/odra#726).

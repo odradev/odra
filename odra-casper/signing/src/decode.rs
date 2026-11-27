@@ -1,9 +1,7 @@
 use casper_types::{bytesrepr::FromBytes, Transaction, TransactionArgs, TransactionTarget};
 use odra_casper_account_manager::{AccountChange, ACCOUNT_MANAGER_WASM};
 
-/// Field indices of a TransactionV1 payload (as casper-client 5.0.0's builder writes them).
-const ARGS_MAP_KEY: u16 = 0;
-const TARGET_MAP_KEY: u16 = 1;
+use crate::build::{ARGS_MAP_KEY, TARGET_MAP_KEY};
 
 /// The change an account manager transaction makes, read from the transaction: its session
 /// code must be exactly `ACCOUNT_MANAGER_WASM` and its arguments must decode. `None` for any

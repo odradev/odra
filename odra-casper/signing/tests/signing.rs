@@ -322,3 +322,97 @@ fn the_file_transport_collects_approvals() {
     assert!(transport.path(&hash).starts_with(transport.dir()));
     std::fs::remove_dir_all(dir).unwrap();
 }
+
+fn header() -> odra_casper_signing::build::Header {
+    odra_casper_signing::build::Header {
+        chain_name: "casper-test".to_string(),
+        timestamp: Timestamp::from(NOW),
+        ttl: TimeDiff::from_seconds(1800),
+        payment: 100_000_000
+    }
+}
+
+#[test]
+fn a_legacy_deploy_is_signed_and_merged_the_same_way() {
+    use odra_casper_signing::build::unsigned_transfer_deploy;
+    let (state, keys) = account();
+    let unsigned = unsigned_transfer_deploy(
+        header(),
+        PublicKey::from(&keys[0]),
+        hash_of(&keys[1]),
+        2_500_000_000u64.into(),
+        Some(7)
+    )
+    .unwrap();
+    let Transaction::Deploy(deploy) = &unsigned else {
+        panic!("expected a Deploy");
+    };
+    deploy
+        .has_valid_hash()
+        .expect("body and header hashes are right");
+    assert_eq!(
+        inspect(&unsigned, &state, Timestamp::from(NOW)).status,
+        Status::Pending { missing: 2 }
+    );
+
+    // Two machines sign the same deploy; the signature strings say "deploy".
+    let lines: Vec<SignatureString> = [&keys[1], &keys[2]]
+        .into_iter()
+        .map(|key| SignatureString::new(unsigned.hash(), sign(&unsigned, key)).unwrap())
+        .collect();
+    assert!(lines[0].to_string().starts_with("odra-sig:deploy:"));
+    let parsed: Vec<_> = lines
+        .iter()
+        .map(|line| line.to_string().parse::<SignatureString>().unwrap())
+        .map(|line| line.approval_for(&unsigned).unwrap())
+        .collect();
+    let merged = merge(unsigned.clone(), parsed).unwrap();
+    assert_eq!(merged.hash(), unsigned.hash());
+    merged.verify().expect("hash and both signatures verify");
+    // The account's own key did not sign: weight comes from keys 2 and 3.
+    assert_eq!(
+        inspect(&merged, &state, Timestamp::from(NOW)).status,
+        Status::Ready
+    );
+
+    // A V1 signature does not fit a Deploy of the same transfer.
+    let v1 = odra_casper_signing::build::unsigned_transfer_v1(
+        header(),
+        InitiatorAddr::AccountHash(hash_of(&keys[0])),
+        hash_of(&keys[1]),
+        2_500_000_000u64.into(),
+        Some(7)
+    )
+    .unwrap();
+    assert!(merge(unsigned, [sign(&v1, &keys[1])]).is_err());
+
+    // The JSON the node takes, and back.
+    let json = serde_json::to_value(&merged).unwrap();
+    assert!(json.get("Deploy").is_some());
+    let back: Transaction = serde_json::from_value(json).unwrap();
+    assert_eq!(back, merged);
+}
+
+#[test]
+fn a_v1_transfer_with_an_account_hash_initiator() {
+    use odra_casper_signing::build::unsigned_transfer_v1;
+    let (state, keys) = account();
+    let unsigned = unsigned_transfer_v1(
+        header(),
+        InitiatorAddr::AccountHash(hash_of(&keys[0])),
+        hash_of(&keys[1]),
+        2_500_000_000u64.into(),
+        None
+    )
+    .unwrap();
+    let merged = merge(
+        unsigned.clone(),
+        [sign(&unsigned, &keys[1]), sign(&unsigned, &keys[2])]
+    )
+    .unwrap();
+    merged.verify().unwrap();
+    let inspection = inspect(&merged, &state, Timestamp::from(NOW));
+    assert_eq!(inspection.status, Status::Ready);
+    assert_eq!(inspection.account, hash_of(&keys[0]));
+    assert_eq!(decode_account_change(&merged), None);
+}
