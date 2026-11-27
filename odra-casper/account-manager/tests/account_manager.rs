@@ -2,10 +2,11 @@
 //! casper-engine-test-support, with the addressable entity model off, as on mainnet) and checks
 //! the account afterwards.
 
-use std::collections::BTreeSet;
+use std::{collections::BTreeSet, path::PathBuf, sync::OnceLock};
 
 use casper_engine_test_support::{
-    ExecuteRequestBuilder, LmdbWasmTestBuilder, DEFAULT_ACCOUNT_ADDR, LOCAL_GENESIS_REQUEST
+    ChainspecConfig, ExecuteRequestBuilder, LmdbWasmTestBuilder, CHAINSPEC_SYMLINK,
+    DEFAULT_ACCOUNTS, DEFAULT_ACCOUNT_ADDR, DEFAULT_PROTOCOL_VERSION
 };
 use casper_execution_engine::{engine_state, execution::ExecError};
 use casper_types::{account::AccountHash, ApiError};
@@ -15,14 +16,39 @@ fn key(n: u8) -> AccountHash {
     AccountHash::new([n; 32])
 }
 
+/// The local chainspec of casper-engine-test-support, written from its `chainspec.toml.in`
+/// template here instead of read from the `chainspec.toml` its build script writes into its
+/// source directory: a CI cache restores that directory without the generated file while the
+/// build script counts as fresh (the casper-vm job of the Odra CI works around the same thing).
+fn chainspec_path() -> &'static PathBuf {
+    static PATH: OnceLock<PathBuf> = OnceLock::new();
+    PATH.get_or_init(|| {
+        let template = CHAINSPEC_SYMLINK.with_file_name("chainspec.toml.in");
+        let chainspec = std::fs::read_to_string(&template)
+            .unwrap_or_else(|error| panic!("cannot read {}: {error}", template.display()))
+            .replace("${TIMESTAMP}", "2026-01-01T00:00:00Z");
+        let path = std::env::temp_dir().join(format!(
+            "odra-account-manager-chainspec-{}.toml",
+            std::process::id()
+        ));
+        std::fs::write(&path, chainspec).expect("the chainspec is written");
+        path
+    })
+}
+
 struct Chain {
     builder: LmdbWasmTestBuilder
 }
 
 impl Chain {
     fn new() -> Self {
-        let mut builder = LmdbWasmTestBuilder::default();
-        builder.run_genesis(LOCAL_GENESIS_REQUEST.clone()).commit();
+        let chainspec =
+            ChainspecConfig::from_chainspec_path(chainspec_path()).expect("the chainspec loads");
+        let genesis = chainspec
+            .create_genesis_request(DEFAULT_ACCOUNTS.clone(), DEFAULT_PROTOCOL_VERSION)
+            .expect("the genesis request builds");
+        let mut builder = LmdbWasmTestBuilder::new_temporary_with_config(chainspec);
+        builder.run_genesis(genesis).commit();
         Chain { builder }
     }
 
