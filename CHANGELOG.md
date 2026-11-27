@@ -2,6 +2,16 @@
 
 Changelog for `odra`.
 
+## [2.12.0]
+### Fixed
+- **Can break a build:** the macros read an entry point's mutability from the receiver's reference, not
+  from a `mut` binding of it (#736). `self: &mut Self` was taken as read-only and did not compile
+  (`cannot borrow as mutable` on `#[odra::module]`); now it is `&mut self`. `mut self: &Self` was taken as
+  mutable: its `HostRef` method took `&mut self` and had `<x>_no_ret` variants, the schema and the contract
+  def said `is_mutable: true` and livenet sent a deploy for it; now it is `&self`, and code calling its
+  `_no_ret` variants no longer builds. `#[odra(offchain)]` now accepts `mut self: &Self` and rejects
+  `self: &mut Self`.
+
 ## [2.11.0]
 ### Added
 - `odra-casper-account-manager`: session code that changes a Casper account's multisig configuration, its

@@ -99,3 +99,66 @@ mod offchain {
         assert_eq!(names(module.offchain_functions()), vec!["balances"]);
     }
 }
+
+mod receiver_mutability {
+    use crate::ir::ModuleImplIR;
+    use quote::quote;
+
+    fn parse(module: proc_macro2::TokenStream) -> syn::Result<ModuleImplIR> {
+        ModuleImplIR::try_from((&quote!(), &module))
+    }
+
+    /// `is_mut` follows the reference (`&mut`), not the binding (`mut self`).
+    #[test]
+    fn is_mut_follows_the_reference_not_the_binding() {
+        let module = parse(quote! {
+            impl Counter {
+                pub fn get(&self) -> u32 { 0 }
+                pub fn set(&mut self) {}
+                pub fn typed_get(self: &Self) -> u32 { 0 }
+                pub fn typed_set(self: &mut Self) {}
+                pub fn mut_binding_get(mut self: &Self) -> u32 { 0 }
+                pub fn mut_binding_set(mut self: &mut Self) {}
+            }
+        })
+        .unwrap();
+        let is_mut = module
+            .functions()
+            .iter()
+            .map(|f| (f.name_str(), f.is_mut()))
+            .collect::<Vec<_>>();
+        assert_eq!(
+            is_mut,
+            vec![
+                ("get".to_string(), false),
+                ("set".to_string(), true),
+                ("typed_get".to_string(), false),
+                ("typed_set".to_string(), true),
+                ("mut_binding_get".to_string(), false),
+                ("mut_binding_set".to_string(), true)
+            ]
+        );
+    }
+
+    #[test]
+    fn offchain_rejects_a_typed_mut_receiver() {
+        let module = parse(quote! {
+            impl Token {
+                #[odra(offchain)]
+                pub fn balances(self: &mut Self) -> u32 { 0 }
+            }
+        });
+        assert!(module.is_err());
+    }
+
+    #[test]
+    fn offchain_accepts_a_mut_binding_to_a_shared_reference() {
+        let module = parse(quote! {
+            impl Token {
+                #[odra(offchain)]
+                pub fn balances(mut self: &Self) -> u32 { 0 }
+            }
+        });
+        assert!(module.is_ok());
+    }
+}

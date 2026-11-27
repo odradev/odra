@@ -157,6 +157,13 @@ fn validate_signature(sig: &syn::Signature, is_offchain: bool) -> syn::Result<()
     )
 }
 
+/// The receiver is `&mut self` or `self: &mut Self`. `Receiver::mutability` is the `mut` of a
+/// `mut self` binding, not of the reference: `mut self: &Self` is read-only. syn spells `&mut self`
+/// out as `self: &mut Self` in `Receiver::ty`, so the type answers for both forms.
+fn is_mut_receiver(receiver: &syn::Receiver) -> bool {
+    matches!(receiver.ty.as_ref(), syn::Type::Reference(reference) if reference.mutability.is_some())
+}
+
 /// `&self`, `&mut self`, or the typed `self: &Self` forms.
 fn is_reference_receiver(receiver: &syn::Receiver) -> bool {
     receiver.reference.is_some() || matches!(receiver.ty.as_ref(), syn::Type::Reference(_))
@@ -184,7 +191,7 @@ fn validate_offchain(sig: &syn::Signature, attrs: &OdraAttrs, ctx: ImplContext) 
         return Ok(());
     };
     let receiver = utils::syn::receiver_arg(sig);
-    let is_mut = receiver.as_ref().is_some_and(|r| r.mutability.is_some());
+    let is_mut = receiver.as_ref().is_some_and(is_mut_receiver);
     let (why, spanned) = if ctx.is_external_contract {
         (
             OffchainMisuse::InExternalContract,
@@ -387,8 +394,7 @@ impl FnIR {
     }
 
     pub fn is_mut(&self) -> bool {
-        let receiver = utils::syn::receiver_arg(self.sig());
-        receiver.map(|r| r.mutability.is_some()).unwrap_or_default()
+        utils::syn::receiver_arg(self.sig()).is_some_and(|r| is_mut_receiver(&r))
     }
 
     /// The submodule field a `delegate!`-generated function with no docs of its own forwards
