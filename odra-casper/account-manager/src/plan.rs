@@ -451,6 +451,23 @@ mod tests {
     }
 
     #[test]
+    fn runtime_args_read_back() {
+        let change = AccountChange::new()
+            .set_key(key(2), 3)
+            .set_key(key(4), 1)
+            .remove_key(key(3))
+            .key_management(2);
+        assert_eq!(
+            AccountChange::from_runtime_args(&change.to_runtime_args()),
+            Some(change)
+        );
+        assert_eq!(
+            AccountChange::from_runtime_args(&casper_types::RuntimeArgs::new()),
+            None
+        );
+    }
+
+    #[test]
     fn runtime_args_carry_every_field() {
         use crate::{
             DEPLOYMENT_THRESHOLD_ARG, KEY_MANAGEMENT_THRESHOLD_ARG, REMOVE_KEYS_ARG, SET_KEYS_ARG

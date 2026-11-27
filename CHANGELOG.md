@@ -2,6 +2,21 @@
 
 Changelog for `odra`.
 
+## [2.12.0]
+### Added
+- `odra-casper-signing`: collects the signatures of one Casper transaction made on several machines, for an
+  account whose thresholds need more than one key (#725). The hash of a transaction does not cover its
+  approvals, so every associated key signs the same transaction file on its own machine and the approvals are
+  merged afterwards (`sign`, `merge`, which checks every signature and the 100-approval limit). An approval
+  also travels as one line, `odra-sig:<v1|deploy>:<hash>:<public key>:<signature>` (`SignatureString`).
+  `inspect` tells, against the account the transaction runs as, who signed with what weight, which signers
+  are not associated keys (the node would reject it), how much weight is missing and whether it expired;
+  an account manager transaction needs `key_management`, any other `deployment`. `decode_account_change`
+  reads the change an account manager transaction makes from the transaction itself, so a signer reviews
+  what they sign. `SigningTransport` is where a transaction is kept while it is signed; `FileTransport`
+  keeps it in a directory. Only casper-types, no network code.
+- `AccountChange::from_runtime_args` reads a change back from the account manager's arguments.
+
 ## [2.11.0]
 ### Added
 - `odra-casper-account-manager`: session code that changes a Casper account's multisig configuration, its
