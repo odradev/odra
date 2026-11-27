@@ -3,3 +3,9 @@ error: `#[odra(offchain)]` on `bump`: an offchain function runs on the host and 
    |
 11 |     pub fn bump(&mut self) {
    |                 ^^^^^^^^^
+
+error: `#[odra(offchain)]` on `bump_typed`: an offchain function runs on the host and cannot change the state: take `&self`
+  --> tests/macros/fail/offchain_mut.rs:16:23
+   |
+16 |     pub fn bump_typed(self: &mut Self) {
+   |                       ^^^^^^^^^^^^^^^
