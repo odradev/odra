@@ -789,3 +789,22 @@ mod self_code {
         );
     }
 }
+
+/// The name of a module generated next to the user's one: the module name in snake case, digits
+/// kept with the letters before them.
+mod generated_mod {
+    use super::super::generated_mod_ident;
+
+    fn ident(module: &str) -> String {
+        let module = syn::Ident::new(module, proc_macro2::Span::call_site());
+        generated_mod_ident(&module, "exec_parts").to_string()
+    }
+
+    #[test]
+    fn digits_stay_with_the_letters_before_them() {
+        assert_eq!(ident("Erc20"), "__erc20_exec_parts");
+        assert_eq!(ident("ERC20"), "__erc20_exec_parts");
+        assert_eq!(ident("Cep78Token"), "__cep78_token_exec_parts");
+        assert_eq!(ident("NFT721Pack"), "__nft721_pack_exec_parts");
+    }
+}

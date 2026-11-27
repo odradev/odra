@@ -1517,3 +1517,107 @@ pattern = """
             #test_parts_reexport
 """
 change = ""
+
+[[mutations]]
+name = "factory_wasm_upgrade_key_name_dropped"
+file = "src/ast/factory/parts/wasm_parts.rs"
+pattern = """
+                let _ = named_args.insert("odra_cfg_package_hash_key_name", name.clone());
+                let contract_package_hash = odra::odra_casper_wasm_env::host_functions::upgrade_contract("""
+change = "                let contract_package_hash = odra::odra_casper_wasm_env::host_functions::upgrade_contract("
+
+[[mutations]]
+name = "factory_wasm_new_contract_init_args_dropped"
+file = "src/ast/factory/parts/wasm_parts.rs"
+pattern = """
+            init_args: module
+                .constructor()
+                .map(|f| f.args().to_vec())
+                .unwrap_or_default()"""
+change = "            init_args: Vec::new()"
+
+[[mutations]]
+name = "factory_wasm_child_ident_is_factory"
+file = "src/ast/factory/parts/wasm_parts.rs"
+pattern = """
+            child_ident: module.child_module_ident(),
+            event_ident: format_ident!("{}ContractDeployed", module.module_ident()),
+            init_args"""
+change = """
+            child_ident: module.module_ident(),
+            event_ident: format_ident!("{}ContractDeployed", module.module_ident()),
+            init_args"""
+
+[[mutations]]
+name = "contract_ref_with_tokens_keeps_old_value"
+file = "src/ast/contract_ref_item.rs"
+pattern = "                    attached_value: tokens"
+change = "                    attached_value: self.attached_value"
+
+[[mutations]]
+name = "contract_ref_trait_path_dropped"
+file = "src/ast/contract_ref_item.rs"
+pattern = "                module.impl_trait_path(),"
+change = "                None,"
+
+[[mutations]]
+name = "error_item_wasm_code_dropped"
+file = "src/ast/error_item.rs"
+pattern = "                    OdraError::user(error as u16)"
+change = "                    OdraError::user(0u16)"
+
+[[mutations]]
+name = "storage_layout_explicit_layout_ignored"
+file = "src/ast/schema/storage_layout.rs"
+pattern = "            Some(layout) => quote::quote!(#layout),"
+change = "            Some(_) => quote::quote!(odra::schema::StorageKind::Module { fields: odra::prelude::vec![] }),"
+
+[[mutations]]
+name = "storage_layout_field_index_from_zero"
+file = "src/ast/schema/storage_layout.rs"
+pattern = "                    let idx = f.idx;"
+change = "                    let idx = f.idx - 1;"
+
+[[mutations]]
+name = "module_def_env_field_first"
+file = "src/ast/module_def.rs"
+pattern = """
+            .into_iter()
+            .chain(vec![env_field])"""
+change = "            .into_iter()"
+
+[[mutations]]
+name = "ident_item_module_name_lowercase"
+file = "src/ast/ident_item.rs"
+pattern = "        let module_name = module_ident.to_string();"
+change = "        let module_name = module_ident.to_string().to_lowercase();"
+
+[[mutations]]
+name = "generated_mod_ident_upper_digit_boundary"
+file = "src/ir/mod.rs"
+pattern = "        .without_boundaries(&[Boundary::UpperDigit, Boundary::LowerDigit])"
+change = "        .without_boundaries(&[Boundary::LowerDigit])"
+
+[[mutations]]
+name = "generated_mod_ident_span_lost"
+file = "src/ir/mod.rs"
+pattern = '    Ident::new(&format!("__{snake_cased}_{part}"), module_ident.span())'
+change = '    Ident::new(&format!("__{snake_cased}_{part}"), proc_macro2::Span::call_site())'
+skip = "not observable in the unit tests: outside a proc macro proc_macro2 spans are all the fallback span, so a test cannot tell the module ident span from call_site; the span of errors inside the generated modules is what the compile-fail tests of the odra crate would show"
+
+[[mutations]]
+name = "config_events_trailing_list_ignored"
+file = "src/ir/config.rs"
+pattern = "    Ok(events.into_iter().collect())"
+change = "    Ok(events.into_iter().take(1).collect())"
+
+[[mutations]]
+name = "test_parts_reexport_cfg_dropped"
+file = "src/ast/test_parts.rs"
+pattern = """
+        tokens.extend(quote! {
+            #[cfg(not(target_arch = "wasm32"))]
+            pub use #mod_ident::*;"""
+change = """
+        tokens.extend(quote! {
+            pub use #mod_ident::*;"""
