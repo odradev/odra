@@ -2,6 +2,15 @@
 
 Changelog for `odra`.
 
+## [2.12.0]
+### Fixed
+- The client `cargo odra generate-client` writes takes its `Address`, `U128`, `U256`, `U512`, `URef`,
+  `PublicKey` and custom-type arguments by reference, the `<Contract>WasmClient` constructor its address too.
+  Taken by value, wasm-bindgen moved the object into the call and freed it, so a page that used the same
+  `Address` for a second call, or read its `.value` after the first, stopped with `null pointer passed to
+  rust`. Callers keep their objects now; nothing changes in the TypeScript signatures or in how a page calls
+  the client. Regenerate the client (`cargo odra generate-client`) to get it.
+
 ## [2.11.0]
 ### Added
 - `odra-casper-account-manager`: session code that changes a Casper account's multisig configuration, its

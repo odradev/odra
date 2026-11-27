@@ -24,11 +24,11 @@ pub fn client(contract_schema: &ContractSchema) -> TokenStream {
             #[wasm_bindgen(constructor)]
             pub fn new(
                 #[wasm_bindgen(js_name = "wasmClient")] wasm_client: &odra_wasm_client::OdraWasmClient,
-                address: odra_wasm_client::types::Address
+                address: &odra_wasm_client::types::Address
             ) -> Self {
                 #client_name {
                     wasm_client: wasm_client.clone(),
-                    address
+                    address: address.clone()
                 }
             }
 
@@ -141,7 +141,7 @@ fn payable_impl(ep: &Entrypoint) -> syn::ImplItemFn {
                     *self.address,
                     #entry_point_str,
                     odra_wasm_client::casper_types::runtime_args! { #(#rt_args),* },
-                    *attached_value
+                    **attached_value
                 )
                 .await
         }
@@ -182,12 +182,40 @@ fn runtime_arg(arg: &Argument) -> TokenStream {
     let name = &arg.name;
     let ident = format_ident!("{}", name);
     let odra_ty = OdraType::from(&arg.ty);
-    quote::quote! { #name => odra_wasm_client::types::IntoOdraValue::<#odra_ty>::into_odra_value(#ident)? }
+    let value = if is_borrowed(&WasmType::from(&arg.ty)) {
+        quote::quote!(#ident.clone())
+    } else {
+        quote::quote!(#ident)
+    };
+    quote::quote! { #name => odra_wasm_client::types::IntoOdraValue::<#odra_ty>::into_odra_value(#value)? }
 }
 
 fn entry_point_arg(fn_arg: &Argument) -> syn::FnArg {
     let arg_ident = format_ident!("{}", fn_arg.name);
     let js_name = fn_arg.name.to_case(Case::Camel);
     let ty = WasmType::from(&fn_arg.ty);
-    parse_quote!(#[wasm_bindgen(js_name = #js_name)] #arg_ident: #ty)
+    if is_borrowed(&ty) {
+        parse_quote!(#[wasm_bindgen(js_name = #js_name)] #arg_ident: &#ty)
+    } else {
+        parse_quote!(#[wasm_bindgen(js_name = #js_name)] #arg_ident: #ty)
+    }
+}
+
+/// Whether an argument of this type is taken by reference.
+///
+/// These types are JS classes backed by Rust objects. Taken by value, wasm-bindgen moves the
+/// object into the call and frees it on the JS side, so a page that passes the same `Address` or
+/// `U256` to a second call (or reads `.value` after the first) fails with "null pointer passed to
+/// rust". By reference, the caller keeps its object; the call clones it.
+fn is_borrowed(ty: &WasmType) -> bool {
+    matches!(
+        ty,
+        WasmType::U128
+            | WasmType::U256
+            | WasmType::U512
+            | WasmType::Address
+            | WasmType::URef
+            | WasmType::PublicKey
+            | WasmType::Custom(_)
+    )
 }
