@@ -1141,3 +1141,379 @@ change = """
         let syn::Fields::Named(named) = &item_struct.fields else {
             return Ok(Self { item_struct: item_struct.clone(), fields: vec![] });
         };"""
+
+[[mutations]]
+name = "module_impl_item_self_code_dropped"
+file = "src/ast/module_impl_item.rs"
+pattern = """
+            #self_code
+"""
+change = ""
+
+[[mutations]]
+name = "module_impl_item_module_check_dropped"
+file = "src/ast/module_impl_item.rs"
+pattern = """
+            #module_check
+"""
+change = ""
+
+[[mutations]]
+name = "module_impl_item_has_entrypoints_item_dropped"
+file = "src/ast/module_impl_item.rs"
+pattern = """
+            #has_entrypoints_item
+"""
+change = ""
+
+[[mutations]]
+name = "module_impl_item_ref_item_dropped"
+file = "src/ast/module_impl_item.rs"
+pattern = """
+            #ref_item
+"""
+change = ""
+
+[[mutations]]
+name = "module_impl_item_test_parts_dropped"
+file = "src/ast/module_impl_item.rs"
+pattern = """
+            #test_parts
+"""
+change = ""
+
+[[mutations]]
+name = "module_impl_item_test_parts_reexport_dropped"
+file = "src/ast/module_impl_item.rs"
+pattern = """
+            #test_parts_reexport
+"""
+change = ""
+
+[[mutations]]
+name = "module_impl_item_exec_parts_dropped"
+file = "src/ast/module_impl_item.rs"
+pattern = """
+            #exec_parts
+"""
+change = ""
+
+[[mutations]]
+name = "module_impl_item_wasm_parts_dropped"
+file = "src/ast/module_impl_item.rs"
+pattern = """
+            #wasm_parts
+"""
+change = ""
+
+[[mutations]]
+name = "module_impl_item_contract_item_dropped"
+file = "src/ast/module_impl_item.rs"
+pattern = """
+            #contract_item
+"""
+change = ""
+
+[[mutations]]
+name = "module_impl_item_blueprint_dropped"
+file = "src/ast/module_impl_item.rs"
+pattern = """
+            #blueprint
+"""
+change = ""
+
+[[mutations]]
+name = "module_impl_item_schema_entrypoints_dropped"
+file = "src/ast/module_impl_item.rs"
+pattern = """
+            #schema_entrypoints
+"""
+change = ""
+
+[[mutations]]
+name = "module_impl_item_schema_custom_types_dropped"
+file = "src/ast/module_impl_item.rs"
+pattern = """
+            #schema_custom_types
+"""
+change = ""
+
+[[mutations]]
+name = "module_impl_item_factory_dropped"
+file = "src/ast/module_impl_item.rs"
+pattern = """
+            #factory
+"""
+change = ""
+
+[[mutations]]
+name = "module_struct_item_self_code_dropped"
+file = "src/ast/module_struct_item.rs"
+pattern = """
+            #self_code
+"""
+change = ""
+
+[[mutations]]
+name = "module_struct_item_mod_item_dropped"
+file = "src/ast/module_struct_item.rs"
+pattern = """
+            #mod_item
+"""
+change = ""
+
+[[mutations]]
+name = "module_struct_item_has_ident_item_dropped"
+file = "src/ast/module_struct_item.rs"
+pattern = """
+            #has_ident_item
+"""
+change = ""
+
+[[mutations]]
+name = "module_struct_item_has_events_item_dropped"
+file = "src/ast/module_struct_item.rs"
+pattern = """
+            #has_events_item
+"""
+change = ""
+
+[[mutations]]
+name = "module_struct_item_schema_item_dropped"
+file = "src/ast/module_struct_item.rs"
+pattern = """
+            #schema_item
+"""
+change = ""
+
+[[mutations]]
+name = "module_struct_item_schema_events_item_dropped"
+file = "src/ast/module_struct_item.rs"
+pattern = """
+            #schema_events_item
+"""
+change = ""
+
+[[mutations]]
+name = "module_struct_item_schema_errors_dropped"
+file = "src/ast/module_struct_item.rs"
+pattern = """
+            #schema_errors
+"""
+change = ""
+
+[[mutations]]
+name = "module_struct_item_schema_storage_layout_dropped"
+file = "src/ast/module_struct_item.rs"
+pattern = """
+            #schema_storage_layout
+"""
+change = ""
+
+[[mutations]]
+name = "module_struct_item_factory_dropped"
+file = "src/ast/module_struct_item.rs"
+pattern = """
+            #factory
+"""
+change = ""
+
+[[mutations]]
+name = "factory_impl_item_self_code_dropped"
+file = "src/ast/factory/impl_item.rs"
+pattern = """
+            #self_code
+"""
+change = ""
+
+[[mutations]]
+name = "factory_impl_item_has_entrypoints_item_dropped"
+file = "src/ast/factory/impl_item.rs"
+pattern = """
+            #has_entrypoints_item
+"""
+change = ""
+
+[[mutations]]
+name = "factory_impl_item_ref_item_dropped"
+file = "src/ast/factory/impl_item.rs"
+pattern = """
+            #ref_item
+"""
+change = ""
+
+[[mutations]]
+name = "factory_impl_item_test_parts_dropped"
+file = "src/ast/factory/impl_item.rs"
+pattern = """
+            #test_parts
+"""
+change = ""
+
+[[mutations]]
+name = "factory_impl_item_test_parts_reexport_dropped"
+file = "src/ast/factory/impl_item.rs"
+pattern = """
+            #test_parts_reexport
+"""
+change = ""
+
+[[mutations]]
+name = "factory_impl_item_exec_parts_dropped"
+file = "src/ast/factory/impl_item.rs"
+pattern = """
+            #exec_parts
+"""
+change = ""
+
+[[mutations]]
+name = "factory_impl_item_wasm_parts_dropped"
+file = "src/ast/factory/impl_item.rs"
+pattern = """
+            #wasm_parts
+"""
+change = ""
+
+[[mutations]]
+name = "factory_impl_item_contract_item_dropped"
+file = "src/ast/factory/impl_item.rs"
+pattern = """
+            #contract_item
+"""
+change = ""
+
+[[mutations]]
+name = "factory_impl_item_blueprint_dropped"
+file = "src/ast/factory/impl_item.rs"
+pattern = """
+            #blueprint
+"""
+change = ""
+
+[[mutations]]
+name = "factory_impl_item_schema_entrypoints_dropped"
+file = "src/ast/factory/impl_item.rs"
+pattern = """
+            #schema_entrypoints
+"""
+change = ""
+
+[[mutations]]
+name = "factory_impl_item_schema_custom_types_dropped"
+file = "src/ast/factory/impl_item.rs"
+pattern = """
+            #schema_custom_types
+"""
+change = ""
+
+[[mutations]]
+name = "factory_struct_item_self_code_dropped"
+file = "src/ast/factory/struct_item.rs"
+pattern = """
+            #self_code
+"""
+change = ""
+
+[[mutations]]
+name = "factory_struct_item_mod_item_dropped"
+file = "src/ast/factory/struct_item.rs"
+pattern = """
+            #mod_item
+"""
+change = ""
+
+[[mutations]]
+name = "factory_struct_item_has_ident_item_dropped"
+file = "src/ast/factory/struct_item.rs"
+pattern = """
+            #has_ident_item
+"""
+change = ""
+
+[[mutations]]
+name = "factory_struct_item_has_events_item_dropped"
+file = "src/ast/factory/struct_item.rs"
+pattern = """
+            #has_events_item
+"""
+change = ""
+
+[[mutations]]
+name = "factory_struct_item_factory_has_events_impl_item_dropped"
+file = "src/ast/factory/struct_item.rs"
+pattern = """
+            #factory_has_events_impl_item
+"""
+change = ""
+
+[[mutations]]
+name = "factory_struct_item_schema_item_dropped"
+file = "src/ast/factory/struct_item.rs"
+pattern = """
+            #schema_item
+"""
+change = ""
+
+[[mutations]]
+name = "factory_struct_item_schema_events_item_dropped"
+file = "src/ast/factory/struct_item.rs"
+pattern = """
+            #schema_events_item
+"""
+change = ""
+
+[[mutations]]
+name = "factory_struct_item_schema_errors_dropped"
+file = "src/ast/factory/struct_item.rs"
+pattern = """
+            #schema_errors
+"""
+change = ""
+
+[[mutations]]
+name = "factory_struct_item_schema_storage_layout_dropped"
+file = "src/ast/factory/struct_item.rs"
+pattern = """
+            #schema_storage_layout
+"""
+change = ""
+
+[[mutations]]
+name = "external_contract_trait_item_dropped"
+file = "src/ast/external_contract_item.rs"
+pattern = """
+            #trait_item
+"""
+change = ""
+
+[[mutations]]
+name = "external_contract_ref_item_dropped"
+file = "src/ast/external_contract_item.rs"
+pattern = """
+            #ref_item
+"""
+change = ""
+
+[[mutations]]
+name = "external_contract_ref_trait_impl_dropped"
+file = "src/ast/external_contract_item.rs"
+pattern = """
+            #ref_trait_impl
+"""
+change = ""
+
+[[mutations]]
+name = "external_contract_test_parts_dropped"
+file = "src/ast/external_contract_item.rs"
+pattern = """
+            #test_parts
+"""
+change = ""
+
+[[mutations]]
+name = "external_contract_test_parts_reexport_dropped"
+file = "src/ast/external_contract_item.rs"
+pattern = """
+            #test_parts_reexport
+"""
+change = ""

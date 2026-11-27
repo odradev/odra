@@ -93,3 +93,6 @@ impl ToTokens for ModuleImplItem {
         });
     }
 }
+
+#[cfg(test)]
+mod tests;

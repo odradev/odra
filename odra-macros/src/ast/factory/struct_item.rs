@@ -68,3 +68,6 @@ impl ToTokens for FactoryModuleStructItem {
         });
     }
 }
+
+#[cfg(test)]
+mod tests;

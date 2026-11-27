@@ -485,7 +485,9 @@ fn test_offchain_function_has_no_wasm_entry_point() {
     test_utils::assert_eq(actual, expected);
 }
 
-/// The `CLType` of a generic return type is read through `<Ty::<Arg> as CLTyped>`.
+/// The `CLType` of a generic return type is read through `<Ty::<Arg> as CLTyped>`. This records
+/// the current output of `utils::syn::as_casted_ty_stream`; `<Option<U256> as CLTyped>` would be
+/// valid Rust too, so the turbofish is a choice of the emitter, not a requirement.
 #[test]
 fn test_generic_return_type() {
     let module = quote::quote! {

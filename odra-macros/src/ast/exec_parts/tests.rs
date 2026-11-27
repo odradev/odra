@@ -257,8 +257,9 @@ mod factory {
     }
 }
 
-/// `upgrade` and a non-reentrant function read the execution env even when they take no
-/// arguments: the guard calls need it, and `upgrade` always builds it.
+/// A non-reentrant function builds the execution env even without arguments: its guard calls
+/// need it. `upgrade` without arguments builds it too, and nothing uses it: this records the
+/// current output (`uses_exec_env` in `ExecFnBody::new`), not a requirement.
 #[test]
 fn test_parts_without_args() {
     let module = quote::quote! {

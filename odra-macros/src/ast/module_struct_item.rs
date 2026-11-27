@@ -67,3 +67,6 @@ impl ToTokens for ModuleStructItem {
         });
     }
 }
+
+#[cfg(test)]
+mod tests;

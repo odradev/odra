@@ -642,7 +642,9 @@ fn host_ref_delegation() {
     test_utils::assert_eq(actual, expected);
 }
 
-/// An `#[odra(offchain)]` function is on the host ref, called like an entry point.
+/// An `#[odra(offchain)]` function is on the host ref, called like an entry point. Like the
+/// others it forwards `attached_value` (`amount`, `with_amount`), which an offchain function
+/// cannot use: this records the current output.
 #[test]
 fn test_host_ref_with_offchain_function() {
     let module = test_utils::mock::module_offchain();

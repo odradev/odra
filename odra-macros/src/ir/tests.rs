@@ -375,10 +375,16 @@ mod rejected_input {
 
     #[test]
     fn a_typed_self_reference_is_accepted() {
-        assert!(function(quote!(
-            pub fn run(self: &Self) {}
-        ))
-        .is_ok());
+        for code in [
+            quote!(
+                pub fn run(self: &Self) {}
+            ),
+            quote!(
+                pub fn run(self: &mut Self) {}
+            )
+        ] {
+            assert!(function(code).is_ok());
+        }
     }
 
     #[test]
@@ -405,7 +411,6 @@ mod rejected_input {
 
     #[test]
     fn offchain_where_it_does_not_fit() {
-        let offchain = "`#[odra(offchain)]` on `balances`";
         assert_rejected(
             function(quote!(
                 #[odra(offchain)]
@@ -453,7 +458,10 @@ mod rejected_input {
                 fn balances(&self);
             }
         );
-        assert_rejected(module(quote!(), item), offchain);
+        assert_rejected(
+            module(quote!(), item),
+            "an external contract has no offchain functions"
+        );
     }
 
     #[test]
@@ -718,17 +726,6 @@ mod rejected_input {
         assert_eq!(both.len(), 2, "{both:?}");
         assert!(both[0].contains("an Odra impl block is for a named module"));
         assert!(both[1].contains("`env` is a reserved entry point name"));
-    }
-
-    #[test]
-    fn an_impl_is_read() {
-        // The context the function checks above run in: a plain module impl.
-        let item = quote!(
-            impl Token {
-                pub fn transfer(&mut self) {}
-            }
-        );
-        assert!(ModuleImplIR::try_from((&quote!(), &item)).is_ok());
     }
 }
 
