@@ -808,3 +808,76 @@ mod generated_mod {
         assert_eq!(ident("NFT721Pack"), "__nft721_pack_exec_parts");
     }
 }
+
+/// `#[derive(IntoRuntimeArgs)]` takes a struct with named fields, or a unit struct.
+mod into_runtime_args {
+    use quote::quote;
+
+    fn derive(item: proc_macro2::TokenStream) -> syn::Result<proc_macro2::TokenStream> {
+        crate::into_runtime_args(&syn::parse2(item).unwrap())
+    }
+
+    #[test]
+    fn a_tuple_struct_or_an_enum_is_rejected() {
+        let message = |item| derive(item).unwrap_err().to_string();
+        assert!(message(quote!(
+            struct Args(u32);
+        ))
+        .contains("`#[derive(IntoRuntimeArgs)]` needs named fields"));
+        assert!(message(quote!(
+            enum Args {
+                A
+            }
+        ))
+        .contains("this is not a struct"));
+    }
+}
+
+/// The messages that list what is accepted list all of it, in the documented order.
+mod expected_values {
+    use crate::ir::{function::ImplContext, FnIR, ModuleStructIR};
+    use quote::quote;
+
+    fn error(result: syn::Result<impl Sized>) -> String {
+        match result {
+            Ok(_) => panic!("accepted"),
+            Err(error) => error.to_string()
+        }
+    }
+
+    #[test]
+    fn an_unknown_flag_lists_the_flags() {
+        let code = syn::parse2(quote!(
+            #[odra(cheap)]
+            pub fn pay(&mut self) {}
+        ))
+        .unwrap();
+        assert_eq!(
+            error(FnIR::try_new_impl(code, ImplContext::default())),
+            "unknown odra attribute `cheap`, expected one of: payable, non_reentrant, offchain"
+        );
+    }
+
+    #[test]
+    fn module_arguments_name_what_is_expected() {
+        let module = quote!(
+            pub struct Token;
+        );
+        let parse = |attr: proc_macro2::TokenStream| ModuleStructIR::try_from((&attr, &module));
+        assert_eq!(
+            error(parse(quote!(owner = "me"))),
+            "`owner` is not a `#[odra::module(..)]` argument; expected one of: name, version, \
+             events, errors, factory, layout"
+        );
+        let missing_eq = error(parse(quote!(name "A")));
+        assert!(missing_eq.contains("name = \"MyToken\""), "{missing_eq}");
+        let bad_value = error(parse(quote!(version = 1)));
+        assert!(bad_value.contains("version = \"1.0.0\""), "{bad_value}");
+    }
+
+    #[test]
+    fn too_many_fields_says_the_limit() {
+        assert!(error(crate::test_utils::mock::invalid_module_definition())
+            .contains("a module has at most 255 fields, this one has 256"));
+    }
+}

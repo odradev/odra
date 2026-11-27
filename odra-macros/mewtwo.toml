@@ -1621,3 +1621,58 @@ pattern = """
 change = """
         tokens.extend(quote! {
             pub use #mod_ident::*;"""
+
+[[mutations]]
+name = "lib_runtime_args_tuple_struct_allowed"
+file = "src/lib.rs"
+pattern = "        syn::Fields::Unnamed(_) => return Err(errors::runtime_args_on_unnamed_fields(fields)),"
+change = "        syn::Fields::Unnamed(_) => return Ok(into_runtime_args_impl(&item.ident, [].into_iter())),"
+
+[[mutations]]
+name = "lib_runtime_args_enum_allowed"
+file = "src/lib.rs"
+pattern = """
+    let syn::Data::Struct(syn::DataStruct { fields, .. }) = &item.data else {
+        return Err(errors::runtime_args_on_non_struct(item));
+    };"""
+change = """
+    let syn::Data::Struct(syn::DataStruct { fields, .. }) = &item.data else {
+        return Ok(into_runtime_args_impl(&item.ident, [].into_iter()));
+    };"""
+
+[[mutations]]
+name = "attr_expected_flags_order"
+file = "src/ir/attr.rs"
+pattern = """
+            .collect::<Vec<_>>()
+            .join(", ")"""
+change = """
+            .rev()
+            .collect::<Vec<_>>()
+            .join(", ")"""
+
+[[mutations]]
+name = "config_expected_args_truncated"
+file = "src/ir/config.rs"
+pattern = "                .ok_or_else(|| errors::unknown_module_arg(input, &Self::ARGS))?;"
+change = "                .ok_or_else(|| errors::unknown_module_arg(input, &Self::ARGS[..5]))?;"
+
+[[mutations]]
+name = "config_bad_value_arg_name_lost"
+file = "src/ir/config.rs"
+pattern = "            let bad_value = |e: syn::Error| errors::module_arg_bad_value(arg, e.span());"
+change = '            let bad_value = |e: syn::Error| errors::module_arg_bad_value("", e.span());'
+
+[[mutations]]
+name = "config_missing_eq_message_dropped"
+file = "src/ir/config.rs"
+pattern = """
+                .parse::<Token![=]>()
+                .map_err(|_| errors::module_arg_bad_value(arg, span))?;"""
+change = "                .parse::<Token![=]>()?;"
+
+[[mutations]]
+name = "module_struct_too_many_fields_max_lost"
+file = "src/ir/module_struct.rs"
+pattern = "            return Err(errors::module_too_many_fields(&code.fields, MAX_FIELDS));"
+change = "            return Err(errors::module_too_many_fields(&code.fields, 0));"
