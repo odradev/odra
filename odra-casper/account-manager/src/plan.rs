@@ -56,8 +56,9 @@ pub enum ValidationError {
 pub enum Warning {
     /// One of the signer's own keys is removed.
     OwnKeyRemoved(AccountHash),
-    /// After the change, the signer's own keys together do not reach the threshold: they can no
+    /// The signer's own keys reach the threshold now but not after the change: they can no
     /// longer send transactions (`Deployment`) or change keys (`KeyManagement`) on their own.
+    /// Not reported when they are below it already.
     OwnKeysBelowThreshold {
         /// Which threshold.
         kind: ThresholdKind,
@@ -66,8 +67,8 @@ pub enum Warning {
         /// The threshold after the change.
         threshold: u8
     },
-    /// The total weight equals `key_management`: losing any key with weight locks key
-    /// management for good.
+    /// After the change the total weight equals `key_management`, and before it did not: losing
+    /// any key with weight locks key management for good.
     NoSpareKeyManagementWeight {
         /// The total weight and `key_management` after the change.
         weight: u8
@@ -185,12 +186,23 @@ pub fn plan(
     {
         warnings.push(Warning::OwnKeyRemoved(*key));
     }
+    // Only what the change makes worse: own keys that are already below a threshold, or an
+    // account that already has no spare weight, are not news.
+    let own_weight_before = state.weight_of(own_keys);
     let own_weight = after.weight_of(own_keys);
-    for (kind, threshold) in [
-        (ThresholdKind::Deployment, after.deployment),
-        (ThresholdKind::KeyManagement, after.key_management)
+    for (kind, before, threshold) in [
+        (
+            ThresholdKind::Deployment,
+            state.deployment,
+            after.deployment
+        ),
+        (
+            ThresholdKind::KeyManagement,
+            state.key_management,
+            after.key_management
+        )
     ] {
-        if own_weight < threshold {
+        if own_weight < threshold && own_weight_before >= before {
             warnings.push(Warning::OwnKeysBelowThreshold {
                 kind,
                 weight: own_weight,
@@ -198,7 +210,7 @@ pub fn plan(
             });
         }
     }
-    if total_weight == after.key_management {
+    if total_weight == after.key_management && state.total_weight() != state.key_management {
         warnings.push(Warning::NoSpareKeyManagementWeight {
             weight: total_weight
         });
@@ -254,10 +266,56 @@ mod tests {
                     kind: ThresholdKind::KeyManagement,
                     weight: 1,
                     threshold: 2
-                },
-                Warning::NoSpareKeyManagementWeight { weight: 2 }
+                }
             ]
         );
+    }
+
+    #[test]
+    fn warns_only_about_what_the_change_makes_worse() {
+        // The own key (8) is already below deployment (9): raising it to 10 changes nothing for
+        // that key, so there is no warning about it.
+        let mut state = AccountState::new(key(1));
+        state.associated_keys.insert(key(1), 8);
+        state.associated_keys.insert(key(2), 8);
+        state.deployment = 9;
+        state.key_management = 16;
+        let change = AccountChange::new().deployment(10);
+        let checked = plan(&state, &change, &own(&[1])).unwrap();
+        assert!(
+            !checked
+                .warnings
+                .iter()
+                .any(|w| matches!(w, Warning::OwnKeysBelowThreshold { .. })),
+            "{:?}",
+            checked.warnings
+        );
+        // The account had no spare key-management weight before either.
+        assert!(!checked
+            .warnings
+            .contains(&Warning::NoSpareKeyManagementWeight { weight: 16 }));
+
+        // With spare weight before (total 16, key_management 15), lowering the other key to 7
+        // takes it away: that is new.
+        state.key_management = 15;
+        let change = AccountChange::new().set_key(key(2), 7);
+        let checked = plan(&state, &change, &own(&[1])).unwrap();
+        assert!(checked
+            .warnings
+            .contains(&Warning::NoSpareKeyManagementWeight { weight: 15 }));
+
+        // An own key that reaches deployment now and not after the change is reported.
+        let mut state = AccountState::new(key(1));
+        state.associated_keys.insert(key(1), 9);
+        state.associated_keys.insert(key(2), 9);
+        state.deployment = 9;
+        state.key_management = 18;
+        let checked = plan(&state, &AccountChange::new().deployment(10), &own(&[1])).unwrap();
+        assert!(checked.warnings.contains(&Warning::OwnKeysBelowThreshold {
+            kind: ThresholdKind::Deployment,
+            weight: 9,
+            threshold: 10
+        }));
     }
 
     #[test]
