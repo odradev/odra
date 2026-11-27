@@ -12,7 +12,7 @@ edition = "2021"
 homepage = "https://odra.dev/docs"
 license = "MIT"
 repository = "https://github.com/odradev/odra"
-version = "2.10.0"
+version = "2.11.0"
 
 # Its own crate, outside the workspace and outside odra-casper/proxy-caller, so that a change
 # here never changes the bytes of the proxy callers. `just build-proxy-callers` builds it.
