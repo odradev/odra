@@ -304,3 +304,35 @@ fn test_factory_entrypoints() {
     let actual = FactorySchemaEntrypointsItem::try_from(&module).unwrap();
     test_utils::assert_eq(actual, expected);
 }
+
+/// An `#[odra(offchain)]` function is listed in `schema_offchain_entrypoints` only.
+#[test]
+fn test_offchain_entrypoints() {
+    let module = test_utils::mock::module_offchain();
+    let expected = quote! {
+        #[automatically_derived]
+        #[cfg(not(target_arch = "wasm32"))]
+        impl odra::schema::SchemaEntrypoints for Erc20 {
+            fn schema_entrypoints() -> odra::prelude::vec::Vec<
+                odra::schema::casper_contract_schema::Entrypoint,
+            > {
+                odra::prelude::vec![
+                    odra::schema::entry_point:: < U256 > ("balance_of",
+                    "Returns the balance of the owner.", false, false,
+                    odra::prelude::vec![odra::schema::argument:: < Address > ("owner")])
+                ]
+            }
+            fn schema_offchain_entrypoints() -> odra::prelude::vec::Vec<
+                odra::schema::casper_contract_schema::Entrypoint,
+            > {
+                odra::prelude::vec![
+                    odra::schema::entry_point:: < Vec < U256 > > ("balances",
+                    "Returns the balances of the owners.", false, false,
+                    odra::prelude::vec![odra::schema::argument:: < Vec < Address > > ("owners")])
+                ]
+            }
+        }
+    };
+    let actual = SchemaEntrypointsItem::try_from(&module).unwrap();
+    test_utils::assert_eq(actual, expected);
+}

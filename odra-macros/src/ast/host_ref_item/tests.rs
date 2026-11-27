@@ -641,3 +641,126 @@ fn host_ref_delegation() {
     let actual = HostRefItem::try_from(&module).unwrap();
     test_utils::assert_eq(actual, expected);
 }
+
+/// An `#[odra(offchain)]` function is on the host ref, called like an entry point. Like the
+/// others it forwards `attached_value` (`amount`, `with_amount`), which an offchain function
+/// cannot use: this records the current output.
+#[test]
+fn test_host_ref_with_offchain_function() {
+    let module = test_utils::mock::module_offchain();
+    let expected = quote! {
+            /// [Erc20] Host Ref.
+            pub struct Erc20HostRef {
+                address: odra::prelude::Address,
+                env: odra::host::HostEnv,
+                attached_value: odra::casper_types::U512,
+            }
+            impl odra::host::HostRef for Erc20HostRef {
+                fn new(address: odra::prelude::Address, env: odra::host::HostEnv) -> Self {
+                    env.register_contract_ref(
+                        address,
+                        <Self as odra::contract_def::HasIdent>::ident(),
+                        <Self as odra::host::EntryPointsCallerProvider>::entry_points_caller,
+                    );
+                    Self {
+                        address,
+                        env,
+                        attached_value: Default::default(),
+                    }
+                }
+                fn with_tokens(&self, tokens: odra::casper_types::U512) -> Self {
+                    Self {
+                        address: self.address,
+                        env: self.env.clone(),
+                        attached_value: tokens,
+                    }
+                }
+                fn contract_address(&self) -> odra::prelude::Address {
+                    self.address
+                }
+                fn env(&self) -> &odra::host::HostEnv {
+                    &self.env
+                }
+                fn get_event<T>(&self, index: i32) -> Result<T, odra::EventError>
+                where
+                    T: odra::casper_types::bytesrepr::FromBytes
+                        + odra::casper_event_standard::EventInstance,
+                {
+                    self.env.get_event(self, index)
+                }
+                fn last_call(&self) -> odra::ContractCallResult {
+                    self.env.last_call_result(self.address)
+                }
+            }
+            impl Erc20HostRef {
+                /// Returns the balance of the owner.
+                pub fn balance_of(&self, owner: Address) -> U256 {
+                    self.try_balance_of(owner).unwrap()
+                }
+                /// Returns the balances of the owners.
+                pub fn balances(&self, owners: Vec<Address>) -> Vec<U256> {
+                    self.try_balances(owners).unwrap()
+                }
+            }
+            impl Erc20HostRef {
+                /// Returns the balance of the owner.
+                /// Does not fail in case of error, returns `odra::OdraResult` instead.
+                pub fn try_balance_of(&self, owner: Address) -> OdraResult<U256> {
+                    self.env
+                        .call_contract::<
+                            U256,
+                        >(
+                            self.address,
+                            odra::CallDef::new(
+                                    odra::prelude::string::String::from("balance_of"),
+                                    false,
+                                    {
+                                        let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
+                                        if self.attached_value > odra::casper_types::U512::zero() {
+                                            let _ = __odra_named_args
+                                                .insert("amount", self.attached_value);
+                                        }
+                                        odra::args::EntrypointArgument::insert_runtime_arg(
+                                            owner,
+                                            "owner",
+                                            &mut __odra_named_args,
+                                        );
+                                        __odra_named_args
+                                    },
+                                )
+                                .with_amount(self.attached_value),
+                        )
+                }
+                /// Returns the balances of the owners.
+                /// Does not fail in case of error, returns `odra::OdraResult` instead.
+                pub fn try_balances(&self, owners: Vec<Address>) -> OdraResult<Vec<U256>> {
+                    self.env
+                        .call_contract::<
+                            Vec<U256>,
+                        >(
+                            self.address,
+                            odra::CallDef::new(
+                                    odra::prelude::string::String::from("balances"),
+                                    false,
+                                    {
+                                        let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
+                                        if self.attached_value > odra::casper_types::U512::zero() {
+                                            let _ = __odra_named_args
+                                                .insert("amount", self.attached_value);
+                                        }
+                                        odra::args::EntrypointArgument::insert_runtime_arg(
+                                            owners,
+                                            "owners",
+                                            &mut __odra_named_args,
+                                        );
+                                        __odra_named_args
+                                    },
+                                )
+                                .with_amount(self.attached_value),
+                        )
+                }
+            }
+    };
+    let actual = HostRefItem::try_from(&module).unwrap();
+    test_utils::assert_eq(actual, expected);
+}

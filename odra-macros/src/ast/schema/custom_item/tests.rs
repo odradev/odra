@@ -152,3 +152,21 @@ fn test_complex_enum() {
 
     test_utils::assert_eq(item, expected);
 }
+
+/// A tuple variant with one field is typed as that field, not as a one-element tuple.
+#[test]
+fn test_enum_with_single_field_tuple_variant() {
+    let ir = crate::ir::TypeIR::try_from(&quote!(
+        enum MyType {
+            A(u32),
+            B
+        }
+    ))
+    .unwrap();
+    let item = SchemaCustomTypeItem::try_from(&ir).unwrap();
+    test_utils::assert_contains(
+        &item,
+        quote!(odra::schema::enum_typed_variant::<u32>("A", 0u16),)
+    );
+    test_utils::assert_contains(&item, quote!(odra::schema::enum_variant("B", 1u16),));
+}

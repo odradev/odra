@@ -256,3 +256,51 @@ mod factory {
         test_utils::assert_eq(actual, expected);
     }
 }
+
+/// A non-reentrant function builds the execution env even without arguments: its guard calls
+/// need it. `upgrade` without arguments builds it too, and nothing uses it: this records the
+/// current output (`uses_exec_env` in `ExecFnBody::new`), not a requirement.
+#[test]
+fn test_parts_without_args() {
+    let module = quote::quote! {
+        impl Erc20 {
+            pub fn upgrade(&mut self) {}
+
+            #[odra(non_reentrant)]
+            pub fn lock(&mut self) {}
+        }
+    };
+    let attr = quote::quote!();
+    let module = crate::ir::ModuleImplIR::try_from((&attr, &module)).unwrap();
+    let actual = ModuleExecPartsItem::try_from(&module).unwrap();
+
+    let expected = quote::quote! {
+        #[allow(missing_docs)]
+        mod __erc20_exec_parts {
+            use super::*;
+            use odra::prelude::*;
+
+            #[inline]
+            pub fn execute_upgrade(__odra_env: odra::ContractEnv) {
+                let __odra_env_rc = Rc::new(__odra_env);
+                let __odra_exec_env = odra::ExecutionEnv::new(__odra_env_rc.clone());
+                let mut __odra_contract = <Erc20 as Module>::new(__odra_env_rc);
+                let __odra_result = __odra_contract.upgrade();
+                return __odra_result;
+            }
+
+            #[inline]
+            pub fn execute_lock(__odra_env: odra::ContractEnv) {
+                let __odra_env_rc = Rc::new(__odra_env);
+                let __odra_exec_env = odra::ExecutionEnv::new(__odra_env_rc.clone());
+                __odra_exec_env.non_reentrant_before();
+                let mut __odra_contract = <Erc20 as Module>::new(__odra_env_rc);
+                let __odra_result = __odra_contract.lock();
+                __odra_exec_env.non_reentrant_after();
+                return __odra_result;
+            }
+        }
+    };
+
+    test_utils::assert_eq(actual, expected);
+}

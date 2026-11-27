@@ -572,3 +572,76 @@ mod factory {
         test_utils::assert_eq(actual, expected);
     }
 }
+
+/// A contract calling another one cannot call its `#[odra(offchain)]` functions: they are not on the contract ref.
+#[test]
+fn test_contract_ref_without_offchain_function() {
+    let module = test_utils::mock::module_offchain();
+    let expected = quote! {
+        /// [Erc20] Contract Ref.
+        pub struct Erc20ContractRef {
+            env: odra::prelude::Rc<odra::ContractEnv>,
+            address: odra::prelude::Address,
+            attached_value: odra::casper_types::U512,
+        }
+        impl odra::ContractRef for Erc20ContractRef {
+            fn new(
+                env: odra::prelude::Rc<odra::ContractEnv>,
+                address: odra::prelude::Address,
+            ) -> Self {
+                Self {
+                    env,
+                    address,
+                    attached_value: odra::casper_types::U512::zero(),
+                }
+            }
+            fn address(&self) -> &odra::prelude::Address {
+                &self.address
+            }
+            fn with_tokens(&self, tokens: odra::casper_types::U512) -> Self {
+                Self {
+                    address: self.address,
+                    env: self.env.clone(),
+                    attached_value: tokens,
+                }
+            }
+        }
+        impl Erc20ContractRef {
+            /// Returns the balance of the owner.
+            pub fn balance_of(&self, owner: Address) -> U256 {
+                self.env
+                    .call_contract::<
+                        U256,
+                    >(
+                        self.address,
+                        odra::CallDef::new(
+                                odra::prelude::string::String::from("balance_of"),
+                                false,
+                                {
+                                    let mut __odra_named_args = odra::casper_types::RuntimeArgs::new();
+                                    if self.attached_value > odra::casper_types::U512::zero() {
+                                        let _ = __odra_named_args
+                                            .insert("amount", self.attached_value);
+                                    }
+                                    odra::args::EntrypointArgument::insert_runtime_arg(
+                                        owner,
+                                        "owner",
+                                        &mut __odra_named_args,
+                                    );
+                                    __odra_named_args
+                                },
+                            )
+                            .with_amount(self.attached_value),
+                    )
+            }
+        }
+        #[automatically_derived]
+        #[cfg(not(target_arch = "wasm32"))]
+        impl odra::schema::SchemaErrors for Erc20ContractRef {}
+        #[automatically_derived]
+        #[cfg(not(target_arch = "wasm32"))]
+        impl odra::schema::SchemaEvents for Erc20ContractRef {}
+    };
+    let actual = RefItem::try_from(&module).unwrap();
+    test_utils::assert_eq(actual, expected);
+}

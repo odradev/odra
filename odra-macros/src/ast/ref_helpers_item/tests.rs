@@ -52,6 +52,9 @@ fn rejects_generics() {
     assert!(RefHelpersItem::try_from(&item).is_err());
     let item = quote::quote!(impl Token<u32> {});
     assert!(RefHelpersItem::try_from(&item).is_err());
+    // Generic parameters the self type does not use.
+    let item = quote::quote!(impl<T> Token {});
+    assert!(RefHelpersItem::try_from(&item).is_err());
 }
 
 #[test]
