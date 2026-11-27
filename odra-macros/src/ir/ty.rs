@@ -89,6 +89,19 @@ impl TypeIR {
         }))?;
         Ok(variants)
     }
+
+    /// A unit enum is serialized as one byte, its code, so every variant's code fits a `u8`;
+    /// otherwise two variants could share a byte (`A = 300` is written as `44`). Every variant
+    /// over 255 is reported. Other types have nothing to check.
+    pub fn check_unit_enum_codes(&self) -> syn::Result<()> {
+        let TypeKind::UnitEnum { variants } = &self.kind else {
+            return Ok(());
+        };
+        errors::check_all(variants.iter().map(|v| match u8::try_from(v.code) {
+            Ok(_) => Ok(()),
+            Err(_) => Err(errors::unit_enum_code_not_u8(&v.ident, v.code, v.span))
+        }))
+    }
 }
 
 /// The type is one concrete type, and `#[odra(..)]` is not an attribute of its fields or

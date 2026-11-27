@@ -48,6 +48,7 @@ impl TryFrom<&TypeIR> for OdraTypeItem {
     type Error = syn::Error;
 
     fn try_from(ir: &TypeIR) -> Result<Self, Self::Error> {
+        ir.check_unit_enum_codes()?;
         Ok(Self {
             item: ir.self_code().clone(),
             ident: ir.ident(),

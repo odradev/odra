@@ -2,6 +2,13 @@
 
 Changelog for `odra`.
 
+## [2.12.0]
+### Fixed
+- **Can break a build**: `#[odra::odra_type]` rejects a unit enum variant whose discriminant is over 255. A
+  unit enum is serialized as one byte, and such a discriminant was truncated to it, so `A = 300` was written
+  as `44` and read back as whichever variant came first with that byte (#732). `#[odra::odra_error]` keeps
+  codes up to 65535.
+
 ## [2.11.0]
 ### Added
 - `odra-casper-account-manager`: session code that changes a Casper account's multisig configuration, its
